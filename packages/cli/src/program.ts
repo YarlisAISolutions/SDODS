@@ -4,6 +4,7 @@ import { registerProjectCommands } from './commands/project.js';
 import { registerEnvCommands } from './commands/env.js';
 import { registerConfigCommands } from './commands/config.js';
 import { registerDoctorCommand } from './commands/doctor.js';
+import { registerWorkspaceCommands } from './commands/workspace.js';
 import { register as registerRun } from './commands/run.js';
 import { register as registerLint } from './commands/lint.js';
 import { register as registerInit } from './commands/init.js';
@@ -41,7 +42,7 @@ export function buildProgram(): Command {
   const program = new Command('automax');
   program
     .description(
-      'AutoMax — an entire wrapper around Playwright for BDD UI, API and hybrid automation.',
+      'AutoMax — an automation platform with a reusable architecture built on Playwright for BDD UI, API and hybrid automation.',
     )
     .version(VERSION, '-V, --version')
     .option('--json', 'machine-readable output')
@@ -57,6 +58,7 @@ export function buildProgram(): Command {
   registerEnvCommands(program);
   registerConfigCommands(program);
   registerDoctorCommand(program);
+  registerWorkspaceCommands(program);
   registerRun(program);
   registerLint(program);
   registerInit(program);

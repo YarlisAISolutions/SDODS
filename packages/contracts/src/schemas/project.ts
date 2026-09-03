@@ -199,10 +199,101 @@ export const ScheduleSchema = z.object({
   retentionRuns: z.number().int().positive().optional(),
 });
 
+/**
+ * Hierarchy: organization → workspace → project → module.
+ * A module is a feature area of an application (auth, inventory, checkout …) that owns a
+ * features directory, default tags and an owner. A process is a named, repeatable run recipe
+ * (pr-check, nightly-regression, release-gate …) that pins tags/layers/browsers/env and a trigger.
+ */
+export const OrganizationSchema = z.object({
+  slug: SlugSchema,
+  name: z.string().min(1),
+  description: z.string().optional(),
+  url: z.string().url().optional(),
+});
+
+export const WorkspaceSchema = z.object({
+  slug: SlugSchema,
+  name: z.string().min(1),
+  description: z.string().optional(),
+  organization: SlugSchema.optional(),
+});
+
+export const TestingTypeSchema = z.enum([
+  'functional',
+  'smoke',
+  'regression',
+  'sanity',
+  'integration',
+  'contract',
+  'visual',
+  'accessibility',
+  'performance',
+  'security',
+  'data-driven',
+  'exploratory',
+]);
+
+export const ModuleSchema = z.object({
+  name: SlugSchema,
+  title: z.string().optional(),
+  description: z.string().optional(),
+  /** directory under features/ (default: the module name) */
+  path: z.string().optional(),
+  layers: z.array(LayerSchema).optional(),
+  testingTypes: z.array(TestingTypeSchema).default(['functional']),
+  /** tags every scenario in this module is expected to carry (lint warns when missing) */
+  tags: z.array(z.string()).default([]),
+  owner: z.string().optional(),
+  jiraComponent: z.string().optional(),
+  routes: z.array(z.string()).default([]),
+  endpoints: z.array(z.string()).default([]),
+});
+
+export const ProcessTriggerSchema = z.enum([
+  'manual',
+  'pr',
+  'merge',
+  'nightly',
+  'release',
+  'schedule',
+  'webhook',
+]);
+
+export const ProcessSchema = z.object({
+  name: SlugSchema,
+  title: z.string().optional(),
+  description: z.string().optional(),
+  trigger: ProcessTriggerSchema.default('manual'),
+  env: z.string().optional(),
+  tags: z.string().optional(),
+  layers: z.array(LayerSchema).optional(),
+  browsers: z.array(BrowserSchema).optional(),
+  modules: z.array(SlugSchema).optional(),
+  workers: z.number().int().positive().optional(),
+  retries: z.number().int().min(0).optional(),
+  harMode: z.enum(['off', 'update', 'replay']).optional(),
+  failOnFlaky: z.boolean().default(false),
+  gates: z
+    .object({
+      minPassRate: z.number().min(0).max(100).optional(),
+      maxFlaky: z.number().int().min(0).optional(),
+      perfBudgets: z.boolean().default(false),
+      a11y: z.boolean().default(false),
+    })
+    .default({ perfBudgets: false, a11y: false }),
+  notify: z.array(z.enum(['github', 'jira', 'webhook'])).default([]),
+  schedule: z.string().optional(),
+});
+
 export const ProjectConfigSchema = z.object({
   slug: SlugSchema,
   name: z.string().min(1),
   description: z.string().optional(),
+  organization: SlugSchema.optional(),
+  workspace: SlugSchema.optional(),
+  modules: z.array(ModuleSchema).default([]),
+  processes: z.array(ProcessSchema).default([]),
   layers: z.array(LayerSchema).min(1),
   browsers: z.array(BrowserSchema).min(1).default(['chromium']),
   channel: z.enum(['chrome', 'msedge', 'chrome-beta', 'msedge-beta']).optional(),
@@ -266,6 +357,29 @@ export const ProjectConfigSchema = z.object({
     .default({ cucumberHtml: false, allure: false, junit: false }),
 });
 
+/** Root `automax.workspace.yaml`: names the organization and workspace every project in the repo belongs to. */
+export const WorkspaceFileSchema = z.object({
+  organization: OrganizationSchema,
+  /** one organization can hold many workspaces; projects pick one via `workspace:` */
+  workspaces: z.array(WorkspaceSchema).min(1),
+  /** workspace used by projects that do not set `workspace:` */
+  defaultWorkspace: SlugSchema,
+  defaults: z
+    .object({
+      browsers: z.array(BrowserSchema).optional(),
+      suites: z.array(z.string()).optional(),
+      testIdAttribute: z.string().optional(),
+      processes: z.array(ProcessSchema).default([]),
+    })
+    .default({ processes: [] }),
+});
+
+export type WorkspaceFile = z.infer<typeof WorkspaceFileSchema>;
+export type Organization = z.infer<typeof OrganizationSchema>;
+export type Workspace = z.infer<typeof WorkspaceSchema>;
+export type ModuleConfig = z.infer<typeof ModuleSchema>;
+export type ProcessConfig = z.infer<typeof ProcessSchema>;
+export type TestingType = z.infer<typeof TestingTypeSchema>;
 export type ProjectConfig = z.infer<typeof ProjectConfigSchema>;
 export type ProjectConfigInput = z.input<typeof ProjectConfigSchema>;
 export type ScreenshotConfig = z.infer<typeof ScreenshotConfigSchema>;

@@ -1,0 +1,30 @@
+{
+  "name": "@automax/integrations",
+  "version": "0.1.0",
+  "description": "AutoMax integrations: GitHub (check runs, PR comments, issues) and Jira (issues, links, transitions) with fingerprint-based dedupe.",
+  "license": "Apache-2.0",
+  "author": "Sireesh Yarlagadda (https://www.linkedin.com/in/yarlagadda/)",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "publishConfig": {
+    "exports": {
+      ".": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@automax/contracts": "workspace:*",
+    "@octokit/rest": "^22.0.1",
+    "zod": "^4.5.4"
+  },
+  "devDependencies": {
+    "msw": "^2.15.0"
+  }
+}

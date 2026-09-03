@@ -21,6 +21,8 @@ export interface RunManifest {
   command: string;
   shardIndex?: number;
   shardTotal?: number;
+  process?: string;
+  modules?: string[];
   automaxVersion: string;
   playwrightVersion?: string;
   exitCode?: number;
@@ -76,6 +78,8 @@ export interface ScenarioMeta {
   pickleLine?: number;
   exampleIndex?: number | null;
   tags: string[];
+  module?: string;
+  process?: string;
   retry: number;
   workerIndex: number;
   parallelIndex: number;

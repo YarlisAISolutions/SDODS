@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "AutoMax — an entire wrapper around Playwright: BDD UI + API + hybrid testing, multi-project, data-driven, self-healing, MCP, agents.",
+  "description": "AutoMax — an automation platform with a reusable architecture built on Playwright: BDD UI + API + hybrid testing, multi-project, data-driven, self-healing, MCP, agents.",
   "license": "Apache-2.0",
   "engines": {
     "node": ">=22"
@@ -23,7 +23,10 @@
     "test:db:pg": "DB_DRIVER=postgres vitest run packages/db",
     "demo:api": "node --import tsx ./packages/cli/src/bin.ts run -p demo-shop -e staging -l api",
     "demo:ui": "node --import tsx ./packages/cli/src/bin.ts run -p demo-shop -e staging -l ui -b chromium -t @smoke",
-    "release:check": "node --import tsx ./packages/cli/src/bin.ts run -p demo-shop --project-matrix --har-replay --strict"
+    "release:check": "node --import tsx ./packages/cli/src/bin.ts run -p demo-shop --project-matrix --har-replay --strict",
+    "docs:dev": "bun run --cwd apps/docs dev",
+    "docs:build": "bun run --cwd apps/docs build",
+    "docs:verify": "bun run --cwd apps/docs verify"
   },
   "devDependencies": {
     "@types/node": "^22.15.0",
@@ -37,7 +40,11 @@
     "vitest": "^5.0.0",
     "@eslint/js": "^9.39.0",
     "@playwright/test": "^1.62.1",
-    "playwright-bdd": "^9.2.0"
+    "playwright-bdd": "^9.2.0",
+    "@automax/contracts": "workspace:*",
+    "@automax/core": "workspace:*",
+    "@automax/cli": "workspace:*",
+    "@changesets/cli": "^3.0.1"
   },
   "trustedDependencies": [
     "better-sqlite3",

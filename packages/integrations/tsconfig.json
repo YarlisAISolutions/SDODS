@@ -6,18 +6,6 @@
     "outDir": "dist",
     "tsBuildInfoFile": "dist/.tsbuildinfo"
   },
-  "include": [
-    "src"
-  ],
-  "references": [
-    {
-      "path": "../contracts"
-    },
-    {
-      "path": "../core"
-    },
-    {
-      "path": "../integrations"
-    }
-  ]
+  "include": ["src"],
+  "references": [{ "path": "../contracts" }]
 }

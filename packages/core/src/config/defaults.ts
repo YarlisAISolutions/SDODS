@@ -42,3 +42,4 @@ export const ENV_TO_CONFIG_PATH: Record<string, string> = {
 export const DEFAULT_ARTIFACTS_DIR = '.automax/runs';
 export const DEFAULT_PROJECTS_DIR = 'projects';
 export const PROJECT_FILE = 'automax.project.yaml';
+export const WORKSPACE_FILE = 'automax.workspace.yaml';
