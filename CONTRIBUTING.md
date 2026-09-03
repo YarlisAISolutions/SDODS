@@ -5,7 +5,7 @@ Thank you for helping. AutoMax is Apache-2.0 and welcomes issues, docs fixes and
 ## Setup
 
 ```bash
-git clone https://github.com/yarlagadda/AutoMax.git && cd AutoMax
+git clone https://github.com/siri1410/AutoMax.git && cd AutoMax
 bun install                      # pnpm install also works
 npx playwright install --with-deps
 bun run typecheck && bun run lint && bun run test

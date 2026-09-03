@@ -65,7 +65,7 @@ Prerequisites: Node 22+, and either Bun 1.4+ (fastest) or pnpm 9+.
 
 ```bash
 # 1. Get the code
-git clone https://github.com/yarlagadda/AutoMax.git && cd AutoMax
+git clone https://github.com/siri1410/AutoMax.git && cd AutoMax
 bun install                      # or: pnpm install
 npx playwright install --with-deps
 

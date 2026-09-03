@@ -76,7 +76,7 @@ perf:
 integrations:
   github:
     enabled: false
-    owner: yarlagadda
+    owner: siri1410
     repo: AutoMax
     createIssueOnFailure: never
     tokenEnv: GITHUB_TOKEN
