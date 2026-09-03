@@ -41,7 +41,7 @@ export default function HomePage() {
       <main className="mx-auto flex max-w-5xl flex-col items-center px-4 py-16 text-center">
         <img src="/AutoMax/img/automax-logo.svg" alt="AutoMax" className="w-full max-w-lg" />
         <p className="mt-6 max-w-2xl text-lg text-fd-muted-foreground">
-          An automation platform with a reusable architecture, built on Playwright. BDD for UI, API
+          An automation platform with a reusable architecture. BDD for UI, API
           and hybrid flows, multi-project and multi-environment, data-driven, self-healing, with a
           web UI, an MCP server and AI agents.
         </p>
