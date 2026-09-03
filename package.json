@@ -1,0 +1,49 @@
+{
+  "name": "automax-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "AutoMax — an entire wrapper around Playwright: BDD UI + API + hybrid testing, multi-project, data-driven, self-healing, MCP, agents.",
+  "license": "Apache-2.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "bun@1.4.0",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "automax": "node --import tsx ./packages/cli/src/bin.ts",
+    "typecheck": "tsc -b",
+    "lint": "eslint . && prettier --check .",
+    "format": "prettier --write .",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:db:pg": "DB_DRIVER=postgres vitest run packages/db",
+    "demo:api": "node --import tsx ./packages/cli/src/bin.ts run -p demo-shop -e staging -l api",
+    "demo:ui": "node --import tsx ./packages/cli/src/bin.ts run -p demo-shop -e staging -l ui -b chromium -t @smoke",
+    "release:check": "node --import tsx ./packages/cli/src/bin.ts run -p demo-shop --project-matrix --har-replay --strict"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "eslint": "^9.39.0",
+    "eslint-config-prettier": "^10.1.0",
+    "eslint-plugin-playwright": "^2.11.0",
+    "prettier": "^3.9.0",
+    "tsx": "^4.23.0",
+    "typescript": "~5.9.3",
+    "typescript-eslint": "^8.69.0",
+    "vitest": "^5.0.0",
+    "@eslint/js": "^9.39.0",
+    "@playwright/test": "^1.62.1",
+    "playwright-bdd": "^9.2.0"
+  },
+  "trustedDependencies": [
+    "better-sqlite3",
+    "argon2",
+    "@playwright/test",
+    "playwright",
+    "esbuild"
+  ]
+}

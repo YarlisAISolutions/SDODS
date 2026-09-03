@@ -1,0 +1,83 @@
+{
+  "name": "@automax/core",
+  "version": "0.1.0",
+  "description": "AutoMax runtime: config, project registry, merged Playwright/BDD fixtures, step libraries, data providers, screenshots, self-healing, recorder, lint and reporters.",
+  "license": "Apache-2.0",
+  "author": "Sireesh Yarlagadda (https://www.linkedin.com/in/yarlagadda/)",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./config": "./src/config/index.ts",
+    "./fixtures": "./src/fixtures/test.ts",
+    "./test": "./src/fixtures/test.ts",
+    "./steps": "./src/steps/index.ts",
+    "./steps/glob": "./src/steps/glob.ts",
+    "./data": "./src/data/index.ts",
+    "./heal": "./src/heal/index.ts",
+    "./shots": "./src/shots/index.ts",
+    "./api": "./src/api/index.ts",
+    "./pages": "./src/pages/index.ts",
+    "./lint": "./src/lint/index.ts",
+    "./analyze": "./src/analyze/index.ts",
+    "./recorder": "./src/recorder/index.ts",
+    "./har": "./src/har/index.ts",
+    "./auth": "./src/auth/index.ts",
+    "./insights": "./src/insights/index.ts",
+    "./reporters/dashboard": "./src/reporters/dashboard.ts",
+    "./reporters": "./src/reporters/index.ts",
+    "./logger": "./src/logger.ts"
+  },
+  "publishConfig": {
+    "exports": {
+      ".": "./dist/index.js",
+      "./config": "./dist/config/index.js",
+      "./fixtures": "./dist/fixtures/test.js",
+      "./test": "./dist/fixtures/test.js",
+      "./steps": "./dist/steps/index.js",
+      "./steps/glob": "./dist/steps/glob.js",
+      "./data": "./dist/data/index.js",
+      "./heal": "./dist/heal/index.js",
+      "./shots": "./dist/shots/index.js",
+      "./api": "./dist/api/index.js",
+      "./pages": "./dist/pages/index.js",
+      "./lint": "./dist/lint/index.js",
+      "./analyze": "./dist/analyze/index.js",
+      "./recorder": "./dist/recorder/index.js",
+      "./har": "./dist/har/index.js",
+      "./auth": "./dist/auth/index.js",
+      "./insights": "./dist/insights/index.js",
+      "./reporters/dashboard": "./dist/reporters/dashboard.js",
+      "./reporters": "./dist/reporters/index.js",
+      "./logger": "./dist/logger.js"
+    }
+  },
+  "files": ["dist"],
+  "engines": { "node": ">=22" },
+  "peerDependencies": {
+    "@playwright/test": ">=1.58",
+    "playwright-bdd": ">=9"
+  },
+  "dependencies": {
+    "@automax/contracts": "workspace:*",
+    "@cucumber/gherkin": "^42.0.1",
+    "@cucumber/messages": "^34.2.1",
+    "@faker-js/faker": "^10.6.0",
+    "@scalar/openapi-parser": "^0.29.0",
+    "ajv": "^8.20.0",
+    "ajv-formats": "^3.0.1",
+    "chart.js": "^4.5.1",
+    "csv-parse": "^7.0.2",
+    "cucumber-tag-expressions": "^2.0.3",
+    "dotenv": "^17.4.2",
+    "execa": "^10.0.1",
+    "jsonpath-plus": "^10.4.0",
+    "picocolors": "^1.1.1",
+    "ts-morph": "^28.0.0",
+    "yaml": "^2.9.0",
+    "zod": "^4.5.4"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.62.1",
+    "playwright-bdd": "^9.2.0"
+  }
+}

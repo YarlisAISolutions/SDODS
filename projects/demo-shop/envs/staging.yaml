@@ -1,0 +1,23 @@
+name: staging
+description: Public sandboxes (SauceDemo + JSONPlaceholder). No secrets except the demo password.
+ui:
+  baseUrl: https://www.saucedemo.com
+api:
+  baseUrl: https://jsonplaceholder.typicode.com
+  headers: { Accept: application/json }
+  auth: { type: none }
+  # For a real API:
+  # auth: { type: bearer, token: '${API_TOKEN}' }
+  # openapi: ./openapi/staging.json
+users:
+  poolSize: 4
+vars:
+  defaultProduct: Sauce Labs Backpack
+  standardPassword: '${DEMO_SHOP_PASSWORD:-secret_sauce}'
+use:
+  locale: en-US
+  timezoneId: America/New_York
+screenshots:
+  onlyOnFailure: false
+perf:
+  budgets: { pageLoadMs: 5000 }

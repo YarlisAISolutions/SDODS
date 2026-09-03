@@ -1,0 +1,42 @@
+{
+  "name": "@automax/cli",
+  "version": "0.1.0",
+  "description": "automax — the command-line entry point for AutoMax: init, analyze, run, lint, record, har, data, db, report, agent, mcp, serve, schedule, integrations.",
+  "license": "Apache-2.0",
+  "author": "Sireesh Yarlagadda (https://www.linkedin.com/in/yarlagadda/)",
+  "type": "module",
+  "bin": {
+    "automax": "./bin/automax.js"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "publishConfig": {
+    "exports": {
+      ".": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "bin",
+    "templates"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@automax/contracts": "workspace:*",
+    "@automax/core": "workspace:*",
+    "commander": "^15.0.0",
+    "execa": "^10.0.1",
+    "picocolors": "^1.1.1",
+    "semver": "^7.8.5",
+    "yaml": "^2.9.0",
+    "zod": "^4.5.4",
+    "@playwright/test": "^1.62.1",
+    "playwright-core": "^1.62.1"
+  },
+  "devDependencies": {
+    "@types/semver": "^7.7.0"
+  }
+}

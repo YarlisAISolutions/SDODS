@@ -1,0 +1,8 @@
+dist
+node_modules
+.automax
+.features-gen
+*.md
+bun.lock
+apps/docs/build
+packages/web/dist

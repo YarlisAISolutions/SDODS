@@ -1,0 +1,118 @@
+# AutoMax project definition. Validated by ProjectConfigSchema (@automax/contracts).
+slug: demo-shop
+name: Demo Shop
+description: >-
+  Reference project: SauceDemo UI, JSONPlaceholder API, hybrid API→UI chaining,
+  data-driven CSV logins, a user pool, HAR playback, visual/a11y/perf examples.
+layers: [ui, api, hybrid, recorded]
+browsers: [chromium, firefox, webkit]
+testIdAttribute: data-test # SauceDemo uses data-test="..."
+
+routes:
+  login: /
+  inventory: /inventory.html
+  cart: /cart.html
+  checkout: /checkout-step-one.html
+
+tags:
+  suites: [smoke, regression, sanity]
+  extra: [mock, visual, a11y, perf, data-driven, pool, hybrid-demo]
+  roles: [standard, problem, performance, locked]
+
+envs:
+  default: staging
+  available: [local, staging]
+
+data:
+  sources:
+    users: { type: csv, path: 'data/{env}/users.csv', fallback: data/common/users.csv }
+    products: { type: json, path: data/common/products.json }
+    posts: { type: yaml, path: 'data/{env}/posts.yaml', fallback: data/common/posts.yaml }
+  factories: ./data/factories.ts
+  userPool:
+    dataset: users
+    roleColumn: role
+    leaseStore: file
+    leaseTtlMs: 600000
+
+auth:
+  strategy: form
+  storageState: true
+  maxAgeMinutes: 120
+  form:
+    loginPath: /
+    usernameSelector: '#user-name'
+    passwordSelector: '#password'
+    submitSelector: '#login-button'
+    readyUrl: /inventory.html
+
+screenshots:
+  policy:
+    default: on-failure
+    '@smoke': scenario
+    '@regression': step
+    '@sanity': scenario
+    '@visual': visual
+  fullPage: false
+  mask: ['[data-test="shopping-cart-badge"]']
+  viewport: { width: 1280, height: 720 }
+  onlyOnFailure: false
+
+heal:
+  enabled: true
+  primaryTimeoutMs: 3000
+  probeTimeoutMs: 1500
+  minScore: 0.6
+
+timeouts: { test: 60000, expect: 10000, action: 15000, navigation: 30000, api: 15000 }
+retries:
+  ci: 2
+  local: 0
+  byTag: { '@flaky': 2 }
+
+perf:
+  budgets: { pageLoadMs: 4000, lcpMs: 3000, apiP95Ms: 1500 }
+
+integrations:
+  github:
+    enabled: false
+    owner: yarlagadda
+    repo: AutoMax
+    createIssueOnFailure: never
+    tokenEnv: GITHUB_TOKEN
+  jira:
+    enabled: false
+    projectKey: DEMO
+    createIssueOnFailure: never
+
+mcp:
+  servers:
+    playwright:
+      transport: stdio
+      command: npx
+      args: [playwright, mcp, --headless]
+
+agents:
+  models: { planner: claude-opus-5, generator: claude-opus-5, healer: claude-opus-5 }
+  budgetUsd: { default: 2, planner: 5 }
+  maxRunsPerJob: 3
+
+schedules:
+  - name: smoke-hourly
+    cron: '0 * * * *'
+    timezone: UTC
+    tags: '@smoke'
+    browsers: [chromium]
+    harMode: replay
+    enabled: false
+  - name: nightly-matrix
+    cron: '0 2 * * *'
+    timezone: America/New_York
+    tags: '@regression'
+    browsers: [chromium, firefox, webkit]
+    enabled: false
+
+reports:
+  cucumberHtml: false
+  allure: false
+  junit: false

@@ -1,0 +1,17 @@
+name: local
+description: Same public sandboxes, smaller pool, headed-friendly timeouts. Override URLs via AUTOMAX_UI_BASE_URL / AUTOMAX_API_BASE_URL.
+ui:
+  baseUrl: https://www.saucedemo.com
+api:
+  baseUrl: https://jsonplaceholder.typicode.com
+  headers: { Accept: application/json }
+  auth: { type: none }
+users:
+  poolSize: 2
+vars:
+  defaultProduct: Sauce Labs Bike Light
+  standardPassword: '${DEMO_SHOP_PASSWORD:-secret_sauce}'
+timeouts:
+  test: 90000
+screenshots:
+  onlyOnFailure: false

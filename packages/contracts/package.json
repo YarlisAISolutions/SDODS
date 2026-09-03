@@ -1,0 +1,30 @@
+{
+  "name": "@automax/contracts",
+  "version": "0.1.0",
+  "description": "Shared schemas, identifiers, naming conventions and DTO types for AutoMax packages.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./ids": "./src/ids.ts",
+    "./names": "./src/names.ts",
+    "./scopes": "./src/scopes.ts",
+    "./schemas": "./src/schemas/index.ts",
+    "./types": "./src/types.ts"
+  },
+  "publishConfig": {
+    "exports": {
+      ".": "./dist/index.js",
+      "./ids": "./dist/ids.js",
+      "./names": "./dist/names.js",
+      "./scopes": "./dist/scopes.js",
+      "./schemas": "./dist/schemas/index.js",
+      "./types": "./dist/types.js"
+    }
+  },
+  "files": ["dist"],
+  "engines": { "node": ">=22" },
+  "dependencies": {
+    "zod": "^4.5.4"
+  }
+}
