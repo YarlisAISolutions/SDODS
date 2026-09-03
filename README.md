@@ -3,7 +3,7 @@
 </p>
 
 <p align="center">
-  <strong>An automation platform with a reusable architecture, built on Playwright.</strong><br>
+  <strong>An automation platform</strong><br>
   BDD for UI, API and hybrid flows · multi-project, multi-environment · data-driven · self-healing · before/after screenshot narratives · SQLite ⇄ Postgres · MCP server · AI agents · GitHub &amp; Jira · cron schedules · web UI.
 </p>
 
