@@ -1,0 +1,17 @@
+---
+title: Tagging policy
+description: A small, enforced vocabulary keeps suites selectable and reports meaningful.
+---
+
+<Learn>
+How to assign suite tags, when to add feature tags, how modules make expectations explicit, and how to keep the vocabulary from growing.
+</Learn>
+
+- **One layer, one suite, always.** Lint enforces it; do not disable lint to get a green run.
+- **`@smoke` is a budget.** Keep it under a few minutes per browser; it runs on every pull request.
+- **`@regression` is the truth.** Everything with product value; nightly on every browser.
+- **`@sanity` is targeted.** After a hotfix or a data migration.
+- **Feature tags describe mechanics** (`@visual`, `@a11y`, `@perf`, `@mock`, `@pool`), not teams. Put ownership on modules (`owner`, `jiraComponent`).
+- **Value tags carry facts** (`@user:admin`, `@data:orders`, `@har:checkout`, `@jira:SHOP-42`); lint validates them against the project.
+- **Prefer `@skip:<browser>` to code branches.** The exclusion stays visible in reports.
+- **Retire tags.** Remove entries from `tags.extra` when nothing uses them; unknown tags warn, so drift is visible.

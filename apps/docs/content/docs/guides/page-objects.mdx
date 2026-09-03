@@ -1,0 +1,74 @@
+---
+title: Page objects with decorators
+description: Bind Gherkin steps to page-object methods with playwright-bdd decorators and heal-aware locators.
+---
+
+<Learn>
+How `@Fixture` and step decorators bind Gherkin to methods, what `BasePage` provides, how `heal.locator` declares recovery context, and how page objects are exposed as fixtures.
+</Learn>
+
+## Anatomy
+
+```ts title="projects/demo-shop/pages/InventoryPage.ts"
+import { expect } from '@playwright/test';
+import { Fixture, Given, Then, When } from 'playwright-bdd/decorators';
+import { BasePage } from '@automax/core/pages';
+import type { test } from '../steps/fixtures.js';
+
+@Fixture<typeof test>('inventoryPage')
+export class InventoryPage extends BasePage {
+  readonly title = this.heal.locator(this.page.locator('.title'), { text: 'Products', description: 'page title' });
+  readonly cartBadge = this.page.getByTestId('shopping-cart-badge');
+
+  @Given('I am on the inventory page')
+  async open() {
+    await this.goto('inventory');
+  }
+
+  @When('I add {string} to the cart')
+  async add(product: string) {
+    const card = this.page.locator('.inventory_item', { hasText: product });
+    await this.heal.click(card.getByRole('button', { name: 'Add to cart' }), { role: 'button', name: 'Add to cart', description: `add ${product}` });
+  }
+
+  @Then('the cart should show {int} item(s)')
+  async cartCount(n: number) {
+    await expect(this.cartBadge).toHaveText(String(n));
+  }
+}
+```
+
+## Expose it as a fixture
+
+```ts title="projects/demo-shop/steps/fixtures.ts"
+import { test as base, createBdd } from '@automax/core/fixtures';
+import { InventoryPage } from '../pages/InventoryPage.js';
+import { auth } from './auth.js';
+
+export const test = base.extend<{ inventoryPage: InventoryPage }>({
+  auth: [auth, { scope: 'worker', option: true }],
+  inventoryPage: async ({ pages }, use) => use(pages.get(InventoryPage)),
+});
+
+export const { Given, When, Then } = createBdd(test);
+```
+
+`pages.get(Class)` constructs the page object lazily with the current `page`, the resolved configuration and the healer, and caches it per scenario.
+
+## What `BasePage` gives you
+
+| Member | Purpose |
+|---|---|
+| `goto(routeName)` | navigates to a route declared in `routes:` relative to the environment base URL |
+| `heal` | the scenario's healer: `locator()`, `click()`, `fill()`, `selectOption()`, `expectVisible()` |
+| `waitForPopup()`, `frame(name)`, `setInputFiles()`, `waitForDownload()` | multi-tab, iframe, upload and download helpers |
+| `shots` | the screenshot narrator, for explicit captures |
+
+<Callout type="info">
+Keep the primary locator you believe in and describe the element in the heal context. AutoMax only probes alternatives when the primary fails, and it tells you which alternative won.
+</Callout>
+
+## Next steps
+
+- [Self-healing locators](/docs/guides/self-healing)
+- [Locator strategy](/docs/best-practices/locator-strategy)

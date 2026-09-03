@@ -1,0 +1,93 @@
+---
+title: Reusable step library
+description: The steps every project gets for free, grouped by API, UI, data and hybrid use.
+---
+
+<Learn>
+Which steps `@automax/core/steps` ships, how parameters and doc strings are rendered with variables, and how project steps coexist with the shared ones.
+</Learn>
+
+## API
+
+```gherkin
+When I send a GET request to "/posts/{{postId}}"
+When I send a POST request to "/posts" with body:
+  """json
+  { "title": "{{title}}" }
+  """
+Given I set the request header "X-Trace" to "abc"
+Given I set the query parameter "page" to "2"
+Given I authenticate with bearer token from "API_TOKEN"
+Then the response status should be 201
+Then the response JSON path "data.items[0].id" should equal "42"
+Then the response JSON path "title" should match "^Auto"
+Then the response should match the JSON schema "schemas/post.schema.json"
+Then the response should match the OpenAPI schema for GET "/posts/{id}"
+Then the response should match the zod schema "schemas/post.ts"
+When I save the response JSON path "id" as "postId"
+When I poll GET "/jobs/{{jobId}}" until JSON path "status" equals "done" within 30 seconds
+Then the response time should be under 800 ms
+```
+
+## UI
+
+```gherkin
+Given I navigate to the "inventory" page
+When I click the "Add to cart" button
+When I fill the "Username" field with "{{username}}"
+When I click the element with test id "checkout"
+When I fill the form:
+  | field      | value            |
+  | First Name | {{firstName}}    |
+  | Last Name  | {{lastName}}     |
+Then I should see the text "Products"
+Then the "Checkout" button should be visible
+Then the page URL should contain "/cart.html"
+Then the page should match the visual baseline "inventory"
+When I mock "**/api/banner" with JSON:
+  """json
+  { "text": "hello" }
+  """
+When I upload "data/common/avatar.png" to the "Avatar" field
+```
+
+`{role}` accepts any ARIA role (`button`, `link`, `textbox`, ...).
+
+## Data
+
+```gherkin
+Given I load dataset "users" row 1
+Given I load dataset "users" where "role" is "admin"
+Given I use a leased user with role "standard"
+Given I generate a "user" from the factory as "newUser"
+Given I register cleanup DELETE "/users/{{newUser.id}}"
+```
+
+## Hybrid
+
+```gherkin
+When I seed via POST "/posts" with body:
+  """json
+  { "title": "seeded" }
+  """
+Then the UI should show the text from JSON path "title"
+When I replay HAR "products" for "**/api/**"
+```
+
+## Rendering rules
+
+Every `{string}` argument and doc string passes through the template renderer. Variables come from, in order: values captured with `I save ...`, the current dataset row, `vars` in the environment file. `${VAR}` references are resolved earlier by configuration.
+
+## Discover what a project can use
+
+```bash
+bun run automax steps list -p demo-shop
+bun run automax steps list -p demo-shop --unused
+```
+
+The list is what the editor and the MCP `step_list` tool use for completion.
+
+## Next steps
+
+- [Step library reference](/docs/reference/step-library)
+- [Page objects](/docs/guides/page-objects)

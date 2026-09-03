@@ -1,0 +1,45 @@
+---
+title: automax steps, features, coverage, browsers, processes
+description: Inventory commands for a project.
+---
+
+## `steps list`
+
+```text
+automax steps list -p <slug> [--unused] [--json]
+```
+
+Lists every step definition available to the project (shared library plus project steps) from `bddgen export`. <Planned phase={1} />
+
+## `features list`
+
+```text
+automax features list -p <slug> [--tags <expr>] [--json]
+```
+
+Lists feature files and scenarios with their tags and modules. <Planned phase={1} />
+
+## `coverage`
+
+```text
+automax coverage -p <slug> [--routes] [--openapi] [--json]
+```
+
+Joins routes and endpoints (from modules and the analyzer) with scenarios per suite tag. <Planned phase={12} />
+
+## `browsers`
+
+```text
+automax browsers install [--with-deps] [--browser <name>]...
+automax browsers list
+```
+
+Wraps `playwright install`. <Planned phase={12} />
+
+## `processes list`
+
+```text
+automax processes list -p <slug> [--json]
+```
+
+Lists processes from the workspace defaults and the project, with trigger, tags, browsers and gates. <Planned phase={12} />

@@ -1,0 +1,13 @@
+{
+  "title": "AutoMax",
+  "pages": [
+    "index",
+    "glossary",
+    "getting-started",
+    "guides",
+    "reference",
+    "best-practices",
+    "release-notes",
+    "roadmap"
+  ]
+}

@@ -1,0 +1,33 @@
+---
+title: automax record, har, auth
+description: Record sessions, manage HAR files and capture login state.
+---
+
+## `record` (alias `codegen`)
+
+```text
+automax record -p <slug> -e <env> [--name <name>] [--url <path>] [--user <role>] [--device <name>]
+               [--browser <name>] [--save-har] [--viewport <WxH>] [--no-post-process]
+automax record convert <spec>... [--dry-run]
+```
+
+<Planned phase={6} />
+
+## `har`
+
+```text
+automax har record -p <slug> -e <env> [-t <expr>] [--interactive --name <name>]
+automax har replay -p <slug> -e <env> [-t <expr>] [--strict]
+automax har list -p <slug>
+```
+
+<Planned phase={6} />
+
+## `auth`
+
+```text
+automax auth capture -p <slug> -e <env> --user <role> [--index <n>|--all] [--interactive]
+automax auth list -p <slug> -e <env>
+```
+
+<Planned phase={3} />

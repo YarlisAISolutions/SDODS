@@ -1,0 +1,14 @@
+{
+  "title": "Getting started",
+  "defaultOpen": true,
+  "pages": [
+    "installation",
+    "onboard-existing-app",
+    "first-api-test",
+    "first-ui-test",
+    "hybrid-scenario",
+    "every-browser",
+    "view-results",
+    "web-ui"
+  ]
+}

@@ -1,0 +1,20 @@
+---
+title: automax doctor
+description: Check the toolchain, browsers, projects, variables and database.
+---
+
+```text
+automax doctor [-p <slug>] [--fix] [--json]
+```
+
+| Check | Detail |
+|---|---|
+| node | version 22 or newer |
+| bun | optional accelerator |
+| npx playwright | Playwright present |
+| browser:chromium / firefox / webkit | executable installed; `--fix` installs missing ones |
+| projects | at least one project discovered |
+| `<slug>/<env> vars` | every `${VAR}` without a default resolves from `.env` files or the shell |
+| database | `DB_DRIVER` and `DATABASE_URL` consistent |
+
+Exit code `1` when any check fails; `--json` prints the check list.

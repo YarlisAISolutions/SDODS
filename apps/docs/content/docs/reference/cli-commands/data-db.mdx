@@ -1,0 +1,28 @@
+---
+title: automax data, db
+description: Import and preview datasets; migrate, inspect and switch the database.
+---
+
+## `data`
+
+```text
+automax data import <dataset> <file> -p <slug> [-e <env>] [--to db|table]
+automax data preview <file>
+automax data seed -p <slug> -e <env> [--truncate --yes]
+```
+
+<Planned phase={5} />
+
+## `db`
+
+```text
+automax db migrate [--to <name>] [--down]
+automax db status
+automax db reset --yes                       # sqlite only
+automax db switch <sqlite|postgres> [--target-url <url>] [--target-path <file>] [--dry-run] [--yes]
+automax db export <dir>
+automax db import <dir>
+automax db prune --keep-runs <n> --keep-days <n>
+```
+
+Environment: `DB_DRIVER`, `DATABASE_URL`, `SQLITE_PATH`. <Planned phase={5} />

@@ -1,0 +1,22 @@
+---
+title: automax mcp, serve
+description: Start the MCP server or the web server.
+---
+
+## `mcp`
+
+```text
+automax mcp [-p <slug>] [-e <env>] [--caps core,analyze,run,data,agents,issues] [--config <file>] [--headless|--headed]
+            [--output-dir <dir>] [--isolated] [--http --port <n>] [--stateless]
+automax mcp install claude|cursor|vscode
+```
+
+<Planned phase={7} />
+
+## `serve`
+
+```text
+automax serve [--port 4444] [--host 127.0.0.1]
+```
+
+Environment: `PORT`, `HOST`, `SESSION_SECRET`, `AUTOMAX_PUBLIC_URL`, `AUTH_DISABLED`, `AUTOMAX_PROJECTS_DIR`, `AUTOMAX_ARTIFACTS_DIR`, `AUTOMAX_MAX_CONCURRENT_RUNS`. <Planned phase={9} />

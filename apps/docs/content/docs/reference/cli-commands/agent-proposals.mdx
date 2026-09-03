@@ -1,0 +1,19 @@
+---
+title: automax agent, proposals
+description: Run agent roles and review their proposals.
+---
+
+```text
+automax agent plan     -p <slug> [-e <env>] --goal <text> [--model <id>] [--max-turns <n>] [--budget-usd <n>] [--dry-run] [--adapter claude|openai|fake]
+automax agent generate -p <slug> (--plan <file> | --goal <text> | --spec <file>)
+automax agent heal     -p <slug> --scenario <fingerprint>
+automax agent upgrade  -p <slug> (--diff <a..b> | --openapi-old <f> --openapi-new <f>)
+automax agent review   -p <slug> [paths...]
+automax agent install-claude
+automax proposals list [--status pending|accepted|rejected]
+automax proposals show <id>
+automax proposals accept <id> [--branch <name>] [--yes]
+automax proposals reject <id>
+```
+
+<Planned phase={8} />

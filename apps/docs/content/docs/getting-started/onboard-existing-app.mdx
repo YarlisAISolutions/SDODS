@@ -1,0 +1,64 @@
+---
+title: Onboard an existing app
+description: Point AutoMax at an application repository and get a working project.
+---
+
+<Learn>
+How `automax analyze` reads an application repository, what it detects, what it proposes, and how to turn the proposal into a project you can run immediately.
+</Learn>
+
+## Analyze
+
+<Planned phase={12} />
+```bash
+bun run automax analyze ../my-app
+```
+
+The analyzer is read-only. It scans the repository and reports, with evidence and a confidence score:
+
+- package manager and monorepo shape
+- frontend framework (React, Next.js, Vue, Nuxt, Angular, Svelte, plain)
+- **routes** from Next.js `app/` and `pages/`, React Router, Vue Router, Angular, Express, Fastify, NestJS, Spring, Flask, Django
+- **OpenAPI or Swagger** specifications on disk or at common URLs
+- the **test-id attribute** in use (`data-testid`, `data-test`, `data-cy`, `data-qa`) by counting occurrences
+- existing tests (Playwright, Cypress, Cucumber, Jest) and their locators
+- login pages and authentication libraries
+- environment files, base URLs, Docker Compose ports, CI provider, locales, accessibility tooling
+
+The output is `automax-analysis.json` plus a readable report containing a proposed `automax.project.yaml`, `envs/*.yaml`, a starter feature per route group and per OpenAPI tag, a coverage map and a best-practice checklist.
+
+## Apply
+
+```bash
+bun run automax analyze ../my-app --apply
+bun run automax run -p my-app -e local -t @smoke
+```
+
+`--apply` writes the project. The generated `@smoke` scenarios are health checks that pass on a reachable application, so the first run is green and you extend from there.
+
+## Start from scratch instead
+
+`project create` exists today:
+
+```bash
+bun run automax project create my-app \
+  --ui-url http://localhost:3000 \
+  --api-url http://localhost:3000/api \
+  --env local
+```
+
+It scaffolds the YAML, an environment, fixtures, an authentication stub, a page object, health features and a data folder. See the [project command reference](/docs/reference/cli-commands/project).
+
+## Coverage
+
+<Planned phase={12} />
+```bash
+bun run automax coverage -p my-app --routes --openapi
+```
+
+`coverage` joins the route and endpoint inventory with your features to show what each suite tag exercises.
+
+## Next steps
+
+- [Projects and environments](/docs/guides/projects-and-environments)
+- [Your first API test](/docs/getting-started/first-api-test)

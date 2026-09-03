@@ -1,0 +1,35 @@
+---
+title: automax report, show-report, trace, heal, insights
+description: Open reports, ingest results, inspect heals and compute insights.
+---
+
+## `report`
+
+```text
+automax report [--last|--run <id>] [--open] [--html|--dashboard|--allure] [--json]
+automax report ingest --run-id <id> [-p <slug>] [--manifest <file>] [--format auto|cucumber|pw-json] <files...> [--replace]
+                      [--server <url> --token <token>]
+automax report html --run-id <id>
+automax show-report [--run <id>]
+automax trace <zip|runId>
+```
+
+<Planned phase={2} />
+
+## `heal report`
+
+```text
+automax heal report [--last|--run <id>] [-p <slug>] [--json] [--write-history]
+```
+
+<Planned phase={2} />
+
+## `insights`
+
+```text
+automax insights compute -p <slug> [--window <n>]
+automax insights show -p <slug> [--json]
+automax insights quarantine <fingerprint> [--off]
+```
+
+<Planned phase={8} />

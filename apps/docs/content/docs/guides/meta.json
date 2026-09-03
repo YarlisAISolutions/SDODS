@@ -1,0 +1,29 @@
+{
+  "title": "Guides",
+  "pages": [
+    "organizations-workspaces-modules",
+    "processes-and-testing-types",
+    "projects-and-environments",
+    "configuration",
+    "tags-and-suites",
+    "test-data-and-user-pools",
+    "auth-and-storage-state",
+    "page-objects",
+    "step-library",
+    "screenshots-and-visual",
+    "accessibility-and-performance",
+    "network-mocking-and-har",
+    "record-and-playback",
+    "record-playback-roles-environments",
+    "sharding-and-ci",
+    "github-and-jira",
+    "database",
+    "self-healing",
+    "insights-and-flaky",
+    "agents",
+    "mcp",
+    "scheduling",
+    "security",
+    "migrating"
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "title": "CLI commands",
+  "pages": [
+    "init",
+    "analyze",
+    "project",
+    "env",
+    "config",
+    "doctor",
+    "run",
+    "lint",
+    "steps-features-coverage",
+    "record-har-auth",
+    "data-db",
+    "report-heal-insights",
+    "agent-proposals",
+    "mcp-serve",
+    "users-tokens-schedule-integrations"
+  ]
+}

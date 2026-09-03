@@ -1,0 +1,31 @@
+---
+title: Flaky triage playbook
+description: A repeatable routine for turning flaky scenarios into stable ones.
+---
+
+<Learn>
+How to spot flakiness early, classify its cause, and act with the tools AutoMax provides at each step.
+</Learn>
+
+<Steps>
+<Step>
+### Detect
+`automax insights show -p <slug>` ranks scenarios by flakiness score over the last 30 runs; the dashboard flags any that passed only on retry.
+</Step>
+<Step>
+### Classify
+Open the run: heal events point to locator drift; API snapshots with 5xx or timeouts point to the environment; before/after screenshots show timing races.
+</Step>
+<Step>
+### Contain
+Quarantine (`insights quarantine <fingerprint>`) so gates stay honest while you work; the scenario keeps running and reporting.
+</Step>
+<Step>
+### Fix
+Locator drift: accept the page-object patch proposal. Timing: replace waits with assertions on state. Environment: tag `@env:` or record a HAR.
+</Step>
+<Step>
+### Verify
+`automax run -p <slug> --scenario "<name>" --repeat-each 10 --fail-on-flaky`, then lift the quarantine.
+</Step>
+</Steps>

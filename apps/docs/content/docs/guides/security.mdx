@@ -1,0 +1,58 @@
+---
+title: Security
+description: Secrets, API tokens, roles across organizations and workspaces, sessions, and what agents may touch.
+---
+
+<Learn>
+Where secrets are allowed to live, how free scoped API tokens work, how platform, organization and workspace roles combine, and the boundaries agents cannot cross.
+</Learn>
+
+## Secrets
+
+- YAML holds `${VAR}` references; a literal secret fails validation.
+- `.env` files are parsed into a private map, never into `process.env`.
+- Integrations and MCP servers store variable names only.
+- Logs, HAR files and screenshots are redacted or masked by key pattern and `mask` selectors.
+
+## API tokens
+
+Tokens are free, unlimited, scoped and revocable. Format `amx_` plus 40 characters; stored as SHA-256; shown once.
+
+```bash
+bun run automax tokens create --user ci --name ingest --scopes runs:ingest,runs:read --expires 90d
+bun run automax tokens list
+bun run automax tokens revoke <id>
+```
+
+A token's scopes must be a subset of its owner's role, at creation and at use.
+
+## Roles
+
+```mermaid
+flowchart LR
+  PR["platform role<br/>viewer · editor · admin"] --> EFF{"effective workspace role"}
+  OR["organization role<br/>member → viewer · admin → admin · owner → admin"] --> EFF
+  WR["workspace role<br/>viewer · editor · admin"] --> EFF
+  EFF --> SC["scopes<br/>projects:* envs:* runs:* features:* agents:* processes:* ..."]
+```
+
+The effective role inside a workspace is the higher of the explicit workspace membership and the role implied by organization membership; platform admins are admin everywhere.
+
+| Scope group | viewer | editor | admin |
+|---|---|---|---|
+| `*:read`, `artifacts:read` | ✔ | ✔ | ✔ |
+| `runs:write`, `runs:ingest`, `features:write`, `datasets:write`, `envs:write`, `schedules:write`, `processes:write`, `agents:*` | | ✔ | ✔ |
+| `users:admin`, `orgs:admin`, `workspaces:write`, `integrations:write`, `audit:read` | | | ✔ |
+
+## Sessions
+
+HttpOnly, SameSite=Lax cookies with sliding seven-day expiry; every non-GET request carries a CSRF header; login is rate-limited.
+
+## Agents
+
+Agents can read the project, run scenarios and drive a browser. Their only write path is a proposal directory. Nothing reaches `main` without a person accepting it.
+
+## Next steps
+
+- [Reviewing agent proposals](/docs/best-practices/reviewing-proposals)
+- [MCP](/docs/guides/mcp)

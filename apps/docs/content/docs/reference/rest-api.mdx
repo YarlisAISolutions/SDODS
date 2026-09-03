@@ -1,0 +1,12 @@
+---
+title: REST API
+description: The server's HTTP API, generated from the Fastify schemas.
+---
+
+<Planned phase={9} />
+
+The server exposes REST routes under `/api` for auth, tokens, projects, environments, datasets, runs (start, list, detail, cancel, SSE events), artifacts (stream, compare), features (tree, read, write, validate), steps, record, agent jobs, integrations, schedules, stats, users and audit, plus `/mcp` (streamable HTTP MCP) and static `/reports/:runId/` and `/trace/`.
+
+Authentication: a session cookie (browser) or `Authorization: Bearer amx_...` (CI, MCP clients). Non-GET session requests carry `x-csrf-token`.
+
+The OpenAPI document is served at `/api/openapi.json` and rendered at `/api/docs` once the server ships.

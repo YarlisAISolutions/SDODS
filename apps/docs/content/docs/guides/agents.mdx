@@ -1,0 +1,67 @@
+---
+title: Agents
+description: Provider-agnostic AI roles that plan, generate, heal, upgrade and review tests, and only write proposals.
+---
+
+<Learn>
+Which agent roles exist, what each reads and produces, how the adapter keeps AutoMax independent of one LLM vendor, how proposals are reviewed, and how cost is bounded.
+</Learn>
+
+## Roles
+
+| Role | Input | Output |
+|---|---|---|
+| planner | a goal, the running app through Playwright MCP or the source tree and OpenAPI | `docs/test-plans/<name>.md` with tagged scenarios |
+| generator | a plan, a goal or a recorded spec | feature file, only-unmatched steps, page object |
+| healer | a failing scenario, its error, ARIA snapshot and locator stats | a page-object or step patch, re-run result |
+| upgrader | a git diff range or two OpenAPI versions | new and updated scenarios, data rows, deprecation list |
+| reviewer | changed features | review notes and optional data-driven refactors |
+
+```mermaid
+flowchart LR
+  G["goal / diff / failure"] --> A["agent role"]
+  A -->|reads| T["MCP tools: project config, steps, features,<br/>run scenario, run history, locator stats, source"]
+  A -->|browses| PW["Playwright MCP"]
+  A -->|writes only| P["proposals/&lt;id&gt;/"]
+  P --> R["review: UI diff or automax proposals show"]
+  R -->|accept| W["working tree or branch → lint → bddgen"]
+```
+
+## Adapter
+
+`AUTOMAX_LLM_PROVIDER=claude` uses the Claude Agent SDK with the bundled Playwright MCP; `openai-compatible` talks to any chat-completions endpoint with tool calling; `fake` replays scripted responses for tests and `--dry-run`. LLM keys are yours and billed by the provider; AutoMax's own API tokens are free.
+
+## Commands
+
+```bash
+bun run automax agent plan     -p demo-shop --goal "checkout with a discount code"
+bun run automax agent generate -p demo-shop --plan docs/test-plans/checkout.md
+bun run automax agent heal     -p demo-shop --scenario <fingerprint>
+bun run automax agent upgrade  -p demo-shop --diff main..feature/x
+bun run automax agent review   -p demo-shop
+bun run automax agent generate -p demo-shop --goal "login" --dry-run --adapter fake
+bun run automax proposals list
+bun run automax proposals show <id>
+bun run automax proposals accept <id> --branch automax/<id>
+```
+
+## Budgets
+
+```yaml title="automax.project.yaml"
+agents:
+  models: { planner: claude-opus-5, generator: claude-opus-5, healer: claude-opus-5 }
+  maxTurns: { healer: 30 }
+  budgetUsd: { default: 2, planner: 5 }
+  maxRunsPerJob: 3
+```
+
+Every job records model, turns and cost; a job stops at its budget.
+
+## Claude Code
+
+`automax agent install-claude` writes `.claude/agents/automax-*.md`, `.mcp.json` and the repository's `AGENT.md`/`SKILL.md`, so Claude Code users get the same roles as the CLI.
+
+## Next steps
+
+- [Reviewing agent proposals](/docs/best-practices/reviewing-proposals)
+- [MCP](/docs/guides/mcp)
