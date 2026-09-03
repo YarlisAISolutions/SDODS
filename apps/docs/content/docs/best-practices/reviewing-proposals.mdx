@@ -1,0 +1,17 @@
+---
+title: Reviewing agent proposals
+description: What to check before accepting a change an agent produced.
+---
+
+<Learn>
+A checklist for reviewing proposals from the planner, generator, healer and upgrader roles.
+</Learn>
+
+- **Scope**: the proposal touches only the module it was asked about. Reject anything that edits unrelated features or steps.
+- **Reuse**: new steps exist only where the shared vocabulary has no match; check `step_find` suggestions in the manifest.
+- **Locators**: role, label or test id first; CSS only inside page objects with a heal context.
+- **Assertions**: a heal proposal must not loosen an assertion; a generator proposal must assert an outcome, not just "no error".
+- **Tags**: one layer, one suite, value tags valid; run `automax lint` on the proposal (accept does it for you).
+- **Verification**: the manifest records which scenarios the agent ran and their status; re-run them yourself on a second browser.
+- **Cost**: note the model, turns and cost in the manifest; adjust `agents.budgetUsd` when a role overspends.
+- **Branch**: accept with `--branch` and open a pull request; never apply to `main` directly.

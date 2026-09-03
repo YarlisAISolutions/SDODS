@@ -1,0 +1,61 @@
+---
+title: Step library
+description: Every shared step, its parameters and what it touches.
+---
+
+Parameter types: `{string}`, `{int}`, `{method}` (GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS), `{role}` (any ARIA role). Every `{string}` and doc string is rendered with `{{variables}}`.
+
+## API steps
+
+| Step | Effect |
+|---|---|
+| `I send a {method} request to {string}` | request without body |
+| `I send a {method} request to {string} with body:` | request with a doc-string body (`json` media type parsed) |
+| `I set the request header {string} to {string}` | header for the rest of the scenario |
+| `I set the query parameter {string} to {string}` | query parameter for the rest of the scenario |
+| `I authenticate with bearer token from {string}` | bearer token from an environment variable |
+| `the response status should be {int}` | status assertion |
+| `the response JSON path {string} should equal {string}` | dot/bracket path or `$..` JSONPath, value coerced |
+| `the response JSON path {string} should match {string}` | regular expression |
+| `the response should match the JSON schema {string}` | ajv with formats |
+| `the response should match the OpenAPI schema for {method} {string}` | operation response schema from `api.openapi` |
+| `the response should match the zod schema {string}` | default export of a Zod module |
+| `I save the response JSON path {string} as {string}` | capture a variable |
+| `I poll {method} {string} until JSON path {string} equals {string} within {int} seconds` | polling with 1 s interval |
+| `the response time should be under {int} ms` | latency assertion |
+
+## UI steps
+
+| Step | Effect |
+|---|---|
+| `I navigate to the {string} page` | route name from `routes` |
+| `I click the {string} {role}` | heal-aware click by role and name |
+| `I fill the {string} field with {string}` | heal-aware fill by label |
+| `I click the element with test id {string}` | heal-aware click by test id |
+| `I fill the form:` | data table of `field`/`value` |
+| `I should see the text {string}` | visible text |
+| `the {string} {role} should be visible` | heal-aware visibility assertion |
+| `the page URL should contain {string}` | URL assertion |
+| `the page should match the visual baseline {string}` | `toHaveScreenshot` |
+| `I mock {string} with JSON:` | route fulfilment |
+| `I upload {string} to the {string} field` | file input |
+| `the page should have no accessibility violations of impact {string} or higher` | axe-core |
+| `the page should meet the performance budget` | web vitals vs budgets |
+
+## Data steps
+
+| Step | Effect |
+|---|---|
+| `I load dataset {string} row {int}` | columns become variables |
+| `I load dataset {string} where {string} is {string}` | first matching row |
+| `I use a leased user with role {string}` | lease + apply storage state |
+| `I generate a {string} from the factory as {string}` | deterministic faker object |
+| `I register cleanup {method} {string}` | request executed at scenario end |
+
+## Hybrid steps
+
+| Step | Effect |
+|---|---|
+| `I seed via {method} {string} with body:` | API request reported as a seed |
+| `the UI should show the text from JSON path {string}` | asserts a captured API value in the page |
+| `I replay HAR {string} for {string}` | `routeFromHAR` for a URL glob |

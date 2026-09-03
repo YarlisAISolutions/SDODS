@@ -1,0 +1,15 @@
+{
+  "title": "Reference",
+  "pages": [
+    "cli",
+    "cli-commands",
+    "project-yaml",
+    "env-yaml",
+    "step-library",
+    "mcp-tools",
+    "rest-api",
+    "environment-variables",
+    "exit-codes",
+    "file-naming"
+  ]
+}

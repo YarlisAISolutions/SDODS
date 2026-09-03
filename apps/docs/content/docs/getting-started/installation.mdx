@@ -1,0 +1,76 @@
+---
+title: Installation
+description: Install Node 22, Bun or pnpm, the AutoMax workspace and Playwright browsers.
+---
+
+<Learn>
+Which runtimes AutoMax needs, how to install the workspace with Bun or pnpm, how to install browsers, and how to confirm the setup with `automax doctor`.
+</Learn>
+
+## Requirements
+
+| Requirement | Version | Why |
+|---|---|---|
+| Node.js | 22 or newer | Playwright workers, vitest and native database drivers run on Node |
+| Bun **or** pnpm | Bun 1.4+ or pnpm 9+ | package manager and script runner. Bun installs and builds faster; nothing executes tests under Bun |
+| Git | any recent | cloning and proposals |
+| Docker | optional | Postgres for the database toggle |
+
+<Callout type="info">
+Use `nvm use 22` or `fnm use 22`. The repository ships an `.nvmrc`.
+</Callout>
+
+## Install the workspace
+
+```bash
+git clone https://github.com/siri1410/AutoMax.git
+cd AutoMax
+bun install                # or: pnpm install
+npx playwright install --with-deps
+```
+
+`bun install` links every workspace package (`packages/*`, `apps/*`). The `automax` command runs from source through `tsx`, so there is no build step during development.
+
+## Check the setup
+
+```bash
+bun run automax doctor
+```
+
+`doctor` checks Node, Bun, Playwright, the three browser engines, every project's environment files and the variables they reference, and database reachability. Add `--fix` to install missing browsers.
+
+Sample output:
+
+```text
+✔ node                         v22.22.2
+✔ bun                          1.4.0
+✔ npx playwright               Version 1.62.1
+✔ browser:chromium             /Users/you/Library/Caches/ms-playwright/chromium-.../chrome
+✔ browser:firefox              ...
+✔ browser:webkit               ...
+✔ projects                     demo-shop
+✔ demo-shop/local vars         0 var(s) resolved
+✔ demo-shop/staging vars       0 var(s) resolved
+✔ database                     sqlite (.automax/automax.db)
+```
+
+## Look around
+
+```bash automax-verify
+bun run automax project list
+bun run automax config validate
+```
+
+## Install as a dependency of your own repository
+
+<Planned phase={13} />
+Once packages are published, a new workspace is one command away:
+
+```bash
+npx automax init my-tests
+```
+
+## Next steps
+
+- [Onboard an existing app](/docs/getting-started/onboard-existing-app)
+- [Your first API test](/docs/getting-started/first-api-test)

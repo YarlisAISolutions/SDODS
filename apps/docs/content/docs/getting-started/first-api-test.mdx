@@ -1,0 +1,68 @@
+---
+title: Your first API test
+description: Write and run an API scenario with the shared step library, without a browser.
+---
+
+<Learn>
+How an API scenario is tagged, which shared steps send requests and assert on responses, and how `automax run -l api` executes it without launching a browser.
+</Learn>
+
+## Write the feature
+
+Create `projects/demo-shop/features/api/posts.feature`:
+
+```gherkin
+@api @smoke
+Feature: Posts API
+  Scenario: Read a single post
+    When I send a GET request to "/posts/1"
+    Then the response status should be 200
+    And the response JSON path "id" should equal "1"
+    And the response time should be under 2000 ms
+```
+
+Two tags matter: `@api` selects the layer, `@smoke` selects the suite. `automax lint` refuses a scenario without exactly one of each.
+
+## Send a body and chain values
+
+```gherkin
+@api @regression
+Feature: Posts API
+  Scenario: Create then read
+    When I send a POST request to "/posts" with body:
+      """json
+      { "title": "AutoMax", "body": "hello", "userId": 1 }
+      """
+    Then the response status should be 201
+    When I save the response JSON path "id" as "postId"
+    And I send a GET request to "/posts/{{postId}}"
+    Then the response status should be 200
+```
+
+`{{postId}}` is rendered from variables captured in the same scenario, plus `vars` from the environment file and any loaded dataset row.
+
+## Validate against a schema
+
+```gherkin
+    Then the response should match the JSON schema "schemas/post.schema.json"
+```
+
+JSON Schema (via ajv), Zod modules and OpenAPI operations are supported. See the [step library](/docs/guides/step-library).
+
+## Run it
+
+```bash
+bun run automax run -p demo-shop -e staging -l api
+bun run automax run -p demo-shop -e staging -l api -t @smoke
+```
+
+`-l api` runs the Playwright project `demo-shop--api`, which has no browser device. The base URL, headers and authentication come from `envs/staging.yaml` (`api.baseUrl`, `api.headers`, `api.auth`).
+
+## What you get
+
+Every request attaches `request.json` and `response.json` (with `Authorization` redacted) to the scenario, so the HTML report and the run viewer show the exact exchange.
+
+## Next steps
+
+- [Your first UI test](/docs/getting-started/first-ui-test)
+- [Configuration precedence](/docs/guides/configuration)

@@ -1,0 +1,7 @@
+.source/
+.next/
+out/
+next-env.d.ts
+public/screenshots/*.png
+public/screenshots/*.html
+public/screenshots/manifest.json

@@ -1,0 +1,11 @@
+{
+  "title": "Best practices",
+  "pages": [
+    "locator-strategy",
+    "tagging-policy",
+    "data-driven-design",
+    "fast-suites",
+    "flaky-triage",
+    "reviewing-proposals"
+  ]
+}

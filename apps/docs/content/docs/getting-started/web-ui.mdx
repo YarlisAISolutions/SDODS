@@ -1,0 +1,46 @@
+---
+title: The web UI
+description: What the AutoMax web application offers and how it relates to the CLI.
+---
+
+<Learn>
+What each page of the web application does, which role can do what, and why the UI never does anything the CLI cannot.
+</Learn>
+
+## Start it
+
+```bash
+bun run automax users create --admin
+bun run automax serve                 # http://127.0.0.1:4444
+```
+
+The server is a Fastify application. It spawns the same `automax` commands you run by hand and streams their logs over Server-Sent Events, so a run started from a browser looks exactly like one started from a terminal.
+
+## Pages
+
+| Page | What it does |
+|---|---|
+| Dashboard | pass-rate, duration and flaky trends; most-failing locators; latest runs; proposals inbox |
+| Projects | the project YAML as a form: layers, browsers, tag policy, screenshot policy, integrations, MCP servers |
+| Environments | base URLs and non-secret settings; secret names shown with a presence indicator |
+| Datasets | upload CSV, JSON or YAML, preview the first rows, choose file or database storage |
+| Runs | filterable list, live log, scenario tree, step timeline with before/after comparison and API panels |
+| Feature editor | Gherkin editing with step completion from your project, lint diagnostics, run this scenario |
+| Recorder | launch Playwright codegen with a pool user, save the spec, convert it with an agent |
+| Agents | start a role, watch it work, review the diff, accept or reject |
+| Integrations | GitHub and Jira settings, connection tests, MCP servers the project consumes |
+| Schedules | cron builder with the next fire times, history, pause and resume |
+| Users, Settings | roles, free scoped API tokens, MCP client install snippets |
+
+## Roles
+
+| Role | Can |
+|---|---|
+| viewer | read everything, download artifacts |
+| editor | start and stop runs, edit features and datasets, run agents, accept proposals |
+| admin | manage users, integrations, projects, tokens |
+
+## Next steps
+
+- [Configuration precedence](/docs/guides/configuration)
+- [MCP](/docs/guides/mcp)

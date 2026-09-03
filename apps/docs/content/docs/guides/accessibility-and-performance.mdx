@@ -1,0 +1,49 @@
+---
+title: Accessibility and performance budgets
+description: Gate scenarios on axe-core violations and web-vitals budgets per environment.
+---
+
+<Learn>
+How `@a11y` runs axe-core after each page, how `@perf` collects navigation and paint timings, and how budgets are declared per project and per environment.
+</Learn>
+
+## Accessibility
+
+```gherkin
+@ui @regression @a11y
+Scenario: The inventory page has no serious accessibility violations
+  Given I am on the inventory page
+  Then the page should have no accessibility violations of impact "serious" or higher
+```
+
+`@a11y` registers a hook that runs `@axe-core/playwright` after each UI step; violations are attached as JSON (`automax/a11y/<step>`) and counted per impact. The assertion step lets you choose the threshold.
+
+## Performance
+
+```yaml title="automax.project.yaml"
+perf:
+  budgets: { pageLoadMs: 4000, lcpMs: 3000, apiP95Ms: 1500 }
+```
+
+```yaml title="envs/staging.yaml"
+perf:
+  budgets: { pageLoadMs: 5000 }    # looser on staging
+```
+
+```gherkin
+@ui @regression @perf
+Scenario: Inventory loads within budget
+  Given I am on the inventory page
+  Then the page should meet the performance budget
+```
+
+Metrics come from the Navigation Timing, Resource Timing and Paint Timing APIs (TTFB, DOMContentLoaded, load, FCP, LCP, resource count and size) and are attached as `automax/perf/<step>`. API latency per endpoint is collected from every API step and compared with `apiP95Ms` in insights.
+
+## In processes
+
+A [process](/docs/guides/processes-and-testing-types) can require both gates: `gates: { a11y: true, perfBudgets: true }` fails the run when any tagged scenario breaks its budget.
+
+## Next steps
+
+- [Processes and testing types](/docs/guides/processes-and-testing-types)
+- [Insights and flaky management](/docs/guides/insights-and-flaky)

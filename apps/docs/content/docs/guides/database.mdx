@@ -1,0 +1,64 @@
+---
+title: Database (SQLite ⇄ Postgres)
+description: One schema on two drivers, ingest of run results, and a verified switch between drivers.
+---
+
+<Learn>
+What the database stores, how `DB_DRIVER` selects SQLite or Postgres, what ingest writes, and how `automax db switch` copies and verifies data.
+</Learn>
+
+## Toggle
+
+```bash
+DB_DRIVER=sqlite  bun run automax db migrate          # default: .automax/automax.db
+docker compose up -d postgres
+DB_DRIVER=postgres DATABASE_URL=postgres://automax:automax@localhost:5432/automax bun run automax db migrate
+bun run automax db status
+```
+
+Kysely serves one schema on both drivers; primary keys are application-generated UUID v7 strings, timestamps are ISO text on SQLite and `timestamptz` on Postgres, JSON is text or `jsonb`.
+
+## What is stored
+
+| Group | Tables |
+|---|---|
+| Platform | organizations, workspaces, projects, environments, users, roles, sessions, api_tokens, audit_log |
+| Results | runs, scenarios, scenario_attempts, steps, artifacts |
+| Learning | heal_events, locator_stats, flaky_stats |
+| Data | datasets, dataset_rows, user_pool, user_leases, plus `td_<slug>_<name>` test-data tables |
+| Automation | integrations, issue_links, agent_jobs, proposals, schedules, schedule_runs |
+
+The runner never needs the database unless a scenario uses a `db` dataset, a database lease store, or ingest is enabled.
+
+## Ingest
+
+```mermaid
+flowchart LR
+  N["messages.ndjson<br/>(cucumber messages)"] --> I["ingest"]
+  J["pw-results.json<br/>(recorded layer)"] --> I
+  A["run directory artifacts"] --> I
+  I --> R["runs · scenarios · attempts · steps · artifacts"]
+  R --> F["finalize: flaky flags, totals,<br/>flaky_stats, locator_stats"]
+```
+
+Scenarios are counted, attempts are kept; a scenario that failed once and passed on retry is `flaky`. Re-ingesting the same files is idempotent, and shards merge into one run.
+
+```bash
+bun run automax run -p demo-shop -e staging -l api --ingest
+bun run automax report ingest --run-id <id> .automax/runs/<id>/messages.ndjson
+```
+
+## Switch drivers
+
+```bash
+bun run automax db switch postgres --target-url postgres://automax:automax@localhost:5432/automax --dry-run
+bun run automax db switch postgres --target-url postgres://automax:automax@localhost:5432/automax --yes
+bun run automax db switch sqlite --yes
+```
+
+The switch migrates the target, exports every table in foreign-key order, imports in one transaction, verifies row counts, and only then rewrites `.env`. `db export` and `db import` expose the two halves for backups; `db prune --keep-runs 200 --keep-days 90` deletes old runs and their artifact directories.
+
+## Next steps
+
+- [Insights and flaky management](/docs/guides/insights-and-flaky)
+- [Sharding and CI](/docs/guides/sharding-and-ci)

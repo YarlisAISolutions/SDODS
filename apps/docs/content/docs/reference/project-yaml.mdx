@@ -1,0 +1,175 @@
+---
+title: automax.project.yaml and automax.workspace.yaml
+description: Field-by-field reference for the project file and the workspace file.
+---
+
+<Learn>
+Every field of `automax.project.yaml` and of the root `automax.workspace.yaml`, its type, default and purpose, derived from the Zod schemas in `@automax/contracts`.
+</Learn>
+
+## automax.project.yaml
+
+### Identity and hierarchy
+
+<TypeTable type={{
+  slug: { type: 'string', description: 'Lowercase letters, digits, dashes; must equal the directory name.', required: true },
+  name: { type: 'string', required: true },
+  description: { type: 'string' },
+  organization: { type: 'slug', description: 'Organization the project belongs to (default: workspace file).' },
+  workspace: { type: 'slug', description: 'Workspace the project belongs to (default: workspace file).' },
+}} />
+
+### Layers, browsers, routes, tags, environments
+
+<TypeTable type={{
+  layers: { type: "('ui'|'api'|'hybrid'|'recorded')[]", required: true },
+  browsers: { type: "('chromium'|'firefox'|'webkit'|'mobile-chrome'|'mobile-safari')[]", default: "['chromium']" },
+  channel: { type: "'chrome'|'msedge'|'chrome-beta'|'msedge-beta'", description: 'Branded browser channel.' },
+  testIdAttribute: { type: 'string', default: "'data-testid'" },
+  routes: { type: 'Record<string, string>', default: '{}', description: 'Route name → path, used by goto(name) and navigation steps.' },
+  'tags.suites': { type: 'string[]', default: "['smoke','regression','sanity']" },
+  'tags.extra': { type: 'string[]', default: '[]', description: 'Optional feature tags allowed without warnings.' },
+  'tags.roles': { type: 'string[]', default: '[]', description: 'Valid values for @user:<role>.' },
+  'envs.default': { type: 'string', required: true },
+  'envs.available': { type: 'string[]', required: true },
+}} />
+
+### Modules and processes
+
+<TypeTable type={{
+  'modules[].name': { type: 'slug', required: true },
+  'modules[].title': { type: 'string' },
+  'modules[].path': { type: 'string', description: 'Folder under features/ (default: the name).' },
+  'modules[].layers': { type: 'Layer[]' },
+  'modules[].testingTypes': { type: 'TestingType[]', default: "['functional']", description: 'functional, smoke, regression, sanity, integration, contract, visual, accessibility, performance, security, data-driven, exploratory.' },
+  'modules[].tags': { type: 'string[]', default: '[]', description: 'Tags every scenario in the module should carry (lint warns).' },
+  'modules[].owner': { type: 'string' },
+  'modules[].jiraComponent': { type: 'string' },
+  'modules[].routes': { type: 'string[]', default: '[]' },
+  'modules[].endpoints': { type: 'string[]', default: '[]' },
+  'processes[].name': { type: 'slug', required: true },
+  'processes[].trigger': { type: "'manual'|'pr'|'merge'|'nightly'|'release'|'schedule'|'webhook'", default: "'manual'" },
+  'processes[].env': { type: 'string' },
+  'processes[].tags': { type: 'string', description: 'Tag expression.' },
+  'processes[].layers': { type: 'Layer[]' },
+  'processes[].browsers': { type: 'Browser[]' },
+  'processes[].modules': { type: 'slug[]' },
+  'processes[].workers': { type: 'number' },
+  'processes[].retries': { type: 'number' },
+  'processes[].harMode': { type: "'off'|'update'|'replay'" },
+  'processes[].failOnFlaky': { type: 'boolean', default: 'false' },
+  'processes[].gates': { type: '{ minPassRate?, maxFlaky?, perfBudgets, a11y }', default: '{ perfBudgets: false, a11y: false }' },
+  'processes[].notify': { type: "('github'|'jira'|'webhook')[]", default: '[]' },
+  'processes[].schedule': { type: 'string', description: 'Cron expression.' },
+}} />
+
+### Data and authentication
+
+<TypeTable type={{
+  'data.sources': { type: 'Record<string, DataSource>', default: '{}', description: "csv|json|yaml with path/fallback; db with table/envColumn; openapi with spec/schema." },
+  'data.factories': { type: 'string', description: 'Path to a defineFactories module.' },
+  'data.userPool': { type: '{ dataset, roleColumn, leaseStore, leaseTtlMs }', description: "roleColumn default 'role', leaseStore 'file'|'db', leaseTtlMs 600000." },
+  'auth.strategy': { type: "'none'|'form'|'token'|'oauth-client-credentials'|'sso'|'custom'", default: "'none'" },
+  'auth.storageState': { type: 'boolean', default: 'true' },
+  'auth.maxAgeMinutes': { type: 'number', default: '60' },
+  'auth.form': { type: '{ loginPath, usernameSelector, passwordSelector, submitSelector, readySelector?, readyUrl? }' },
+  'auth.tokenPlacement': { type: "{ kind: 'localStorage'|'cookie'|'header', name, prefix }" },
+}} />
+
+### Screenshots, healing, timeouts, retries, performance
+
+<TypeTable type={{
+  'screenshots.policy': { type: "Record<string, 'off'|'on-failure'|'scenario'|'step'|'visual'>", default: "{ default: 'on-failure' }", description: 'Keys are tags or "default".' },
+  'screenshots.fullPage': { type: 'boolean', default: 'false' },
+  'screenshots.mask': { type: 'string[]', default: '[]' },
+  'screenshots.viewport': { type: '{ width, height }', default: '{ 1280, 720 }' },
+  'screenshots.onlyOnFailure': { type: 'boolean', default: 'false' },
+  'heal.enabled': { type: 'boolean', default: 'true' },
+  'heal.primaryTimeoutMs': { type: 'number', default: '3000' },
+  'heal.probeTimeoutMs': { type: 'number', default: '1500' },
+  'heal.minScore': { type: 'number 0–1', default: '0.6' },
+  'heal.actions': { type: "('click'|'fill'|'select'|'assert'|'hover'|'check')[]", default: 'all' },
+  timeouts: { type: '{ test, expect, action, navigation, api }', default: '{ 60000, 10000, 15000, 30000, 15000 }' },
+  retries: { type: '{ ci, local, byTag }', default: '{ 2, 0, {} }' },
+  'perf.budgets': { type: '{ pageLoadMs?, lcpMs?, fcpMs?, ttfbMs?, apiP95Ms? }', default: '{}' },
+}} />
+
+### Integrations, MCP, agents, schedules, reports
+
+<TypeTable type={{
+  'integrations.github': { type: '{ enabled, owner, repo, checkRun, prComment, createIssueOnFailure, closeOnPass, labels, tokenEnv, uploadToRelease }' },
+  'integrations.jira': { type: '{ enabled, baseUrl, projectKey, issueType, authMode, emailEnv, tokenEnv, createIssueOnFailure, transitionOnPass, linkTaggedScenarios, labels, maxAttachmentMb }' },
+  'integrations.custom': { type: '{ module, options }[]', default: '[]' },
+  'mcp.servers': { type: 'Record<string, stdio|http server>', default: '{}', description: 'envFrom/headersFrom hold env var NAMES.' },
+  'agents.provider': { type: "'claude'|'openai-compatible'|'fake'" },
+  'agents.models': { type: 'Record<role, model>', default: '{}' },
+  'agents.maxTurns': { type: 'Record<role, number>', default: '{}' },
+  'agents.budgetUsd': { type: 'Record<role, number>', default: '{ default: 2 }' },
+  'agents.maxRunsPerJob': { type: 'number', default: '3' },
+  'agents.sourceRoots': { type: 'string[]', default: '[]' },
+  'schedules[]': { type: '{ name, cron, timezone, env?, tags?, layers?, browsers?, workers?, harMode?, overlap, jitterSeconds, catchUp, enabled, notify, retentionRuns? }' },
+  reports: { type: '{ cucumberHtml, allure, junit }', default: 'all false' },
+}} />
+
+### The demo project
+
+```yaml
+slug: demo-shop
+name: Demo Shop
+layers: [ui, api, hybrid, recorded]
+browsers: [chromium, firefox, webkit]
+testIdAttribute: data-test
+routes: { login: /, inventory: /inventory.html, cart: /cart.html, checkout: /checkout-step-one.html }
+tags:
+  suites: [smoke, regression, sanity]
+  extra: [mock, visual, a11y, perf, data-driven, pool, hybrid-demo]
+  roles: [standard, problem, performance, locked]
+envs: { default: staging, available: [local, staging] }
+data:
+  sources:
+    users: { type: csv, path: 'data/{env}/users.csv', fallback: data/common/users.csv }
+    products: { type: json, path: data/common/products.json }
+  factories: ./data/factories.ts
+  userPool: { dataset: users, roleColumn: role, leaseStore: file, leaseTtlMs: 600000 }
+auth:
+  strategy: form
+  form: { loginPath: /, usernameSelector: '#user-name', passwordSelector: '#password', submitSelector: '#login-button', readyUrl: /inventory.html }
+screenshots:
+  policy: { default: on-failure, '@smoke': scenario, '@regression': step, '@sanity': scenario, '@visual': visual }
+  mask: ['[data-test="shopping-cart-badge"]']
+heal: { enabled: true, primaryTimeoutMs: 3000, probeTimeoutMs: 1500, minScore: 0.6 }
+retries: { ci: 2, local: 0, byTag: { '@flaky': 2 } }
+perf: { budgets: { pageLoadMs: 4000, lcpMs: 3000, apiP95Ms: 1500 } }
+```
+
+## automax.workspace.yaml
+
+The root file names the organization and workspace every project in the repository belongs to and holds defaults.
+
+<TypeTable type={{
+  'organization.slug': { type: 'slug', required: true },
+  'organization.name': { type: 'string', required: true },
+  'organization.description': { type: 'string' },
+  'organization.url': { type: 'url' },
+  'workspace.slug': { type: 'slug', required: true },
+  'workspace.name': { type: 'string', required: true },
+  'workspace.description': { type: 'string' },
+  'workspace.organization': { type: 'slug' },
+  'defaults.browsers': { type: 'Browser[]' },
+  'defaults.suites': { type: 'string[]' },
+  'defaults.testIdAttribute': { type: 'string' },
+  'defaults.processes': { type: 'Process[]', default: '[]', description: 'Apply to every project unless overridden by name.' },
+}} />
+
+```yaml
+organization: { slug: automax, name: AutoMax, url: https://github.com/siri1410/AutoMax }
+workspace: { slug: default, name: Default workspace, organization: automax }
+defaults:
+  browsers: [chromium, firefox, webkit]
+  suites: [smoke, regression, sanity]
+  testIdAttribute: data-testid
+  processes:
+    - { name: pr-check, trigger: pr, tags: '@smoke', browsers: [chromium], harMode: replay, gates: { minPassRate: 100 } }
+    - { name: nightly-regression, trigger: nightly, tags: '@regression', browsers: [chromium, firefox, webkit], notify: [github], schedule: '0 2 * * *' }
+    - { name: release-gate, trigger: release, tags: '@smoke or @regression', failOnFlaky: true, gates: { minPassRate: 100, maxFlaky: 0, perfBudgets: true, a11y: true } }
+```

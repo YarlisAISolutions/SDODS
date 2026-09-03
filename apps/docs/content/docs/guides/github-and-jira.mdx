@@ -1,0 +1,76 @@
+---
+title: GitHub and Jira
+description: Check runs, PR comments and deduplicated issues on GitHub; issues, links and transitions on Jira.
+---
+
+<Learn>
+How the GitHub and Jira providers are configured per project with secret names only, what each does on a finished run, how issues are deduplicated by scenario fingerprint, and how tags link scenarios to existing issues.
+</Learn>
+
+## Configure
+
+```yaml title="automax.project.yaml"
+integrations:
+  github:
+    enabled: true
+    owner: siri1410
+    repo: AutoMax
+    checkRun: true
+    prComment: true
+    createIssueOnFailure: smoke      # never | smoke | always
+    labels: [automax, test-failure]
+    tokenEnv: GITHUB_TOKEN
+  jira:
+    enabled: true
+    baseUrl: https://acme.atlassian.net
+    projectKey: SHOP
+    issueType: Bug
+    emailEnv: JIRA_EMAIL
+    tokenEnv: JIRA_API_TOKEN
+    createIssueOnFailure: always
+    transitionOnPass: Done
+    linkTaggedScenarios: true
+```
+
+Only variable **names** are stored; values come from the environment where `automax` runs.
+
+## What happens after a run
+
+```mermaid
+flowchart LR
+  RUN["run finished"] --> GH["GitHub provider"]
+  RUN --> JI["Jira provider"]
+  GH --> C["check run with failure annotations<br/>(in CI)"]
+  GH --> PC["one PR comment, updated in place"]
+  GH --> GI["issue per failing scenario fingerprint"]
+  JI --> JC["issue with steps, error, screenshots, trace"]
+  JI --> JT["transition linked issue on pass"]
+  GI & JC --> D{"open issue for this fingerprint?"}
+  D -->|yes| CM["comment: failed again in run X"]
+  D -->|no| NEW["create"]
+```
+
+## Link scenarios to issues
+
+```gherkin
+@ui @regression @jira:SHOP-42 @github:123
+Scenario: Discount code applies
+```
+
+`automax integrations sync -p demo-shop` scans features for these tags, creates links, and refreshes their status. The run viewer shows the status next to the scenario.
+
+## Commands
+
+```bash
+bun run automax integrations test -p demo-shop --provider github
+bun run automax integrations notify --run-id <id> --from-files --dry-run
+bun run automax integrations sync -p demo-shop
+bun run automax integrations links -p demo-shop
+```
+
+`--from-files` builds the summary from the run directory, so notifications work without a database.
+
+## Next steps
+
+- [Sharding and CI](/docs/guides/sharding-and-ci)
+- [Security](/docs/guides/security)

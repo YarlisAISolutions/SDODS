@@ -1,0 +1,54 @@
+---
+title: A hybrid scenario
+description: Seed state through the API and verify it in the browser within one scenario.
+---
+
+<Learn>
+Why AutoMax uses one merged fixture set, how a scenario chains API responses into UI steps, and how a leased user starts the browser already logged in.
+</Learn>
+
+## Why one fixture set matters
+
+Frameworks that keep separate `test` objects for UI and API cannot mix them in one scenario. AutoMax has a single `test` with API, page, data, user, screenshot and heal fixtures, so a scenario can prepare state over HTTP and assert in the browser without glue code.
+
+## The feature
+
+`projects/demo-shop/features/hybrid/seed-then-verify.feature`:
+
+```gherkin
+@hybrid @regression
+Feature: Seed a post and see it in the UI
+  Scenario: API seeds, UI verifies
+    Given I use a leased user with role "standard"
+    When I seed via POST "/posts" with body:
+      """json
+      { "title": "AutoMax {{username}}", "userId": 1 }
+      """
+    And I save the response JSON path "title" as "title"
+    And I mock "**/inventory.html" with JSON:
+      """json
+      { "banner": "{{title}}" }
+      """
+    And I navigate to the "inventory" page
+    Then the UI should show the text from JSON path "title"
+```
+
+What happens:
+
+1. `I use a leased user` takes an account of role `standard` from the pool for this worker and applies its cached storage state to the browser context.
+2. `I seed via POST` uses the API client bound to `envs/staging.yaml`.
+3. Variables captured from the response flow into later steps through `{{title}}`.
+4. The mock step answers the UI request with the seeded value so the demo works against a public sandbox; against your own application you would skip the mock and assert on real data.
+
+## Run it
+
+```bash
+bun run automax run -p demo-shop -e staging -l hybrid -b chromium
+```
+
+Hybrid scenarios take screenshots for UI steps and attach request and response JSON for API steps, so the run viewer shows the whole story.
+
+## Next steps
+
+- [Run on every browser](/docs/getting-started/every-browser)
+- [Test data and user pools](/docs/guides/test-data-and-user-pools)

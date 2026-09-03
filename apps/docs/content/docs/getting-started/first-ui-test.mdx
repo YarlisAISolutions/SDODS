@@ -1,0 +1,72 @@
+---
+title: Your first UI test
+description: Write a UI scenario with a page object and heal-aware locators, then run it in Chromium.
+---
+
+<Learn>
+How a UI scenario maps to a page object with playwright-bdd decorators, how heal-aware locators are declared, and how to run the scenario headless or headed in Chromium.
+</Learn>
+
+## The feature
+
+`projects/demo-shop/features/ui/login.feature`:
+
+```gherkin
+@ui @smoke
+Feature: Login
+  Scenario: A standard user logs in
+    Given I am on the login page
+    When I login with "standard_user" and "{{standardPassword}}"
+    Then the page URL should contain "/inventory.html"
+```
+
+`{{standardPassword}}` comes from `vars` in the environment file, which in turn reads `${DEMO_SHOP_PASSWORD:-secret_sauce}`.
+
+## The page object
+
+`projects/demo-shop/pages/LoginPage.ts`:
+
+```ts
+
+@Fixture<typeof test>('loginPage')
+export class LoginPage extends BasePage {
+  readonly username = this.heal.locator(this.page.locator('#user-name'), {
+    label: 'Username', placeholder: 'Username', testId: 'username', description: 'username input',
+  });
+  readonly password = this.heal.locator(this.page.locator('#password'), {
+    placeholder: 'Password', testId: 'password', description: 'password input',
+  });
+  readonly submit = this.heal.locator(this.page.locator('#login-button'), {
+    role: 'button', name: 'Login', testId: 'login-button', description: 'login button',
+  });
+
+  @Given('I am on the login page')
+  async open() {
+    await this.goto('login'); // route name from automax.project.yaml
+  }
+
+  @When('I login with {string} and {string}')
+  async login(user: string, password: string) {
+    await this.username.fill(user);
+    await this.password.fill(password);
+    await this.submit.click();
+  }
+}
+```
+
+The page object is exposed as a fixture in `steps/fixtures.ts`, and `@Fixture('loginPage')` binds the decorated steps to it. `this.heal.locator` keeps your primary locator and records the context AutoMax uses when that locator breaks; see [Self-healing locators](/docs/guides/self-healing).
+
+## Run it
+
+```bash
+bun run automax run -p demo-shop -e staging -l ui -b chromium -t @smoke
+bun run automax run -p demo-shop -e staging -l ui -b chromium -t @smoke --headed
+bun run automax run -p demo-shop -e staging -l ui -b chromium --ui        # Playwright UI mode
+```
+
+`@smoke` uses the `scenario` screenshot policy by default: one capture at the start and one at the end. Switch to `@regression` and you get before and after captures for every step.
+
+## Next steps
+
+- [A hybrid scenario](/docs/getting-started/hybrid-scenario)
+- [Page objects with decorators](/docs/guides/page-objects)

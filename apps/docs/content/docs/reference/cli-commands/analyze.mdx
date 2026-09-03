@@ -1,0 +1,20 @@
+---
+title: automax analyze
+description: Analyze an application repository and propose an AutoMax project.
+---
+
+<Planned phase={12} />
+
+```text
+automax analyze [path] [--project <slug>] [--openapi <spec>] [--json] [--apply]
+```
+
+| Flag | Meaning |
+|---|---|
+| `path` | application repository (default: current directory) |
+| `--project` | slug to use for the proposal (default: derived from the repository name) |
+| `--openapi` | path or URL of a specification to include |
+| `--apply` | write the proposed project under `projects/` |
+| `--json` | print `automax-analysis.json` to stdout |
+
+Detects framework, routes, OpenAPI, test-id attribute, existing tests, authentication, environment files and CI, then proposes the project YAML, environments, starter smoke features, a coverage map and a best-practice checklist. Read-only without `--apply`.

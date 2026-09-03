@@ -1,0 +1,52 @@
+---
+title: automax users, tokens, schedule, integrations, completion, upgrade
+description: Platform administration commands.
+---
+
+## `users`
+
+```text
+automax users create --admin | --username <u> --role viewer|editor|admin
+automax users list
+```
+
+<Planned phase={9} />
+
+## `tokens`
+
+```text
+automax tokens create --user <u> --name <n> --scopes <a,b> [--expires 90d]
+automax tokens list
+automax tokens revoke <id>
+```
+
+Tokens are free and unlimited. <Planned phase={9} />
+
+## `schedule`
+
+```text
+automax schedule add -p <slug> --name <n> --cron <expr> [--tz <zone>] [-t <expr>] [-b <browser>]... [--overlap skip|queue|cancel-previous] [--notify github,jira]
+automax schedule list|remove|pause|resume|run-now|history|next|sync|install|export
+```
+
+<Planned phase={9} />
+
+## `integrations`
+
+```text
+automax integrations test -p <slug> [--provider github|jira]
+automax integrations notify --run-id <id> [-p <slug>] [--from-files] [--dry-run]
+automax integrations sync -p <slug>
+automax integrations links -p <slug>
+```
+
+<Planned phase={11} />
+
+## `completion`, `upgrade`
+
+```text
+automax completion bash|zsh|fish
+automax upgrade
+```
+
+<Planned phase={13} />

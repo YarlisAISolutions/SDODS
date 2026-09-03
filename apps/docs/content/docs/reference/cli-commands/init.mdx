@@ -1,0 +1,24 @@
+---
+title: automax init
+description: Scaffold a new AutoMax workspace with a demo project.
+---
+
+<Planned phase={13} />
+
+```text
+automax init [dir] [--db sqlite|postgres] [--pm bun|pnpm] [--no-demo] [--claude]
+```
+
+| Flag | Meaning |
+|---|---|
+| `dir` | target directory (default: current) |
+| `--db` | database driver written to `.env` |
+| `--pm` | package manager used for the install step |
+| `--no-demo` | skip `projects/demo-shop` |
+| `--claude` | also write `.claude/agents` and `.mcp.json` |
+
+Creates `package.json`, `automax.workspace.yaml`, `playwright.config.ts`, `.env.example`, `docker-compose.yml`, the demo project, then runs the install and `playwright install --with-deps chromium`.
+
+```bash
+npx automax init my-tests && cd my-tests && automax run -p demo-shop -e local -t @smoke
+```

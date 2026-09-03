@@ -1,0 +1,25 @@
+---
+title: Locator strategy
+description: Choose locators that survive refactors, and declare what AutoMax may fall back to.
+---
+
+<Learn>
+The order of preference for locators, why test ids beat CSS, how to write heal contexts that are worth healing to, and what never to do.
+</Learn>
+
+1. **Role and accessible name** (`getByRole('button', { name: 'Login' })`): stable, accessible, readable.
+2. **Label, placeholder, text** for forms and content.
+3. **Test id** (`getByTestId`) when the DOM offers nothing semantic; keep `testIdAttribute` in the project YAML in sync with the application.
+4. **CSS or XPath** only as a last resort and only inside a page object with a heal context.
+
+```ts
+readonly submit = this.heal.locator(this.page.getByRole('button', { name: 'Login' }), {
+  testId: 'login-button', text: 'Login', description: 'login button',
+});
+```
+
+Give every heal context a `description`; it becomes the label in reports and the key for fragility statistics. Avoid contexts that match several elements (`text: 'Add'` on a product grid); uniqueness lowers the score and can pick the wrong element.
+
+Never heal negative assertions; AutoMax refuses to, because "not visible" is trivially satisfied by a wrong locator.
+
+Run `analyze_locators` (MCP) or the reviewer agent on a project to find CSS-only locators and strict-mode risks.
