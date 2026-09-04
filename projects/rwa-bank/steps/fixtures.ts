@@ -25,5 +25,15 @@ export const test = base.extend<{
   },
 });
 
-export const { Given, When, Then, Step, BeforeScenario, AfterScenario, BeforeStep, AfterStep, BeforeWorker, AfterWorker } =
-  createBdd(test);
+export const {
+  Given,
+  When,
+  Then,
+  Step,
+  BeforeScenario,
+  AfterScenario,
+  BeforeStep,
+  AfterStep,
+  BeforeWorker,
+  AfterWorker,
+} = createBdd(test);
