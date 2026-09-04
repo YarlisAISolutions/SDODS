@@ -26,9 +26,9 @@ Feature: Seed a post and see it in the UI
       { "title": "SDODS {{username}}", "userId": 1 }
       """
     And I save the response JSON path "title" as "title"
-    And I mock "**/inventory.html" with JSON:
-      """json
-      { "banner": "{{title}}" }
+    And I mock "**/inventory.html" with HTML:
+      """
+      <main><h1>{{title}}</h1><p>rendered from the seeded API response</p></main>
       """
     And I navigate to the "inventory" page
     Then the UI should show the text from JSON path "title"
@@ -40,6 +40,11 @@ What happens:
 2. `I seed via POST` uses the API client bound to `envs/staging.yaml`.
 3. Variables captured from the response flow into later steps through `{{title}}`.
 4. The mock step answers the UI request with the seeded value so the demo works against a public sandbox; against your own application you would skip the mock and assert on real data.
+
+Run it here — watch the title the API returns arrive in the browser panel, and note that the
+browser starts on the products page because the leased user brought its own storage state:
+
+<Playground preset="hybrid-seed" />
 
 ## Run it
 

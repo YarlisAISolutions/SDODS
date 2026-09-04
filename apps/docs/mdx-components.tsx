@@ -11,6 +11,7 @@ import { Planned } from '@/components/planned';
 import { Learn } from '@/components/learn';
 import { Screenshot } from '@/components/screenshot';
 import { Art, ArtRow } from '@/components/art';
+import { Playground } from '@/components/playground';
 
 export function getMDXComponents(components?: MDXComponents): MDXComponents {
   return {
@@ -30,6 +31,7 @@ export function getMDXComponents(components?: MDXComponents): MDXComponents {
     Screenshot,
     Art,
     ArtRow,
+    Playground,
     ...components,
   };
 }
