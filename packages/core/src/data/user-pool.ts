@@ -149,9 +149,11 @@ export class FileUserPool implements UserPool {
     if (existing) return existing;
     const pool = this.config.project.data.userPool!;
     const rows = await this.users();
+    // `index` is the position WITHIN the role, matching `automax auth capture --index` and the
+    // storage-state file name `<role>-<index>.json`.
     const candidates = rows
-      .map((r, index) => ({ r, index }))
-      .filter(({ r }) => String(r[pool.roleColumn] ?? 'standard') === role);
+      .filter((r) => String(r[pool.roleColumn] ?? 'standard') === role)
+      .map((r, index) => ({ r, index }));
     if (!candidates.length) {
       throw new AutomaxError(
         'USER_POOL_EXHAUSTED',

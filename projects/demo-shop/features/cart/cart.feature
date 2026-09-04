@@ -6,7 +6,7 @@ Feature: Cart
     Given I am on the login page
     And I login with "standard_user" and "{{standardPassword}}"
 
-  @smoke
+  @smoke @har:cart
   Scenario: A product added on the inventory page appears in the cart
     When I add "Sauce Labs Backpack" to the cart
     And I open the cart

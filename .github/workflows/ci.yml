@@ -6,7 +6,7 @@ on:
   pull_request:
   workflow_dispatch:
   schedule:
-    - cron: '0 2 * * *' # nightly full matrix (UTC)
+    - cron: '0 2 * * *' # nightly: every browser, live sandboxes (no HAR)
 
 permissions:
   contents: read
@@ -20,35 +20,58 @@ concurrency:
 
 env:
   CI: true
-  AUTOMAX_ENV: staging
+  # NOTE: do not export AUTOMAX_ENV globally — unit tests build fixture projects with their own envs.
+  BUN_VERSION: '1.4.0'
+  DEMO_ENV: staging
+  RUN_ID: gh-${{ github.run_id }}
 
 jobs:
   lint-typecheck-unit:
     name: lint · typecheck · unit
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: '1.4.0'
+          bun-version: ${{ env.BUN_VERSION }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22
       - run: bun install --frozen-lockfile
+      - run: npx playwright install --with-deps chromium
       - run: bun run typecheck
       - run: bun run lint
+      # CLI e2e tests replay the committed HAR fixtures when CI is set (offline, deterministic).
       - run: bun run test
+
+  web:
+    name: web · build · unit
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: bun install --frozen-lockfile
+      - run: bun run --filter @automax/web build
+      - run: cd packages/web && npx vitest run
 
   matrix:
     name: build matrix
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.m.outputs.matrix }}
+      live: ${{ steps.m.outputs.live }}
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: '1.4.0'
+          bun-version: ${{ env.BUN_VERSION }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -56,12 +79,15 @@ jobs:
       - id: m
         shell: bash
         run: |
-          # PRs and pushes: chromium only; nightly/manual: every browser declared in each project yaml.
-          FULL=$(bun run --silent automax project list --json --matrix --shards 1)
+          # PRs and pushes: chromium only, 1 shard, offline (HAR replay).
+          # Nightly / manual: every browser declared in each project yaml, 2 shards, live sandboxes.
           if [[ "${{ github.event_name }}" == "schedule" || "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            MATRIX="$FULL"
+            MATRIX=$(bun run --silent automax project list --json --matrix --shards 2)
+            echo "live=true" >> "$GITHUB_OUTPUT"
           else
+            FULL=$(bun run --silent automax project list --json --matrix --shards 1)
             MATRIX=$(echo "$FULL" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const m=JSON.parse(s).filter(x=>x.browser==="chromium");console.log(JSON.stringify(m))})')
+            echo "live=false" >> "$GITHUB_OUTPUT"
           fi
           echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
           echo "$MATRIX"
@@ -75,24 +101,43 @@ jobs:
       fail-fast: false
       matrix:
         include: ${{ fromJson(needs.matrix.outputs.matrix) }}
+    env:
+      # offline replay of the committed HAR fixtures unless this is the nightly live run
+      HAR_FLAGS: ${{ needs.matrix.outputs.live == 'true' && '' || '--har-replay --strict' }}
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: '1.4.0'
+          bun-version: ${{ env.BUN_VERSION }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22
       - run: bun install --frozen-lockfile
       - run: npx playwright install --with-deps ${{ matrix.browser }}
       - name: API layer (no browser)
-        if: matrix.browser == 'chromium'
-        run: bun run automax run -p ${{ matrix.project }} -e staging -l api --run-id gh-${{ github.run_id }}-${{ matrix.project }}-api --no-ingest
+        if: matrix.browser == 'chromium' && matrix.shard == 1
+        run: >
+          bun run automax run -p ${{ matrix.project }} -e ${{ env.DEMO_ENV }} -l api
+          --run-id ${{ env.RUN_ID }}-${{ matrix.project }}-api --no-ingest $HAR_FLAGS
       - name: UI layer · @smoke
-        run: bun run automax run -p ${{ matrix.project }} -e staging -l ui -b ${{ matrix.browser }} -t @smoke --run-id gh-${{ github.run_id }}-${{ matrix.project }}-${{ matrix.browser }} --no-ingest
-      - name: UI layer · @regression (nightly)
-        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
-        run: bun run automax run -p ${{ matrix.project }} -e staging -l ui -b ${{ matrix.browser }} -t @regression --run-id gh-${{ github.run_id }}-${{ matrix.project }}-${{ matrix.browser }}-regression --no-ingest
+        run: >
+          bun run automax run -p ${{ matrix.project }} -e ${{ env.DEMO_ENV }} -l ui -b ${{ matrix.browser }}
+          -t @smoke --shard ${{ matrix.shard }}/${{ matrix.total }} --reporter blob
+          --run-id ${{ env.RUN_ID }}-${{ matrix.project }}-${{ matrix.browser }} --no-ingest $HAR_FLAGS
+      - name: UI layer · @regression (nightly, live)
+        if: needs.matrix.outputs.live == 'true'
+        run: >
+          bun run automax run -p ${{ matrix.project }} -e ${{ env.DEMO_ENV }} -l ui -b ${{ matrix.browser }}
+          -t @regression --shard ${{ matrix.shard }}/${{ matrix.total }} --reporter blob
+          --run-id ${{ env.RUN_ID }}-${{ matrix.project }}-${{ matrix.browser }}-regression --no-ingest
+      - name: Pack run artifacts (screenshots, api snapshots, meta) for ingest
+        if: always()
+        shell: bash
+        run: |
+          shopt -s nullglob
+          for dir in .automax/runs/${RUN_ID}-*; do
+            tar -czf "$dir/artifacts.tgz" -C "$dir" --exclude=artifacts.tgz --exclude=playwright-report --exclude=pw-output . || true
+          done
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -102,7 +147,7 @@ jobs:
           if-no-files-found: ignore
 
   report:
-    name: report · notify
+    name: report · ingest · notify
     needs: [test]
     if: always()
     runs-on: ubuntu-latest
@@ -110,7 +155,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: '1.4.0'
+          bun-version: ${{ env.BUN_VERSION }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -120,17 +165,33 @@ jobs:
           pattern: automax-*
           path: .automax/runs
           merge-multiple: true
-      - name: Merge blob reports (when present)
+      - name: Merge blob reports (sharded UI runs)
         shell: bash
         run: |
           shopt -s nullglob
           blobs=(.automax/runs/*/blob-report)
           if [ ${#blobs[@]} -gt 0 ]; then
-            npx playwright merge-reports --reporter html,junit "${blobs[@]}" || true
+            npx playwright merge-reports --reporter html,junit "${blobs[@]}" || echo "merge-reports failed"
           else
             echo "no blob reports"
           fi
-      - name: Notify GitHub (check runs, PR comment, issues)
+      - name: Ingest into an AutoMax server (when AUTOMAX_SERVER_URL + AUTOMAX_TOKEN secrets exist)
+        if: always()
+        shell: bash
+        env:
+          AUTOMAX_SERVER_URL: ${{ secrets.AUTOMAX_SERVER_URL }}
+          AUTOMAX_TOKEN: ${{ secrets.AUTOMAX_TOKEN }}
+        run: |
+          if [ -z "$AUTOMAX_SERVER_URL" ] || [ -z "$AUTOMAX_TOKEN" ]; then
+            echo "no server secrets; skipping ingest"; exit 0
+          fi
+          shopt -s nullglob
+          for dir in .automax/runs/${RUN_ID}-*; do
+            id=$(basename "$dir")
+            bun run automax report ingest --run-id "$id" --server "$AUTOMAX_SERVER_URL" --token "$AUTOMAX_TOKEN" \
+              "$dir"/run.json "$dir"/messages*.ndjson "$dir"/pw-results*.json "$dir"/artifacts.tgz || echo "ingest failed for $id"
+          done
+      - name: Notify GitHub (check runs, PR comment, issues) and Jira
         if: always()
         shell: bash
         env:
@@ -139,7 +200,7 @@ jobs:
           JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
         run: |
           shopt -s nullglob
-          for dir in .automax/runs/gh-${{ github.run_id }}-*; do
+          for dir in .automax/runs/${RUN_ID}-*; do
             id=$(basename "$dir")
             bun run automax integrations notify --run-id "$id" --from-files || echo "notify failed for $id"
           done

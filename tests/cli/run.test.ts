@@ -4,6 +4,13 @@ import { execa } from 'execa';
 import { describe, expect, it } from 'vitest';
 
 const root = resolve(import.meta.dirname, '..', '..');
+/** In CI the demo runs offline from the committed HAR fixtures (projects/demo-shop/har). */
+const harFlags = process.env.CI ? ['--har-replay', '--strict'] : [];
+const explain = (r: { exitCode?: number; stdout: string; stderr: string }) =>
+  r.exitCode === 0
+    ? ''
+    : `exit ${r.exitCode}\n--- stdout ---\n${r.stdout.slice(-3000)}\n--- stderr ---\n${r.stderr.slice(-3000)}`;
+
 const cli = (...args: string[]) =>
   execa('node', ['--import', 'tsx', 'packages/cli/src/bin.ts', ...args], {
     cwd: root,
@@ -65,8 +72,9 @@ describe('automax CLI (end to end against projects/demo-shop)', () => {
       'api',
       '-t',
       '@smoke',
+      ...harFlags,
     );
-    expect(r.exitCode).toBe(0);
+    expect(r.exitCode, explain(r)).toBe(0);
     const out = JSON.parse(r.stdout.slice(r.stdout.indexOf('{'))) as {
       runId: string;
       runDir: string;
@@ -92,8 +100,9 @@ describe('automax CLI (end to end against projects/demo-shop)', () => {
       'staging',
       '--process',
       'api-contract',
+      ...harFlags,
     );
-    expect(r.exitCode).toBe(0);
+    expect(r.exitCode, explain(r)).toBe(0);
     const out = JSON.parse(r.stdout.slice(r.stdout.indexOf('{'))) as {
       manifest: { process?: string; tagsExpr?: string };
     };

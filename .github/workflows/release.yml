@@ -33,8 +33,17 @@ jobs:
           node-version: 22
           registry-url: https://registry.npmjs.org
       - run: bun install --frozen-lockfile
+      - run: npx playwright install --with-deps chromium
       - run: bun run typecheck && bun run test
+      # Publishing needs an NPM_TOKEN secret; without it the workflow still succeeds (nothing to publish).
+      - name: Check publish credentials
+        id: creds
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ -n "$NPM_TOKEN" ]; then echo "present=true" >> "$GITHUB_OUTPUT"; else echo "present=false" >> "$GITHUB_OUTPUT"; echo "NPM_TOKEN not set — skipping changesets publish"; fi
       - name: Create release PR or publish
+        if: steps.creds.outputs.present == 'true'
         uses: changesets/action@v1
         with:
           version: bunx changeset version

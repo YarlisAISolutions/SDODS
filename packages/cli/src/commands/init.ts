@@ -144,8 +144,14 @@ export async function initWorkspace(target: string, flags: InitFlags): Promise<I
     basename(target)
       .replace(/[^a-zA-Z0-9-_]/g, '-')
       .toLowerCase() || 'automax-tests';
+  // --link: bun's `link:` protocol expects a package registered with `bun link` (done below);
+  // pnpm accepts a path. Transitive workspace deps resolve from the symlink's real location.
   const dep = (pkg: string) =>
-    flags.link ? `link:${join(src, 'packages', pkg.replace('@automax/', ''))}` : `^${VERSION}`;
+    flags.link
+      ? flags.pm === 'bun'
+        ? `link:${pkg}`
+        : `link:${join(src, 'packages', pkg.replace('@automax/', ''))}`
+      : `^${VERSION}`;
   const run = flags.pm === 'bun' ? 'bun run' : 'pnpm';
 
   write(
@@ -171,8 +177,9 @@ export async function initWorkspace(target: string, flags: InitFlags): Promise<I
           '@automax/cli': dep('@automax/cli'),
           '@automax/core': dep('@automax/core'),
           '@automax/contracts': dep('@automax/contracts'),
-          '@playwright/test': '^1.62.1',
-          'playwright-bdd': '^9.2.0',
+          '@playwright/test':
+            flags.link && flags.pm === 'bun' ? 'link:@playwright/test' : '^1.62.1',
+          'playwright-bdd': flags.link && flags.pm === 'bun' ? 'link:playwright-bdd' : '^9.2.0',
         },
         devDependencies: {
           '@types/node': '^22.15.0',
@@ -375,6 +382,19 @@ Docs: https://automax.sdods.com
   }
 
   let installed = false;
+  if (flags.install && flags.link && flags.pm === 'bun') {
+    // Register the local packages so `link:@automax/*` resolves. Playwright and playwright-bdd are
+    // linked from the monorepo too: a second @playwright/test copy in the consumer would make
+    // Playwright throw "Requiring @playwright/test second time".
+    const linkDirs = [
+      ...['contracts', 'core', 'cli'].map((pkg) => join(src, 'packages', pkg)),
+      ...['@playwright/test', 'playwright-bdd'].map((pkg) => join(src, 'node_modules', pkg)),
+    ];
+    for (const dir of linkDirs) {
+      if (!existsSync(dir)) continue;
+      await execa('bun', ['link'], { cwd: dir, reject: false, stdio: 'ignore' });
+    }
+  }
   if (flags.install) {
     const res = await execa(flags.pm, ['install'], {
       cwd: target,

@@ -119,7 +119,7 @@ describe('coverage', () => {
   it('computes route/endpoint/role coverage by suite, including OpenAPI endpoints', () => {
     const root = fixtureRepo();
     const reg = ProjectRegistry.discover(root);
-    const report = computeCoverage(reg, 'shop', { openapi: true });
+    const report = computeCoverage(reg, 'shop', { openapi: true, env: 'local' }); // explicit: CI may export AUTOMAX_ENV
 
     const route = (n: string) => report.routes.find((r) => r.name === n)!;
     expect(route('login').covered).toBe(true);

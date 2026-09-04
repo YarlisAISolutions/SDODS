@@ -1,16 +1,13 @@
 import type { Command } from 'commander';
 import { execa } from 'execa';
-import pc from 'picocolors';
-import {
-  AuthStateCache,
-  AutomaxError,
-  CompositeDataProvider,
-  FileUserPool,
-  defineAuth,
-} from '@automax/core';
+import { AutomaxError } from '@automax/core';
 import { createContext } from '../context.js';
-import { json, ok, out, table } from '../ui.js';
+import { json, ok, table } from '../ui.js';
 
+/**
+ * Login-state commands. Capture/list are thin wrappers over `@automax/core/auth/capture`
+ * (the same library `automax record --user` uses) so there is a single implementation.
+ */
 export function register(program: Command) {
   const auth = program
     .command('auth')
@@ -26,89 +23,53 @@ export function register(program: Command) {
     .option('--all', 'every user of the role, not only --index')
     .option(
       '--interactive',
-      'open a headed browser (SSO): finish the login by hand, then close the window',
+      'open a headed browser (SSO/MFA): finish the login by hand, then close the window',
     )
+    .option('-b, --browser <name>', 'chromium | firefox | webkit', 'chromium')
+    .option('--headed', 'run the login with a visible browser')
     .option('--force', 'recapture even when a fresh state exists')
     .action(async (opts, cmd) => {
       const ctx = createContext(cmd);
       const cfg = ctx.registry.resolve(opts.project, opts.env);
-      const cache = new AuthStateCache(cfg);
-      const provider = new CompositeDataProvider(cfg);
-      const pool = new FileUserPool(cfg, provider, { owner: `auth-capture:${process.pid}` });
-      const all = await pool.status();
-      const roles = opts.user ? [opts.user] : [...new Set(all.map((u) => u.role))];
-      const { chromium } = await import('playwright-core');
-      const browser = await chromium.launch({ headless: !opts.interactive });
-      const results: Array<{ user: string; role: string; file?: string; status: string }> = [];
-      try {
-        for (const role of roles) {
-          const members = all.filter((u) => u.role === role);
-          const chosen = opts.all ? members : [members[Number(opts.index)]].filter(Boolean);
-          for (const m of chosen) {
-            const rows = await provider.load(cfg.project.data.userPool!.dataset);
-            const idx = rows.findIndex((r) => String(r.username ?? r.id) === m!.username);
-            const row = rows[idx]!;
-            const user = {
-              id: m!.id,
-              username: m!.username,
-              password: String(row.password ?? ''),
-              role,
-              index: idx,
-              extra: row,
-            };
-            if (!opts.force && cache.isFresh(user)) {
-              results.push({
-                user: user.username,
-                role,
-                file: cache.fileFor(user),
-                status: 'fresh (skipped)',
-              });
-              continue;
-            }
-            if (opts.interactive) {
-              const context = await browser.newContext({ baseURL: cfg.env.ui.baseUrl });
-              const page = await context.newPage();
-              await page.goto(cfg.project.auth.form?.loginPath ?? '/');
-              out(
-                pc.cyan(
-                  `Complete the login for ${user.username} in the browser window, then close it…`,
-                ),
-              );
-              await new Promise<void>((resolve) => page.once('close', () => resolve()));
-              const state = (await context.storageState()) as unknown as Record<string, unknown>;
-              await context.close();
-              results.push({
-                user: user.username,
-                role,
-                file: cache.save(user, state),
-                status: 'captured (interactive)',
-              });
-              continue;
-            }
-            const strategy = defineAuth({ strategy: cfg.project.auth.strategy as any });
-            const state = await strategy.login({ browser, config: cfg, user });
-            if (!state) {
-              results.push({
-                user: user.username,
-                role,
-                status: `strategy "${cfg.project.auth.strategy}" produced no state`,
-              });
-              continue;
-            }
-            results.push({
-              user: user.username,
-              role,
-              file: cache.save(user, state),
-              status: 'captured',
-            });
-          }
+      const { captureAuth, poolUsers } = await import('@automax/core/auth/capture');
+      const roles: string[] = opts.user
+        ? [opts.user]
+        : [...new Set((await poolUsers(cfg)).map((u) => u.role))];
+      const results: Array<{
+        user: string;
+        role: string;
+        index: number;
+        strategy: string;
+        file?: string;
+        tokenFile?: string;
+        status: string;
+      }> = [];
+      for (const role of roles) {
+        const captured = await captureAuth({
+          config: cfg,
+          role,
+          index: Number(opts.index),
+          all: Boolean(opts.all),
+          interactive: Boolean(opts.interactive),
+          browserName: opts.browser,
+          headed: Boolean(opts.headed || opts.interactive),
+          force: Boolean(opts.force),
+        });
+        for (const r of captured) {
+          results.push({
+            user: r.user,
+            role: r.role,
+            index: r.index,
+            strategy: r.strategy,
+            file: r.file,
+            tokenFile: r.tokenFile,
+            status: r.skipped ? `skipped: ${r.skipped}` : r.file ? 'captured' : 'no state',
+          });
         }
-      } finally {
-        await browser.close();
       }
       if (ctx.opts.json) return json(results);
-      table(results);
-      ok(`states under ${cache.dir}`);
+      table(results, ['user', 'role', 'index', 'strategy', 'status', 'file']);
+      ok(`states under ${cfg.project.root}/.auth/${cfg.env.name}`);
     });
 
   auth
@@ -116,12 +77,17 @@ export function register(program: Command) {
     .description('Show cached login states and their age')
     .requiredOption('-p, --project <slug>', 'project slug')
     .option('-e, --env <name>', 'environment')
-    .action((opts, cmd) => {
+    .action(async (opts, cmd) => {
       const ctx = createContext(cmd);
       const cfg = ctx.registry.resolve(opts.project, opts.env);
-      const rows = new AuthStateCache(cfg).list().map((s) => ({
-        ...s,
-        fresh: s.ageMinutes < cfg.project.auth.maxAgeMinutes ? 'yes' : 'no',
+      const { listAuthStates } = await import('@automax/core/auth/capture');
+      const rows = listAuthStates(cfg).map((s) => ({
+        user: s.user,
+        role: s.role,
+        ageMinutes: s.ageMinutes,
+        fresh: s.fresh ? 'yes' : 'no',
+        file: s.file,
+        tokenFile: s.tokenFile ?? '',
       }));
       if (ctx.opts.json) return json(rows);
       table(rows, ['user', 'role', 'ageMinutes', 'fresh', 'file']);

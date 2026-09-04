@@ -1,6 +1,51 @@
 import { existsSync } from 'node:fs';
-import { resolve } from 'node:path';
+import { createRequire } from 'node:module';
+import { dirname, resolve } from 'node:path';
 import { ProjectRegistry } from '@automax/core/config';
+
+/**
+ * Locate Playwright's bundled trace viewer. Under bun/pnpm layouts `playwright-core` is not
+ * hoisted to `<root>/node_modules`, so resolve it through Node's module resolution first and
+ * only then fall back to the conventional paths.
+ */
+export function resolveTraceViewerDir(rootDir: string): string | null {
+  const candidates: string[] = [];
+  // playwright-core's `exports` map does not expose package.json, so resolve its entry point
+  // (`<pkg>/index.js`) and derive the package directory from it. Under bun/pnpm isolated
+  // layouts playwright-core is only reachable from the package that depends on it, so also
+  // resolve through @playwright/test and playwright.
+  const froms: string[] = [resolve(rootDir, 'package.json'), import.meta.url];
+  for (const base of [...froms]) {
+    for (const pkg of ['@playwright/test', 'playwright']) {
+      try {
+        froms.push(createRequire(base).resolve(pkg));
+      } catch {
+        /* not installed from here */
+      }
+    }
+  }
+  for (const from of froms) {
+    try {
+      const req = createRequire(from);
+      candidates.push(resolve(dirname(req.resolve('playwright-core')), 'lib/vite/traceViewer'));
+    } catch {
+      /* not resolvable from here */
+    }
+    try {
+      const req = createRequire(from);
+      candidates.push(
+        resolve(dirname(req.resolve('playwright-core/package.json')), 'lib/vite/traceViewer'),
+      );
+    } catch {
+      /* exports map may hide package.json */
+    }
+  }
+  candidates.push(
+    resolve(rootDir, 'node_modules/playwright-core/lib/vite/traceViewer'),
+    resolve(rootDir, 'node_modules/playwright/node_modules/playwright-core/lib/vite/traceViewer'),
+  );
+  return firstExisting(candidates);
+}
 
 export interface ServerConfig {
   rootDir: string;
@@ -33,12 +78,7 @@ export function loadServerConfig(
       resolve(rootDir, 'packages/web/dist'),
       resolve(rootDir, 'node_modules/@automax/web/dist'),
     ]);
-  const traceViewerDir =
-    overrides.traceViewerDir ??
-    firstExisting([
-      resolve(rootDir, 'node_modules/playwright-core/lib/vite/traceViewer'),
-      resolve(rootDir, 'node_modules/playwright/node_modules/playwright-core/lib/vite/traceViewer'),
-    ]);
+  const traceViewerDir = overrides.traceViewerDir ?? resolveTraceViewerDir(rootDir);
   return {
     rootDir,
     host: overrides.host ?? env.HOST ?? '127.0.0.1',

@@ -28,6 +28,8 @@ export interface CaptureOptions {
   /** login URL for interactive mode (default: auth.form.loginPath or "/") */
   loginUrl?: string;
   strategy?: AuthStrategy;
+  /** recapture even when a fresh state exists (default: skip fresh states) */
+  force?: boolean;
   /** injectable for tests */
   launch?: (name: CaptureBrowser, headed: boolean) => Promise<Browser>;
   /** injectable for tests: run the interactive codegen */
@@ -172,6 +174,12 @@ export async function captureAuth(opts: CaptureOptions): Promise<CaptureResult[]
       };
       if (strategy.strategy === 'none') {
         result.skipped = 'auth.strategy is none';
+        results.push(result);
+        continue;
+      }
+      if (!opts.force && cache.isFresh(user)) {
+        result.file = cache.fileFor(user);
+        result.skipped = 'fresh state exists (use force to recapture)';
         results.push(result);
         continue;
       }

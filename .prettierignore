@@ -12,3 +12,4 @@ apps/docs/.source
 apps/docs/public/screenshots
 packages/core/test/fixtures/apps
 packages/web/public/mockServiceWorker.js
+projects/*/har/**

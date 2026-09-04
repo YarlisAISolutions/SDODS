@@ -6,7 +6,7 @@ Feature: Inventory
     Given I am on the login page
     And I login with "standard_user" and "{{standardPassword}}"
 
-  @smoke
+  @smoke @har:products
   Scenario: Products are displayed
     Then the inventory title should be "Products"
     And there should be 6 products listed

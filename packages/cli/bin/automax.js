@@ -6,11 +6,14 @@ import { dirname, join } from 'node:path';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const dist = join(here, '..', 'dist', 'bin.js');
-if (existsSync(dist)) {
+const src = join(here, '..', 'src', 'bin.ts');
+// Published install: only dist exists → run it. Workspace / `automax init --link` install: src is
+// present and the workspace exports of @automax/* point at TypeScript, so always go through tsx
+// (a stale `tsc -b` dist would otherwise import .ts files without a loader).
+if (existsSync(dist) && !existsSync(src)) {
   await import(dist);
 } else {
-  // Workspace fallback: register tsx and run from source.
   const { register } = await import('tsx/esm/api');
   register();
-  await import(join(here, '..', 'src', 'bin.ts'));
+  await import(src);
 }
