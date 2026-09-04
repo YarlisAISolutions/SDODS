@@ -16,6 +16,7 @@ import {
 } from './tool-loop.js';
 import type { AgentSdkToolDef } from '@sdods/mcp';
 import { toolParameters } from './json-schema.js';
+import { bridgeMcpServers } from './mcp-bridge.js';
 
 /**
  * Models running on this machine, through Ollama's native API.
@@ -172,14 +173,19 @@ export class OllamaAdapter implements LlmAdapter {
 
   async runAgent(o: RunAgentOptions): Promise<RunAgentResult> {
     const model = o.model ?? this.defaultModel;
-    if (o.mcpServers && Object.keys(o.mcpServers).length)
-      o.onEvent?.({
-        type: 'status',
-        message:
-          'The ollama adapter does not start external MCP servers; only SDODS tools are available.',
-      });
-    await this.assertFits(model, o, o.onEvent);
-    return runToolLoop(this.transport(model, o), o);
+    const bridged = await bridgeMcpServers({
+      servers: o.mcpServers,
+      withPlaywright: o.needsBrowser,
+      cwd: o.cwd,
+      onEvent: o.onEvent,
+    });
+    try {
+      const withMcp = { ...o, tools: [...o.tools, ...bridged.tools] };
+      await this.assertFits(model, withMcp, o.onEvent);
+      return await runToolLoop(this.transport(model, withMcp), withMcp);
+    } finally {
+      await bridged.close();
+    }
   }
 
   /** Native shapes: tool calls carry no id and arguments arrive already parsed. */
@@ -355,7 +361,7 @@ function nativeTools(tools: AgentSdkToolDef[]) {
     function: {
       name: t.name,
       description: t.description,
-      parameters: toolParameters(t.inputSchema),
+      parameters: toolParameters(t.inputSchema, t.parametersJsonSchema),
     },
   }));
 }

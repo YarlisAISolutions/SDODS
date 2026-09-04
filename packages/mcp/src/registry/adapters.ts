@@ -52,6 +52,11 @@ export interface AgentSdkToolDef {
   name: string;
   description: string;
   inputSchema: Record<string, z.ZodTypeAny>;
+  /**
+   * Parameters as JSON Schema, for a tool that did not come from a zod shape — a tool bridged
+   * from another MCP server, whose schema is already JSON Schema. When set it wins.
+   */
+  parametersJsonSchema?: Record<string, unknown>;
   annotations: { readOnlyHint: boolean; destructiveHint: boolean };
   handler: (args: Record<string, unknown>) => Promise<{
     content: Array<

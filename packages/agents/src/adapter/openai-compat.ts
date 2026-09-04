@@ -10,6 +10,7 @@ import {
   type TokenUsage,
 } from './types.js';
 import { toolParameters } from './json-schema.js';
+import { bridgeMcpServers } from './mcp-bridge.js';
 import {
   readToolArgs,
   runToolLoop,
@@ -149,15 +150,20 @@ export class OpenAiCompatibleAdapter implements LlmAdapter {
   }
 
   async runAgent(o: RunAgentOptions): Promise<RunAgentResult> {
-    if (o.mcpServers && Object.keys(o.mcpServers).length) {
-      o.onEvent?.({
-        type: 'status',
-        message:
-          'OpenAI-compatible adapter ignores external MCP servers (v1); only SDODS tools are available.',
-      });
-    }
     const model = o.model ?? this.defaultModel;
-    return runToolLoop(this.transport(model, o), o);
+    // MCP servers become ordinary functions, so a role that needs a browser gets one here too.
+    const bridged = await bridgeMcpServers({
+      servers: o.mcpServers,
+      withPlaywright: o.needsBrowser,
+      cwd: o.cwd,
+      onEvent: o.onEvent,
+    });
+    try {
+      const withMcp = { ...o, tools: [...o.tools, ...bridged.tools] };
+      return await runToolLoop(this.transport(model, withMcp), withMcp);
+    } finally {
+      await bridged.close();
+    }
   }
 
   /** Chat-completions shapes: tool calls carry an id, results are `{role:'tool', tool_call_id}`. */
@@ -231,7 +237,7 @@ function toolFunctions(tools: AgentSdkToolDef[]) {
     function: {
       name: t.name,
       description: t.description,
-      parameters: toolParameters(t.inputSchema),
+      parameters: toolParameters(t.inputSchema, t.parametersJsonSchema),
     },
   }));
 }

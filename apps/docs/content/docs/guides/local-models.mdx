@@ -93,6 +93,17 @@ ollama show qwen2.5-coder:7b     # capabilities: completion, tools
 A model whose `capabilities` do not include `tools` cannot drive the agent loop at all — SDODS says
 so rather than letting it flail.
 
+## Tools are the real limit
+
+A role sees 33–35 SDODS tools, and the roles that drive a browser get Playwright's MCP server on
+top — about 24 more. Hosted models handle that; a 7–8B model somewhere past ~20 functions starts
+_describing_ the call it would make instead of making it. If you see the model printing JSON at
+you rather than acting:
+
+- give a browser role a larger model (`agents.models.generator: qwen2.5-coder:14b`),
+- narrow `allowedTools` on the MCP servers the project consumes,
+- or use the roles that need fewer tools — `review` and `heal` work well at 7B.
+
 ## Other local servers
 
 Anything that speaks the OpenAI protocol works through the `openai-compatible` adapter, which no
