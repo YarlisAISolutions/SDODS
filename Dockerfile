@@ -29,7 +29,7 @@ COPY packages ./packages
 COPY apps/docs/package.json ./apps/docs/package.json
 COPY apps/www/package.json ./apps/www/package.json
 COPY projects ./projects
-COPY tsconfig.base.json tsconfig.json playwright.config.ts sdods.workspace.yaml ./
+COPY tsconfig.base.json tsconfig.json sdods.runner.config.ts sdods.workspace.yaml ./
 RUN bun install --frozen-lockfile
 
 # Web UI bundle served by the Fastify server

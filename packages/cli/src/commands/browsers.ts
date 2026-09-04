@@ -60,7 +60,7 @@ export async function browserStatuses(
   });
 }
 
-/** Install Playwright browser engines (used by `browsers install`, `doctor --fix`, `init`). */
+/** Install browser engines (used by `browsers install`, `doctor --fix`, `init`). */
 export async function installBrowsers(
   opts: { browsers?: string[]; withDeps?: boolean; cwd?: string } = {},
 ): Promise<void> {
@@ -76,7 +76,7 @@ export async function installBrowsers(
 }
 
 export function register(program: Command) {
-  const browsers = program.command('browsers').description('Install and list Playwright browsers');
+  const browsers = program.command('browsers').description('Install and list browser engines');
 
   browsers
     .command('install')

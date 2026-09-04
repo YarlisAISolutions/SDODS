@@ -147,7 +147,7 @@ export function zodToConfigError(e: ZodError, file: string): SdodsConfigError {
 
 /**
  * Precedence (later wins): defaults → project yaml → envs/<env>.yaml → .env(.<env>) → process.env → CLI.
- * Synchronous on purpose: this runs inside playwright.config.ts.
+ * Synchronous on purpose: this runs inside sdods.runner.config.ts.
  */
 export function resolveConfig(opts: ResolveOptions): ResolvedConfig {
   const processEnv = opts.processEnv ?? process.env;

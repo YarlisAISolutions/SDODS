@@ -7,7 +7,7 @@ import { SdodsError, DEFAULT_ARTIFACTS_DIR } from '@sdods/core';
 import { createContext } from '../context.js';
 import { json, out, table } from '../ui.js';
 
-/** Recursively find `trace.zip` files (Playwright output) below a directory. */
+/** Recursively find `trace.zip` files (runner output) below a directory. */
 export function findTraceZips(dir: string, depth = 8): string[] {
   const found: string[] = [];
   const walk = (d: string, level: number) => {
@@ -50,7 +50,7 @@ export function register(program: Command) {
   program
     .command('trace [zip]')
     .description(
-      'Open Playwright traces: a zip file, the traces of a run (--run), or of the latest run (--last)',
+      'Open traces: a zip file, the traces of a run (--run), or of the latest run (--last)',
     )
     .option('--last', 'use the most recent run (default when no zip or --run is given)')
     .option('--run <id>', 'run id under the artifacts directory')

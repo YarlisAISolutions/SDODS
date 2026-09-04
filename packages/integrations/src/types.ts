@@ -76,7 +76,7 @@ export interface ScenarioSummary {
   scenarioName: string;
   line?: number;
   exampleIndex?: number | null;
-  pwProject: string;
+  runnerProject: string;
   layer: string;
   browser?: string;
   suiteTag?: string;

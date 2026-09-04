@@ -5,14 +5,14 @@ description: The tag taxonomy SDODS enforces and how tags select layers, suites,
 
 <Learn>
   Which tags are mandatory, which are optional, how value tags are validated against the project
-  YAML, how tag expressions filter a run, and how playwright-bdd special tags pass through.
+  YAML, how tag expressions filter a run, and how runner control tags pass through.
 </Learn>
 
 ## The taxonomy
 
 | Tag                                                                       | Rule                                                | Effect                                               |
 | ------------------------------------------------------------------------- | --------------------------------------------------- | ---------------------------------------------------- |
-| `@ui` `@api` `@hybrid`                                                    | exactly one per scenario                            | selects the layer, therefore the Playwright project  |
+| `@ui` `@api` `@hybrid`                                                    | exactly one per scenario                            | selects the layer, therefore the run target          |
 | `@smoke` `@regression` `@sanity`                                          | exactly one (list configurable under `tags.suites`) | selects the screenshot policy and the CI gate        |
 | `@visual` `@a11y` `@perf` `@mock` `@data-driven` `@pool`                  | optional (declare extras under `tags.extra`)        | enable features                                      |
 | `@user:<role>`                                                            | role must exist in `tags.roles`                     | leases a pool user before the browser context starts |
@@ -21,14 +21,14 @@ description: The tag taxonomy SDODS enforces and how tags select layers, suites,
 | `@env:<name>`                                                             | must be in `envs.available`                         | restricts a scenario to one environment              |
 | `@jira:PROJ-123` `@github:123`                                            | pattern-checked                                     | links the scenario to an issue                       |
 | `@skip:<browser>`                                                         | browser must be supported                           | excludes the scenario from that engine               |
-| `@retries:N` `@timeout:N` `@slow` `@mode:serial` `@skip` `@fixme` `@only` | playwright-bdd special tags                         | passed through                                       |
+| `@retries:N` `@timeout:N` `@slow` `@mode:serial` `@skip` `@fixme` `@only` | runner control tags                                 | passed through                                       |
 
 Unknown tags produce a warning, so typos surface without blocking.
 
 ```mermaid
 flowchart LR
   T["@ui @regression @user:standard @jira:DEMO-12"] --> L{"sdods lint"}
-  L -->|layer ok| P["Playwright project demo-shop--ui--*"]
+  L -->|layer ok| P["run target demo-shop--ui--*"]
   L -->|suite ok| S["screenshot policy: step"]
   L -->|role ok| U["lease pool user 'standard'"]
   L -->|issue pattern ok| J["link DEMO-12 in run viewer"]

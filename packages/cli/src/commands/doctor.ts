@@ -38,9 +38,9 @@ export function registerDoctorCommand(program: Command) {
       );
       checks.push(
         await versionCheck(
-          'npx playwright',
+          'runner',
           ['playwright', '--version'],
-          'npm i -D @playwright/test',
+          'install workspace dependencies: bun install (or npm install)',
           'npx',
         ),
       );
@@ -300,14 +300,14 @@ async function browserCheck(): Promise<Check[]> {
         name: `browser:${b}`,
         ok: existsSync(path),
         detail: existsSync(path) ? path : 'not installed',
-        fix: `npx playwright install ${b}`,
+        fix: `sdods browsers install -b ${b}`,
       });
     } catch {
       out.push({
         name: `browser:${b}`,
         ok: false,
-        detail: 'playwright-core not resolvable',
-        fix: 'npm i -D @playwright/test',
+        detail: 'browser runner not resolvable',
+        fix: 'install workspace dependencies: bun install (or npm install)',
       });
     }
   }

@@ -164,7 +164,7 @@ export interface ScenarioNode {
   featureName: string;
   scenarioName: string;
   exampleIndex?: number | null;
-  pwProject: string;
+  runnerProject: string;
   layer: Layer;
   browser?: BrowserName;
   suiteTag?: string;
@@ -387,7 +387,7 @@ export interface Trends {
     fingerprint: string;
     scenarioName: string;
     featureUri: string;
-    pwProject: string;
+    runnerProject: string;
     flakyRate: number;
     runsCount: number;
     quarantined: boolean;

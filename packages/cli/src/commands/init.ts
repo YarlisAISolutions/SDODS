@@ -44,7 +44,7 @@ export function register(program: Command) {
   program
     .command('init [dir]')
     .description(
-      'Scaffold a new SDODS workspace: workspace yaml, Playwright config, demo project, skills',
+      'Scaffold a new SDODS workspace: workspace yaml, runner config, demo project, skills',
     )
     .option('--db <driver>', 'sqlite | postgres (written to .env.example)', 'sqlite')
     .option('--pm <manager>', 'bun | pnpm', 'bun')
@@ -57,7 +57,7 @@ export function register(program: Command) {
       'depend on the local SDODS packages (development) instead of the npm registry',
     )
     .option('--no-install', 'skip the package manager install step')
-    .option('--no-browsers', 'skip `playwright install chromium`')
+    .option('--no-browsers', 'skip downloading the chromium engine')
     .option('--org <slug>', 'organization slug', 'default')
     .option('--org-name <name>', 'organization display name')
     .option('--workspace <slug>', 'workspace slug', 'default')
@@ -75,7 +75,7 @@ export function register(program: Command) {
       out(pc.bold('Next steps'));
       if (dir) out(`  cd ${dir}`);
       if (!flags.install)
-        out(`  ${flags.pm} install && npx playwright install --with-deps chromium`);
+        out(`  ${flags.pm} install && ${flags.pm} run sdods browsers install --with-deps`);
       out(`  ${run} sdods doctor`);
       out(`  ${run} sdods workspace tree`);
       if (result.demo) out(`  ${run} sdods run -p demo-shop -e staging -l api`);
@@ -215,18 +215,18 @@ defaults:
   );
 
   write(
-    'playwright.config.ts',
+    'sdods.runner.config.ts',
     `/**
- * SDODS Playwright config. Generated from the project registry:
- * one Playwright project per (project × layer × browser), driven by SDODS_* env vars set by \`sdods run\`.
+ * SDODS runner config. Generated from the project registry:
+ * one run target per (project × layer × browser), driven by SDODS_* env vars set by \`sdods run\`.
  */
 import { defineConfig } from '@playwright/test';
-import { ProjectRegistry, buildPlaywrightConfig, selectionFromEnv } from '@sdods/core/config';
+import { ProjectRegistry, buildRunnerConfig, selectionFromEnv } from '@sdods/core/config';
 
 const rootDir = process.env.SDODS_ROOT ?? ProjectRegistry.findRepoRoot(import.meta.dirname);
 const registry = ProjectRegistry.discover(rootDir);
 
-export default defineConfig(buildPlaywrightConfig(registry, selectionFromEnv()));
+export default defineConfig(buildRunnerConfig(registry, selectionFromEnv()));
 `,
   );
 
@@ -246,7 +246,7 @@ export default defineConfig(buildPlaywrightConfig(registry, selectionFromEnv()))
           noEmit: true,
           types: ['node'],
         },
-        include: ['playwright.config.ts', 'projects/**/*.ts'],
+        include: ['sdods.runner.config.ts', 'projects/**/*.ts'],
         exclude: ['node_modules', '.features-gen', '.sdods'],
       },
       null,
@@ -274,10 +274,9 @@ export default defineConfig(buildPlaywrightConfig(registry, selectionFromEnv()))
     `node_modules/
 dist/
 .sdods/
-.features-gen/
 test-results/
-playwright-report/
-blob-report/
+html-report/
+shard-reports/
 *.log
 .env
 .env.*
@@ -315,7 +314,7 @@ volumes:
 SDODS automation workspace (organization **${org.name}**, workspace **${workspace.name}**).
 
 \`\`\`bash
-${flags.pm} install && npx playwright install --with-deps chromium
+${flags.pm} install && ${flags.pm} run sdods browsers install --with-deps
 ${run} sdods doctor
 ${run} sdods workspace tree
 ${withDemo ? `${run} sdods run -p demo-shop -e staging -l api` : `${run} sdods project create my-app --ui-url http://localhost:3000 --api-url http://localhost:3000/api`}

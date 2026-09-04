@@ -43,7 +43,7 @@ export function ScenarioPage() {
             </Link>
             <span className="mono">{s.featureUri}</span>
             <Badge tone="purple">{s.module ?? 'no module'}</Badge>
-            <Badge>{s.pwProject}</Badge>
+            <Badge>{s.runnerProject}</Badge>
             <span>{fmtDuration(s.durationMs)}</span>
             {s.tags.map((t) => (
               <TagChip key={t} tag={t} />

@@ -34,7 +34,7 @@ sdods browsers install [-b <name>]... [--with-deps] [-p <slug>]
 sdods browsers list [-p <slug>]
 ```
 
-`install` wraps `playwright install` (default engines: chromium, firefox, webkit; `--with-deps` adds OS packages on Linux CI; `-p` installs what a project declares). `list` shows which engines are installed and where, including the mobile emulation mappings.
+`install` downloads the browser engines (default: chromium, firefox, webkit; `--with-deps` adds OS packages on Linux CI; `-p` installs what a project declares). `list` shows which engines are installed and where, including the mobile emulation mappings.
 
 ## `processes list`
 

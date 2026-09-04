@@ -138,12 +138,12 @@ export function DashboardPage() {
           <ul className="space-y-1.5 text-sm">
             {t.flaky.map((f) => (
               <li
-                key={`${f.fingerprint}-${f.pwProject}`}
+                key={`${f.fingerprint}-${f.runnerProject}`}
                 className="flex items-center justify-between gap-2"
               >
                 <span className="truncate">
                   {f.scenarioName}{' '}
-                  <span className="muted text-[11px]">{f.pwProject.split('--').pop()}</span>
+                  <span className="muted text-[11px]">{f.runnerProject.split('--').pop()}</span>
                 </span>
                 <span className="flex shrink-0 items-center gap-1">
                   <Badge tone="amber">{pct(f.flakyRate)}</Badge>

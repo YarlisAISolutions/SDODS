@@ -4,10 +4,10 @@ node_modules
 **/.next
 **/out
 .sdods
-.features-gen
+.sdods/generated
 test-results
-playwright-report
-blob-report
+html-report
+shard-reports
 .git
 .github
 apps/docs/.source

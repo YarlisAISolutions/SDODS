@@ -18,22 +18,20 @@ interface WatchFlags {
 }
 
 /**
- * `bddgen --watch` regenerates specs when features/steps change while Playwright UI mode
+ * Spec generation runs in watch mode while the interactive UI
  * re-runs them. Both children share the same SDODS_* environment that `sdods run` uses.
  */
 export function register(program: Command) {
   program
     .command('watch')
-    .description(
-      'bddgen --watch + Playwright UI mode for a project (hot reload of features and steps)',
-    )
+    .description('regenerate specs on change and re-run them in interactive UI mode (hot reload)')
     .option('-p, --project <slug>', 'project slug (default: the only project)')
     .option('-e, --env <name>', 'environment name')
     .option('-t, --tags <expr>', 'Cucumber tag expression')
     .option('-l, --layer <layer>', 'ui | api | hybrid | recorded (repeatable)', collect, [])
     .option('-b, --browser <name>', 'browser (repeatable)', collect, [])
-    .option('--headed', 'headed Playwright (only meaningful with --no-ui)')
-    .option('--no-ui', 'run `playwright test --watch` instead of UI mode')
+    .option('--headed', 'headed browser (only meaningful with --no-ui)')
+    .option('--no-ui', 'run the suite in watch mode instead of the interactive UI')
     .action(async (flags: WatchFlags, cmd: Command) => {
       const ctx = createContext(cmd);
       const entry = ctx.registry.pick(flags.project);
@@ -65,12 +63,12 @@ export function register(program: Command) {
         SDODS_RUN_ID: cfg.runtime.runId,
         SDODS_REPORTER_MODE: 'quiet',
       };
-      const configPath = join(ctx.rootDir, 'playwright.config.ts');
+      const configPath = join(ctx.rootDir, 'sdods.runner.config.ts');
       const names = listGeneratedProjects(ctx.registry, selection).map((p) => p.name);
       if (!names.length) {
         throw new SdodsError(
           'CONFIG_INVALID',
-          'Nothing to watch: no Playwright projects match the selection.',
+          'Nothing to watch: no run targets match the selection.',
           {
             hint: 'Check --layer/--browser against the project yaml.',
             exitCode: 2,

@@ -32,7 +32,7 @@ function addRecordOptions(cmd: Command): Command {
       'route name from the project yaml, a path, or an absolute URL',
       '/',
     )
-    .option('--device <name>', 'Playwright device, e.g. "iPhone 15"')
+    .option('--device <name>', 'device name, e.g. "iPhone 15"')
     .option('--user <role>', 'use a pool user of this role and start logged in (storageState)')
     .option('-b, --browser <name>', 'chromium | firefox | webkit', 'chromium')
     .option('--save-har', 'also capture network into har/<env>/<name>.har')

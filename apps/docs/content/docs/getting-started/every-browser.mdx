@@ -29,10 +29,10 @@ browsers: [chromium, firefox, webkit]
 ```bash
 bun run sdods run -p demo-shop -l ui -b chromium
 bun run sdods run -p demo-shop -l ui -b firefox -b webkit
-bun run sdods run -p demo-shop -l ui --list          # prints the generated Playwright project names
+bun run sdods run -p demo-shop -l ui --list          # prints the generated run target names
 ```
 
-Each browser becomes a Playwright project named `demo-shop--ui--<browser>`. Generation happens once per layer; browsers share the generated spec files.
+Each browser becomes a run target named `demo-shop--ui--<browser>`. Generation happens once per layer; browsers share the generated spec files.
 
 ## The whole matrix
 

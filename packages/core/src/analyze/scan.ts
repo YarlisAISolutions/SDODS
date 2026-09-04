@@ -26,7 +26,7 @@ export const IGNORED_DIRS = new Set([
   '.idea',
   '.vscode',
   '.sdods',
-  '.features-gen',
+  'html-report',
   'playwright-report',
   'test-results',
   'storybook-static',

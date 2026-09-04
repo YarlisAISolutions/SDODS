@@ -59,7 +59,7 @@ export function RunDetailPage() {
           <>
             {run.reportPaths.html && (
               <a href={run.reportPaths.html} target="_blank" rel="noreferrer">
-                <Button size="sm">Playwright report</Button>
+                <Button size="sm">HTML report</Button>
               </a>
             )}
             {run.reportPaths.dashboard && (

@@ -90,6 +90,7 @@ const SKIP_DIRS = new Set([
   'out',
   '.next',
   'coverage',
+  'html-report',
   'playwright-report',
   'test-results',
 ]);

@@ -142,7 +142,7 @@ export function listScenarioDirs(runDir: string, slug?: string): ScenarioAttempt
         (n) =>
           !n.startsWith('.') &&
           statSync(join(runDir, n)).isDirectory() &&
-          !['playwright-report', 'dashboard', 'pw-output', 'blob-report', 'diff'].includes(n),
+          !['html-report', 'dashboard', 'runner-output', 'shard-reports', 'diff'].includes(n),
       );
   for (const s of slugs) {
     const sDir = join(runDir, s);

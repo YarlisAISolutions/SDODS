@@ -15,7 +15,7 @@ description: Run SDODS test suites for a project across environments, layers (ui
 | `browser` | project `browsers` | `-b chromium -b firefox -b webkit`, or `--project-matrix` for all |
 | `tags` | none | Cucumber expression, e.g. `"@smoke and not @mock"`, `@user:admin`, `@jira:DEMO-12` |
 | `headed` | false | `--headed` for a visible browser |
-| `workers` | Playwright default | `-w 2` |
+| `workers` | runner default | `-w 2` |
 | `shard` | none | `--shard 1/3` |
 | `har` | off | `--har-replay --strict` for offline runs, `--har-update` to refresh |
 
@@ -25,7 +25,7 @@ description: Run SDODS test suites for a project across environments, layers (ui
    ```bash
    bun run sdods config validate
    bun run sdods lint -p <project>
-   bun run sdods run -p <project> -e <env> --list          # shows the Playwright projects that would run
+   bun run sdods run -p <project> -e <env> --list          # shows the run targets that would run
    ```
 2. Run the requested slice. Typical combinations:
    ```bash

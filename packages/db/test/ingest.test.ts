@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { sql } from 'kysely';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -15,7 +15,7 @@ const PW = 'demo-shop--ui--chromium';
 describe('ingest helpers', () => {
   it('parses uri prefix, module and locator selectors', () => {
     expect(splitUri('[demo-shop--ui--chromium]:features/ui/login.feature')).toEqual({
-      pwProject: 'demo-shop--ui--chromium',
+      runnerProject: 'demo-shop--ui--chromium',
       uri: 'features/ui/login.feature',
     });
     expect(moduleFromUri('features/ui/login.feature')).toBe('ui');
@@ -70,7 +70,7 @@ describe('cucumber NDJSON ingest', () => {
           ],
         },
       ],
-      { pwProject: PW },
+      { runnerProject: PW },
     );
     const { root } = writeRun('run-simple', { 'messages.ndjson': ndjson });
     const res = await ingestRun(adb, { runId: 'run-simple', artifactsRoot: root });
@@ -130,7 +130,7 @@ describe('cucumber NDJSON ingest', () => {
           ],
         },
       ],
-      { pwProject: PW },
+      { runnerProject: PW },
     );
     const { root } = writeRun('run-flaky', { 'messages.ndjson': ndjson });
     const first = await ingestRun(adb, { runId: 'run-flaky', artifactsRoot: root });
@@ -204,7 +204,7 @@ describe('cucumber NDJSON ingest', () => {
           ],
         },
       ],
-      { pwProject: 'demo-shop--api' },
+      { runnerProject: 'demo-shop--api' },
     );
     const b = buildMessages(
       [
@@ -228,7 +228,7 @@ describe('cucumber NDJSON ingest', () => {
           ],
         },
       ],
-      { pwProject: 'demo-shop--api', startMs: Date.parse('2026-09-03T10:05:00.000Z') },
+      { runnerProject: 'demo-shop--api', startMs: Date.parse('2026-09-03T10:05:00.000Z') },
     );
     const { root } = writeRun(
       'run-shards',
@@ -345,7 +345,7 @@ describe('cucumber NDJSON ingest', () => {
           ],
         },
       ],
-      { pwProject: PW },
+      { runnerProject: PW },
     );
     const { root } = writeRun('run-att', { 'messages.ndjson': ndjson });
     const res = await ingestRun(adb, { runId: 'run-att', artifactsRoot: root });
@@ -392,7 +392,7 @@ describe('cucumber NDJSON ingest', () => {
     expect(JSON.parse(readFileSync(join(dir, fp, 'r0', 'meta.json'), 'utf8'))).toEqual(meta);
   });
 
-  it('pw-json: recorded specs ingest with attempts and flaky detection', async () => {
+  it('runner-json: recorded specs ingest with attempts and flaky detection', async () => {
     const json = buildPwJson({
       projectName: 'demo-shop--recorded--chromium',
       file: 'projects/demo-shop/recorded/checkout.spec.ts',
@@ -408,21 +408,40 @@ describe('cucumber NDJSON ingest', () => {
     });
     const { root, runDir } = writeRun(
       'run-pw',
-      { 'pw-results.json': json },
+      { 'runner-results.json': json },
       { layers: ['recorded'] },
     );
-    writeFileSync(join(runDir, 'pw-results.json'), json);
+    writeFileSync(join(runDir, 'runner-results.json'), json);
     const res = await ingestRun(adb, { runId: 'run-pw', artifactsRoot: root });
     expect(res.scenarios).toBe(1);
     expect(res.attempts).toBe(2);
     expect(res.totals).toMatchObject({ total: 1, flaky: 1, passed: 0, failed: 0 });
     const scenarios = await getRunScenarios(adb.db, 'run-pw');
-    expect(scenarios[0]!.source).toBe('pw-json');
+    expect(scenarios[0]!.source).toBe('runner-json');
     expect(scenarios[0]!.layer).toBe('recorded');
     expect(scenarios[0]!.module).toBe('recorded');
     expect(scenarios[0]!.flaky).toBe(true);
     const detail = await getScenarioDetail(adb.db, scenarios[0]!.id);
     expect(detail!.attempts[0]!.steps.map((s) => s.text)).toEqual(['goto /', 'click login']);
+  });
+
+  it('still ingests a run directory written before the engine-neutral rename', async () => {
+    const json = buildPwJson({
+      file: 'recorded/legacy.spec.ts',
+      title: 'legacy checkout',
+      project: 'demo-shop--recorded--chromium',
+      results: [{ status: 'passed', retry: 0 }],
+    });
+    // Pre-rename layout: pw-results.json beside a playwright-report/ directory.
+    const { root, runDir } = writeRun('run-legacy', {}, { layers: ['recorded'] });
+    writeFileSync(join(runDir, 'pw-results.json'), json);
+    mkdirSync(join(runDir, 'playwright-report'), { recursive: true });
+    writeFileSync(join(runDir, 'playwright-report', 'index.html'), '<html></html>');
+
+    const res = await ingestRun(adb, { runId: 'run-legacy', artifactsRoot: root });
+    expect(res.scenarios).toBe(1);
+    const scenarios = await getRunScenarios(adb.db, 'run-legacy');
+    expect(scenarios[0]!.source).toBe('runner-json');
   });
 
   it('fails clearly when nothing to ingest', async () => {

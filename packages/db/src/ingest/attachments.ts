@@ -72,9 +72,9 @@ export function targetFileFor(
       return 'cleanup-errors.json';
     case 'meta':
       return scenarioFiles.meta;
-    case 'pw-visual':
+    case 'visual-baseline':
       return `visual/${safeName(parsed.name)}-${parsed.phase}.png`;
-    case 'pw-builtin':
+    case 'runner-builtin':
       return parsed.name === 'trace'
         ? 'trace.zip'
         : parsed.name === 'video'
@@ -151,9 +151,9 @@ export function artifactKindFor(
       return { kind: 'screenshot', phase: parsed.phase, stepIndex: parsed.stepIndex };
     case 'visual':
       return { kind: 'visual', phase: 'actual', stepIndex: parsed.stepIndex };
-    case 'pw-visual':
+    case 'visual-baseline':
       return { kind: 'visual', phase: parsed.phase, stepIndex: null };
-    case 'pw-builtin':
+    case 'runner-builtin':
       return {
         kind: parsed.name === 'screenshot' ? 'screenshot' : parsed.name,
         phase: parsed.name === 'screenshot' ? 'failure' : null,

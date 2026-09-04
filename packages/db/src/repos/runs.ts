@@ -31,7 +31,7 @@ export interface RunUpsert {
   durationMs?: number | null;
   totals?: Record<string, unknown>;
   artifactsDir?: string | null;
-  pwReportRel?: string | null;
+  htmlReportRel?: string | null;
   exitCode?: number | null;
   errorText?: string | null;
 }
@@ -74,7 +74,7 @@ export async function upsertRun(
     duration_ms: r.durationMs,
     totals_json: r.totals ? enc.json(r.totals) : undefined,
     artifacts_dir: r.artifactsDir,
-    pw_report_rel: r.pwReportRel,
+    html_report_rel: r.htmlReportRel,
     exit_code: r.exitCode,
     error_text: r.errorText,
   });
@@ -268,7 +268,7 @@ export function mapScenario(s: any) {
     scenarioName: s.scenario_name,
     module: s.module ?? null,
     exampleIndex: s.examples_row,
-    pwProject: s.pw_project,
+    runnerProject: s.runner_project,
     layer: s.layer,
     browser: s.browser,
     suiteTag: s.suite_tag,

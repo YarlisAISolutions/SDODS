@@ -60,25 +60,34 @@ export function shortId(length = 6): string {
     .slice(0, length);
 }
 
-/** Split an SDODS-generated Playwright project name into its parts. */
-export interface PwProjectParts {
+/** Split an SDODS-generated runner project name into its parts. */
+export interface RunnerProjectParts {
   project: string;
   layer: string;
   browser?: string;
 }
 
-export const PW_PROJECT_SEPARATOR = '--';
+export const RUNNER_PROJECT_SEPARATOR = '--';
 
-export function pwProjectName(parts: PwProjectParts): string {
+export function runnerProjectName(parts: RunnerProjectParts): string {
   const segs = [parts.project, parts.layer];
   if (parts.browser) segs.push(parts.browser);
-  return segs.join(PW_PROJECT_SEPARATOR);
+  return segs.join(RUNNER_PROJECT_SEPARATOR);
 }
 
-export function parsePwProjectName(name: string): PwProjectParts | null {
-  const segs = name.split(PW_PROJECT_SEPARATOR);
+export function parseRunnerProjectName(name: string): RunnerProjectParts | null {
+  const segs = name.split(RUNNER_PROJECT_SEPARATOR);
   if (segs.length < 2 || segs.length > 3) return null;
   const [project, layer, browser] = segs;
   if (!project || !layer) return null;
   return browser ? { project, layer, browser } : { project, layer };
 }
+
+/** @deprecated Use {@link RunnerProjectParts}. Removed in the next minor. */
+export type PwProjectParts = RunnerProjectParts;
+/** @deprecated Use {@link RUNNER_PROJECT_SEPARATOR}. Removed in the next minor. */
+export const PW_PROJECT_SEPARATOR = RUNNER_PROJECT_SEPARATOR;
+/** @deprecated Use {@link runnerProjectName}. Removed in the next minor. */
+export const pwProjectName = runnerProjectName;
+/** @deprecated Use {@link parseRunnerProjectName}. Removed in the next minor. */
+export const parsePwProjectName = parseRunnerProjectName;

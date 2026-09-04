@@ -14,7 +14,7 @@ export interface InsightsOptions {
 
 export interface ScenarioInsight {
   fingerprint: string;
-  pwProject: string;
+  runnerProject: string;
   featureUri: string;
   scenarioName: string;
   module: string | null;
@@ -101,7 +101,7 @@ export async function computeInsights(
         .select([
           'run_id',
           'fingerprint',
-          'pw_project',
+          'runner_project',
           'feature_uri',
           'scenario_name',
           'module',
@@ -117,7 +117,7 @@ export async function computeInsights(
   // ── scenario flakiness ────────────────────────────────────────────────
   const groups = new Map<string, typeof scenarios>();
   for (const s of scenarios) {
-    const key = `${s.fingerprint}|${s.pw_project}`;
+    const key = `${s.fingerprint}|${s.runner_project}`;
     const list = groups.get(key) ?? [];
     list.push(s);
     groups.set(key, list);
@@ -149,7 +149,7 @@ export async function computeInsights(
     const last = ordered[ordered.length - 1]!;
     scenarioInsights.push({
       fingerprint: last.fingerprint,
-      pwProject: last.pw_project,
+      runnerProject: last.runner_project,
       featureUri: last.feature_uri,
       scenarioName: last.scenario_name,
       module: last.module ?? null,

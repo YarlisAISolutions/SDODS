@@ -2,6 +2,6 @@ export {
   newId,
   uuidv7,
   fingerprint,
-  parsePwProjectName,
-  pwProjectName,
+  parseRunnerProjectName,
+  runnerProjectName,
 } from '@sdods/contracts/ids';

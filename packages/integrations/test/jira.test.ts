@@ -106,7 +106,7 @@ function scenario(over: Partial<ScenarioSummary> = {}): ScenarioSummary {
     featureUri: 'features/ui/cart.feature',
     featureName: 'Cart',
     scenarioName: 'Add product',
-    pwProject: 'shop--ui--chromium',
+    runnerProject: 'shop--ui--chromium',
     layer: 'ui',
     browser: 'chromium',
     suiteTag: '@regression',

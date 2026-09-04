@@ -2,13 +2,13 @@ import { existsSync } from 'node:fs';
 import { join, resolve as resolvePath } from 'node:path';
 import { devices, type PlaywrightTestConfig, type ReporterDescription } from '@playwright/test';
 import { cucumberReporter, defineBddConfig } from 'playwright-bdd';
-import { pwProjectName, runFiles, type BrowserName, type Layer } from '@sdods/contracts';
+import { runnerProjectName, runFiles, type BrowserName, type Layer } from '@sdods/contracts';
 import { coreStepsGlob } from '../steps/glob.js';
 import type { ProjectRegistry } from './registry.js';
 import type { ResolvedConfig } from './resolve.js';
 import { combineTagExpr, normalizeTagExpr } from './tags.js';
 
-export interface PlaywrightSelection {
+export interface RunnerSelection {
   project?: string;
   env?: string;
   layers?: string[];
@@ -37,8 +37,8 @@ const DEVICE_FOR_BROWSER: Record<BrowserName, string> = {
 
 export const DASHBOARD_REPORTER = '@sdods/core/reporters/dashboard';
 
-/** Convenience for `playwright.config.ts`: read the selection from SDODS_* env vars. */
-export function selectionFromEnv(env: NodeJS.ProcessEnv = process.env): PlaywrightSelection {
+/** Convenience for `sdods.runner.config.ts`: read the selection from SDODS_* env vars. */
+export function selectionFromEnv(env: NodeJS.ProcessEnv = process.env): RunnerSelection {
   const list = (v?: string) =>
     v
       ? v
@@ -56,7 +56,7 @@ export function selectionFromEnv(env: NodeJS.ProcessEnv = process.env): Playwrig
     lint: env.SDODS_LINT === '1',
     allure: env.SDODS_ALLURE === '1',
     reporters: list(env.SDODS_REPORTERS),
-    reporterMode: (env.SDODS_REPORTER_MODE as PlaywrightSelection['reporterMode']) || 'default',
+    reporterMode: (env.SDODS_REPORTER_MODE as RunnerSelection['reporterMode']) || 'default',
   };
 }
 
@@ -70,7 +70,7 @@ export interface GeneratedProject {
 /** Names (and identity) of the Playwright projects a selection would produce, without side effects. */
 export function listGeneratedProjects(
   registry: ProjectRegistry,
-  sel: PlaywrightSelection,
+  sel: RunnerSelection,
 ): GeneratedProject[] {
   const out: GeneratedProject[] = [];
   for (const entry of sel.project ? [registry.entry(sel.project)] : registry.entriesList()) {
@@ -85,13 +85,13 @@ export function listGeneratedProjects(
     ) as BrowserName[];
     for (const layer of layers) {
       if (layer === 'api') {
-        out.push({ name: pwProjectName({ project: p.slug, layer }), project: p.slug, layer });
+        out.push({ name: runnerProjectName({ project: p.slug, layer }), project: p.slug, layer });
         continue;
       }
       if (layer === 'recorded' && !existsSync(join(entry.root, 'recorded'))) continue;
       for (const browser of browsers) {
         out.push({
-          name: pwProjectName({ project: p.slug, layer, browser }),
+          name: runnerProjectName({ project: p.slug, layer, browser }),
           project: p.slug,
           layer,
           browser,
@@ -106,9 +106,9 @@ export function listGeneratedProjects(
  * Build the Playwright config for a selection of projects × layers × browsers.
  * One `defineBddConfig` per project × layer; browsers reuse the generated testDir.
  */
-export function buildPlaywrightConfig(
+export function buildRunnerConfig(
   registry: ProjectRegistry,
-  sel: PlaywrightSelection = {},
+  sel: RunnerSelection = {},
 ): PlaywrightTestConfig {
   const entries = sel.project ? [registry.entry(sel.project)] : registry.entriesList();
   const projects: NonNullable<PlaywrightTestConfig['projects']> = [];
@@ -151,7 +151,7 @@ export function buildPlaywrightConfig(
         if (!existsSync(recordedDir)) continue;
         for (const browser of browsers) {
           projects.push({
-            name: pwProjectName({ project: p.slug, layer, browser }),
+            name: runnerProjectName({ project: p.slug, layer, browser }),
             testDir: recordedDir,
             testMatch: '**/*.spec.ts',
             snapshotPathTemplate: join(
@@ -186,7 +186,7 @@ export function buildPlaywrightConfig(
         ],
         // Each run generates into its own dir (cleaned by `sdods run`), lint/export into `.lint`,
         // so concurrent runs and tooling never race on generated specs.
-        outputDir: `${toPosix(join(cfg.runtime.repoRoot, '.features-gen', sel.lint ? '.lint' : (sel.runId ?? 'adhoc'), p.slug, layer))}`,
+        outputDir: `${toPosix(join(cfg.runtime.repoRoot, '.sdods/generated', sel.lint ? '.lint' : (sel.runId ?? 'adhoc'), p.slug, layer))}`,
         featuresRoot: `${toPosix(p.root)}/features`,
         // Explicit: scenarios that only use core steps cannot let bddgen guess the project test instance.
         importTestFrom: `${toPosix(p.root)}/steps/fixtures.ts`,
@@ -201,7 +201,7 @@ export function buildPlaywrightConfig(
 
       if (layer === 'api') {
         projects.push({
-          name: pwProjectName({ project: p.slug, layer }),
+          name: runnerProjectName({ project: p.slug, layer }),
           testDir,
           use: { sdods: { project: p.slug, layer } satisfies SdodsUseOption } as Record<
             string,
@@ -213,7 +213,7 @@ export function buildPlaywrightConfig(
 
       for (const browser of browsers) {
         projects.push({
-          name: pwProjectName({ project: p.slug, layer, browser }),
+          name: runnerProjectName({ project: p.slug, layer, browser }),
           testDir,
           // Baselines live with the project (generated specs are per-run and deleted):
           // projects/<slug>/features/__screenshots__/<pw project>/<platform>/<name>.png
@@ -260,8 +260,8 @@ export function buildPlaywrightConfig(
   const extra: ReporterDescription[] = (sel.reporters ?? []).map((r) => {
     const [name, file] = r.split('=') as [string, string | undefined];
     if (file) return [name, name === 'blob' ? { outputDir: file } : { outputFile: file }];
-    if (name === 'blob') return ['blob', { outputDir: join(runDir, 'blob-report') }];
-    if (name === 'json') return ['json', { outputFile: join(runDir, 'pw-results.extra.json') }];
+    if (name === 'blob') return ['blob', { outputDir: join(runDir, 'shard-reports') }];
+    if (name === 'json') return ['json', { outputFile: join(runDir, 'runner-results.extra.json') }];
     if (name === 'junit') return ['junit', { outputFile: join(runDir, runFiles.junit) }];
     return [name];
   });
@@ -269,7 +269,7 @@ export function buildPlaywrightConfig(
     reporter.push(
       reporterMode === 'server' ? ['line'] : reporterMode === 'quiet' ? ['dot'] : ['list'],
     );
-    reporter.push(['html', { outputFolder: join(runDir, runFiles.pwReport), open: 'never' }]);
+    reporter.push(['html', { outputFolder: join(runDir, runFiles.htmlReport), open: 'never' }]);
     // The cucumber reporter throws when no defineBddConfig() ran (recorded-only selections).
     if (bddConfigs > 0)
       reporter.push(
@@ -279,7 +279,7 @@ export function buildPlaywrightConfig(
       );
     reporter.push([DASHBOARD_REPORTER, { outputDir: join(runDir, runFiles.dashboard) }]);
     if (projects.some((p) => String(p.name).includes('--recorded--'))) {
-      reporter.push(['json', { outputFile: join(runDir, runFiles.pwResults) }]);
+      reporter.push(['json', { outputFile: join(runDir, runFiles.results) }]);
     }
     if (first?.project.reports.junit || first?.runtime.ci)
       reporter.push(['junit', { outputFile: join(runDir, runFiles.junit) }]);
@@ -303,7 +303,7 @@ export function buildPlaywrightConfig(
     retries,
     workers,
     fullyParallel: true,
-    outputDir: join(runDir, runFiles.pwOutput),
+    outputDir: join(runDir, runFiles.output),
     reporter,
     use: {
       screenshot: 'off',
@@ -334,3 +334,8 @@ function parseEnvOverrides() {
 function toPosix(p: string): string {
   return p.replace(/\\/g, '/');
 }
+
+/** @deprecated Use {@link buildRunnerConfig}. Removed in the next minor. */
+export const buildPlaywrightConfig = buildRunnerConfig;
+/** @deprecated Use {@link RunnerSelection}. Removed in the next minor. */
+export type PlaywrightSelection = RunnerSelection;

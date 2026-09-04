@@ -37,7 +37,7 @@ description: Field reference for environment files.
     use: {
       type: '{ locale?, timezoneId?, geolocation?, permissions?, colorScheme?, ignoreHTTPSErrors?, extraHTTPHeaders?, httpCredentials? }',
       default: '{}',
-      description: 'Merged into Playwright use for every browser project.',
+      description: 'Merged into the browser context options for every run target.',
     },
     screenshots: {
       type: 'partial ScreenshotConfig',

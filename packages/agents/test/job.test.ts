@@ -155,7 +155,7 @@ describe('agent jobs', () => {
     expect(mcp.mcpServers.sdods!.args).toEqual(['sdods', 'mcp', '--project', 'shop']);
     expect(mcp.mcpServers.playwright).toBeDefined();
     expect(readFileSync(join(root, 'AGENT.md'), 'utf8')).toContain(
-      'automation platform with a reusable architecture built on Playwright',
+      'automation and orchestration platform with a reusable architecture',
     );
     expect(readFileSync(join(root, 'SKILL.md'), 'utf8')).toContain('name: sdods');
     expect(installClaudeCode(root, { project: 'shop' })).toEqual([join(root, '.mcp.json')]); // idempotent except the merged config

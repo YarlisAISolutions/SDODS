@@ -23,7 +23,7 @@ import {
   normalizeTagExpr,
   serializeCliOverrides,
   type CliOverrides,
-  type PlaywrightSelection,
+  type RunnerSelection,
 } from '@sdods/core';
 import { createContext } from '../context.js';
 import { collect, json, out, parseIntFlag, warn } from '../ui.js';
@@ -84,12 +84,12 @@ function addRunOptions(cmd: Command): Command {
     .option('-m, --module <name>', 'restrict to a module (repeatable)', collect, [])
     .option('--process <name>', 'run a named process (recipe) from the project or workspace')
     .option('--project-matrix', 'run every browser declared in the project yaml')
-    .option('--device <name>', 'Playwright device name (mobile emulation)')
+    .option('--device <name>', 'device name for mobile emulation, e.g. "iPhone 15"')
     .option('--headed', 'run headed')
     .option('-w, --workers <n>', 'parallel workers', parseIntFlag('workers'))
     .option('--shard <i/n>', 'shard, e.g. 1/3')
     .option('--retries <n>', 'retries per test', parseIntFlag('retries'))
-    .option('--grep <pattern>', 'Playwright --grep')
+    .option('--grep <pattern>', 'filter tests by title (regular expression)')
     .option('--feature <path>', 'only this feature file (relative to features/)')
     .option('--scenario <name>', 'only scenarios whose title contains this text')
     .option('--run-id <id>', 'run id (default: uuid v7)')
@@ -102,19 +102,14 @@ function addRunOptions(cmd: Command): Command {
     .option('--har-replay', 'replay HAR files for @har scenarios')
     .option('--strict', 'with --har-replay: abort on any request not in the HAR (offline)')
     .option('--update-snapshots', 'update visual baselines')
-    .option('--ui', 'Playwright UI mode')
-    .option('--debug', 'Playwright inspector')
-    .option('--list', 'list the Playwright projects and tests that would run')
+    .option('--ui', 'interactive UI mode')
+    .option('--debug', 'step debugger')
+    .option('--list', 'list the run targets and tests that would run')
     .option('--repeat-each <n>', 'repeat each test n times', parseIntFlag('repeat-each'))
     .option('--fail-on-flaky', 'exit 1 when any test is flaky')
     .option('--max-failures <n>', 'stop after n failures', parseIntFlag('max-failures'))
     .option('--timeout <ms>', 'per-test timeout override', parseIntFlag('timeout'))
-    .option(
-      '--reporter <name>',
-      'Playwright reporter override (repeatable, name=outputFile)',
-      collect,
-      [],
-    )
+    .option('--reporter <name>', 'reporter override (repeatable, name=outputFile)', collect, [])
     .option('--reporter-mode <mode>', 'default | server | quiet')
     .option('--trigger <kind>', 'cli | ui | ci | agent | mcp | schedule', 'cli');
 }
@@ -123,7 +118,7 @@ export function register(program: Command) {
   const run = addRunOptions(
     program
       .command('run')
-      .description('Generate BDD specs and run Playwright for a project (alias: test)'),
+      .description('Generate BDD specs and run them for a project (alias: test)'),
   );
   run.action(async (flags: RunFlags, cmd: Command) => {
     process.exitCode = await runCommand(flags, cmd);
@@ -243,7 +238,7 @@ export async function runCommand(flags: RunFlags, cmd: Command): Promise<number>
       process.stderr.write(formatFindings(result) + '\n');
   }
 
-  const selection: PlaywrightSelection = {
+  const selection: RunnerSelection = {
     project: entry.slug,
     env: cfg.env.name,
     layers: layers.length ? layers : undefined,
@@ -253,7 +248,7 @@ export async function runCommand(flags: RunFlags, cmd: Command): Promise<number>
     allure: flags.allure,
     reporters: flags.reporter.length ? flags.reporter : undefined,
     reporterMode:
-      (flags.reporterMode as PlaywrightSelection['reporterMode']) ??
+      (flags.reporterMode as RunnerSelection['reporterMode']) ??
       (ctx.opts.quiet ? 'quiet' : 'default'),
   };
   const childEnv: NodeJS.ProcessEnv = {
@@ -277,23 +272,23 @@ export async function runCommand(flags: RunFlags, cmd: Command): Promise<number>
   if (harMode) childEnv.SDODS_HAR_MODE = harMode;
   if (flags.strict && harMode === 'replay') childEnv.SDODS_OFFLINE = '1';
 
-  const configPath = join(ctx.rootDir, 'playwright.config.ts');
+  const configPath = join(ctx.rootDir, 'sdods.runner.config.ts');
   if (!existsSync(configPath)) {
-    throw new SdodsError('CONFIG_NOT_FOUND', `No playwright.config.ts at ${ctx.rootDir}.`, {
+    throw new SdodsError('CONFIG_NOT_FOUND', `No runner config at ${configPath}.`, {
       hint: 'Run `sdods init` or copy the template from the SDODS repo.',
     });
   }
 
-  const pwProjects = listGeneratedProjects(ctx.registry, selection);
-  if (!pwProjects.length) {
-    throw new SdodsError('CONFIG_INVALID', 'The selection produced no Playwright projects.', {
+  const runnerProjects = listGeneratedProjects(ctx.registry, selection);
+  if (!runnerProjects.length) {
+    throw new SdodsError('CONFIG_INVALID', 'The selection produced no run targets.', {
       hint: 'Check --layer / --browser against the project yaml.',
       exitCode: 2,
     });
   }
 
-  // Recorded specs are plain Playwright tests: no Gherkin to generate.
-  const recordedOnly = pwProjects.every((p) => p.layer === 'recorded');
+  // Recorded specs are plain runner tests: no Gherkin to generate.
+  const recordedOnly = runnerProjects.every((p) => p.layer === 'recorded');
   if (!recordedOnly) {
     const gen = await execa('npx', ['bddgen', '-c', configPath], {
       cwd: ctx.rootDir,
@@ -311,7 +306,7 @@ export async function runCommand(flags: RunFlags, cmd: Command): Promise<number>
   }
 
   const args = ['playwright', 'test', '-c', configPath, '--pass-with-no-tests'];
-  for (const p of pwProjects) args.push('--project', p.name);
+  for (const p of runnerProjects) args.push('--project', p.name);
   if (flags.headed) args.push('--headed');
   if (workers) args.push('--workers', String(workers));
   if (flags.shard) args.push('--shard', flags.shard);
@@ -327,7 +322,7 @@ export async function runCommand(flags: RunFlags, cmd: Command): Promise<number>
   if (flags.debug) args.push('--debug');
   if (flags.list) args.push('--list');
 
-  // module / feature restriction → generated spec path filters (features/<dir>/x.feature → .features-gen/<slug>/<layer>/<dir>/x.feature.spec.js)
+  // module / feature restriction → generated spec path filters (features/<dir>/x.feature → .sdods/generated/<slug>/<layer>/<dir>/x.feature.spec.js)
   const filters: string[] = [];
   for (const m of modules) {
     const rel = relative(
@@ -335,7 +330,7 @@ export async function runCommand(flags: RunFlags, cmd: Command): Promise<number>
       moduleDir(cfg.project.root, moduleByName(projectCfg, m)),
     ).replace(/\\/g, '/');
     filters.push(
-      `\\.features-gen/${escapeRe(runId)}/${escapeRe(entry.slug)}/[^/]+/${escapeRe(rel)}/`,
+      `\\.sdods/generated/${escapeRe(runId)}/${escapeRe(entry.slug)}/[^/]+/${escapeRe(rel)}/`,
     );
   }
   if (flags.feature)
@@ -343,19 +338,19 @@ export async function runCommand(flags: RunFlags, cmd: Command): Promise<number>
       escapeRe(flags.feature.replace(/^features\//, '').replace(/\.feature$/, '')) +
         '\\.feature\\.spec',
     );
-  // positional filters must precede `--project` (variadic in Playwright's CLI)
+  // positional filters must precede `--project` (variadic in the runner CLI)
   args.splice(4, 0, ...filters);
 
   if (flags.list) {
-    out(pc.bold('Playwright projects:'));
-    for (const p of pwProjects) out(`  ${p.name}`);
+    out(pc.bold('Run targets:'));
+    for (const p of runnerProjects) out(`  ${p.name}`);
     const listed = await execa('npx', args, {
       cwd: ctx.rootDir,
       env: childEnv,
       stdio: 'inherit',
       reject: false,
     });
-    rmSync(join(ctx.rootDir, '.features-gen', runId), { recursive: true, force: true });
+    rmSync(join(ctx.rootDir, '.sdods', 'generated', runId), { recursive: true, force: true });
     rmSync(runDir, { recursive: true, force: true });
     return listed.exitCode ?? 0;
   }
@@ -365,7 +360,7 @@ export async function runCommand(flags: RunFlags, cmd: Command): Promise<number>
       `run ${runId} · project ${entry.slug} · env ${cfg.env.name}${tags ? ` · tags ${tags}` : ''}${proc ? ` · process ${proc.name}` : ''}${modules.length ? ` · modules ${modules.join(',')}` : ''}`,
     ),
   );
-  out(pc.dim(`projects: ${pwProjects.map((p) => p.name).join(', ')}`));
+  out(pc.dim(`projects: ${runnerProjects.map((p) => p.name).join(', ')}`));
   const started = Date.now();
   const child = execa('npx', args, {
     cwd: ctx.rootDir,
@@ -382,7 +377,7 @@ export async function runCommand(flags: RunFlags, cmd: Command): Promise<number>
 
   const exitCode =
     result.signal === 'SIGINT' || result.signal === 'SIGTERM' ? 130 : (result.exitCode ?? 1);
-  rmSync(join(ctx.rootDir, '.features-gen', runId), { recursive: true, force: true });
+  rmSync(join(ctx.rootDir, '.sdods', 'generated', runId), { recursive: true, force: true });
   manifest.finishedAt = new Date().toISOString();
   manifest.exitCode = exitCode;
   writeManifest();
@@ -430,7 +425,7 @@ export async function runCommand(flags: RunFlags, cmd: Command): Promise<number>
       `${exitCode === 0 ? pc.green('✔ passed') : exitCode === 130 ? pc.yellow('■ cancelled') : pc.red('✖ failed')}  ${t ? `${t.passed} passed, ${t.failed} failed, ${t.skipped} skipped, ${t.flaky} flaky` : ''}  ${pc.dim(`(${Math.round((Date.now() - started) / 1000)}s)`)}`,
     );
     out(pc.dim(`artifacts:   ${runDir}`));
-    out(pc.dim(`html report: ${join(runDir, runFiles.pwReport, 'index.html')}`));
+    out(pc.dim(`html report: ${join(runDir, runFiles.htmlReport, 'index.html')}`));
     out(pc.dim(`dashboard:   ${join(runDir, runFiles.dashboard, 'index.html')}`));
   }
   return exitCode;
@@ -476,7 +471,7 @@ function readSummary(
       failed: m.failed ?? [],
       flaky: m.flaky ?? [],
       reportPaths: {
-        html: join(runDir, runFiles.pwReport, 'index.html'),
+        html: join(runDir, runFiles.htmlReport, 'index.html'),
         dashboard: join(runDir, runFiles.dashboard, 'index.html'),
         messages: join(runDir, runFiles.messages),
       },

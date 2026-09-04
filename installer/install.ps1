@@ -4,7 +4,7 @@
 
 .DESCRIPTION
   Checks Node 22+, installs Bun into the SDODS home if needed, fetches SDODS (npm when
-  published, otherwise a shallow git clone), installs dependencies and Playwright browsers, and
+  published, otherwise a shallow git clone), installs dependencies and browser engines, and
   writes an `sdods.cmd` shim. Re-running upgrades in place.
 
   Nothing is written outside -Dir (default $env:USERPROFILE\.sdods) and -BinDir (default
@@ -158,7 +158,7 @@ Options (environment equivalent in parentheses):
   -BinDir <path>        where sdods.cmd goes, default `$env:LOCALAPPDATA\SDODS\bin (SDODS_BIN_DIR)
   -Pm bun|pnpm|npm      package manager, default bun (SDODS_PM)
   -Browsers all|chromium|none
-                        Playwright browsers to install, default chromium (SDODS_BROWSERS)
+                        browser engines to install, default chromium (SDODS_BROWSERS)
   -Workspace <dir>      also scaffold a workspace there with 'sdods init' (SDODS_WORKSPACE)
   -Source git|npm|auto  how to fetch SDODS, default auto (SDODS_SOURCE)
   -Mcp claude|codex|all register the SDODS MCP server with those CLIs (SDODS_MCP)
@@ -305,8 +305,8 @@ function Install-FromGit([string] $ResolvedRef) {
 function Install-Browsers {
   if ($BrowsersOpt -eq 'none') { return }
   $list = if ($BrowsersOpt -eq 'all') { @('chromium', 'firefox', 'webkit') } else { @('chromium') }
-  Step "Installing Playwright browsers: $($list -join ' ')"
-  if ($DryRun) { Say "   would run: npx playwright install $($list -join ' ')"; return }
+  Step "Installing browser engines: $($list -join ' ')"
+  if ($DryRun) { Say "   would install browser engines: $($list -join ' ')"; return }
   try { Invoke-Step 'npx' (@('--yes', 'playwright', 'install') + $list) $AppDir }
   catch { Warn 'Browser download failed. Re-run later with: sdods browsers install' }
 }
@@ -401,7 +401,7 @@ function Remove-SDODS {
   if (Test-Path $SdodsHome) { Remove-Item -Recurse -Force $SdodsHome; Ok "Removed $SdodsHome" }
   Say ''
   Say 'SDODS is uninstalled. Workspaces you created are untouched.'
-  Say 'Playwright browsers stay in %USERPROFILE%\AppData\Local\ms-playwright.'
+  Say 'Browser engines stay in %USERPROFILE%\AppData\Local\ms-playwright.'
   exit 0
 }
 

@@ -1,12 +1,12 @@
 ---
 title: Record and playback
-description: Record a browser session with Playwright codegen, run it as a spec, and convert it to Gherkin with review.
+description: Record a browser session, run it as a spec, and convert it to Gherkin with review.
 ---
 
 <Learn>
-  How `sdods record` wraps Playwright codegen with your project's environment, test-id attribute and
-  a logged-in pool user, what post-processing does, how recorded specs run, and how conversion to
-  features stays reviewable.
+  How `sdods record` wraps the session recorder with your project's environment, test-id attribute
+  and a logged-in pool user, what post-processing does, how recorded specs run, and how conversion
+  to features stays reviewable.
 </Learn>
 
 ## The flow
@@ -28,7 +28,7 @@ bun run sdods record -p demo-shop -e staging --name mobile-checkout --device "iP
 bun run sdods record -p demo-shop -e staging --name api-capture --save-har
 ```
 
-Under the hood SDODS spawns `npx playwright codegen` with `--target playwright-test`, the environment's base URL, `--test-id-attribute` from the project, `--load-storage` for the leased user, and device, locale, timezone, geolocation and color-scheme options from the environment. `context._enableRecorder` is never used; only public Playwright surfaces are.
+Under the hood SDODS starts the recorder with the environment's base URL, the project's test-id attribute, the leased user's storage state, and the device, locale, timezone, geolocation and color-scheme options from the environment. Only public, supported recorder surfaces are used; nothing private is called.
 
 ## Post-processing
 
@@ -37,7 +37,7 @@ The generated spec is rewritten so it fits the project:
 - imports `test` and `expect` from `@sdods/core/test`, so fixtures, screenshots and healing apply
 - absolute URLs on the environment origin become relative routes
 - the test is wrapped in `test.describe` with `@recorded @ui @regression` tags
-- a header comment records project, environment, user, device and Playwright version
+- a header comment records project, environment, user, device and runner version
 - CSS and XPath locators are flagged `// sdods:fragile` for the reviewer
 
 `--no-post-process` keeps the raw output.
@@ -48,7 +48,7 @@ The generated spec is rewritten so it fits the project:
 bun run sdods run -p demo-shop -e staging -l recorded -b chromium
 ```
 
-`recorded` is a layer like the others; results ingest through the Playwright JSON reporter.
+`recorded` is a layer like the others; results ingest through the runner's JSON reporter.
 
 ## Convert to Gherkin
 

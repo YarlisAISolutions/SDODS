@@ -7,7 +7,7 @@ import {
   BROWSERS_FOR_SKIP,
   KNOWN_VALUE_TAGS,
   LAYER_TAGS,
-  PLAYWRIGHT_BDD_SPECIAL,
+  RUNNER_SPECIAL_TAGS,
   VALUE_TAG,
   taxonomyFromProject,
 } from '../config/tags.js';
@@ -105,7 +105,7 @@ export async function lintProject(opts: LintOptions): Promise<LintResult> {
           tax.extra.includes(tag)
         )
           continue;
-        if (PLAYWRIGHT_BDD_SPECIAL.test(tag)) continue;
+        if (RUNNER_SPECIAL_TAGS.test(tag)) continue;
         if (mod?.tags.includes(tag)) continue;
         if (project.modules.some((m) => m.tags.includes(tag))) continue;
         const m = VALUE_TAG.exec(tag);
@@ -257,7 +257,7 @@ export async function detectUndefinedSteps(
     SDODS_LINT: '1',
     SDODS_ARTIFACTS_DIR: join(repoRoot, '.sdods', 'lint'),
   };
-  const result = await execa('npx', ['bddgen', '-c', join(repoRoot, 'playwright.config.ts')], {
+  const result = await execa('npx', ['bddgen', '-c', join(repoRoot, 'sdods.runner.config.ts')], {
     cwd: repoRoot,
     env,
     reject: false,

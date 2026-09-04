@@ -56,7 +56,7 @@ Certificates are issued by Firebase automatically once ownership is verified; no
 
 ## The API on Cloud Run
 
-One container image serves everything: `deploy/entrypoint.sh serve` runs migrations and starts the server; `bootstrap` creates the admin user and makes it organization owner; any other argument is passed to the `sdods` CLI. The image is built on the official Playwright image so UI runs triggered from the web UI work inside the container.
+One container image serves everything: `deploy/entrypoint.sh serve` runs migrations and starts the server; `bootstrap` creates the admin user and makes it organization owner; any other argument is passed to the `sdods` CLI. The image ships the browser engines, so UI runs triggered from the web UI work inside the container.
 
 <Steps>
   <Step>

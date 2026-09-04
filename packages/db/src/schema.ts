@@ -140,7 +140,7 @@ export interface RunsTable {
   duration_ms: number | null;
   totals_json: Json<Record<string, unknown>>;
   artifacts_dir: string | null;
-  pw_report_rel: string | null;
+  html_report_rel: string | null;
   exit_code: number | null;
   error_text: string | null;
   created_at: Ts;
@@ -159,7 +159,7 @@ export interface ScenariosTable {
   scenario_name: string;
   module: string | null;
   examples_row: number | null;
-  pw_project: string;
+  runner_project: string;
   layer: string;
   browser: string | null;
   suite_tag: string | null;
@@ -280,7 +280,7 @@ export interface FlakyStatsTable {
   id: string;
   project_id: string;
   fingerprint: string;
-  pw_project: string;
+  runner_project: string;
   feature_uri: string | null;
   scenario_name: string | null;
   window_size: number;

@@ -106,7 +106,7 @@ function render(r: any, top = 10) {
       .map((s: any) => ({
         scenario: s.scenarioName,
         module: s.module ?? '',
-        browser: String(s.pwProject).split('--').pop(),
+        browser: String(s.runnerProject).split('--').pop(),
         runs: s.runs,
         failed: s.failed,
         flaky: s.flaky,

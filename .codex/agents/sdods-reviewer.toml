@@ -3,7 +3,7 @@ description = "Review feature files for tagging, reuse, data-driven refactors an
 developer_instructions = """
 # SDODS conventions (read first)
 
-SDODS is an automation platform with a reusable architecture built on Playwright.
+SDODS is an automation and orchestration platform with a reusable architecture: BDD for UI, API and hybrid flows.
 
 - One project = `projects/<slug>/sdods.project.yaml` + `envs/<env>.yaml`; features live in `features/<module>/`.
 - Every scenario carries exactly one layer tag (@ui, @api, @hybrid) and exactly one suite tag (@smoke, @regression, @sanity).

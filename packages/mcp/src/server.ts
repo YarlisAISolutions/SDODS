@@ -127,7 +127,7 @@ export function buildSdodsMcpServer(opts: BuildServerOptions = {}): {
     {
       capabilities: { tools: {}, resources: {}, prompts: {}, logging: {} },
       instructions:
-        'SDODS is an automation platform with a reusable architecture built on Playwright. Tools are grouped by prefix: project_*, workspace_*, process_*, feature_*, step_*, run_*, heal_*, data_*, analyze_*, issue_*, schedule_*, proposal_*. Write tools only create proposals; nothing touches the working tree until a person accepts. Start with project_list, then feature_list / step_list before writing scenarios.',
+        'SDODS is an automation and orchestration platform with a reusable architecture. Tools are grouped by prefix: project_*, workspace_*, process_*, feature_*, step_*, run_*, heal_*, data_*, analyze_*, issue_*, schedule_*, proposal_*. Write tools only create proposals; nothing touches the working tree until a person accepts. Start with project_list, then feature_list / step_list before writing scenarios.',
     },
   );
   const toolCount = toMcpServer(registry, server, ctx);

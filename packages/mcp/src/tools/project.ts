@@ -90,7 +90,7 @@ export const projectTools = [
   defineTool({
     name: 'project_doctor',
     title: 'Doctor',
-    description: 'Check Node, Bun, Playwright browsers, projects, env vars and database settings.',
+    description: 'Check Node, Bun, browser engines, projects, env vars and database settings.',
     shape: { project: z.string().optional() },
     access: 'read',
     domain: 'projects',

@@ -16,7 +16,7 @@ description: The names SDODS gives to attachments and files so every tool can fi
 | `sdods/meta`                                                                          | the scenario meta document                                                                                               |
 | `sdods/cleanup-errors`                                                                | cleanup failures                                                                                                         |
 
-Playwright's own `trace`, `screenshot`, `video` and `<name>-expected.png`/`-actual.png`/`-diff.png` are recognised as well. Names never start with `_`.
+The runner's own `trace`, `screenshot`, `video` and `<name>-expected.png`/`-actual.png`/`-diff.png` are recognised as well. Names never start with `_`.
 
 ## Run directory
 
@@ -25,7 +25,7 @@ Playwright's own `trace`, `screenshot`, `video` and `<name>-expected.png`/`-actu
   run.json  summary.json  run.log
   messages.ndjson | messages.shard-N.ndjson
   pw-results.json          # recorded layer
-  playwright-report/  dashboard/  pw-output/  junit.xml
+  html-report/  dashboard/  runner-output/  junit.xml
   <slug>/<fingerprint>/r<retry>/
     meta.json
     scenario-start.png  scenario-end.png  failure.png
@@ -39,4 +39,4 @@ Playwright's own `trace`, `screenshot`, `video` and `<name>-expected.png`/`-actu
 
 - `runId`: UUID v7, sortable by time; `--run-id` overrides (CI uses `gh-<run id>`).
 - Fingerprint: `sha256(project, featureUri, scenarioName, exampleIndex, layer)` truncated to 16 hex characters.
-- Playwright project: `<slug>--<layer>--<browser>` or `<slug>--api`.
+- Run target: `<slug>--<layer>--<browser>` or `<slug>--api`.

@@ -130,7 +130,7 @@ describe('install.sh', () => {
     ]);
     expect(out).toContain('Dry run');
     expect(out).toMatch(/would run: git clone/);
-    expect(out).toMatch(/would run: npx playwright install chromium/);
+    expect(out).toMatch(/would install browser engines: chromium/);
     expect(out).toMatch(/would write: .*sdods/);
     expect(out).toMatch(/would run: sdods init/);
     expect(existsSync(dir)).toBe(false);

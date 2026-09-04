@@ -50,7 +50,9 @@ describe('agent install --for claude|codex|all', () => {
   });
 
   it('content generators mention the wording rule and the conventions', () => {
-    expect(claudeMdContent()).toContain('automation platform with a reusable architecture');
+    expect(claudeMdContent()).toContain(
+      'automation and orchestration platform with a reusable architecture',
+    );
     expect(agentsMdContent({ project: 'p' })).toContain('sdods run -p p -l api');
   });
 });

@@ -1,10 +1,10 @@
 node_modules/
 dist/
 .sdods/
-.features-gen/
+.sdods/generated/
 test-results/
-playwright-report/
-blob-report/
+html-report/
+shard-reports/
 allure-results/
 *.log
 .env

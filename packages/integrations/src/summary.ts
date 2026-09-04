@@ -3,7 +3,7 @@ import { basename, join } from 'node:path';
 import {
   fingerprint as makeFingerprint,
   parseAttachmentName,
-  parsePwProjectName,
+  parseRunnerProjectName,
   runFiles,
   scenarioFiles,
   type RunManifest,
@@ -177,7 +177,7 @@ export function parseMessages(
   const attempts = new Map<string, AttemptState>();
   const scenarios = new Map<
     string,
-    { pickle: NonNullable<Envelope['pickle']>; pwProject: string; attempts: AttemptState[] }
+    { pickle: NonNullable<Envelope['pickle']>; runnerProject: string; attempts: AttemptState[] }
   >();
   const stepStarts = new Map<string, number>();
 
@@ -219,8 +219,8 @@ export function parseMessages(
       const tc = testCases.get(env.testCaseStarted.testCaseId);
       const pickle = tc && pickles.get(tc.pickleId);
       if (!tc || !pickle) continue;
-      const { pwProject, uri } = splitUri(pickle.uri);
-      const key = `${pwProject}:${pickle.id}`;
+      const { runnerProject, uri } = splitUri(pickle.uri);
+      const key = `${runnerProject}:${pickle.id}`;
       const state: AttemptState = {
         scenarioKey: key,
         attempt: env.testCaseStarted.attempt ?? 0,
@@ -230,7 +230,11 @@ export function parseMessages(
         screenshots: [],
       };
       attempts.set(env.testCaseStarted.id, state);
-      const entry = scenarios.get(key) ?? { pickle: { ...pickle, uri }, pwProject, attempts: [] };
+      const entry = scenarios.get(key) ?? {
+        pickle: { ...pickle, uri },
+        runnerProject,
+        attempts: [],
+      };
       entry.attempts.push(state);
       scenarios.set(key, entry);
     } else if (env.testStepStarted) {
@@ -287,18 +291,18 @@ export function parseMessages(
           phase: parsed.phase,
           stepIndex: parsed.stepIndex,
         });
-      else if (parsed.kind === 'pw-visual')
+      else if (parsed.kind === 'visual-baseline')
         state.screenshots.push({
           relPath: env.attachment.url ?? `${parsed.name}-${parsed.phase}.png`,
           phase: parsed.phase,
           name: parsed.name,
         });
-      else if (parsed.kind === 'pw-builtin' && parsed.name === 'screenshot')
+      else if (parsed.kind === 'runner-builtin' && parsed.name === 'screenshot')
         state.screenshots.push({
           relPath: env.attachment.url ?? 'screenshot.png',
           phase: 'failure',
         });
-      else if (parsed.kind === 'pw-builtin' && parsed.name === 'trace')
+      else if (parsed.kind === 'runner-builtin' && parsed.name === 'trace')
         state.tracePath = env.attachment.url ?? 'trace.zip';
     } else if (env.testCaseFinished) {
       const state = attempts.get(env.testCaseFinished.testCaseStartedId);
@@ -309,11 +313,11 @@ export function parseMessages(
   }
 
   const out: ScenarioSummary[] = [];
-  for (const { pickle, pwProject, attempts: atts } of scenarios.values()) {
+  for (const { pickle, runnerProject, attempts: atts } of scenarios.values()) {
     const sorted = atts.sort((a, b) => a.attempt - b.attempt);
     const final = sorted[sorted.length - 1]!;
     const doc = docs.get(pickle.uri);
-    const parts = parsePwProjectName(pwProject);
+    const parts = parseRunnerProjectName(runnerProject);
     const layer = parts?.layer ?? 'ui';
     const scenarioAst = pickle.astNodeIds?.[0];
     const exampleRow = pickle.astNodeIds?.[1];
@@ -333,7 +337,7 @@ export function parseMessages(
       scenarioName: pickle.name,
       line: scenarioAst && doc ? doc.lines.get(scenarioAst) : undefined,
       exampleIndex,
-      pwProject,
+      runnerProject,
       layer,
       browser: parts?.browser,
       suiteTag: tags.find((t) => ['@smoke', '@regression', '@sanity'].includes(t)),
@@ -363,11 +367,11 @@ export function parseMessages(
 
 function relPathFor(
   projectSlug: string,
-  entry: { pickle: { uri: string; name: string; astNodeIds?: string[] }; pwProject: string },
+  entry: { pickle: { uri: string; name: string; astNodeIds?: string[] }; runnerProject: string },
   state: AttemptState,
   file: string,
 ): string {
-  const parts = parsePwProjectName(entry.pwProject);
+  const parts = parseRunnerProjectName(entry.runnerProject);
   const fp = makeFingerprint({
     project: projectSlug,
     featureUri: entry.pickle.uri,
@@ -378,9 +382,9 @@ function relPathFor(
   return `${projectSlug}/${fp}/r${state.attempt}/${file}`;
 }
 
-function splitUri(uri: string): { pwProject: string; uri: string } {
+function splitUri(uri: string): { runnerProject: string; uri: string } {
   const m = /^\[([^\]]+)\]:(.*)$/.exec(uri);
-  return m ? { pwProject: m[1]!, uri: m[2]! } : { pwProject: 'unknown', uri };
+  return m ? { runnerProject: m[1]!, uri: m[2]! } : { runnerProject: 'unknown', uri };
 }
 
 function mapStatus(s: string | undefined): SuiteStatus {

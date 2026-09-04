@@ -19,22 +19,22 @@ sdods init [dir] [--db sqlite|postgres] [--pm bun|pnpm] [--no-demo] [--claude] [
 | `--from <app>`                    | analyze an application repository and create a project from it (`sdods analyze --apply`) |
 | `--git`                           | `git init` plus an initial commit                                                        |
 | `--link`                          | depend on the local SDODS packages instead of the npm registry (developing SDODS itself) |
-| `--no-install` / `--no-browsers`  | skip `bun install` / `playwright install chromium`                                       |
+| `--no-install` / `--no-browsers`  | skip the dependency install / the chromium download                                      |
 | `--org`, `--org-name`             | organization written to `sdods.workspace.yaml` (default `default`)                       |
 | `--workspace`, `--workspace-name` | first workspace (default `default`)                                                      |
 
 What gets created:
 
-| File                         | Purpose                                                                                                                                        |
-| ---------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| `package.json`               | depends on `@sdods/cli`, `@sdods/core`, `@playwright/test`, `playwright-bdd`; scripts `test`, `test:api`, `test:ui`, `lint`, `serve`, `doctor` |
-| `sdods.workspace.yaml`       | organization, workspaces, `defaultWorkspace`, default processes (`pr-check`, `nightly-regression`, `release-gate`)                             |
-| `playwright.config.ts`       | generated from the project registry (project × layer × browser)                                                                                |
-| `tsconfig.json`              | strict NodeNext config covering `projects/**`                                                                                                  |
-| `.env.example`, `.gitignore` | secrets template and ignores (`.sdods/`, `.auth/`, `.env.*`)                                                                                   |
-| `docker-compose.yml`         | Postgres 16 and the optional server                                                                                                            |
-| `projects/demo-shop/`        | the reference project (unless `--no-demo`)                                                                                                     |
-| `.claude/skills/`            | `sdods-record` and `sdods-run` skills                                                                                                          |
+| File                         | Purpose                                                                                                                          |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `package.json`               | depends on `@sdods/cli`, `@sdods/core` and the runner packages; scripts `test`, `test:api`, `test:ui`, `lint`, `serve`, `doctor` |
+| `sdods.workspace.yaml`       | organization, workspaces, `defaultWorkspace`, default processes (`pr-check`, `nightly-regression`, `release-gate`)               |
+| `sdods.runner.config.ts`     | generated from the project registry (project × layer × browser)                                                                  |
+| `tsconfig.json`              | strict NodeNext config covering `projects/**`                                                                                    |
+| `.env.example`, `.gitignore` | secrets template and ignores (`.sdods/`, `.auth/`, `.env.*`)                                                                     |
+| `docker-compose.yml`         | Postgres 16 and the optional server                                                                                              |
+| `projects/demo-shop/`        | the reference project (unless `--no-demo`)                                                                                       |
+| `.claude/skills/`            | `sdods-record` and `sdods-run` skills                                                                                            |
 
 ```bash
 npx sdods init my-tests --org acme --workspace web && cd my-tests

@@ -22,7 +22,7 @@ contracts → core → db → mcp → integrations → agents → server → web
 | Package | Owns | Never imports |
 |---|---|---|
 | `@sdods/contracts` | Zod schemas for project/env yaml, ids (fingerprint, uuid v7, Playwright project naming), attachment naming, scopes/roles, DTO types | anything else in the repo |
-| `@sdods/core` | config precedence, `ProjectRegistry`, `buildPlaywrightConfig`, merged fixtures, step libraries, `DataProvider` + `UserPool`, `ScreenshotNarrator`, `Healer`, recorder/HAR/auth capture, lint, analyze, reporters, insights math | `db` statically (lazy `import('@sdods/db')` in the db fixture and loader) |
+| `@sdods/core` | config precedence, `ProjectRegistry`, `buildRunnerConfig`, merged fixtures, step libraries, `DataProvider` + `UserPool`, `ScreenshotNarrator`, `Healer`, recorder/HAR/auth capture, lint, analyze, reporters, insights math | `db` statically (lazy `import('@sdods/db')` in the db fixture and loader) |
 | `@sdods/db` | Kysely `Database` interface, driver factory (`DB_DRIVER`), `col()` dialect helper, migrations, repos, NDJSON and PW-json ingest, `db switch` | server, web |
 | `@sdods/mcp` | `ToolRegistry` (one definition → MCP server, Agent SDK tools, OpenAI functions), tools, resources, prompts, stdio and HTTP transports | agents |
 | `@sdods/integrations` | `IntegrationProvider`, GitHub and Jira providers, issue dedupe | server |
@@ -41,7 +41,7 @@ TypeScript project references enforce the graph; a cycle fails `tsc -b`.
 4. Compute the Playwright project names in-process with the same builder and spawn `playwright test --project <name>…` with the remaining flags.
 5. On exit: ingest NDJSON and artifacts if a database is configured, run integration notifications, print the summary, exit with Playwright's code.
 
-`playwright.config.ts` calls `buildPlaywrightConfig(ProjectRegistry.discover(root), selection)`. For each project and layer it calls `defineBddConfig` once (`features`, `steps` = core glob + project glob, `outputDir: .features-gen/<slug>/<layer>`, `importTestFrom: projects/<slug>/steps/fixtures.ts`, `tags: (@<layer>) and (<expr>)`); browsers reuse the returned `testDir`. Project names are `<slug>--<layer>--<browser>`; the `sdods` option on `use` tells workers their identity.
+`sdods.runner.config.ts` calls `buildRunnerConfig(ProjectRegistry.discover(root), selection)`. For each project and layer it calls `defineBddConfig` once (`features`, `steps` = core glob + project glob, `outputDir: .sdods/generated/<slug>/<layer>`, `importTestFrom: projects/<slug>/steps/fixtures.ts`, `tags: (@<layer>) and (<expr>)`); browsers reuse the returned `testDir`. Project names are `<slug>--<layer>--<browser>`; the `sdods` option on `use` tells workers their identity.
 
 ## 4. Fixtures
 

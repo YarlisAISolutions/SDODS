@@ -5,7 +5,7 @@
 #   curl -fsSL https://sdods.com/install.sh | sh -s -- --workspace ~/tests --mcp claude
 #
 # What it does: checks Node 22+, installs Bun into the SDODS home if needed, fetches SDODS
-# (npm when published, otherwise a shallow git clone), installs dependencies and Playwright
+# (npm when published, otherwise a shallow git clone), installs dependencies and browser
 # browsers, and writes an `sdods` shim on your PATH. Re-running upgrades in place.
 #
 # Nothing is written outside $SDODS_HOME (default ~/.sdods) and $BIN_DIR (default
@@ -148,7 +148,7 @@ Options (environment equivalent in parentheses):
   --bin-dir <path>      where the sdods shim goes, default \$HOME/.local/bin (SDODS_BIN_DIR)
   --pm bun|pnpm|npm     package manager, default bun (SDODS_PM)
   --browsers all|chromium|none
-                        Playwright browsers to install, default chromium (SDODS_BROWSERS)
+                        browser engines to install, default chromium (SDODS_BROWSERS)
   --workspace <dir>     also scaffold a workspace there with 'sdods init' (SDODS_WORKSPACE)
   --source git|npm|auto how to fetch SDODS, default auto (SDODS_SOURCE)
   --mcp claude|codex|all
@@ -226,7 +226,7 @@ detect_platform() {
         "Or install inside WSL, where this script works normally."
       ;;
     FreeBSD | OpenBSD | NetBSD)
-      die 3 "$UNAME_S is not supported by Playwright browsers." \
+      die 3 "$UNAME_S is not supported by the browser engines." \
         "You can still clone the repository and run API-layer tests."
       ;;
     *) die 3 "Unsupported operating system: $UNAME_S" ;;
@@ -446,9 +446,9 @@ install_browsers() {
   if [ "$BROWSERS" = none ]; then debug 'skipping browsers'; return 0; fi
   list=chromium
   if [ "$BROWSERS" = all ]; then list='chromium firefox webkit'; fi
-  step "Installing Playwright browsers: $list"
+  step "Installing browser engines: $list"
   if [ "$DRY_RUN" = 1 ]; then
-    printf '%s   would run: npx playwright install %s%s\n' "$C_DIM" "$list" "$C_RESET"
+    printf '%s   would install browser engines: %s%s\n' "$C_DIM" "$list" "$C_RESET"
     return 0
   fi
   with_deps=''
@@ -457,7 +457,7 @@ install_browsers() {
       with_deps='--with-deps'
     else
       warn "Skipping system libraries (needs root). If browsers fail to start, run:"
-      say "  cd \"$APP_DIR\" && sudo npx playwright install-deps"
+      say "  cd \"$APP_DIR\" && sudo ./node_modules/.bin/sdods browsers install --with-deps"
     fi
   fi
   # shellcheck disable=SC2086
@@ -586,7 +586,7 @@ do_uninstall() {
   esac
   say ''
   say "SDODS is uninstalled. Workspaces you created are untouched."
-  say "Playwright browsers stay in the shared cache; remove them with:"
+  say "Browser engines stay in the shared cache; remove them with:"
   say "  rm -rf ~/Library/Caches/ms-playwright  # macOS"
   say "  rm -rf ~/.cache/ms-playwright          # Linux"
   exit 0
