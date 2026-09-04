@@ -1,0 +1,1 @@
+{ "projects": { "portal": { "architect": { "serve": { "options": { "port": 4300 } } } } } }
