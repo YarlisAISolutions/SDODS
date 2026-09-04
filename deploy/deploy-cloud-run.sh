@@ -28,7 +28,9 @@ gcloud run deploy "$SERVICE" \
   --cpu-boost \
   --add-cloudsql-instances "$CONN" \
   --set-secrets "SESSION_SECRET=automax-session-secret:latest,DB_PASSWORD=automax-db-password:latest" \
-  --set-env-vars "DB_DRIVER=postgres,DB_USER=sdods,DB_NAME=sdods,CLOUDSQL_CONNECTION=${CONN},HOST=0.0.0.0,SDODS_ROOT=/app,SDODS_PUBLIC_URL=${PUBLIC_URL},SDODS_PROJECTS_DIR=/app/projects,SDODS_ARTIFACTS_DIR=/tmp/sdods/runs,SDODS_MAX_CONCURRENT_RUNS=1,SDODS_SESSION_COOKIE=__session" \
+  # DB_USER and DB_NAME name the existing Cloud SQL role and database. They keep the
+  # pre-rebrand prefix on purpose; renaming them means migrating live data.
+  --set-env-vars "DB_DRIVER=postgres,DB_USER=automax,DB_NAME=automax,CLOUDSQL_CONNECTION=${CONN},HOST=0.0.0.0,SDODS_ROOT=/app,SDODS_PUBLIC_URL=${PUBLIC_URL},SDODS_PROJECTS_DIR=/app/projects,SDODS_ARTIFACTS_DIR=/tmp/sdods/runs,SDODS_MAX_CONCURRENT_RUNS=1,SDODS_SESSION_COOKIE=__session" \
   --quiet
 
 URL=$(gcloud run services describe "$SERVICE" --project "$PROJECT" --region "$REGION" --format 'value(status.url)')

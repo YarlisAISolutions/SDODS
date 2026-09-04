@@ -13,6 +13,8 @@ SDODS="node --import tsx packages/cli/src/bin.ts"
 
 if [[ "${DB_DRIVER:-sqlite}" == "postgres" && -z "${DATABASE_URL:-}" ]]; then
   : "${DB_PASSWORD:?DB_PASSWORD (secret) is required when DATABASE_URL is not set}"
+  # Defaults for a fresh deployment. The hosted deployment overrides both, because its
+  # Cloud SQL role and database predate the rebrand.
   DB_USER="${DB_USER:-sdods}"
   DB_NAME="${DB_NAME:-sdods}"
   ENC_PW=$(node -e 'process.stdout.write(encodeURIComponent(process.argv[1]))' "$DB_PASSWORD")

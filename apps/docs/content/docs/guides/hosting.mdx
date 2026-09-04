@@ -99,7 +99,7 @@ fresh set of secrets for no user-visible gain. Treat them as opaque identifiers,
 | Name                                    | Where           | Used for                                                                                                     |
 | --------------------------------------- | --------------- | ------------------------------------------------------------------------------------------------------------ |
 | `automax-session-secret`                | Secret Manager  | signs session cookies                                                                                        |
-| `automax-db-password`                   | Secret Manager  | Cloud SQL user `sdods`                                                                                       |
+| `automax-db-password`                   | Secret Manager  | Cloud SQL user `automax`                                                                                       |
 | `automax-admin-password`                | Secret Manager  | bootstrap admin (read once, then change it in the UI)                                                        |
 | `automax-api-runtime@…`                 | service account | Cloud Run runtime: Secret Manager accessor, Cloud SQL client                                                 |
 | `github-deploy-api@…`                   | service account | CI: Cloud Build, Cloud Run admin, Artifact Registry writer; key stored as GitHub secret `GCP_SA_KEY_AUTOMAX` |
