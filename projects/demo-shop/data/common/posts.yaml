@@ -1,0 +1,11 @@
+# Rows for the "posts" dataset (JSONPlaceholder ids and their owners).
+rows:
+  - id: 1
+    userId: 1
+    title: sunt aut facere repellat provident occaecati excepturi optio reprehenderit
+  - id: 11
+    userId: 2
+    title: et ea vero quia laudantium autem
+  - id: 21
+    userId: 3
+    title: asperiores ea ipsam voluptatibus modi minima quia sint

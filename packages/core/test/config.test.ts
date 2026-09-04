@@ -2,7 +2,7 @@ import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { deepMerge, coerceEnvValue, setPath, getPath } from '../src/config/merge.js';
+import { deepMerge, coerceEnvValue, setPath, getAtPath } from '../src/config/merge.js';
 import { assertNoSecretLiterals, collectVarRefs, interpolate } from '../src/config/interpolate.js';
 import { combineTagExpr, normalizeTagExpr, parseTagValue } from '../src/config/tags.js';
 import { resolveConfig, serializeCliOverrides } from '../src/config/resolve.js';
@@ -49,7 +49,7 @@ describe('deepMerge', () => {
   it('setPath/getPath and env coercion', () => {
     const t: Record<string, unknown> = {};
     setPath(t, 'a.b.c', 5);
-    expect(getPath(t, 'a.b.c')).toBe(5);
+    expect(getAtPath(t, 'a.b.c')).toBe(5);
     expect(coerceEnvValue('true')).toBe(true);
     expect(coerceEnvValue('42')).toBe(42);
     expect(coerceEnvValue('x')).toBe('x');

@@ -64,7 +64,7 @@ export function setPath(target: Record<string, unknown>, dotted: string, value: 
   cur[parts[parts.length - 1]!] = value;
 }
 
-export function getPath(target: unknown, dotted: string): unknown {
+export function getAtPath(target: unknown, dotted: string): unknown {
   return dotted
     .split('.')
     .reduce<unknown>((acc, key) => (isPlainObject(acc) ? acc[key] : undefined), target);

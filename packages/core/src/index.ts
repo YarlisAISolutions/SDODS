@@ -1,4 +1,16 @@
 export * from './errors.js';
 export * from './logger.js';
 export * from './config/index.js';
+export * from './api/index.js';
+export * from './auth/index.js';
+export * from './data/index.js';
+export * from './heal/index.js';
+export * from './shots/index.js';
+export * from './lint/index.js';
+export { BasePage } from './pages/base-page.js';
+export { PageRegistry } from './fixtures/pages.js';
+export { AuthStateCache } from './fixtures/auth.js';
+export { ScenarioMeta } from './fixtures/scenario.js';
+export type { TestFixtures, WorkerFixtures, AutomaxOption } from './fixtures/types.js';
+export { coreStepsGlob, coreStepsDir } from './steps/glob.js';
 export { VERSION } from './version.js';

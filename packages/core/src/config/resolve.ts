@@ -21,7 +21,7 @@ import { assertNoSecretLiterals, interpolate } from './interpolate.js';
 import {
   coerceEnvValue,
   deepMerge,
-  getPath,
+  getAtPath,
   setPath,
   type LayerName,
   type Provenance,
@@ -221,7 +221,11 @@ export function resolveConfig(opts: ResolveOptions): ResolvedConfig {
     setPath(
       tree as unknown as Record<string, unknown>,
       dotted,
-      dotted === 'runtime.shard' ? parseShard(raw) : coerceEnvValue(raw),
+      dotted === 'runtime.shard'
+        ? parseShard(raw)
+        : BOOLEAN_PATHS.has(dotted)
+          ? coerceBool(raw)
+          : coerceEnvValue(raw),
     );
     prov.byPath.set(dotted, 'processEnv');
   }
@@ -297,6 +301,19 @@ function applyCli(
   set('project.heal.enabled', cli.heal);
 }
 
+/** Config paths that are booleans: `AUTOMAX_X=1|true|yes|on` → true, `0|false|no|off` → false. */
+const BOOLEAN_PATHS = new Set([
+  'runtime.headed',
+  'runtime.offline',
+  'runtime.updateSnapshots',
+  'project.screenshots.onlyOnFailure',
+  'project.heal.enabled',
+]);
+
+export function coerceBool(raw: string): boolean {
+  return /^(1|true|yes|on)$/i.test(raw.trim());
+}
+
 export function parseShard(raw: string): { current: number; total: number } {
   const m = /^(\d+)\s*\/\s*(\d+)$/.exec(String(raw).trim());
   if (!m)
@@ -327,7 +344,7 @@ export function explainConfig(
   const rows: Array<{ path: string; value: unknown; layer: LayerName }> = [];
   const tree = { project: cfg.project, env: cfg.env, runtime: cfg.runtime };
   for (const [path, layer] of Object.entries(cfg.provenance)) {
-    rows.push({ path, value: getPath(tree, path), layer });
+    rows.push({ path, value: getAtPath(tree, path), layer });
   }
   return rows.sort((a, b) => a.path.localeCompare(b.path));
 }

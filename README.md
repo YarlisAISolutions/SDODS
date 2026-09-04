@@ -388,10 +388,10 @@ Implementation follows the phased plan in [docs/ARCHITECTURE.md](docs/ARCHITECTU
 | Phase | Scope | Status |
 |---|---|---|
 | 0 | Monorepo, config precedence, registry, CLI skeleton | done |
-| 1 | API layer end to end (no browser) | in progress |
-| 2 | UI layer, page objects, self-healing, dashboard | planned |
-| 3 | Data providers, user pool, auth capture, hybrid | planned |
-| 4 | Screenshot narratives, NDJSON | planned |
+| 1 | API layer end to end (no browser) | done |
+| 2 | UI layer, page objects, self-healing, dashboard | done |
+| 3 | Data providers, user pool, auth capture, hybrid | done |
+| 4 | Screenshot narratives, NDJSON | done |
 | 5 | Database, ingest, switch | planned |
 | 6 | Recorder and HAR | planned |
 | 7 | MCP server | planned |

@@ -44,7 +44,8 @@
     "@automax/contracts": "workspace:*",
     "@automax/core": "workspace:*",
     "@automax/cli": "workspace:*",
-    "@changesets/cli": "^3.0.1"
+    "@changesets/cli": "^3.0.1",
+    "execa": "^10.0.1"
   },
   "trustedDependencies": [
     "better-sqlite3",

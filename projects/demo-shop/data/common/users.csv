@@ -1,0 +1,7 @@
+id,username,password,role,displayName
+1,standard_user,${DEMO_SHOP_PASSWORD:-secret_sauce},standard,Standard user
+2,problem_user,${DEMO_SHOP_PASSWORD:-secret_sauce},problem,Problem user
+3,performance_glitch_user,${DEMO_SHOP_PASSWORD:-secret_sauce},performance,Performance glitch user
+4,locked_out_user,${DEMO_SHOP_PASSWORD:-secret_sauce},locked,Locked out user
+5,error_user,${DEMO_SHOP_PASSWORD:-secret_sauce},standard,Error user
+6,visual_user,${DEMO_SHOP_PASSWORD:-secret_sauce},standard,Visual user
