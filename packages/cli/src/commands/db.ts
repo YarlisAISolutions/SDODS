@@ -106,7 +106,11 @@ export function register(program: Command) {
     .description('Copy the database to sqlite|postgres, verify counts and update .env')
     .option('--target-url <url>', 'Postgres connection string for the target')
     .option('--target-path <path>', 'SQLite file for the target')
-    .option('--dry-run', 'copy and verify, but do not rewrite .env')
+    .option('--dry-run', 'verify the target and report row counts without writing anything')
+    .option(
+      '--truncate',
+      'clear the target platform tables first (required when the target already has data)',
+    )
     .option('--env-file <file>', 'dotenv file to update', '.env')
     .option('--yes', 'skip confirmation')
     .action(async (target: string, opts, cmd) => {
@@ -134,6 +138,7 @@ export function register(program: Command) {
           targetUrl: opts.targetUrl,
           targetPath: opts.targetPath,
           dryRun: Boolean(opts.dryRun),
+          truncate: Boolean(opts.truncate),
           envFile: resolve(ctx.rootDir, opts.envFile),
         });
         if (ctx.opts.json) return json(result);
