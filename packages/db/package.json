@@ -1,0 +1,39 @@
+{
+  "name": "@automax/db",
+  "version": "0.1.0",
+  "description": "AutoMax platform database: Kysely schema for SQLite and Postgres, migrations, cucumber NDJSON ingest, driver switch, insights.",
+  "license": "Apache-2.0",
+  "author": "Sireesh Yarlagadda (https://www.linkedin.com/in/yarlagadda/)",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./schema": "./src/schema.ts",
+    "./ingest": "./src/ingest/index.ts",
+    "./switch": "./src/switch/index.ts",
+    "./insights": "./src/insights.ts",
+    "./test-data": "./src/test-data.ts"
+  },
+  "publishConfig": {
+    "exports": {
+      ".": "./dist/index.js",
+      "./schema": "./dist/schema.js",
+      "./ingest": "./dist/ingest/index.js",
+      "./switch": "./dist/switch/index.js",
+      "./insights": "./dist/insights.js",
+      "./test-data": "./dist/test-data.js"
+    }
+  },
+  "files": ["dist"],
+  "engines": { "node": ">=22" },
+  "dependencies": {
+    "@automax/contracts": "workspace:*",
+    "better-sqlite3": "^13.0.3",
+    "kysely": "^0.29.5",
+    "pg": "^8.23.0",
+    "zod": "^4.5.4"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/pg": "^8.15.5"
+  }
+}

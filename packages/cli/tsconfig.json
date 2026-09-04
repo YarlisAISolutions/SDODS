@@ -18,6 +18,15 @@
     },
     {
       "path": "../integrations"
+    },
+    {
+      "path": "../mcp"
+    },
+    {
+      "path": "../agents"
+    },
+    {
+      "path": "../db"
     }
   ]
 }
