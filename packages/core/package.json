@@ -25,7 +25,8 @@
     "./insights": "./src/insights/index.ts",
     "./reporters/dashboard": "./src/reporters/dashboard.ts",
     "./reporters": "./src/reporters/index.ts",
-    "./logger": "./src/logger.ts"
+    "./logger": "./src/logger.ts",
+    "./auth/capture": "./src/auth/capture.ts"
   },
   "publishConfig": {
     "exports": {
@@ -48,11 +49,16 @@
       "./insights": "./dist/insights/index.js",
       "./reporters/dashboard": "./dist/reporters/dashboard.js",
       "./reporters": "./dist/reporters/index.js",
-      "./logger": "./dist/logger.js"
+      "./logger": "./dist/logger.js",
+      "./auth/capture": "./dist/auth/capture.js"
     }
   },
-  "files": ["dist"],
-  "engines": { "node": ">=22" },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
   "peerDependencies": {
     "@playwright/test": ">=1.58",
     "playwright-bdd": ">=9"
