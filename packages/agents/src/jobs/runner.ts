@@ -143,7 +143,15 @@ export function prepareJob(o: RunJobOptions): {
   const adapter =
     o.adapter ??
     createAdapter(
-      { provider, model: o.model ?? yaml?.agents?.models?.[o.role] },
+      {
+        provider,
+        model: o.model ?? yaml?.agents?.models?.[o.role],
+        rootDir,
+        project: o.input.project,
+        env: o.input.env,
+        onAutoDetect: (p, reason) =>
+          o.onEvent?.({ type: 'status', message: `adapter auto-selected: ${p} (${reason})` }),
+      },
       yaml?.agents?.provider,
     );
   const registry = o.registry ?? createRegistry();

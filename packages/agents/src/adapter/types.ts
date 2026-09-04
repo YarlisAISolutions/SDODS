@@ -1,6 +1,10 @@
 import type { AgentSdkToolDef } from '@automax/mcp';
 
-export type Provider = 'claude' | 'openai-compatible' | 'fake';
+/**
+ * claude / openai-compatible: API keys. claude-code / codex: shell out to the user's logged-in
+ * CLI (no key needed). fake: scripted, for tests and --dry-run.
+ */
+export type Provider = 'claude' | 'claude-code' | 'codex' | 'openai-compatible' | 'fake';
 
 export interface TokenUsage {
   inputTokens?: number;
@@ -91,8 +95,11 @@ export class AgentsConfigError extends Error {
   }
 }
 
+/** `default` means "let the CLI pick its configured model" (claude-code, codex). */
 export const DEFAULT_MODELS: Record<Provider, string> = {
   claude: 'claude-opus-5',
+  'claude-code': 'default',
+  codex: 'default',
   'openai-compatible': 'gpt-4.1',
   fake: 'fake-model',
 };

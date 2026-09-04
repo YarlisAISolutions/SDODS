@@ -9,6 +9,7 @@
     "mcp-tools",
     "rest-api",
     "environment-variables",
+    "tokens-and-keys",
     "exit-codes",
     "file-naming",
     "known-limitations"

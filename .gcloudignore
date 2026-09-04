@@ -1,0 +1,2 @@
+# gcloud upload: mirror .dockerignore
+#!include:.dockerignore

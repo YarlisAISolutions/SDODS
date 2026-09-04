@@ -129,6 +129,15 @@ function Shell() {
             {item('/settings/tokens', 'API tokens')}
             {item('/settings/mcp', 'MCP clients')}
             {item('/users', 'Users', { hidden: !isAdmin })}
+            <a
+              href={feedbackUrl()}
+              target="_blank"
+              rel="noreferrer"
+              data-testid="send-feedback"
+              className="block rounded px-2 py-1 text-sm muted hover:underline"
+            >
+              Send feedback ↗
+            </a>
           </div>
         </nav>
         <div className="flex items-center justify-between border-t border-line px-3 py-2 text-xs">
@@ -146,3 +155,17 @@ function Shell() {
     </div>
   );
 }
+
+/** Prefilled GitHub issue form (no backend): feedback goes straight to the maintainers. */
+function feedbackUrl(): string {
+  const params = new URLSearchParams({
+    template: 'feature_request.yml',
+    title: '[Feature] ',
+    labels: 'enhancement,triage,feedback',
+    'automax-version':
+      `web ui ${typeof __AUTOMAX_VERSION__ !== 'undefined' ? __AUTOMAX_VERSION__ : ''}`.trim(),
+  });
+  return `https://github.com/siri1410/AutoMax/issues/new?${params.toString()}`;
+}
+
+declare const __AUTOMAX_VERSION__: string | undefined;

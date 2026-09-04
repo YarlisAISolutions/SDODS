@@ -30,7 +30,14 @@
     "web:dev": "bun run --filter @automax/web dev:mocks",
     "web:build": "bun run --filter @automax/web build",
     "release:check:live": "node --import tsx ./packages/cli/src/bin.ts run -p demo-shop -e staging --project-matrix -t \"@smoke or @sanity or @regression\"",
-    "dogfood": "bash scripts/dogfood.sh"
+    "dogfood": "bash scripts/dogfood.sh",
+    "www:dev": "bun run --cwd apps/www dev",
+    "www:build": "bun run --cwd apps/www build",
+    "www:screenshots": "bun run --cwd apps/www screenshots",
+    "api:build": "gcloud builds submit --project automax-docs --region us-central1 --tag us-central1-docker.pkg.dev/automax-docs/automax/automax-api:latest .",
+    "api:deploy": "bash deploy/deploy-cloud-run.sh",
+    "api:deploy-hosting": "firebase deploy --only hosting:api --project automax-docs",
+    "api:bootstrap": "bash deploy/bootstrap-admin.sh"
   },
   "devDependencies": {
     "@types/node": "^22.15.0",

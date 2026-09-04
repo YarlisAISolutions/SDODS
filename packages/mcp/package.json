@@ -43,7 +43,8 @@
     "@modelcontextprotocol/server": "^2.0.0",
     "csv-parse": "^7.0.2",
     "yaml": "^2.9.0",
-    "zod": "^4.5.4"
+    "zod": "^4.5.4",
+    "smol-toml": "^1.8.0"
   },
   "devDependencies": {
     "@modelcontextprotocol/client": "^2.0.0"

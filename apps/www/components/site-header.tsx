@@ -1,0 +1,41 @@
+import Link from 'next/link';
+import { ThemeToggle } from '@/components/theme-toggle';
+import { DOCS_URL, REPO_URL } from '@/lib/links';
+
+export function SiteHeader() {
+  return (
+    <header className="sticky top-0 z-40 border-b border-[var(--line)] bg-[var(--bg)]/85 backdrop-blur">
+      <nav
+        aria-label="Primary"
+        className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3"
+      >
+        <Link href="/" className="flex items-center gap-2 font-semibold">
+          <img src="/img/favicon.svg" alt="" width={26} height={26} />
+          <span>
+            Auto<span className="text-[var(--brand)]">Max</span>
+          </span>
+        </Link>
+        <div className="hidden items-center gap-6 text-sm md:flex">
+          <a href={DOCS_URL} className="hover:underline">
+            Docs
+          </a>
+          <Link href="/roadmap/" className="hover:underline">
+            Roadmap
+          </Link>
+          <Link href="/feedback/" className="hover:underline">
+            Feedback
+          </Link>
+          <a href={REPO_URL} className="hover:underline" rel="noreferrer">
+            GitHub
+          </a>
+        </div>
+        <div className="flex items-center gap-3">
+          <a href={DOCS_URL} className="btn btn-primary hidden text-sm sm:inline-flex">
+            Read the docs
+          </a>
+          <ThemeToggle />
+        </div>
+      </nav>
+    </header>
+  );
+}

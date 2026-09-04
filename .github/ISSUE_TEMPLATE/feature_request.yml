@@ -1,0 +1,70 @@
+name: Feature request
+description: Ask for a new AutoMax capability or an improvement to an existing one.
+title: '[Feature] '
+labels: ['enhancement', 'triage']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping shape AutoMax. Tell us about the problem first; the solution can come later.
+        Not sure yet? Start in [Discussions → Ideas](https://github.com/siri1410/AutoMax/discussions/categories/ideas).
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem are you trying to solve?
+      description: The workflow you are running, where it gets stuck or slow, and how often it happens.
+      placeholder: 'When I run the nightly regression across three environments I have to …'
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: What would a good solution look like?
+      description: A command, a YAML field, a screen, an agent behaviour. Sketches and examples welcome.
+    validations:
+      required: false
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - CLI
+        - Configuration (project / environment YAML)
+        - Runtime (fixtures, steps, data, screenshots, healing)
+        - Database / insights
+        - Web UI
+        - MCP server
+        - AI agents
+        - Integrations (GitHub, Jira)
+        - Schedules / CI
+        - Documentation
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: who
+    attributes:
+      label: Who benefits?
+      description: Your role, team size, the kind of application under test. Helps us prioritise.
+  - type: dropdown
+    id: priority
+    attributes:
+      label: How important is this for you?
+      options:
+        - Nice to have
+        - Would make my week
+        - Blocking adoption
+    validations:
+      required: true
+  - type: input
+    id: automax-version
+    attributes:
+      label: AutoMax version
+      description: From `automax --version` (or "web ui" if you came from the app).
+  - type: checkboxes
+    id: contribute
+    attributes:
+      label: Contribution
+      options:
+        - label: I am willing to open a pull request for this.
+        - label: I can test a preview build against my project.

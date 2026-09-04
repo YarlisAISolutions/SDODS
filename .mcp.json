@@ -1,0 +1,27 @@
+{
+  "mcpServers": {
+    "automax": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "automax",
+        "mcp",
+        "--project",
+        "demo-shop",
+        "--env",
+        "staging"
+      ],
+      "env": {}
+    },
+    "playwright": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "playwright",
+        "mcp",
+        "--headless"
+      ],
+      "env": {}
+    }
+  }
+}

@@ -47,7 +47,10 @@ export function register(program: Command) {
       .option('--run-id <id>', 'run id (heal), default last', 'last')
       .option('--diff <range>', 'git range (upgrade), e.g. main..HEAD')
       .option('--files <list>', 'feature files (review)', collect, [])
-      .option('--adapter <name>', 'claude | openai | fake')
+      .option(
+        '--adapter <name>',
+        'claude (API key) | claude-code (logged-in Claude Code CLI) | codex (logged-in Codex CLI) | openai | fake; default: auto-detect',
+      )
       .option('--model <id>', 'model override')
       .option('--max-turns <n>', 'turn budget')
       .option('--budget-usd <n>', 'cost budget in USD')
@@ -170,24 +173,65 @@ export function register(program: Command) {
       table(rows);
     });
 
+  const installAction = async (
+    opts: { for?: string; project?: string; env?: string; force?: boolean; mcp?: boolean },
+    cmd: Command,
+    forced?: 'claude',
+  ) => {
+    const ctx = createContext(cmd);
+    const target = (forced ?? opts.for ?? 'all') as 'claude' | 'codex' | 'all';
+    if (!['claude', 'codex', 'all'].includes(target)) {
+      throw new AutomaxError('NOT_SUPPORTED', `Unknown target "${target}".`, {
+        hint: 'Use --for claude, --for codex or --for all.',
+        exitCode: 2,
+      });
+    }
+    const { installCodingAgents } = await import('@automax/agents');
+    const written = installCodingAgents(ctx.rootDir, {
+      for: target,
+      project: opts.project,
+      env: opts.env,
+      force: opts.force,
+    });
+    if (opts.mcp !== false) {
+      const { execa } = await import('execa');
+      const clients = target === 'all' ? ['claude', 'codex'] : [target];
+      for (const client of clients) {
+        const args = ['mcp', 'install', client];
+        if (opts.project) args.push('-p', opts.project);
+        if (opts.env) args.push('-e', opts.env);
+        const r = await execa(process.execPath, [...process.execArgv, process.argv[1]!, ...args], {
+          cwd: ctx.rootDir,
+          reject: false,
+        });
+        written.push(
+          `mcp:${client} → ${r.exitCode === 0 ? 'registered' : `failed (${(r.stderr || r.stdout).trim().split('\n').pop()})`}`,
+        );
+      }
+    }
+    if (ctx.opts.json) return json({ target, written });
+    for (const w of written) ok(w.replace(ctx.rootDir + '/', ''));
+    if (!written.length) out(pc.dim('Nothing written (files exist; use --force).'));
+  };
+
   agent
-    .command('install-claude')
+    .command('install')
     .description(
-      'Write .claude/agents/automax-*.md, .mcp.json, AGENT.md and SKILL.md for Claude Code',
+      'Set up coding-agent CLIs: --for claude writes .claude/agents/automax-*.md + CLAUDE.md, --for codex writes AGENTS.md; both get AGENT.md/SKILL.md and the MCP registration',
     )
+    .option('--for <client>', 'claude | codex | all', 'all')
     .option('-p, --project <slug>')
     .option('-e, --env <name>')
     .option('--force', 'overwrite existing files')
-    .action(async (opts, cmd) => {
-      const ctx = createContext(cmd);
-      const { installClaudeCode } = await import('@automax/agents');
-      const written = installClaudeCode(ctx.rootDir, {
-        project: opts.project,
-        env: opts.env,
-        force: opts.force,
-      });
-      if (ctx.opts.json) return json({ written });
-      for (const w of written) ok(w.replace(ctx.rootDir + '/', ''));
-      if (!written.length) out(pc.dim('Nothing written (files exist; use --force).'));
-    });
+    .option('--no-mcp', 'skip `automax mcp install <client>`')
+    .action((opts, cmd) => installAction(opts, cmd));
+
+  agent
+    .command('install-claude')
+    .description('Alias of `agent install --for claude`')
+    .option('-p, --project <slug>')
+    .option('-e, --env <name>')
+    .option('--force', 'overwrite existing files')
+    .option('--no-mcp', 'skip `automax mcp install claude`')
+    .action((opts, cmd) => installAction(opts, cmd, 'claude'));
 }

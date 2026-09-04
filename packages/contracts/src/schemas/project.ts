@@ -173,7 +173,8 @@ export const McpConfigSchema = z.object({
 });
 
 export const AgentsConfigSchema = z.object({
-  provider: z.enum(['claude', 'openai-compatible', 'fake']).optional(),
+  /** claude/openai-compatible use API keys; claude-code/codex shell out to the logged-in CLI */
+  provider: z.enum(['claude', 'claude-code', 'codex', 'openai-compatible', 'fake']).optional(),
   models: z.record(z.string(), z.string()).default({}),
   maxTurns: z.record(z.string(), z.number().int().positive()).default({}),
   budgetUsd: z.record(z.string(), z.number().positive()).default({ default: 2 }),

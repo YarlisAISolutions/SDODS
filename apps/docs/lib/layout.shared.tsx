@@ -17,6 +17,7 @@ export function baseOptions(): BaseLayoutProps {
       { text: 'Guides', url: '/docs/guides/projects-and-environments' },
       { text: 'Reference', url: '/docs/reference/cli' },
       { text: 'Roadmap', url: '/docs/roadmap' },
+      { text: 'Feedback', url: 'https://sdods.com/feedback/', external: true },
     ],
   };
 }
