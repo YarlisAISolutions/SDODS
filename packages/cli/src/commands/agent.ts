@@ -52,6 +52,15 @@ export function register(program: Command) {
         'claude (API key) | claude-code (logged-in Claude Code CLI) | codex (logged-in Codex CLI) | openai | ollama (a model on this machine) | fake; default: auto-detect',
       )
       .option('--model <id>', 'model override')
+      .option(
+        '--profile <name>',
+        'auto | full | small — how many tools and how much prompt the model is given',
+      )
+      .option(
+        '--browser',
+        'attach the browser MCP server even under the small profile (which omits it)',
+      )
+      .option('--no-browser', 'never attach the browser MCP server')
       .option('--base-url <url>', 'model server endpoint (ollama, vLLM, LM Studio, Azure)')
       .option('--context-tokens <n>', 'context window to load a local model with (num_ctx)')
       .option('--max-turns <n>', 'turn budget')
@@ -83,6 +92,8 @@ export function register(program: Command) {
           rootDir: ctx.rootDir,
           provider: opts.dryRun ? 'fake' : opts.adapter,
           model: opts.model,
+          profile: opts.profile,
+          browser: opts.browser as boolean | undefined,
           baseUrl: opts.baseUrl,
           contextTokens: opts.contextTokens ? Number(opts.contextTokens) : undefined,
           maxTurns: opts.maxTurns ? Number(opts.maxTurns) : undefined,
@@ -90,7 +101,7 @@ export function register(program: Command) {
           dryRun: Boolean(opts.dryRun),
         };
         if (opts.dryRun) {
-          const prep = prepareJob(common);
+          const prep = await prepareJob(common);
           const view = {
             job: {
               id: prep.job.id,
@@ -100,6 +111,7 @@ export function register(program: Command) {
               budgetUsd: prep.job.budgetUsd,
               maxTurns: prep.job.maxTurns,
             },
+            profile: { name: prep.profile.profile, reason: prep.profile.reason },
             tools: prep.tools.map((t) => t.name),
             mcpServers: Object.keys(prep.mcpServers),
             system: prep.system,
@@ -108,7 +120,7 @@ export function register(program: Command) {
           if (ctx.opts.json) return json(view);
           out(pc.bold(`Dry run: sdods agent ${verb} (${role})`));
           out(
-            `${pc.dim('adapter:')} fake  ${pc.dim('budget:')} $${view.job.budgetUsd}  ${pc.dim('max turns:')} ${view.job.maxTurns}`,
+            `${pc.dim('adapter:')} fake  ${pc.dim('budget:')} $${view.job.budgetUsd}  ${pc.dim('max turns:')} ${view.job.maxTurns}  ${pc.dim('profile:')} ${view.profile.name} (${view.profile.reason})`,
           );
           out(`${pc.dim('tools:')} ${view.tools.join(', ')}`);
           if (view.mcpServers.length)

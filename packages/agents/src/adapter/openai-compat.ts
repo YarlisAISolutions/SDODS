@@ -155,6 +155,7 @@ export class OpenAiCompatibleAdapter implements LlmAdapter {
     const bridged = await bridgeMcpServers({
       servers: o.mcpServers,
       withPlaywright: o.needsBrowser,
+      maxToolsPerServer: o.maxBridgedTools,
       cwd: o.cwd,
       onEvent: o.onEvent,
     });
@@ -174,13 +175,15 @@ export class OpenAiCompatibleAdapter implements LlmAdapter {
         { role: 'system', content: system },
         { role: 'user', content: prompt },
       ],
-      send: async (history, tools, signal) => {
+      send: async (history, tools, signal, turnOpts) => {
         const json = await this.chat(
           {
             model,
             messages: history,
             tools: tools.length ? toolFunctions(tools) : undefined,
-            tool_choice: tools.length ? 'auto' : undefined,
+            tool_choice: tools.length ? (turnOpts?.toolChoice ?? 'auto') : undefined,
+            // One decision per turn is the small profile's rule; the flag says so directly here.
+            parallel_tool_calls: o.maxToolCallsPerTurn === 1 ? false : undefined,
             max_tokens: o.maxTokens,
           },
           signal,

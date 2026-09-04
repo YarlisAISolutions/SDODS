@@ -63,6 +63,13 @@ export interface RunAgentOptions {
   mcpServers?: Record<string, ExternalMcpServerConfig>;
   /** The role wants to look at the application, so a browser server should be attached. */
   needsBrowser?: boolean;
+  /** Small-model profile: one tool call per turn, and a first turn that must act. */
+  maxToolCallsPerTurn?: number;
+  firstTurnToolChoice?: 'auto' | 'required';
+  /** Ceiling on tools taken from each bridged MCP server. */
+  maxBridgedTools?: number;
+  /** Read a tool call out of the answer when the model wrote one instead of making it. */
+  recoverTextToolCalls?: boolean;
   model?: string;
   maxTurns?: number;
   /** Cap on one assistant turn; local models otherwise ramble until the context ends. */

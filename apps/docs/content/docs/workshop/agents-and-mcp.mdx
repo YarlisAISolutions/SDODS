@@ -56,11 +56,18 @@ sdods doctor                     # the "local models (ollama)" row turns green
 sdods agent review -p rwa-bank --adapter ollama --model qwen2.5-coder:7b --context-tokens 16384
 ```
 
-No key, no per-token cost, and the project never leaves the laptop. One setting decides whether this
-works: Ollama loads a model with a 4096-token context by default and truncates anything longer
-without saying so, so raise it — SDODS refuses to start a job that would be truncated rather than
-letting you read a confident answer to half a question. [Local models](/docs/guides/local-models/)
-covers the details and which jobs a 7B model can actually finish.
+No key, no per-token cost, and the project never leaves the laptop. Two things make it work:
+
+- **Context.** Ollama loads a model with a 4096-token context by default and truncates anything
+  longer without saying so. SDODS refuses to start a job that would be truncated rather than letting
+  you read a confident answer to half a question.
+- **The small profile.** A local model is given five tools instead of thirty-five, one call per
+  turn, and sixty of your project's real step patterns in the prompt. The run says which profile it
+  chose: `profile small (a local model) · 5 tool(s)`.
+
+Expect a proposal worth editing rather than one worth merging — steps close to the real patterns,
+tags right, a scenario title you would keep. Read the diff before accepting it.
+[Local models](/docs/guides/local-models/) has the measurements behind each of those choices.
 
 ## Budgets and roles
 

@@ -199,6 +199,11 @@ export const AgentsConfigSchema = z.object({
   provider: z
     .enum(['claude', 'claude-code', 'codex', 'openai-compatible', 'ollama', 'fake'])
     .optional(),
+  /**
+   * How much of the platform a model is shown. `auto` picks `small` for a local or small model:
+   * a handful of tools, one call per turn, and the project's real step patterns in the prompt.
+   */
+  profile: z.enum(['auto', 'full', 'small']).default('auto'),
   models: z.record(z.string(), z.string()).default({}),
   maxTurns: z.record(z.string(), z.number().int().positive()).default({}),
   budgetUsd: z.record(z.string(), z.number().positive()).default({ default: 2 }),
@@ -369,6 +374,7 @@ export const ProjectConfigSchema = z.object({
   agents: AgentsConfigSchema.default({
     models: {},
     maxTurns: {},
+    profile: 'auto',
     budgetUsd: { default: 2 },
     maxRunsPerJob: 3,
     sourceRoots: [],

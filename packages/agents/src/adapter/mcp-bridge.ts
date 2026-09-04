@@ -25,8 +25,39 @@ export interface BridgeOptions {
   servers?: Record<string, ExternalMcpServerConfig>;
   /** Adds `npx playwright mcp --headless`, the way the Claude adapter does for browser roles. */
   withPlaywright?: boolean;
+  /**
+   * Ceiling on the tools taken from each server. The browser server alone offers 24, which is
+   * more than a small model can choose between, so the small profile keeps the ones a test author
+   * actually uses and drops the rest.
+   */
+  maxToolsPerServer?: number;
   cwd?: string;
   onEvent?: (e: AgentEvent) => void;
+}
+
+/**
+ * What to keep from a browser server when the menu has to be short: look, go, act, read — in the
+ * order a person would use them.
+ */
+const BROWSER_ESSENTIALS = [
+  'browser_snapshot',
+  'browser_navigate',
+  'browser_click',
+  'browser_type',
+  'browser_fill_form',
+  'browser_find',
+  'browser_wait_for',
+  'browser_console_messages',
+];
+
+/** Ranks a server's tools so a cap keeps the useful ones rather than the alphabetical ones. */
+function prioritise(names: string[], limit: number): Set<string> {
+  const ranked = [...names].sort((a, b) => {
+    const ia = BROWSER_ESSENTIALS.indexOf(a);
+    const ib = BROWSER_ESSENTIALS.indexOf(b);
+    return (ia === -1 ? 99 : ia) - (ib === -1 ? 99 : ib);
+  });
+  return new Set(ranked.slice(0, limit));
 }
 
 /** Playwright's own MCP server, so a role that must look at the application can. */
@@ -53,7 +84,14 @@ export async function bridgeMcpServers(opts: BridgeOptions): Promise<BridgedTool
       await client.connect(transport);
       closers.push(() => client.close().catch(() => undefined));
       const listed = await client.listTools();
-      const allowed = cfg.allowedTools?.length ? new Set(cfg.allowedTools) : undefined;
+      const allowed = cfg.allowedTools?.length
+        ? new Set(cfg.allowedTools)
+        : opts.maxToolsPerServer && listed.tools.length > opts.maxToolsPerServer
+          ? prioritise(
+              listed.tools.map((t) => t.name),
+              opts.maxToolsPerServer,
+            )
+          : undefined;
       for (const tool of listed.tools) {
         if (allowed && !allowed.has(tool.name)) continue;
         tools.push({
@@ -83,9 +121,10 @@ export async function bridgeMcpServers(opts: BridgeOptions): Promise<BridgedTool
           },
         });
       }
+      const kept = allowed ? [...allowed].length : listed.tools.length;
       opts.onEvent?.({
         type: 'status',
-        message: `mcp: ${name} connected (${listed.tools.length} tool(s))`,
+        message: `mcp: ${name} connected (${kept} of ${listed.tools.length} tool(s))`,
       });
     } catch (err) {
       // A server that will not start must not take the job with it: the model simply has fewer

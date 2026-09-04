@@ -176,6 +176,7 @@ export class OllamaAdapter implements LlmAdapter {
     const bridged = await bridgeMcpServers({
       servers: o.mcpServers,
       withPlaywright: o.needsBrowser,
+      maxToolsPerServer: o.maxBridgedTools,
       cwd: o.cwd,
       onEvent: o.onEvent,
     });
@@ -196,11 +197,23 @@ export class OllamaAdapter implements LlmAdapter {
         { role: 'system', content: system },
         { role: 'user', content: prompt },
       ],
-      send: async (history, tools, signal) => {
+      send: async (history, tools, signal, turnOpts) => {
+        // Ollama's native API has no tool_choice, so 'required' is said in words on the turn it
+        // applies to — which is enough to stop a small model narrating instead of calling.
+        const nudged =
+          turnOpts?.toolChoice === 'required' && tools.length
+            ? [
+                ...history,
+                {
+                  role: 'system' as const,
+                  content: 'Reply with a tool call, not prose. Call exactly one tool.',
+                },
+              ]
+            : history;
         const json = (await this.chat(
           {
             model,
-            messages: history,
+            messages: nudged,
             tools: tools.length ? nativeTools(tools) : undefined,
             options: this.options(o.maxTokens),
           },

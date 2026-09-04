@@ -18,11 +18,14 @@ import {
 } from '../adapter/index.js';
 import {
   ROLES,
+  rolePrompt,
   roleSystemPrompt,
   roleTools,
   type RoleInput,
   type RoleName,
 } from '../roles/index.js';
+import { stepVocabulary } from '../roles/steps.js';
+import { resolveProfile, type ProfileSettings } from '../adapter/profile.js';
 
 export type JobStatus =
   'queued' | 'running' | 'awaiting_review' | 'completed' | 'failed' | 'cancelled';
@@ -62,6 +65,10 @@ export interface RunJobOptions {
   contextTokens?: number;
   maxTurns?: number;
   budgetUsd?: number;
+  /** auto | full | small — how much of the platform to show the model. */
+  profile?: string;
+  /** Force the browser server on or off for a role that would otherwise follow the profile. */
+  browser?: boolean;
   dryRun?: boolean;
   adapter?: LlmAdapter;
   registry?: ToolRegistry;
@@ -102,6 +109,7 @@ interface ProjectAgentsYaml {
     maxTurns?: Record<string, number>;
     budgetUsd?: Record<string, number>;
     maxRunsPerJob?: number;
+    profile?: string;
     /** Settings for a model server the team runs itself (ollama, vLLM, LM Studio …). */
     local?: {
       baseUrl?: string;
@@ -127,8 +135,13 @@ interface ProjectAgentsYaml {
   };
 }
 
-/** Build the prompt/tool set for a role without running (used by --dry-run and tests). */
-export function prepareJob(o: RunJobOptions): {
+/**
+ * Build the prompt/tool set for a role without running (used by --dry-run and tests).
+ *
+ * Asynchronous because grounding the prompt in the project's real step patterns means asking the
+ * project for them, which compiles it. The result is cached, so the second call is free.
+ */
+export async function prepareJob(o: RunJobOptions): Promise<{
   job: AgentJob;
   ctx: ToolContext;
   registry: ToolRegistry;
@@ -139,7 +152,9 @@ export function prepareJob(o: RunJobOptions): {
   mcpServers: Record<string, any>;
   /** True for the roles whose work is looking at the application. */
   needsBrowser: boolean;
-} {
+  /** Which menu the model was given, and why. */
+  profile: ProfileSettings;
+}> {
   const rootDir = o.rootDir ?? findRepoRoot();
   const yaml = o.input.project
     ? readYaml<ProjectAgentsYaml>(
@@ -179,9 +194,24 @@ export function prepareJob(o: RunJobOptions): {
     env: o.input.env,
     onProgress: (p) => o.onEvent?.({ type: 'status', message: p.message ?? '' }),
   });
-  const tools = roleTools(o.role, registry, ctx);
-  const system = roleSystemPrompt(o.role, o.input);
-  const prompt = def.buildPrompt(o.input);
+  // The profile decides how much of the platform the model is shown.
+  const profile = resolveProfile({
+    configured: (o.profile ?? yaml?.agents?.profile) as ProfileSettings['profile'] | 'auto',
+    provider: adapter.provider,
+    model: o.model ?? yaml?.agents?.models?.[o.role] ?? adapter.defaultModel,
+    baseUrl: o.baseUrl ?? yaml?.agents?.local?.baseUrl,
+    contextTokens: o.contextTokens ?? yaml?.agents?.local?.contextTokens,
+  });
+  const tools = roleTools(o.role, registry, ctx, profile.profile);
+  const vocabulary = await stepVocabulary({
+    registry,
+    ctx,
+    project: o.input.project,
+    focus: [o.input.goal, o.input.plan, o.input.spec].filter(Boolean).join('\n').slice(0, 2000),
+    limit: profile.stepVocabularyLimit,
+  });
+  const system = roleSystemPrompt(o.role, o.input, vocabulary.selected, profile.profile);
+  const prompt = rolePrompt(o.role, o.input, profile.profile);
   const mcpServers: Record<string, any> = {};
   for (const [name, s] of Object.entries(yaml?.mcp?.servers ?? {})) {
     if (s.enabled === false || name === 'playwright') continue;
@@ -234,26 +264,37 @@ export function prepareJob(o: RunJobOptions): {
     adapter,
     mcpServers,
     needsBrowser: def.needsBrowser,
+    profile,
   };
 }
 
 export async function runJob(o: RunJobOptions): Promise<AgentJob> {
-  const prep = prepareJob(o);
-  const { job, ctx, adapter, system, prompt, tools, mcpServers, needsBrowser } = prep;
+  const prep = await prepareJob(o);
+  const { job, ctx, adapter, system, prompt, tools, mcpServers, needsBrowser, profile } = prep;
   const journal = new JobJournal(ctx.rootDir);
   const before = new Set(new ProposalStore(ctx.rootDir).list().map((p) => p.id));
   const events: AgentEvent[] = [];
   job.status = 'running';
   journal.save(job);
+  o.onEvent?.({
+    type: 'status',
+    message: `profile ${profile.profile} (${profile.reason}) · ${tools.length} tool(s)`,
+  });
   try {
     const result = await adapter.runAgent({
       system,
       prompt,
       tools,
       mcpServers,
-      needsBrowser,
+      // A browser role keeps its browser unless the profile (or the caller) says otherwise.
+      needsBrowser: needsBrowser && (o.browser ?? profile.attachBrowser),
+      maxToolCallsPerTurn: profile.maxToolCallsPerTurn,
+      firstTurnToolChoice: profile.firstTurnToolChoice,
+      maxBridgedTools: profile.maxBridgedTools,
+      recoverTextToolCalls: profile.recoverTextToolCalls,
+      maxTokens: profile.maxTokens,
       model: job.model,
-      maxTurns: job.maxTurns,
+      maxTurns: profile.maxTurns ? Math.min(profile.maxTurns, job.maxTurns) : job.maxTurns,
       maxBudgetUsd: job.budgetUsd,
       cwd: ctx.rootDir,
       signal: o.signal,

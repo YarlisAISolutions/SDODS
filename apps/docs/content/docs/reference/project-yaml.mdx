@@ -193,6 +193,11 @@ description: Field-by-field reference for the project file and the workspace fil
     'agents.provider': {
       type: "'claude'|'claude-code'|'codex'|'openai-compatible'|'ollama'|'fake'",
     },
+    'agents.profile': {
+      type: "'auto'|'full'|'small'",
+      default: "'auto'",
+      description: 'How many tools and how much prompt the model gets; auto picks small locally.',
+    },
     'agents.models': { type: 'Record<role, model>', default: '{}' },
     'agents.maxTurns': { type: 'Record<role, number>', default: '{}' },
     'agents.budgetUsd': { type: 'Record<role, number>', default: '{ default: 2 }' },
