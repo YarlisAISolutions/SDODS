@@ -1,0 +1,177 @@
+---
+title: 1 · Analyze and apply
+description: Read an unknown repository, review what it proposes, write the project, and correct the guesses it could not make.
+---
+
+<Learn>
+  What `sdods analyze` can work out from an application it has never seen, how to read its evidence,
+  and which five things you have to decide yourself before the project is yours.
+</Learn>
+
+<Art
+  scene="onboard-scan"
+  caption="analyze opens files and closes them again. Everything it reports has a file and a line behind it."
+/>
+
+**Time:** 15 minutes · **You need:** the application cloned; it does not have to be running yet.
+
+## Look before you write
+
+```bash
+sdods analyze ../cypress-realworld-app
+```
+
+<Screenshot
+  src="/screenshots/cli/analyze-summary.png"
+  width={657}
+  height={264}
+  alt="Analysis header: 196 files scanned, yarn, Express, React Router, React and Vite with confidence scores, data-test with 107 uses, detected authentication libraries and base URLs"
+  caption="196 files, four frameworks, one test-id attribute counted 107 times. Nothing has been written."
+/>
+
+Read the checklist at the end of the report before anything else. It is the part that tells you what
+this repository will cost you:
+
+<Screenshot
+  src="/screenshots/cli/analyze-checklist.png"
+  width={720}
+  height={439}
+  alt="Checklist noting the data-test attribute, no OpenAPI specification, CSS-heavy Cypress locators, no accessibility tooling and a guessed authentication strategy"
+  caption="Two warnings, four notes, and a command attached to the ones that have a fix."
+/>
+
+<Callout type="info">
+  `--report-only` prints the analysis without the proposal. The global `--json` flag prints the
+  whole thing as JSON, which is what you want if you are onboarding twenty repositories and want a
+  spreadsheet at the end.
+</Callout>
+
+## Write the project
+
+```bash
+sdods analyze ../cypress-realworld-app --apply --project rwa-bank --name "RWA Bank"
+```
+
+<Art
+  scene="onboard-apply"
+  caption="One project directory: YAML you can read, Gherkin you can edit, TypeScript you own."
+/>
+
+```bash
+sdods lint -p rwa-bank
+```
+
+<Screenshot
+  src="/screenshots/cli/lint.png"
+  width={548}
+  height={127}
+  alt="Lint output reporting fifteen feature files with no findings"
+  caption="Lint is the fastest feedback in the product. Run it after every edit; it takes milliseconds."
+/>
+
+## Correct the five guesses
+
+The analyzer is literal on purpose: it reports what the files say and marks its confidence, rather
+than inventing a configuration you would later have to unpick. On this repository five things need
+a person.
+
+<Steps>
+
+<Step>
+### The API port
+
+`.env` publishes `PORT=3000` for the front end and `VITE_BACKEND_PORT=3001` for the API, and the
+analyzer takes the obvious one for both.
+
+```yaml title="projects/rwa-bank/envs/local.yaml"
+api:
+  baseUrl: http://localhost:3001
+```
+
+</Step>
+
+<Step>
+### The sign-in selectors
+
+It guessed `[data-test="username"]`. The application spells them `signin-username` — and puts the
+attribute on the Material UI wrapper, so the selector has to reach the control inside it.
+
+```yaml title="projects/rwa-bank/sdods.project.yaml"
+auth:
+  strategy: form
+  storageState: true
+  form:
+    loginPath: /signin
+    usernameSelector: '[data-test="signin-username"] input'
+    passwordSelector: '[data-test="signin-password"] input'
+    submitSelector: '[data-test="signin-submit"]'
+    readyUrl: /
+```
+
+</Step>
+
+<Step>
+### The routes that are not addresses
+
+React Router patterns (`/*`, `/(public)?`) and the Okta-only `/implicit/callback` are not pages you
+can open. Delete them from `routes:`, delete the modules that referenced them, and add the real
+home page.
+
+```yaml title="projects/rwa-bank/sdods.project.yaml"
+routes:
+  home: /
+  contacts: /contacts
+  personal: /personal
+  signin: /signin
+  signup: /signup
+```
+
+</Step>
+
+<Step>
+### The auth strategy stub
+
+The generated `steps/auth.ts` exports `strategy: 'none'`, which makes `auth capture` skip every
+user. The application has a form login:
+
+```ts title="projects/rwa-bank/steps/auth.ts"
+import { defineAuth } from '@sdods/core/auth';
+
+export const auth = defineAuth({ strategy: 'form' });
+```
+
+</Step>
+
+<Step>
+### The pool users
+
+`data/common/users.csv` arrives with placeholders. The application seeds real accounts and its own
+README publishes their password, so the workshop can use them as they are.
+
+```csv title="projects/rwa-bank/data/common/users.csv"
+id,username,password,role,displayName
+1,Heath93,${RWA_PASSWORD:-s3cret},standard,Ted Parisian
+2,Arvilla_Hegmann,${RWA_PASSWORD:-s3cret},standard,Kristian Bogan
+3,Dina20,${RWA_PASSWORD:-s3cret},admin,Darrel Ortiz
+```
+
+The `${VAR:-default}` form is how every secret in SDODS is written: the file is committable, and a
+real environment overrides it from `.env.local`.
+
+</Step>
+
+</Steps>
+
+## Checkpoint
+
+```bash
+sdods lint -p rwa-bank && sdods coverage -p rwa-bank --routes
+```
+
+You should see no lint findings and a coverage line reading `routes 4/4  endpoints 9/9  roles 0/2`.
+Roles being zero is correct — nothing signs in yet. That is [chapter 2](/docs/workshop/first-run/).
+
+<Callout type="warn">
+  If `coverage` reports routes you deleted, you edited `sdods.project.yaml` but left the generated
+  features behind. Remove `features/<module>/` for each module you dropped.
+</Callout>

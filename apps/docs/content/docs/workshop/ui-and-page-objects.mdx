@@ -1,0 +1,156 @@
+---
+title: 3 · UI scenarios and page objects
+description: Write a scenario a stakeholder can read, put the locators in one place, and watch a broken locator heal itself.
+---
+
+<Learn>
+  How a scenario, a step and a page object divide the work between them; why the locator for this
+  application needs a trailing ` input`; and what self-healing does when the page changes underneath
+  you.
+</Learn>
+
+**Time:** 20 minutes · **You need:** chapter 2 finished, the application running.
+
+## The scenario is the requirement
+
+Generated smoke scenarios prove a page renders. A real scenario states what the business expects.
+
+```gherkin title="projects/rwa-bank/features/account/overview.feature"
+@ui @account
+Feature: Account overview
+  A signed-in customer sees their own account, and a rejected sign-in says why.
+
+  @regression @user:standard
+  Scenario: The overview belongs to the signed-in customer
+    Given I am on the account overview
+    Then the account overview should belong to "Heath93"
+    And the account balance should be shown
+
+  @regression
+  Scenario Outline: A rejected sign-in explains itself
+    Given I am on the sign-in page
+    When I sign in as "<username>" with "<password>"
+    Then I should see the sign-in error "<error>"
+
+    # title-format: <username> → <error>
+    Examples:
+      | username   | password | error                           |
+      | Heath93    | wrong    | Username or password is invalid |
+      | not_a_user | s3cret   | Username or password is invalid |
+```
+
+The `# title-format:` comment names each example in the report, so a failure reads
+“`not_a_user → Username or password is invalid`” instead of “Example 2”.
+
+## The page object holds the awkward truth
+
+This application puts `data-test` on the Material UI wrapper, not on the input. A page object is
+where that belongs — once, instead of in every scenario.
+
+```ts title="projects/rwa-bank/pages/SignInPage.ts"
+@Fixture<typeof test>('signInPage')
+export class SignInPage extends BasePage {
+  readonly username = this.h(this.page.locator('[data-test="signin-username"] input'), {
+    description: 'username input',
+    testId: 'signin-username',
+    placeholder: 'Username',
+  });
+  readonly submit = this.h(this.page.locator('[data-test="signin-submit"]'), {
+    description: 'sign in button',
+    role: 'button',
+    name: 'Sign In',
+    testId: 'signin-submit',
+  });
+  readonly error = this.page.getByTestId('signin-error');
+
+  @Given('I am on the sign-in page')
+  async open() {
+    await this.goto('signin');
+  }
+
+  @When('I sign in as {string} with {string}')
+  async signIn(username: string, password: string) {
+    await this.username.fill(this.render(username));
+    await this.password.fill(this.render(password));
+    await this.submit.click();
+  }
+}
+```
+
+Three things are worth noticing:
+
+- **`this.h(primary, context)`** wraps a locator with the healer. The context — role, name,
+  test id, placeholder, description — is what it will use if the primary locator stops matching.
+- **`this.goto('signin')`** takes a _route name_ from `sdods.project.yaml`, so a path change is one
+  edit, not a search-and-replace.
+- **`this.render(...)`** expands `{{variables}}` from the environment and from earlier steps.
+
+Register the page object once, in `steps/fixtures.ts`:
+
+```ts title="projects/rwa-bank/steps/fixtures.ts"
+export const test = base.extend<{ signInPage: SignInPage; accountPage: AccountPage }>({
+  auth: [auth, { scope: 'worker', option: true }],
+  signInPage: async ({ pages }, use) => {
+    await use(pages.get(SignInPage));
+  },
+  accountPage: async ({ pages }, use) => {
+    await use(pages.get(AccountPage));
+  },
+});
+```
+
+Then run it:
+
+```bash
+sdods run -p rwa-bank -e local -l ui -b chromium -t "@regression and @account"
+```
+
+## Assertions that can heal
+
+Assert through the healed locator, not through `.primary`, or you opt out of healing:
+
+```ts title="projects/rwa-bank/pages/AccountPage.ts"
+  @Then('the account overview should belong to {string}')
+  async assertUser(username: string) {
+    await this.username.expectText(this.render(username));
+  }
+```
+
+Now break it on purpose. Change the primary locator to something that cannot match:
+
+```ts
+  readonly username = this.h(this.page.locator('#sidenav-username-renamed'), {
+    description: 'signed-in username',
+    testId: 'sidenav-username',
+  });
+```
+
+Run the scenario again. It still passes — and the run says why:
+
+```bash
+sdods heal report --last
+```
+
+```
+description         original                              occurrences  succeeded  strategy  suggested
+──────────────────  ────────────────────────────────────  ───────────  ─────────  ────────  ───────────────────────────────
+signed-in username  locator('#sidenav-username-renamed')  1            1          testid×1  getByTestId('sidenav-username')
+```
+
+Healing is a **grace period, not a fix**: the report tells you the exact replacement, and you are
+expected to apply it. Put the correct locator back before continuing.
+
+<Callout type="warn">
+  Self-healing only reaches as far as the context you gave it. A locator declared with no
+  `description`, `role` or `testId` has nothing to fall back to — which is the real argument for
+  writing that context down.
+</Callout>
+
+## Checkpoint
+
+```bash
+sdods run -p rwa-bank -e local -l ui -b chromium -t "@regression and @account and not @visual"
+```
+
+Three scenarios pass: one signed-in overview and two rejected sign-ins. Next:
+[API and hybrid](/docs/workshop/api-and-hybrid/).

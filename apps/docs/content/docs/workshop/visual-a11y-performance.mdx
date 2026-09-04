@@ -1,0 +1,89 @@
+---
+title: 7 · Screenshots and visual baselines
+description: Before-and-after captures per step, a baseline that fails the first time on purpose, and what is not implemented yet.
+---
+
+<Learn>
+  What SDODS captures during a run and when, how a visual baseline is created and compared, why the
+  first run of a baseline scenario always fails, and which parts of this area are still roadmap.
+</Learn>
+
+**Time:** 15 minutes · **You need:** chapter 6 finished, the application running.
+
+## Screenshots are a narrative, not an afterthought
+
+The capture policy is per suite tag, so a smoke run stays fast while a regression run documents
+every step:
+
+```yaml title="projects/rwa-bank/sdods.project.yaml"
+screenshots:
+  policy:
+    default: on-failure
+    '@smoke': scenario # one at the start, one at the end
+    '@regression': step # before and after every step
+    '@visual': visual # compared against a baseline
+  viewport: { width: 1280, height: 720 }
+  mask: ['[data-test="sidenav-user-balance"]']
+```
+
+`mask` blanks regions that change on every run — a balance, a date, an avatar — so a diff means a
+change in behaviour rather than a change in the clock.
+
+```bash
+sdods run -p rwa-bank -e local -b chromium -t "@regression and @account"
+sdods report --last --open
+```
+
+The report pairs the before and after image of each step with the step text, which is what makes a
+failure explainable to someone who was not there.
+
+## A visual baseline
+
+```gherkin title="projects/rwa-bank/features/account/visual.feature"
+@ui @account @visual
+Feature: The sign-in page does not drift
+
+  @regression @visual
+  Scenario: The sign-in page matches its baseline
+    Given I am on the sign-in page
+    Then the page should match the visual baseline "signin"
+```
+
+```bash
+sdods run -p rwa-bank -e local -l ui -b chromium -t @visual
+```
+
+**The first run fails.** There was no baseline, so it wrote one and told you it had nothing to
+compare against. Run it again and it passes:
+
+```
+projects/rwa-bank/features/__screenshots__/rwa-bank--ui--chromium/darwin/signin.png
+```
+
+<Callout type="warn">
+  The path contains the browser **and** the platform, because font rendering differs between macOS
+  and Linux. A baseline recorded on a laptop will not match on a CI runner: record the CI baseline
+  on CI (or in the same container), and keep visual scenarios out of the suite that gates a merge
+  until you have.
+</Callout>
+
+## What is not here yet
+
+The tag taxonomy reserves `@a11y` and `@perf`, and the project schema accepts accessibility and
+performance gates on a process. **Neither is implemented in the runner today** — an `@a11y`
+scenario runs as an ordinary scenario, and a performance budget is not enforced. They are on the
+[roadmap](/docs/roadmap/); [Known limitations](/docs/reference/known-limitations/) is where the
+current state is recorded.
+
+Until then, the honest way to cover accessibility in this suite is with the locator strategy itself:
+scenarios written against roles and labels fail when the accessible name disappears, which is a
+large share of what an automated accessibility check would have told you.
+
+## Checkpoint
+
+```bash
+sdods run -p rwa-bank -e local -l ui -b chromium -t @visual
+```
+
+Green on the second run, with a committed baseline under `features/__screenshots__/`. Next:
+[reports, insights and healing](/docs/workshop/reports-insights-healing/).

@@ -1,0 +1,102 @@
+---
+title: 6 · Record and HAR
+description: Record a session into a runnable spec, convert it into a reviewed proposal, and make the suite run with the application switched off.
+---
+
+<Learn>
+  How recording produces a spec you can run today and a feature you can review tomorrow, and how a
+  HAR file turns a suite that needs a running application into one that does not.
+</Learn>
+
+**Time:** 20 minutes · **You need:** chapter 5 finished.
+
+## Record
+
+`sdods record` opens a browser, watches what you do, and writes a runnable spec under
+`recorded/`. It can start already signed in, which is what makes recording a deep page bearable:
+
+```bash
+sdods record -p rwa-bank -e local --url signin --name signin-flow
+sdods record -p rwa-bank -e local --url personal --user standard --name new-payment
+sdods record -p rwa-bank -e local --url signin --device "iPhone 15" --name signin-mobile
+```
+
+The result runs as its own layer, so a recording is useful before anyone has written a step:
+
+```bash
+sdods run -p rwa-bank -e local -l recorded --grep "signin-flow"
+```
+
+## Convert it into a feature
+
+A recording is a transcript, not a test: it clicks coordinates and CSS chains. `record convert`
+asks the generator agent to rewrite it as Gherkin over the existing step library, with role and
+test-id locators.
+
+```bash
+sdods record convert projects/rwa-bank/recorded/signin-flow.spec.ts --dry-run
+sdods record convert projects/rwa-bank/recorded/signin-flow.spec.ts
+sdods proposals list
+sdods proposals show <id>
+sdods proposals accept <id> --branch sdods/signin-flow
+```
+
+Nothing is applied without you: the agent writes a proposal, and `accept` puts it in the working
+tree or on a branch. `--dry-run` prints the prompt and plan without calling a model, and
+`--adapter ollama` runs the conversion on a model on your own machine
+([local models](/docs/guides/local-models/)).
+
+<Callout type="info">
+  This is the migration path for the 33 Cypress specs the analyzer found in chapter 1: record the
+  flow once, convert it, review the proposal. The old spec is the specification; the new one is the
+  test.
+</Callout>
+
+## HAR: run with the application switched off
+
+A HAR file is a recording of the network. Tag the scenarios worth freezing, record once, and every
+later run can replay from disk.
+
+```gherkin title="projects/rwa-bank/features/session/session-api.feature"
+  @regression @har:profile
+  Scenario: A public profile exposes a name and nothing else
+    When I send a GET request to "/users/profile/Heath93"
+```
+
+```bash
+sdods har record -p rwa-bank -e local -t "@har:profile"
+sdods har list -p rwa-bank -e local
+```
+
+<Screenshot
+  src="/screenshots/cli/har-list.png"
+  width={595}
+  height={166}
+  alt="HAR listing showing one recorded file for the profile tag with its size"
+  caption="One tag, one file. The browser layer records <name>.har; the API layer records <name>.api.har."
+/>
+
+Now stop the application — actually stop it — and replay:
+
+```bash
+sdods har replay -p rwa-bank -e local -t "@har:profile" --strict
+```
+
+`--strict` aborts any request that is not in the recording, so a passing strict replay proves the
+suite touched nothing but the file. That is what makes HAR the answer for CI: no environment, no
+seeded database, no flake from someone else's deploy.
+
+<Callout type="warn">
+  A HAR freezes an API contract in time. When the endpoint changes, the replay keeps passing and
+  lies to you — so re-record on a schedule, and keep at least one non-HAR run against the real
+  application.
+</Callout>
+
+## Checkpoint
+
+```bash
+sdods har list -p rwa-bank -e local && sdods har replay -p rwa-bank -e local -t "@har:profile" --strict
+```
+
+The replay passes with the application stopped. Next:
+[visual, accessibility and performance](/docs/workshop/visual-a11y-performance/).

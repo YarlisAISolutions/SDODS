@@ -1,14 +1,20 @@
 ---
 title: Installation
-description: Install SDODS with one command on macOS, Linux or Windows, or from source.
+description: Install SDODS with one command on macOS, Linux or Windows — then the advanced paths for locked-down machines, containers and CI.
 ---
 
 <Learn>
-  The one-line installer for each operating system, every option it takes, how to upgrade and
-  uninstall, and what to do when something goes wrong.
+  What the one-line installer actually does, how to watch it do it before you let it, where every
+  byte lands, the advanced paths for proxies, private certificate authorities, pinned versions,
+  containers and CI, and how to read `sdods doctor` when something is off.
 </Learn>
 
-## One line
+<Art
+  scene="install-one-command"
+  caption="One command, five stops: Node is checked, Bun is installed if you don't have it, SDODS is cloned, Chromium is downloaded, and the sdods command lands on your PATH. It finishes by running doctor against its own work."
+/>
+
+## Install
 
 <Tabs items={['macOS / Linux', 'Windows', 'Verify first', 'From source']}>
 <Tab value="macOS / Linux">
@@ -61,15 +67,51 @@ bun run sdods doctor
 </Tab>
 </Tabs>
 
-The installer checks Node, installs Bun if you do not have it, fetches SDODS into `~/.sdods`, installs dependencies and Chromium, and writes an `sdods` command. It finishes with `sdods doctor` and a list of next commands. Running it again upgrades in place.
-
 <Callout type="info">
   Node.js 22 or newer is the one prerequisite the installer will not install behind your back. It
   prints the exact command for your platform, or you can pass `--install-node` to set up
   [fnm](https://github.com/Schniz/fnm) inside the SDODS directory.
 </Callout>
 
+### See it before you run it
+
+`--dry-run` prints every step it would take and changes nothing. On a machine you do not own, run
+this first and read it.
+
+```bash
+curl -fsSLO https://sdods.com/install.sh
+sh install.sh --dry-run --browsers chromium
+```
+
+<Screenshot
+  src="/screenshots/cli/install-dry-run.png"
+  width={814}
+  height={283}
+  alt="Terminal output of sh install.sh --dry-run --browsers chromium, listing the clone, the dependency install, the browser install and the command shim"
+  caption="Real output. Every line beginning “would” is a step that has not happened."
+/>
+
+`--version-check` answers the other question — which versions and paths it resolved on _this_
+machine — and then exits.
+
+```bash
+sh install.sh --version-check
+```
+
+<Screenshot
+  src="/screenshots/cli/version-check.png"
+  width={720}
+  height={381}
+  alt="Terminal output of sh install.sh --version-check showing the resolved platform, node and bun versions and install paths"
+  caption="Use this in a support thread: it is the whole environment in one block."
+/>
+
 ## What it installs, and where
+
+<Art
+  scene="install-where-things-land"
+  caption="Four places, and nothing else. The browser cache is shared with any other Playwright tool you already have."
+/>
 
 | Path                                                        | What                                                   |
 | ----------------------------------------------------------- | ------------------------------------------------------ |
@@ -78,7 +120,8 @@ The installer checks Node, installs Bun if you do not have it, fetches SDODS int
 | `~/.local/bin/sdods`                                        | the command shim (Windows: `%LOCALAPPDATA%\SDODS\bin`) |
 | `~/Library/Caches/ms-playwright` · `~/.cache/ms-playwright` | browser engines, in their shared cache                 |
 
-Nothing else on your system is touched. Your shell profile is edited only when you pass `--modify-path`. Budget about 1.5 GB for the checkout and its dependencies, plus roughly 500 MB per browser.
+Your shell profile is edited only when you pass `--modify-path`. Budget about 1.5 GB for the
+checkout and its dependencies, plus roughly 500 MB per browser.
 
 ## Options
 
@@ -113,6 +156,18 @@ Projects are discovered from the current directory, so start in the checkout the
 
 ```bash
 cd ~/.sdods/app
+sdods project list
+```
+
+<Screenshot
+  src="/screenshots/cli/project-list.png"
+  width={751}
+  height={205}
+  alt="Terminal output of sdods project list showing the demo-shop and sdods-web projects with their layers and environments"
+  caption="The projects in the checkout, with their layers, browsers and environments. demo-shop is the one the getting-started pages run against; rwa-bank is the workshop."
+/>
+
+```bash
 sdods run -p demo-shop -e staging -l api                        # API layer, no browser
 sdods run -p demo-shop -e staging -l ui -b chromium -t @smoke   # UI smoke
 sdods report --last --open                                      # HTML report and dashboard
@@ -132,6 +187,136 @@ bun run sdods project list
 bun run sdods config validate
 ```
 
+## Advanced installs
+
+The one-liner is the happy path. These are the ones that come up on a work laptop.
+
+<Steps>
+
+<Step>
+
+### Behind a proxy, or through a TLS-inspecting gateway
+
+The installer honours `HTTPS_PROXY`, `HTTP_PROXY` and `NO_PROXY`, and so do git, npm and Bun once
+they are exported. Corporate TLS interception needs the CA bundle as well, or the clone fails with
+a certificate error that mentions a self-signed chain.
+
+```bash
+export HTTPS_PROXY=http://proxy.corp.example:8080
+export NO_PROXY=localhost,127.0.0.1,.corp.example
+export NODE_EXTRA_CA_CERTS=/etc/ssl/certs/corp-root-ca.pem
+git config --global http.proxy "$HTTPS_PROXY"      # only if the clone still fails
+curl -fsSL https://sdods.com/install.sh | sh
+```
+
+<Art
+  scene="install-locked-down"
+  caption="The gate is not the enemy: give the installer the proxy and the certificate, pin the version, and a locked-down laptop installs like any other."
+/>
+
+</Step>
+
+<Step>
+
+### Pin a version, and keep two side by side
+
+`--version` takes any git ref, and `--dir` plus `--bin-dir` keep installs apart — useful when you
+want to reproduce a run from last quarter without disturbing your daily install.
+
+```bash
+# the version the team is standardised on
+curl -fsSL https://sdods.com/install.sh | sh -s -- --version v0.2.0
+
+# a second install, in its own home, under its own command name
+curl -fsSL https://sdods.com/install.sh | sh -s -- \
+  --version main --dir ~/.sdods-main --bin-dir ~/.local/bin/sdods-main
+```
+
+Re-running the same command upgrades that install in place; it is not additive.
+
+</Step>
+
+<Step>
+
+### Unattended: CI, Dockerfiles and images you bake
+
+`CI=1` implies `--yes`, so nothing waits for a keypress. Choose the browser set deliberately: a
+CI runner that only runs API scenarios should download nothing.
+
+```bash
+CI=1 SDODS_BROWSERS=none SDODS_MODIFY_PATH=1 \
+  sh -c "curl -fsSL https://sdods.com/install.sh | sh"
+```
+
+In a Dockerfile, the environment-variable form keeps the layer readable and cacheable:
+
+```docker
+ENV SDODS_HOME=/opt/sdods SDODS_BIN_DIR=/usr/local/bin SDODS_BROWSERS=chromium SDODS_YES=1
+RUN curl -fsSL https://sdods.com/install.sh | sh
+```
+
+</Step>
+
+<Step>
+
+### The server image
+
+The repository builds a container image on the official Playwright base, so the browsers are
+already inside it. Tagged releases publish it to `ghcr.io/siri1410/sdods-server`; until then, or
+for a private registry, build it from the checkout:
+
+```bash
+docker build -t sdods-server .
+docker run --rm sdods-server doctor          # any CLI command works as the argument
+docker run --rm -p 8080:8080 -v sdods-data:/data sdods-server   # the server and web UI
+```
+
+The entrypoint understands `serve` (the default), `bootstrap`, and anything else is passed
+straight to the CLI. Deployment details are in [Guides → Hosting](/docs/guides/hosting/).
+
+</Step>
+
+<Step>
+
+### Register the MCP server while you install
+
+`--mcp` writes the client configuration for Claude Code or Codex as part of the install, so the
+agent can drive SDODS immediately.
+
+```bash
+curl -fsSL https://sdods.com/install.sh | sh -s -- --mcp all
+```
+
+What the agent may then do, and how to scope its token, is in
+[Guides → Claude Code and Codex](/docs/guides/claude-code-and-codex/).
+
+</Step>
+
+</Steps>
+
+## Check the install
+
+<Art
+  scene="install-doctor"
+  caption="doctor is the one command to run when anything looks wrong: it reports what it found, not what it expected."
+/>
+
+```bash
+sdods doctor
+```
+
+<Screenshot
+  src="/screenshots/cli/doctor.png"
+  width={720}
+  height={381}
+  alt="Terminal output of sdods doctor listing node, bun, runner, projects, resolved environment variables and the database with green check marks"
+  caption="Green means checked, not assumed: the runner version, the project list and the database are all probed."
+/>
+
+`doctor` continues past a failure so you get the whole picture in one pass, and `--fix` installs
+missing browser engines. It is also the fastest way to answer “is my environment the problem?”
+before opening an issue.
+
 ## Upgrade and uninstall
 
 ```bash
@@ -141,14 +326,6 @@ curl -fsSL https://sdods.com/install.sh | sh -s -- --uninstall --yes  # remove
 ```
 
 Uninstalling removes `~/.sdods` and the command shim. Workspaces you created stay where they are, and the browser engine cache is shared with other tools, so remove that yourself if you want the space back.
-
-## Docker
-
-The server image carries the CLI and the browsers, so nothing is installed on the host:
-
-```bash
-docker run --rm -it ghcr.io/siri1410/sdods:latest sdods doctor
-```
 
 ## Troubleshooting
 
@@ -164,10 +341,9 @@ docker run --rm -it ghcr.io/siri1410/sdods:latest sdods doctor
 | `Unknown project "demo-shop"`               | run from `~/.sdods/app`, or from a workspace created by `sdods init`                                                    |
 | Install seems stuck                         | re-run with `--verbose`; the dependency install is the long step                                                        |
 
-`sdods doctor` re-checks all of this and prints what to fix; add `--fix` to install missing browsers.
-
 ## Next steps
 
+- [The workshop](/docs/workshop/) — a real open-source application, onboarded and then exercised feature by feature
 - [Onboard an existing app](/docs/getting-started/onboard-existing-app/)
 - [Your first API test](/docs/getting-started/first-api-test/)
 - [Use it from Claude Code or Codex](/docs/guides/claude-code-and-codex/)

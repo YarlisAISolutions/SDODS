@@ -1,0 +1,154 @@
+---
+title: Workshop
+description: One real open-source application, every SDODS feature, in one sitting.
+---
+
+<Learn>
+  How to exercise every part of SDODS against a real application you can clone in a minute — from
+  the first analysis to a sharded suite running in CI — with the exact commands, their real output,
+  and a checkpoint at the end of each chapter so you always know whether it worked.
+</Learn>
+
+<Art
+  scene="workshop-bench"
+  caption="One application on the bench, ten stations along the rail. Each chapter is one station, and each ends with something you can check."
+/>
+
+## The application
+
+The workshop uses [cypress-io/cypress-realworld-app](https://github.com/cypress-io/cypress-realworld-app):
+a payment application with a React front end, an Express API, seeded users, a real sign-in form, and
+33 existing Cypress specs. It is a good subject precisely because it was not built for SDODS — the
+analyzer has to work for its answers, and two of them turn out to be wrong.
+
+<Callout type="info">
+  Nothing in the workshop modifies the application. SDODS reads it, drives it in a browser and calls
+  its API. You can point the same chapters at your own application by changing one path.
+</Callout>
+
+## Set up, once
+
+<Steps>
+
+<Step>
+### Install SDODS
+
+Follow [Installation](/docs/getting-started/installation/), or work inside a clone. Every command
+below is written as `sdods …`; inside a clone, prefix it with `bun run`.
+
+</Step>
+
+<Step>
+### Clone and start the application
+
+```bash
+git clone --depth 1 https://github.com/cypress-io/cypress-realworld-app.git ../cypress-realworld-app
+cd ../cypress-realworld-app
+yarn install          # a few minutes: it is a full application, not a fixture
+yarn dev              # front end on :3000, API on :3001
+```
+
+Leave it running in its own terminal. Everything else happens in a second one.
+
+</Step>
+
+<Step>
+### Check your environment
+
+```bash
+sdods doctor
+```
+
+Node 22, a browser engine and a writable database are all it needs. Anything marked optional can
+stay missing until the chapter that uses it.
+
+</Step>
+
+</Steps>
+
+## The chapters
+
+Each one takes ten to twenty minutes and builds on the one before it.
+
+<Cards>
+  <Card
+    title="1 · Analyze and apply"
+    href="/docs/workshop/analyze-and-apply/"
+    description="Read an unknown repository, review the proposal, write the project, correct the guesses."
+  />
+  <Card
+    title="2 · The first run"
+    href="/docs/workshop/first-run/"
+    description="Layers, tags and exit codes; why the API layer is green and the UI layer is not."
+  />
+  <Card
+    title="3 · UI scenarios and page objects"
+    href="/docs/workshop/ui-and-page-objects/"
+    description="Write a real scenario, put the locators in a page object, watch self-healing work."
+  />
+  <Card
+    title="4 · API and hybrid"
+    href="/docs/workshop/api-and-hybrid/"
+    description="Assert a payload, then use the API to set up a UI scenario in one flow."
+  />
+  <Card
+    title="5 · Data and users"
+    href="/docs/workshop/data-and-users/"
+    description="Datasets, scenario outlines, the user pool, and login state you capture once."
+  />
+  <Card
+    title="6 · Record and HAR"
+    href="/docs/workshop/record-and-har/"
+    description="Record a session into a runnable spec, then make the suite run offline."
+  />
+  <Card
+    title="7 · Visual, accessibility, performance"
+    href="/docs/workshop/visual-a11y-performance/"
+    description="Before-and-after captures, baselines, axe-core checks and page budgets."
+  />
+  <Card
+    title="8 · Reports, insights, healing"
+    href="/docs/workshop/reports-insights-healing/"
+    description="The HTML report, the run database, flakiness insights and locator drift."
+  />
+  <Card
+    title="9 · Agents and MCP"
+    href="/docs/workshop/agents-and-mcp/"
+    description="Proposals you review, and driving SDODS from Claude Code or Codex."
+  />
+  <Card
+    title="10 · CI and scheduling"
+    href="/docs/workshop/ci-and-scheduling/"
+    description="Processes, sharding, a GitHub Actions workflow and a nightly schedule."
+  />
+</Cards>
+
+## What the workshop covers
+
+Every feature area of the platform appears in a chapter, so “I have finished the workshop” and “I
+have used the product” mean the same thing.
+
+| Area                                                          | Chapter |
+| ------------------------------------------------------------- | ------- |
+| `analyze`, proposals, `project`, `env`                        | 1       |
+| `run`, layers, tags, suites, exit codes, `lint`               | 2       |
+| Page objects, locator strategy, self-healing                  | 3       |
+| API layer, schemas, hybrid scenarios                          | 4       |
+| Datasets, scenario outlines, user pool, `auth capture`        | 5       |
+| `record`, `codegen`, `har record` / `har replay`              | 6       |
+| Screenshot narratives, visual baselines, `@a11y`, budgets     | 7       |
+| `report`, `db ingest`, `insights`, `heal`, `trace`            | 8       |
+| `agent`, `proposals`, `mcp`, Claude Code and Codex            | 9       |
+| `processes`, sharding, CI workflows, `schedule`, integrations | 10      |
+
+## How to work through it
+
+- **Keep the application running.** Every chapter drives the same instance.
+- **Run the commands, do not read them.** Each chapter shows the real output next to the command;
+  if yours differs, that difference is the lesson.
+- **Stop at the checkpoint.** Each chapter ends with one command whose output tells you whether the
+  chapter worked.
+- **Break things on purpose.** The last section of several chapters is a deliberate failure, because
+  a suite you have never seen fail is a suite you do not trust.
+
+Start with [chapter 1 — Analyze and apply](/docs/workshop/analyze-and-apply/).

@@ -1,0 +1,16 @@
+{
+  "title": "Workshop",
+  "pages": [
+    "index",
+    "analyze-and-apply",
+    "first-run",
+    "ui-and-page-objects",
+    "api-and-hybrid",
+    "data-and-users",
+    "record-and-har",
+    "visual-a11y-performance",
+    "reports-insights-healing",
+    "agents-and-mcp",
+    "ci-and-scheduling"
+  ]
+}

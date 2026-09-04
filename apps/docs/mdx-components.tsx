@@ -10,6 +10,7 @@ import { Mermaid } from '@/components/mermaid';
 import { Planned } from '@/components/planned';
 import { Learn } from '@/components/learn';
 import { Screenshot } from '@/components/screenshot';
+import { Art, ArtRow } from '@/components/art';
 
 export function getMDXComponents(components?: MDXComponents): MDXComponents {
   return {
@@ -27,6 +28,8 @@ export function getMDXComponents(components?: MDXComponents): MDXComponents {
     Planned,
     Learn,
     Screenshot,
+    Art,
+    ArtRow,
     ...components,
   };
 }
