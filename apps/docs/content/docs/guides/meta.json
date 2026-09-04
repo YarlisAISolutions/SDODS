@@ -16,6 +16,7 @@
     "record-and-playback",
     "record-playback-roles-environments",
     "sharding-and-ci",
+    "hosting",
     "github-and-jira",
     "database",
     "self-healing",
