@@ -235,6 +235,47 @@ describe('adopting a database created before the rename', () => {
     await adb.db.destroy();
   });
 
+  it('adopts even after a failed start left an empty ledger behind', async () => {
+    const adb = createMemoryDb();
+    await migrateToLatest(adb);
+    await sql`alter table ${sql.ref(MIGRATION_TABLE)} rename to ${sql.ref('automax_migrations')}`.execute(
+      adb.db,
+    );
+    await sql`alter table ${sql.ref(MIGRATION_LOCK_TABLE)} rename to ${sql.ref('automax_migrations_lock')}`.execute(
+      adb.db,
+    );
+    // What a start that failed this way leaves behind: the ledger exists but records nothing.
+    await sql`create table ${sql.ref(MIGRATION_TABLE)} (name varchar(255) primary key, timestamp varchar(255) not null)`.execute(
+      adb.db,
+    );
+
+    expect(await adoptLegacyLedger(adb)).toEqual([
+      `automax_migrations -> ${MIGRATION_TABLE}`,
+      `automax_migrations_lock -> ${MIGRATION_LOCK_TABLE}`,
+    ]);
+    expect((await migrationStatus(adb)).filter((m) => m.executedAt).length).toBe(
+      MIGRATION_NAMES.length,
+    );
+    await adb.db.destroy();
+  });
+
+  it('declines to adopt when the current ledger already records migrations', async () => {
+    const adb = createMemoryDb();
+    await migrateToLatest(adb);
+    // A stray legacy table next to a live ledger must not displace it.
+    await sql`create table automax_migrations (name varchar(255) primary key, timestamp varchar(255) not null)`.execute(
+      adb.db,
+    );
+    await sql`insert into automax_migrations (name, timestamp) values ('0001_init', '2020-01-01')`.execute(
+      adb.db,
+    );
+    expect(await adoptLegacyLedger(adb)).toEqual([]);
+    expect((await migrationStatus(adb)).filter((m) => m.executedAt).length).toBe(
+      MIGRATION_NAMES.length,
+    );
+    await adb.db.destroy();
+  });
+
   it('leaves a fresh database alone', async () => {
     const adb = createMemoryDb();
     expect(await adoptLegacyLedger(adb)).toEqual([]);
