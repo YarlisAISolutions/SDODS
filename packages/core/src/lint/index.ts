@@ -142,14 +142,19 @@ export async function lintProject(opts: LintOptions): Promise<LintResult> {
             case 'har': {
               const name = value.replace(/:strict$/, '');
               const har = join(project.root, 'har');
+              // The browser layer records <name>.har; the API layer records <name>.api.har.
               const exists =
                 existsSync(har) &&
-                readdirSync(har).some((env) => existsSync(join(har, env, `${name}.har`)));
+                readdirSync(har).some(
+                  (env) =>
+                    existsSync(join(har, env, `${name}.har`)) ||
+                    existsSync(join(har, env, `${name}.api.har`)),
+                );
               if (!exists)
                 warnings.push({
                   severity: 'warning',
                   rule: 'tags/har',
-                  message: `@har:${name} has no recorded file under har/<env>/${name}.har yet.`,
+                  message: `@har:${name} has no recorded file under har/<env>/${name}.har (or ${name}.api.har) yet.`,
                   ...loc,
                 });
               break;

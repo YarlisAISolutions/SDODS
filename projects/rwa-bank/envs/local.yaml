@@ -1,0 +1,11 @@
+name: local
+ui:
+  baseUrl: http://localhost:3000
+api:
+  baseUrl: http://localhost:3001
+  headers: { Accept: application/json }
+  auth: { type: none }
+users:
+  poolSize: 2
+vars:
+  rwaPassword: '${RWA_PASSWORD:-s3cret}'

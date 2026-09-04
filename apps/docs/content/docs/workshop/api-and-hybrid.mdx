@@ -1,0 +1,122 @@
+---
+title: 4 · API and hybrid
+description: Assert a payload without a browser, then use both layers in one scenario to catch what neither can catch alone.
+---
+
+<Learn>
+  How the API layer builds a request, the assertions that read a JSON body, what SDODS refuses to
+  print, and how a hybrid scenario checks that the API and the page tell the same story.
+</Learn>
+
+**Time:** 15 minutes · **You need:** chapter 3 finished, the application running.
+
+## The API layer
+
+No browser starts, so the whole suite runs in seconds. `envs/local.yaml` supplies the base URL and
+the default headers; scenarios only carry paths.
+
+```gherkin title="projects/rwa-bank/features/session/session-api.feature"
+@api @session
+Feature: Session API
+  The same sign-in the browser performs, without a browser.
+
+  @regression
+  Scenario: Signing in returns the customer
+    When I send a POST request to "/login" with body:
+      """
+      { "username": "Heath93", "password": "{{rwaPassword}}" }
+      """
+    Then the response status should be 200
+    And the response time should be under 2000 ms
+    And the response JSON path "user.username" should equal "Heath93"
+    And the response JSON path "user.balance" should exist
+
+  @regression
+  Scenario: Rejected credentials do not create a session
+    When I send a POST request to "/login" with body:
+      """
+      { "username": "Heath93", "password": "wrong" }
+      """
+    Then the response status should be 401
+```
+
+`{{rwaPassword}}` comes from `envs/local.yaml`, which reads it from the environment:
+
+```yaml title="projects/rwa-bank/envs/local.yaml"
+vars:
+  rwaPassword: '${RWA_PASSWORD:-s3cret}'
+```
+
+```bash
+sdods run -p rwa-bank -e local -l api -t @regression
+```
+
+<Callout type="info">
+  Try asserting on the `set-cookie` header and watch it fail: the value comes back as `***`. Headers
+  that carry credentials are redacted before anything is written to a report or an artifact, so a
+  session cookie cannot leak into a screenshot, a trace or CI output. Assert on the status and the
+  body instead.
+</Callout>
+
+The step library covers the shapes you need without writing TypeScript:
+
+| Step                                                                           | Use                              |
+| ------------------------------------------------------------------------------ | -------------------------------- |
+| `the response JSON path "a.b[0].c" should equal "x"`                           | one value                        |
+| `the response JSON path "items" should have at least 3 items`                  | collections                      |
+| `the response should match the JSON schema "post.schema.json"`                 | contract checks against a file   |
+| `the response should match the OpenAPI schema for GET "/x"`                    | contract checks against a spec   |
+| `I save the response JSON path "user.id" as "userId"`                          | carry a value into the next step |
+| `I poll GET "/jobs/1" until JSON path "state" equals "done" within 30 seconds` | asynchronous work                |
+
+## The hybrid layer
+
+A hybrid scenario drives the API and the browser in one flow, with one set of variables. It is the
+layer that catches the bug neither of the others can see: the API says one thing and the page shows
+another.
+
+```gherkin title="projects/rwa-bank/features/account/api-and-page-agree.feature"
+@hybrid @account
+Feature: The API and the page agree
+
+  @regression @user:standard
+  Scenario: The name the API returns is the name the account overview shows
+    When I send a GET request to "/users/profile/Heath93"
+    Then the response status should be 200
+    Given I am on the account overview
+    Then the UI should show the text from JSON path "user.firstName"
+    And the account overview should belong to "Heath93"
+```
+
+```bash
+sdods run -p rwa-bank -e local -l hybrid -b chromium -t @regression
+```
+
+Nothing here is mocked: the first two steps call the real API, the rest drive the real page, and the
+assertion compares one against the other.
+
+<Callout type="warn">
+  A hybrid scenario needs a tag from both worlds: the layer tag `@hybrid` on the feature, and
+  `@user:<role>` when the page is behind a login. `sdods lint` catches the missing one.
+</Callout>
+
+## Setting up state through the API
+
+The fastest UI test is the one that does not click through six pages to reach its starting point.
+Two steps exist for that, and both clean up after themselves:
+
+```gherkin
+  When I seed via POST "/bankAccounts" with body:
+    """
+    { "bankName": "Workshop Bank", "accountNumber": "123456789", "routingNumber": "987654321" }
+    """
+  And I register cleanup DELETE "/bankAccounts/{{bankAccountId}}"
+```
+
+## Checkpoint
+
+```bash
+sdods run -p rwa-bank -e local -t "@regression" -b chromium
+```
+
+Eight scenarios pass across three layers. Next: [data and users](/docs/workshop/data-and-users/).

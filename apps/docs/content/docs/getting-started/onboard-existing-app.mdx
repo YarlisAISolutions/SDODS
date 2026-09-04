@@ -1,63 +1,364 @@
 ---
 title: Onboard an existing app
-description: Point SDODS at an application repository and get a working project.
+description: Point SDODS at an application repository, read what it found, and run a green suite in about five minutes.
 ---
 
 <Learn>
-  How `sdods analyze` reads an application repository, what it detects, what it proposes, and how to
-  turn the proposal into a project you can run immediately.
+  How `sdods analyze` reads an application repository, what it detects and with what evidence, how
+  to review the proposal before anything is written, which guess you almost always have to correct,
+  and how to get from a clone to a passing suite in one sitting.
 </Learn>
 
-## Analyze
+<Art
+  scene="onboard-scan"
+  caption="analyze reads the repository and reports what it found, with evidence. It writes nothing until you ask it to."
+/>
+
+Every command on this page was run against a real repository:
+[cypress-io/cypress-realworld-app](https://github.com/cypress-io/cypress-realworld-app) — a React
+and Express banking app with 33 existing Cypress specs. Clone it next to your SDODS checkout and
+you can follow along exactly, or swap in your own app and read the same output shape.
 
 ```bash
-bun run sdods analyze ../my-app
+git clone --depth 1 https://github.com/cypress-io/cypress-realworld-app.git ../cypress-realworld-app
 ```
 
-The analyzer is read-only. It scans the repository and reports, with evidence and a confidence score:
+## The five minutes
 
-- package manager and monorepo shape
-- frontend framework (React, Next.js, Vue, Nuxt, Angular, Svelte, plain)
-- **routes** from Next.js `app/` and `pages/`, React Router, Vue Router, Angular, Express, Fastify, NestJS, Spring, Flask, Django
-- **OpenAPI or Swagger** specifications on disk or at common URLs
-- the **test-id attribute** in use (`data-testid`, `data-test`, `data-cy`, `data-qa`) by counting occurrences
-- existing tests (Playwright, Cypress, Cucumber, Jest) and their locators
-- login pages and authentication libraries
-- environment files, base URLs, Docker Compose ports, CI provider, locales, accessibility tooling
+<Steps>
+<Step>**Analyze** the repository. Nothing is written.</Step>
+<Step>**Read** what it found, and how sure it is.</Step>
+<Step>**Apply** the proposal into `projects/<slug>/`.</Step>
+<Step>**Correct** the one or two guesses it could not make from the source.</Step>
+<Step>**Run** it: the API layer passes immediately, and the UI layer tells you what needs a login.</Step>
+</Steps>
 
-The output is `sdods-analysis.json` plus a readable report containing a proposed `sdods.project.yaml`, `envs/*.yaml`, a starter feature per route group and per OpenAPI tag, a coverage map and a best-practice checklist.
-
-## Apply
+## 1. Analyze
 
 ```bash
-bun run sdods analyze ../my-app --apply
-bun run sdods run -p my-app -e local -t @smoke
+sdods analyze ../cypress-realworld-app
 ```
 
-`--apply` writes the project. The generated `@smoke` scenarios are health checks that pass on a reachable application, so the first run is green and you extend from there.
+The analyzer opens files and never writes one. The header is the summary: package manager,
+frameworks with a confidence score, the test-id attribute _counted_ in the source, the
+authentication libraries it recognised, and the base URLs it inferred.
+
+<Screenshot
+  src="/screenshots/cli/analyze-summary.png"
+  width={657}
+  height={264}
+  alt="Terminal output of sdods analyze showing 196 files scanned, yarn, Express, React Router, React and Vite with confidence scores, the data-test attribute with 107 uses, and the detected authentication libraries"
+  caption="Every line is evidence: the frameworks come from the manifest, the test-id attribute from counting 107 occurrences in the source, the base URLs from the environment files."
+/>
+
+Then the route inventory, taken from the router and the server, with the file and line each one
+came from:
+
+<Screenshot
+  src="/screenshots/cli/analyze-routes.png"
+  width={814}
+  height={498}
+  alt="Table of seven page routes from React Router and ten API endpoints from Express, each with its source file and line number"
+  caption="Seven pages and ten endpoints, each traceable to a line of the application."
+/>
+
+Existing tests are inventoried too, including which locator styles they use — the number that
+decides how much of a migration you are looking at:
+
+<Screenshot
+  src="/screenshots/cli/analyze-tests.png"
+  width={657}
+  height={225}
+  alt="Table of existing tests showing 33 Cypress files with 70 CSS locators, 11 test-id locators and 21 text locators, plus 9 vitest files"
+  caption="70 of 102 locators in the existing specs are CSS. That is the work, quantified, before you start it."
+/>
+
+The checklist turns all of that into things to do, each with the command that does it:
+
+<Screenshot
+  src="/screenshots/cli/analyze-checklist.png"
+  width={720}
+  height={439}
+  alt="Checklist output noting the data-test attribute, the missing OpenAPI specification, the CSS-heavy Cypress locators, the absence of accessibility tooling and the guessed authentication strategy"
+  caption="Two warnings and four notes. None of them block you; all of them are real."
+/>
+
+<Callout type="info">
+  `--report-only` skips the proposal, and the global `--json` flag prints the whole analysis as JSON
+  — the same data the report is rendered from, which is what you want in a script or an onboarding
+  dashboard.
+</Callout>
+
+## 2. Read the proposal
+
+<Art
+  scene="onboard-proposal"
+  caption="The proposal is a document, not a commit. Everything in it is editable, and nothing is on disk yet."
+/>
+
+Below the analysis, `analyze` prints the project it would write: the slug, the layers, the
+test-id attribute, the routes it will address by name, the tag taxonomy, and one module per route
+group.
+
+```yaml
+# Generated by `sdods analyze`. Review routes, modules and auth before committing.
+slug: rwa-bank
+name: RWA Bank
+layers: [ui, api, hybrid]
+testIdAttribute: data-test
+routes:
+  signin: /signin
+  signup: /signup
+  personal: /personal
+  contacts: /contacts
+tags:
+  suites: [smoke, regression, sanity]
+  roles: [standard, admin]
+```
+
+Read three things before you apply it:
+
+| Read this    | Because                                                                                |
+| ------------ | -------------------------------------------------------------------------------------- |
+| `routes`     | a catch-all route (`/*`) or a parameterised one may need a real path to be reachable   |
+| `modules`    | they become your tag names and your folder names; rename them now, not after 200 tests |
+| `envs/local` | base URLs are inferred from the source and are the guess most likely to be wrong       |
+
+## 3. Apply
+
+```bash
+sdods analyze ../cypress-realworld-app --apply --project rwa-bank --name "RWA Bank"
+```
+
+<Art
+  scene="onboard-apply"
+  caption="--apply is the first write. It creates a project you own: plain YAML, plain Gherkin, plain TypeScript."
+/>
+
+```
+projects/rwa-bank/
+├── sdods.project.yaml          # layers, routes, modules, tags, test-id attribute
+├── envs/local.yaml             # base URLs, headers, user pool size
+├── features/                   # 14 starter features: one per route group, one per API group
+│   ├── signin/signin.feature
+│   └── login/login-api.feature
+├── pages/HomePage.ts           # a page object to grow
+├── steps/                      # fixtures, auth and project steps
+├── data/common/users.csv       # the user pool, empty of secrets
+├── har/  ·  recorded/          # ready for `sdods har record` and `sdods record`
+└── README.md
+```
+
+The generated scenarios are health checks, not aspirations. A page scenario asserts the route
+renders; an endpoint scenario asserts the endpoint answers with a non-5xx status inside five
+seconds:
+
+```gherkin
+@ui @signin
+Feature: Signin pages
+
+  @smoke
+  Scenario: The signin page loads
+    Given I navigate to the "signin" page
+    Then the page URL should contain "/signin"
+```
+
+Lint them straight away — it is instant, and it is the difference between a typo now and a red
+suite in ten minutes:
+
+```bash
+sdods lint -p rwa-bank
+# ✔ 14 feature file(s) linted, no findings
+```
+
+## 4. Correct the guesses
+
+Static analysis reads what the source says, and a running application sometimes disagrees. On this
+repository five things needed a human, and each one is a single line:
+
+| The guess                                    | The correction                                                                                                                     |
+| -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| API base URL `http://localhost:3000`         | the backend listens on `3001`; only the frontend port is obvious from `.env`                                                       |
+| Login selectors `[data-test="username"]`     | the app spells them `signin-username` — and the attribute is on the Material UI wrapper, so the selector needs a trailing ` input` |
+| Routes `/*` and `/(public)?`                 | router patterns, not addresses; delete them and their generated modules                                                            |
+| Route `/implicit/callback`                   | only exists when the app runs in its Okta mode                                                                                     |
+| `steps/auth.ts` exporting `strategy: 'none'` | the app has a form login: `strategy: 'form'`                                                                                       |
+
+```yaml title="projects/rwa-bank/envs/local.yaml"
+api:
+  baseUrl: http://localhost:3001 # analyze guessed 3000; the backend listens on 3001
+```
+
+```yaml title="projects/rwa-bank/sdods.project.yaml"
+auth:
+  strategy: form
+  storageState: true
+  form:
+    loginPath: /signin
+    usernameSelector: '[data-test="signin-username"] input'
+    passwordSelector: '[data-test="signin-password"] input'
+    submitSelector: '[data-test="signin-submit"]'
+    readyUrl: /
+```
+
+<Callout type="warn">
+  Expect exactly this kind of correction on any real application. The analyzer is deliberately
+  literal: it reports what the files say and marks how sure it is, rather than inventing a plausible
+  configuration you would then have to unpick.
+</Callout>
+
+## 5. First run
+
+Start the application, then run the two layers.
+
+```bash
+# terminal 1 — the application under test
+cd ../cypress-realworld-app && yarn dev
+
+# terminal 2 — SDODS
+sdods run -p rwa-bank -e local -l api                        # endpoints, no browser
+sdods run -p rwa-bank -e local -l ui -b chromium -t @smoke   # pages, in chromium
+```
+
+The API layer passes on the first attempt, because an endpoint either answers or it does not:
+
+<Screenshot
+  src="/screenshots/cli/run-api.png"
+  width={720}
+  height={478}
+  alt="Terminal output of the API layer run: nine scenarios passed in under two seconds, with the artifacts directory printed at the end"
+  caption="Nine endpoints, nine passes, three seconds — and no browser was started."
+/>
+
+The UI layer does not, and that is the point of running it:
+
+<Screenshot
+  src="/screenshots/cli/run-ui-first-summary.png"
+  width={689}
+  height={283}
+  alt="Terminal summary of the first UI run: five scenarios failed and two passed"
+  caption="Five failures on the project exactly as analyze wrote it."
+/>
+
+All five failures are the same failure:
+
+<Screenshot
+  src="/screenshots/cli/run-ui-first.png"
+  width={689}
+  height={264}
+  alt="A failing assertion showing the expected URL pattern and the received URL http://localhost:3000/signin"
+  caption="The application answered every request by redirecting to its sign-in page. The suite is not wrong; it has not been given a login."
+/>
+
+Give it one. The pool users live in `data/common/users.csv`, `auth capture` signs one in once and
+stores the state, and the tag `@user:standard` makes a scenario start from that state:
+
+```bash
+sdods auth capture -p rwa-bank -e local        # → projects/rwa-bank/.auth/local/standard-0.json
+```
+
+```gherkin title="projects/rwa-bank/features/personal/personal.feature"
+  @smoke @user:standard
+  Scenario: The personal page loads
+    Given I navigate to the "personal" page
+    Then the page URL should contain "/personal"
+```
+
+<Screenshot
+  src="/screenshots/cli/run-ui-green.png"
+  width={720}
+  height={205}
+  alt="Terminal output of the corrected UI run: four scenarios passed in under five seconds"
+  caption="Four pages, four passes. Nothing was mocked: it signs in as a real seeded user."
+/>
+
+<Art
+  scene="onboard-first-green"
+  caption="Nine endpoints and four pages, green, on an application SDODS had never seen twenty minutes earlier."
+/>
+
+Then look at what the run recorded:
+
+```bash
+sdods report --last --open     # HTML report and the run dashboard
+sdods trace --last             # the Playwright trace of any failing step
+```
+
+## What the suite covers, and what it does not
+
+```bash
+sdods coverage -p rwa-bank --routes
+```
+
+`coverage` joins the route and endpoint inventory with the scenarios you have, split by suite tag,
+so the gap is a number rather than a feeling.
+
+```
+Coverage for rwa-bank
+routes 4/4  endpoints 9/9  roles 0/2  scenarios 13  @smoke=13
+```
+
+Everything answers, and nothing is yet checked as a particular person: `roles 0/2` is the whole
+story of a freshly onboarded project.
+
+<Art
+  scene="onboard-coverage"
+  caption="Reachability is covered on day one. Roles and regression depth are the work you choose next."
+/>
+
+The generated suite gets you to “everything answers”. The next three things are worth doing in
+this order: a real assertion per role, `@regression` scenarios for the flows that make money, and
+data that comes from a fixture rather than from whatever the database happens to hold.
+[The workshop](/docs/workshop/) walks all three on this same repository.
+
+## Bringing existing tests along
+
+`analyze` copies existing Playwright specs into `recorded/imported/` unless you pass
+`--no-import-specs`. Cypress specs are inventoried rather than copied, because their API differs —
+the migration path is to record the flow once and convert it:
+
+```bash
+sdods record -p rwa-bank -e local --url signin --name signin-flow
+sdods record convert projects/rwa-bank/recorded/signin-flow.spec.ts
+```
+
+`record convert` asks your configured model adapter to turn the recording into a **proposal**: a
+feature file plus the steps it needs, using role and test-id locators instead of the CSS chains the
+old specs relied on. Nothing is applied automatically — you review it with `sdods proposals list`
+and accept it when you agree. Without a model key, `--dry-run` prints the plan and
+`--adapter fake` produces the shape. [Guides → Migrating](/docs/guides/migrating/)
+covers the whole path.
 
 ## Start from scratch instead
 
-`project create` exists today:
+When there is no application to read — a service that does not exist yet, or a repository you
+cannot clone — `project create` scaffolds the same shape by hand:
 
 ```bash
-bun run sdods project create my-app \
+sdods project create my-app \
   --ui-url http://localhost:3000 \
   --api-url http://localhost:3000/api \
   --env local
 ```
 
-It scaffolds the YAML, an environment, fixtures, an authentication stub, a page object, health features and a data folder. See the [project command reference](/docs/reference/cli-commands/project).
+It writes the YAML, an environment, fixtures, an authentication stub, a page object, health
+features and a data folder. See the [project command reference](/docs/reference/cli-commands/project/).
 
-## Coverage
+## What analyze detects
 
-```bash
-bun run sdods coverage -p my-app --routes --openapi
-```
-
-`coverage` joins the route and endpoint inventory with your features to show what each suite tag exercises.
+| Area            | Detected                                                                                                        |
+| --------------- | --------------------------------------------------------------------------------------------------------------- |
+| Package manager | npm, pnpm, yarn, bun; monorepo shape                                                                            |
+| Frontend        | React, Next.js, Vue, Nuxt, Angular, Svelte, plain                                                               |
+| Routes          | Next.js `app/` and `pages/`, React Router, Vue Router, Angular, Express, Fastify, NestJS, Spring, Flask, Django |
+| API contracts   | OpenAPI or Swagger on disk, or at the usual URLs                                                                |
+| Locators        | the test-id attribute in use (`data-testid`, `data-test`, `data-cy`, `data-qa`), by counting                    |
+| Existing tests  | Playwright, Cypress, Cucumber, Jest — with a breakdown of their locator styles                                  |
+| Authentication  | login pages and auth libraries (passport, Auth0, Okta, Cognito, NextAuth …)                                     |
+| Environment     | `.env` files, base URLs, Docker Compose ports, CI provider, locales, accessibility tooling                      |
 
 ## Next steps
 
-- [Projects and environments](/docs/guides/projects-and-environments)
-- [Your first API test](/docs/getting-started/first-api-test)
+- [The workshop](/docs/workshop/) — the same repository, feature by feature, in one sitting
+- [Projects and environments](/docs/guides/projects-and-environments/)
+- [Your first API test](/docs/getting-started/first-api-test/)

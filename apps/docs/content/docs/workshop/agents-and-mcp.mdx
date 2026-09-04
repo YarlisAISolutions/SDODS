@@ -1,0 +1,110 @@
+---
+title: 9 · Agents and MCP
+description: Let a model read the project and propose changes you review — using a hosted model, your CLI login, or a model running on your own laptop.
+---
+
+<Learn>
+  What the five agent roles do, why everything they produce is a proposal rather than a commit, how
+  to run them on a local model with no key and no cost, and how to drive SDODS from Claude Code or
+  Codex through its MCP server.
+</Learn>
+
+**Time:** 20 minutes · **You need:** chapter 8 finished, and one of: a model API key, a logged-in
+`claude`/`codex` CLI, or [Ollama](/docs/guides/local-models/).
+
+<Art
+  scene="workshop-migrate"
+  caption="An agent never edits your suite. It writes a proposal, you read the diff, and you decide."
+/>
+
+## The roles
+
+| Role      | Asks it to                                        | Command                |
+| --------- | ------------------------------------------------- | ---------------------- |
+| planner   | explore the app and write a tagged test plan      | `sdods agent plan`     |
+| generator | turn a plan, goal or recording into features      | `sdods agent generate` |
+| healer    | diagnose one failure and propose the smallest fix | `sdods agent heal`     |
+| upgrader  | map a code change to the scenarios it breaks      | `sdods agent upgrade`  |
+| reviewer  | review features for tagging, reuse and locators   | `sdods agent review`   |
+
+Every one of them writes to the proposal store, never to your working tree:
+
+```bash
+sdods agent review -p rwa-bank
+sdods proposals list
+sdods proposals show <id>
+sdods proposals accept <id> --branch sdods/<id>
+sdods proposals reject <id>
+```
+
+## Try it without a key first
+
+```bash
+sdods agent generate -p rwa-bank --goal "cover the contacts page" --dry-run
+```
+
+`--dry-run` uses the fake adapter and prints the system prompt, the tool list and the budget. It is
+the cheapest way to see exactly what a model would be told about your project.
+
+## Run it on your own machine
+
+```bash
+ollama serve &
+ollama pull qwen2.5-coder:7b
+
+sdods doctor                     # the "local models (ollama)" row turns green
+sdods agent review -p rwa-bank --adapter ollama --model qwen2.5-coder:7b --context-tokens 16384
+```
+
+No key, no per-token cost, and the project never leaves the laptop. One setting decides whether this
+works: Ollama loads a model with a 4096-token context by default and truncates anything longer
+without saying so, so raise it — SDODS refuses to start a job that would be truncated rather than
+letting you read a confident answer to half a question. [Local models](/docs/guides/local-models/)
+covers the details and which jobs a 7B model can actually finish.
+
+## Budgets and roles
+
+```yaml title="projects/rwa-bank/sdods.project.yaml"
+agents:
+  provider: ollama
+  models:
+    default: qwen2.5-coder:14b
+    reviewer: llama3.1:8b
+  maxTurns: { healer: 20 }
+  budgetUsd: { default: 2 }
+  local:
+    contextTokens: 16384
+```
+
+Models are per role, so planning can use a hosted model while generation stays local. Cost budgets
+apply to hosted providers; on a local model the turn budget is what bounds a job.
+
+## MCP: the other direction
+
+The commands above put a model inside SDODS. The MCP server does the opposite — it puts SDODS inside
+your coding agent, so Claude Code or Codex can list features, read runs, analyse coverage and write
+proposals while you work.
+
+```bash
+sdods mcp install claude          # or: codex, all
+sdods mcp --caps read             # stdio server, read-only tools
+sdods mcp --http --port 4319      # over HTTP, for a remote agent
+```
+
+Then ask the agent, in its own words: _"use sdods to list the failing scenarios of the last rwa-bank
+run and propose a fix."_ Tools are scoped by capability, write tools always produce proposals, and a
+token issued with `sdods tokens create` limits what a remote agent may reach.
+
+<Callout type="info">
+  SDODS tokens are free and self-issued: they scope access to your own server, they are not a
+  licence. What costs money is the model you point at it — unless it is running on your machine.
+</Callout>
+
+## Checkpoint
+
+```bash
+sdods agent review -p rwa-bank --dry-run && sdods proposals list
+```
+
+The dry run prints a prompt and tool list; with a real adapter, `proposals list` has an entry you can
+read. Next: [CI and scheduling](/docs/workshop/ci-and-scheduling/).

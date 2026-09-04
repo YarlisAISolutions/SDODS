@@ -1,0 +1,97 @@
+{
+  "insights": {
+    "command": "sdods insights show -p rwa-bank",
+    "width": 1002,
+    "height": 303
+  },
+  "doctor": {
+    "command": "sdods doctor",
+    "width": 720,
+    "height": 381
+  },
+  "install-dry-run": {
+    "command": "sh install.sh --dry-run --browsers chromium",
+    "width": 814,
+    "height": 283
+  },
+  "version-check": {
+    "command": "sh install.sh --version-check",
+    "width": 720,
+    "height": 381
+  },
+  "project-list": {
+    "command": "sdods project list",
+    "width": 751,
+    "height": 205
+  },
+  "analyze-summary": {
+    "command": "sdods analyze ../cypress-realworld-app",
+    "width": 657,
+    "height": 264
+  },
+  "analyze-routes": {
+    "command": "sdods analyze ../cypress-realworld-app | sed -n \"/^Routes/,/^$/p\"",
+    "width": 814,
+    "height": 498
+  },
+  "analyze-checklist": {
+    "command": "sdods analyze ../cypress-realworld-app | sed -n \"/^Checklist/,/^Proposed/p\"",
+    "width": 720,
+    "height": 439
+  },
+  "analyze-tests": {
+    "command": "sdods analyze ../cypress-realworld-app | sed -n \"/^Existing tests/,/^$/p\"",
+    "width": 657,
+    "height": 225
+  },
+  "run-api": {
+    "command": "sdods run -p rwa-bank -e local -l api",
+    "width": 720,
+    "height": 478
+  },
+  "run-ui-green": {
+    "command": "sdods run -p rwa-bank -e local -l ui -b chromium -t @smoke",
+    "width": 720,
+    "height": 283
+  },
+  "coverage": {
+    "command": "sdods coverage -p rwa-bank --routes",
+    "width": 720,
+    "height": 322
+  },
+  "features-list": {
+    "command": "sdods features list -p rwa-bank",
+    "width": 783,
+    "height": 439
+  },
+  "lint": {
+    "command": "sdods lint -p rwa-bank",
+    "width": 548,
+    "height": 127
+  },
+  "data-preview": {
+    "command": "sdods data preview projects/rwa-bank/data/common/users.csv",
+    "width": 657,
+    "height": 225
+  },
+  "auth-list": {
+    "command": "sdods auth list -p rwa-bank -e local",
+    "width": 595,
+    "height": 186
+  },
+  "har-list": {
+    "command": "sdods har list -p rwa-bank -e local",
+    "width": 595,
+    "height": 166
+  },
+  "processes": {
+    "command": "sdods processes list -p rwa-bank",
+    "width": 845,
+    "height": 205
+  },
+  "run-regression": {
+    "command": "sdods run -p rwa-bank -e local -t @regression",
+    "width": 783,
+    "height": 342
+  }
+}

@@ -1,0 +1,4 @@
+id,username,password,role,displayName
+1,Heath93,${RWA_PASSWORD:-s3cret},standard,Ted Parisian
+2,Arvilla_Hegmann,${RWA_PASSWORD:-s3cret},standard,Kristian Bogan
+3,Dina20,${RWA_PASSWORD:-s3cret},admin,Darrel Ortiz

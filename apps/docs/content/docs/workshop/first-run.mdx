@@ -1,0 +1,160 @@
+---
+title: 2 · The first run
+description: Layers, tags and exit codes — and why the API layer passes immediately while the UI layer does not.
+---
+
+<Learn>
+  What a layer is, what a suite tag is for, how to read a run's output and its exit code, and how to
+  turn five red scenarios into four green ones by giving the suite a login.
+</Learn>
+
+**Time:** 20 minutes · **You need:** the application running (`yarn dev`).
+
+## Two layers, two answers
+
+A project can be exercised at three layers, and they fail for different reasons:
+
+| Layer    | What it drives            | What a failure usually means           |
+| -------- | ------------------------- | -------------------------------------- |
+| `api`    | HTTP requests, no browser | the endpoint, the payload or the port  |
+| `ui`     | a real browser            | the page, the locator or the login     |
+| `hybrid` | both inside one scenario  | the two disagree — the interesting bug |
+
+Start with the layer that has the fewest moving parts:
+
+```bash
+sdods run -p rwa-bank -e local -l api
+```
+
+<Screenshot
+  src="/screenshots/cli/run-api.png"
+  width={720}
+  height={478}
+  alt="API layer run: nine scenarios passed in under two seconds, with the artifacts, HTML report and dashboard paths printed"
+  caption="Nine endpoints answered. No browser was started, so this is the run you put in a pre-commit hook."
+/>
+
+Then the browser:
+
+```bash
+sdods run -p rwa-bank -e local -l ui -b chromium -t @smoke
+```
+
+<Screenshot
+  src="/screenshots/cli/run-ui-first-summary.png"
+  width={689}
+  height={283}
+  alt="First UI run: five scenarios failed, two passed"
+  caption="Five failures, and every one of them is the same failure."
+/>
+
+<Screenshot
+  src="/screenshots/cli/run-ui-first.png"
+  width={689}
+  height={264}
+  alt="A failing assertion showing the expected URL pattern and the received URL http://localhost:3000/signin"
+  caption="The application redirected to its sign-in page. The suite is not wrong; it has not been given an account."
+/>
+
+<Callout type="info">
+  These two screenshots come from the project exactly as `analyze` wrote it. If you already applied
+  the corrections from [chapter 1](/docs/workshop/analyze-and-apply/), your run shows the corrected
+  routes — the redirect is still what happens on `/personal` and `/contacts`.
+</Callout>
+
+## Give the suite an account
+
+The user pool is a CSV, login happens once, and the browser state is reused.
+
+```bash
+sdods auth capture -p rwa-bank -e local
+sdods auth list -p rwa-bank -e local
+```
+
+<Screenshot
+  src="/screenshots/cli/auth-list.png"
+  width={595}
+  height={186}
+  alt="Cached login states for two pool users with their age and freshness"
+  caption="Signed in once, kept for the configured lifetime, re-used by every scenario that asks for that role."
+/>
+
+A scenario asks for a role with a tag:
+
+```gherkin title="projects/rwa-bank/features/personal/personal.feature"
+  @smoke @user:standard
+  Scenario: The personal page loads
+    Given I navigate to the "personal" page
+    Then the page URL should contain "/personal"
+```
+
+Do the same for `features/contacts/contacts.feature`, then run it again:
+
+```bash
+sdods run -p rwa-bank -e local -l ui -b chromium -t @smoke
+```
+
+<Screenshot
+  src="/screenshots/cli/run-ui-green.png"
+  width={720}
+  height={283}
+  alt="Corrected UI run: four scenarios passed in under five seconds"
+  caption="Four pages, four passes — signed in as a real seeded user, with nothing mocked."
+/>
+
+<Art
+  scene="onboard-first-green"
+  caption="The API layer was green from the start; the UI layer needed one fact about the application that no static analysis could give it."
+/>
+
+## Tags are the interface to your suite
+
+Every scenario carries exactly one suite tag — that rule is enforced by `lint`, so the taxonomy
+cannot rot.
+
+```bash
+sdods features list -p rwa-bank
+```
+
+<Screenshot
+  src="/screenshots/cli/features-list.png"
+  width={783}
+  height={439}
+  alt="Feature inventory listing each feature with its module, scenario count, layers and tags"
+  caption="Module, layer and tags for every feature. This is the table to look at when a tag expression selects nothing."
+/>
+
+Tag expressions are boolean:
+
+```bash
+sdods run -p rwa-bank -e local -t "@smoke"
+sdods run -p rwa-bank -e local -t "@regression and @account"
+sdods run -p rwa-bank -e local -t "@smoke and not @visual"
+```
+
+## Exit codes
+
+Runs are meant to be read by CI as well as by you:
+
+| Code | Meaning                                        |
+| ---- | ---------------------------------------------- |
+| 0    | everything passed                              |
+| 1    | at least one scenario failed                   |
+| 2    | configuration is wrong (unknown project, env…) |
+
+The full list is in [Reference → Exit codes](/docs/reference/exit-codes/).
+
+## Break it on purpose
+
+A suite you have never seen fail is a suite you do not trust. Stop the application
+(`Ctrl-C` in its terminal) and run the API layer again: every scenario fails with a connection
+error rather than an assertion error, which is exactly the distinction you want in a failure report.
+Start it again before continuing.
+
+## Checkpoint
+
+```bash
+sdods run -p rwa-bank -e local -l api && sdods run -p rwa-bank -e local -l ui -b chromium -t @smoke
+```
+
+Both commands exit 0. Next: [UI scenarios and page objects](/docs/workshop/ui-and-page-objects/).
