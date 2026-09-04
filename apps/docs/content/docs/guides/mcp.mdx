@@ -98,6 +98,22 @@ mcp:
 
 Values under `envFrom` and `headersFrom` are variable names; literals are rejected.
 
+Every adapter can now reach these servers, not only the Claude and CLI ones. A chat-completions
+adapter — `openai-compatible` or `ollama` — connects each server as an MCP client and presents its
+tools as ordinary functions named `mcp__<server>__<tool>`, the same convention Claude Code uses. A
+server that fails to start is reported and skipped rather than taking the job with it.
+
+The roles whose work is looking at the application (planner, generator, healer) also get
+Playwright's own MCP server attached automatically, so “write a test for this page” means the same
+thing on a local model as it does on a hosted one.
+
+<Callout type="warn">
+  Tool count is the limit, not the transport. SDODS exposes 33–35 tools to a role and Playwright
+  adds about 24; a 7–8B local model starts describing tool calls in prose instead of making them
+  somewhere past that. Narrow `allowedTools`, or use a larger model for the roles that drive a
+  browser — see [Local models](/docs/guides/local-models/).
+</Callout>
+
 ## Next steps
 
 - [MCP tools reference](/docs/reference/mcp-tools)

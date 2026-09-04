@@ -61,6 +61,8 @@ export interface RunAgentOptions {
   prompt: string;
   tools: AgentSdkToolDef[];
   mcpServers?: Record<string, ExternalMcpServerConfig>;
+  /** The role wants to look at the application, so a browser server should be attached. */
+  needsBrowser?: boolean;
   model?: string;
   maxTurns?: number;
   /** Cap on one assistant turn; local models otherwise ramble until the context ends. */

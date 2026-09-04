@@ -137,6 +137,8 @@ export function prepareJob(o: RunJobOptions): {
   tools: ReturnType<typeof roleTools>;
   adapter: LlmAdapter;
   mcpServers: Record<string, any>;
+  /** True for the roles whose work is looking at the application. */
+  needsBrowser: boolean;
 } {
   const rootDir = o.rootDir ?? findRepoRoot();
   const yaml = o.input.project
@@ -222,12 +224,22 @@ export function prepareJob(o: RunJobOptions): {
     maxTurns: o.maxTurns ?? yaml?.agents?.maxTurns?.[o.role] ?? def.defaults.maxTurns,
     dryRun: o.dryRun,
   };
-  return { job, ctx, registry, system, prompt, tools, adapter, mcpServers };
+  return {
+    job,
+    ctx,
+    registry,
+    system,
+    prompt,
+    tools,
+    adapter,
+    mcpServers,
+    needsBrowser: def.needsBrowser,
+  };
 }
 
 export async function runJob(o: RunJobOptions): Promise<AgentJob> {
   const prep = prepareJob(o);
-  const { job, ctx, adapter, system, prompt, tools, mcpServers } = prep;
+  const { job, ctx, adapter, system, prompt, tools, mcpServers, needsBrowser } = prep;
   const journal = new JobJournal(ctx.rootDir);
   const before = new Set(new ProposalStore(ctx.rootDir).list().map((p) => p.id));
   const events: AgentEvent[] = [];
@@ -239,6 +251,7 @@ export async function runJob(o: RunJobOptions): Promise<AgentJob> {
       prompt,
       tools,
       mcpServers,
+      needsBrowser,
       model: job.model,
       maxTurns: job.maxTurns,
       maxBudgetUsd: job.budgetUsd,
