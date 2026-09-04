@@ -10,9 +10,11 @@ description: Bring existing suites into SDODS without rewriting everything on da
 
 ## From Playwright
 
-1. Copy specs into `projects/<slug>/recorded/` (`sdods import playwright <dir>`); they run as the `recorded` layer immediately.
+1. Point `sdods analyze <dir> --apply` at the existing suite. It copies the specs into
+   `projects/<slug>/recorded/imported/` and they run as the `recorded` layer immediately. Pass
+   `--no-import-specs` to scaffold the project without copying them.
 2. Move base URLs and credentials into `envs/<env>.yaml` and `.env.<env>`.
-3. Convert high-value flows with `sdods record convert` so they become tagged features with shared steps.
+3. Convert high-value flows with `sdods record convert <spec>` so they become tagged features with shared steps.
 4. Turn `page.locator('css')` calls into `heal.locator(primary, context)` in page objects as you touch them.
 
 ## From Cypress
