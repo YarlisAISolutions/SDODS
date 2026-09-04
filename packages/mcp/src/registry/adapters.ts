@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/server';
-import type { ToolRegistry} from './registry.js';
+import type { ToolRegistry } from './registry.js';
 import { type AutomaxTool, type ToolContext } from './registry.js';
 
 /** Register every visible tool on an MCP v2 server. */

@@ -4,7 +4,8 @@ description: AutoMax as an MCP server for Claude Code, Cursor and VS Code, and t
 ---
 
 <Learn>
-How to connect an MCP client to AutoMax over stdio or HTTP, which tool families exist, how scopes gate them, and how a project declares external MCP servers for its agents.
+  How to connect an MCP client to AutoMax over stdio or HTTP, which tool families exist, how scopes
+  gate them, and how a project declares external MCP servers for its agents.
 </Learn>
 
 ## Topology
@@ -57,17 +58,17 @@ claude mcp add --transport http automax https://automax.example.com/mcp --header
 
 ## Tool families
 
-| Prefix | Examples |
-|---|---|
-| `project_` | `project_list`, `project_get_config`, `project_list_envs`, `project_doctor` |
-| `analyze_` | `analyze_project`, `analyze_routes`, `analyze_openapi`, `analyze_locators`, `analyze_coverage`, `analyze_best_practices`, `analyze_change_impact`, `analyze_failure` |
-| `feature_` / `step_` | `feature_list`, `feature_read`, `feature_write` (proposal), `feature_lint`, `step_list`, `step_find` |
-| `run_` | `run_tests`, `run_get`, `run_get_scenario`, `run_list`, `run_cancel`, `run_har_replay` |
-| `data_` | `data_list_datasets`, `data_load`, `data_pool_status` |
-| `heal_` / `insights_` | `heal_events`, `heal_locator_stats`, `insights_flaky`, `insights_health` |
-| `record_` | `record_start` (local only), `record_convert`, `auth_capture` |
-| `agent_` / `proposal_` | `agent_plan`, `agent_generate`, `agent_heal`, `proposal_list`, `proposal_accept` |
-| `issue_` / `schedule_` | `issue_create`, `issue_link`, `schedule_list`, `schedule_run_now` |
+| Prefix                 | Examples                                                                                                                                                             |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `project_`             | `project_list`, `project_get_config`, `project_list_envs`, `project_doctor`                                                                                          |
+| `analyze_`             | `analyze_project`, `analyze_routes`, `analyze_openapi`, `analyze_locators`, `analyze_coverage`, `analyze_best_practices`, `analyze_change_impact`, `analyze_failure` |
+| `feature_` / `step_`   | `feature_list`, `feature_read`, `feature_write` (proposal), `feature_lint`, `step_list`, `step_find`                                                                 |
+| `run_`                 | `run_tests`, `run_get`, `run_get_scenario`, `run_list`, `run_cancel`, `run_har_replay`                                                                               |
+| `data_`                | `data_list_datasets`, `data_load`, `data_pool_status`                                                                                                                |
+| `heal_` / `insights_`  | `heal_events`, `heal_locator_stats`, `insights_flaky`, `insights_health`                                                                                             |
+| `record_`              | `record_start` (local only), `record_convert`, `auth_capture`                                                                                                        |
+| `agent_` / `proposal_` | `agent_plan`, `agent_generate`, `agent_heal`, `proposal_list`, `proposal_accept`                                                                                     |
+| `issue_` / `schedule_` | `issue_create`, `issue_link`, `schedule_list`, `schedule_run_now`                                                                                                    |
 
 Write tools produce proposals; they never touch your working tree. Every tool carries annotations, a Zod input schema and a link to its reference page.
 

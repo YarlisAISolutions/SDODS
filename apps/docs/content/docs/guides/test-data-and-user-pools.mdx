@@ -4,7 +4,9 @@ description: Declare datasets once, resolve them per environment, and lease acco
 ---
 
 <Learn>
-How datasets are declared and resolved per environment, which loaders exist, how rows become step variables, how factories stay deterministic, and how user pools hand out accounts to workers without collisions.
+  How datasets are declared and resolved per environment, which loaders exist, how rows become step
+  variables, how factories stay deterministic, and how user pools hand out accounts to workers
+  without collisions.
 </Learn>
 
 ## Declare sources
@@ -12,16 +14,16 @@ How datasets are declared and resolved per environment, which loaders exist, how
 ```yaml title="automax.project.yaml"
 data:
   sources:
-    users:    { type: csv,  path: 'data/{env}/users.csv', fallback: data/common/users.csv }
+    users: { type: csv, path: 'data/{env}/users.csv', fallback: data/common/users.csv }
     products: { type: json, path: data/common/products.json }
-    posts:    { type: yaml, path: 'data/{env}/posts.yaml', fallback: data/common/posts.yaml }
-    orders:   { type: db,   table: td_demo_shop_orders, envColumn: env }
-    pet:      { type: openapi, spec: ./openapi/petstore.json, schema: Pet }
+    posts: { type: yaml, path: 'data/{env}/posts.yaml', fallback: data/common/posts.yaml }
+    orders: { type: db, table: td_demo_shop_orders, envColumn: env }
+    pet: { type: openapi, spec: ./openapi/petstore.json, schema: Pet }
   factories: ./data/factories.ts
   userPool:
     dataset: users
     roleColumn: role
-    leaseStore: file        # or db, for runs spread across machines
+    leaseStore: file # or db, for runs spread across machines
     leaseTtlMs: 600000
 ```
 

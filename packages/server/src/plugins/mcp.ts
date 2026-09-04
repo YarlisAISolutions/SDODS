@@ -9,12 +9,7 @@ import { resolveApiToken } from '@automax/db';
  */
 export default fp(async function mcpPlugin(app: FastifyInstance) {
   let handler:
-    | ((
-        req: IncomingMessage,
-        res: ServerResponse,
-        body?: unknown,
-      ) => Promise<void>)
-    | null = null;
+    ((req: IncomingMessage, res: ServerResponse, body?: unknown) => Promise<void>) | null = null;
   let close: (() => Promise<void>) | null = null;
   try {
     const mcp = await import('@automax/mcp');

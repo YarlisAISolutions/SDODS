@@ -21,8 +21,12 @@
       "./install-claude": "./dist/claude-code/install.js"
     }
   },
-  "files": ["dist"],
-  "engines": { "node": ">=22" },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "^0.3.259",
     "@anthropic-ai/sdk": "^0.123.0",

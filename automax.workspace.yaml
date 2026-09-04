@@ -14,7 +14,7 @@ workspaces:
     organization: automax
   - slug: platform-qa
     name: Platform QA
-    description: "Example second workspace; projects opt in with workspace: platform-qa."
+    description: 'Example second workspace; projects opt in with workspace: platform-qa.'
     organization: automax
 
 defaultWorkspace: default

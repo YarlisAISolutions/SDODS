@@ -4,7 +4,8 @@ description: One schema on two drivers, ingest of run results, and a verified sw
 ---
 
 <Learn>
-What the database stores, how `DB_DRIVER` selects SQLite or Postgres, what ingest writes, and how `automax db switch` copies and verifies data.
+  What the database stores, how `DB_DRIVER` selects SQLite or Postgres, what ingest writes, and how
+  `automax db switch` copies and verifies data.
 </Learn>
 
 ## Toggle
@@ -20,13 +21,13 @@ Kysely serves one schema on both drivers; primary keys are application-generated
 
 ## What is stored
 
-| Group | Tables |
-|---|---|
-| Platform | organizations, workspaces, projects, environments, users, roles, sessions, api_tokens, audit_log |
-| Results | runs, scenarios, scenario_attempts, steps, artifacts |
-| Learning | heal_events, locator_stats, flaky_stats |
-| Data | datasets, dataset_rows, user_pool, user_leases, plus `td_<slug>_<name>` test-data tables |
-| Automation | integrations, issue_links, agent_jobs, proposals, schedules, schedule_runs |
+| Group      | Tables                                                                                           |
+| ---------- | ------------------------------------------------------------------------------------------------ |
+| Platform   | organizations, workspaces, projects, environments, users, roles, sessions, api_tokens, audit_log |
+| Results    | runs, scenarios, scenario_attempts, steps, artifacts                                             |
+| Learning   | heal_events, locator_stats, flaky_stats                                                          |
+| Data       | datasets, dataset*rows, user_pool, user_leases, plus `td*<slug>\_<name>` test-data tables        |
+| Automation | integrations, issue_links, agent_jobs, proposals, schedules, schedule_runs                       |
 
 The runner never needs the database unless a scenario uses a `db` dataset, a database lease store, or ingest is enabled.
 

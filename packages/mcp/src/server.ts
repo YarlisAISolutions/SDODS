@@ -3,8 +3,7 @@ import { McpServer } from '@modelcontextprotocol/server';
 import { cliOrNote } from './cli.js';
 import { findRepoRoot } from './cli.js';
 import { toMcpServer } from './registry/adapters.js';
-import type {
-  ToolRegistry} from './registry/registry.js';
+import type { ToolRegistry } from './registry/registry.js';
 import {
   ALL_CAPABILITIES,
   DEFAULT_CAPABILITIES,

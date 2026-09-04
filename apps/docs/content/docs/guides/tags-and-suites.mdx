@@ -4,23 +4,24 @@ description: The tag taxonomy AutoMax enforces and how tags select layers, suite
 ---
 
 <Learn>
-Which tags are mandatory, which are optional, how value tags are validated against the project YAML, how tag expressions filter a run, and how playwright-bdd special tags pass through.
+  Which tags are mandatory, which are optional, how value tags are validated against the project
+  YAML, how tag expressions filter a run, and how playwright-bdd special tags pass through.
 </Learn>
 
 ## The taxonomy
 
-| Tag | Rule | Effect |
-|---|---|---|
-| `@ui` `@api` `@hybrid` | exactly one per scenario | selects the layer, therefore the Playwright project |
-| `@smoke` `@regression` `@sanity` | exactly one (list configurable under `tags.suites`) | selects the screenshot policy and the CI gate |
-| `@visual` `@a11y` `@perf` `@mock` `@data-driven` `@pool` | optional (declare extras under `tags.extra`) | enable features |
-| `@user:<role>` | role must exist in `tags.roles` | leases a pool user before the browser context starts |
-| `@data:<dataset>` | dataset must exist in `data.sources` | documents the dataset a scenario depends on |
-| `@har:<name>` | file must exist under `har/<env>/` | replays or records network traffic |
-| `@env:<name>` | must be in `envs.available` | restricts a scenario to one environment |
-| `@jira:PROJ-123` `@github:123` | pattern-checked | links the scenario to an issue |
-| `@skip:<browser>` | browser must be supported | excludes the scenario from that engine |
-| `@retries:N` `@timeout:N` `@slow` `@mode:serial` `@skip` `@fixme` `@only` | playwright-bdd special tags | passed through |
+| Tag                                                                       | Rule                                                | Effect                                               |
+| ------------------------------------------------------------------------- | --------------------------------------------------- | ---------------------------------------------------- |
+| `@ui` `@api` `@hybrid`                                                    | exactly one per scenario                            | selects the layer, therefore the Playwright project  |
+| `@smoke` `@regression` `@sanity`                                          | exactly one (list configurable under `tags.suites`) | selects the screenshot policy and the CI gate        |
+| `@visual` `@a11y` `@perf` `@mock` `@data-driven` `@pool`                  | optional (declare extras under `tags.extra`)        | enable features                                      |
+| `@user:<role>`                                                            | role must exist in `tags.roles`                     | leases a pool user before the browser context starts |
+| `@data:<dataset>`                                                         | dataset must exist in `data.sources`                | documents the dataset a scenario depends on          |
+| `@har:<name>`                                                             | file must exist under `har/<env>/`                  | replays or records network traffic                   |
+| `@env:<name>`                                                             | must be in `envs.available`                         | restricts a scenario to one environment              |
+| `@jira:PROJ-123` `@github:123`                                            | pattern-checked                                     | links the scenario to an issue                       |
+| `@skip:<browser>`                                                         | browser must be supported                           | excludes the scenario from that engine               |
+| `@retries:N` `@timeout:N` `@slow` `@mode:serial` `@skip` `@fixme` `@only` | playwright-bdd special tags                         | passed through                                       |
 
 Unknown tags produce a warning, so typos surface without blocking.
 

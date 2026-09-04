@@ -23,12 +23,12 @@ automax project create <slug> [--name <name>] [--layers ui,api,hybrid,recorded] 
                       [--ui-url <url>] [--api-url <url>] [--env <name>] [--test-id <attr>] [--force]
 ```
 
-| Flag | Default |
-|---|---|
-| `--layers` | `ui,api,hybrid` |
-| `--browsers` | `chromium` |
+| Flag                     | Default                                               |
+| ------------------------ | ----------------------------------------------------- |
+| `--layers`               | `ui,api,hybrid`                                       |
+| `--browsers`             | `chromium`                                            |
 | `--ui-url` / `--api-url` | `http://localhost:3000` / `http://localhost:3000/api` |
-| `--env` | `local` |
-| `--test-id` | `data-testid` |
+| `--env`                  | `local`                                               |
+| `--test-id`              | `data-testid`                                         |
 
 Writes `automax.project.yaml`, `envs/<env>.yaml`, `.env.example`, `steps/fixtures.ts`, `steps/auth.ts`, a project step file, `pages/HomePage.ts`, `features/health.feature`, `features/ui/home.feature`, `data/common/users.csv`, `data/factories.ts`, empty `recorded/` and `har/` folders and a README. The slug must be lowercase letters, digits and dashes.

@@ -4,7 +4,8 @@ description: How a project directory is laid out and how environments describe w
 ---
 
 <Learn>
-What lives in a project directory, how environment files describe targets, how Playwright projects are generated from them, and which commands create and inspect both.
+  What lives in a project directory, how environment files describe targets, how Playwright projects
+  are generated from them, and which commands create and inspect both.
 </Learn>
 
 ## A project is a directory
@@ -36,7 +37,7 @@ ui:
 api:
   baseUrl: https://jsonplaceholder.typicode.com
   headers: { Accept: application/json }
-  auth: { type: none }          # or bearer/basic/header/oauth-client-credentials with ${VAR}
+  auth: { type: none } # or bearer/basic/header/oauth-client-credentials with ${VAR}
 users:
   poolSize: 4
 vars:
@@ -45,7 +46,7 @@ vars:
 use:
   locale: en-US
   timezoneId: America/New_York
-screenshots: { onlyOnFailure: false }   # overrides the project section for this env
+screenshots: { onlyOnFailure: false } # overrides the project section for this env
 ```
 
 The project lists which environments exist and which is the default:
@@ -85,7 +86,8 @@ bun run automax env add staging -p billing --ui-url https://billing-staging.exam
 ```
 
 <Callout type="warn">
-Every environment must be listed in `envs.available` **and** have a file under `envs/`. `automax doctor` reports both kinds of mismatch.
+  Every environment must be listed in `envs.available` **and** have a file under `envs/`. `automax
+  doctor` reports both kinds of mismatch.
 </Callout>
 
 ## Next steps

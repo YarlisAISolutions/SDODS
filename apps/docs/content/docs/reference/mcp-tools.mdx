@@ -5,22 +5,22 @@ description: The AutoMax MCP tool taxonomy with access levels.
 
 Access levels map to scopes: `read` needs a `*:read` scope, `run` needs `runs:write`, `write` produces proposals and needs `features:write` or `agents:run`.
 
-| Tool | Access | Purpose |
-|---|---|---|
-| `project_list`, `project_get_config`, `project_list_envs`, `project_doctor` | read | project inventory and health |
-| `project_create` | write | scaffold proposal |
-| `analyze_project`, `analyze_routes`, `analyze_openapi`, `analyze_test_ids`, `analyze_locators`, `analyze_coverage`, `analyze_best_practices`, `analyze_change_impact`, `analyze_failure`, `analyze_suggest_scenarios` | read | code and suite analysis |
-| `feature_list`, `feature_read`, `feature_parse`, `feature_lint`, `step_list`, `step_find`, `step_unused` | read | features and steps |
-| `feature_write` | write | validated feature proposal |
-| `run_tests`, `run_tests_async`, `run_har_replay`, `run_visual_update`, `run_cancel` | run | execution |
-| `run_get`, `run_get_scenario`, `run_list`, `run_last_failed` | read | results with screenshot URIs and API snapshots |
-| `data_list_datasets`, `data_load`, `data_preview_csv`, `data_pool_status`, `data_factory_generate` | read | data |
-| `heal_events`, `heal_locator_stats`, `heal_suggest`, `insights_flaky`, `insights_health`, `insights_trends` | read | learning |
-| `record_start`, `record_convert`, `auth_capture` | run | stdio only for `record_start` |
-| `agent_plan`, `agent_generate`, `agent_heal`, `agent_upgrade`, `agent_review` | write | start cost-capped jobs |
-| `proposal_list`, `proposal_get`, `proposal_accept`, `proposal_reject` | read / write | review |
-| `issue_create`, `issue_link`, `issue_sync` | write | GitHub and Jira |
-| `schedule_list`, `schedule_add`, `schedule_run_now`, `schedule_next` | read / write | schedules |
+| Tool                                                                                                                                                                                                                  | Access       | Purpose                                        |
+| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------ | ---------------------------------------------- |
+| `project_list`, `project_get_config`, `project_list_envs`, `project_doctor`                                                                                                                                           | read         | project inventory and health                   |
+| `project_create`                                                                                                                                                                                                      | write        | scaffold proposal                              |
+| `analyze_project`, `analyze_routes`, `analyze_openapi`, `analyze_test_ids`, `analyze_locators`, `analyze_coverage`, `analyze_best_practices`, `analyze_change_impact`, `analyze_failure`, `analyze_suggest_scenarios` | read         | code and suite analysis                        |
+| `feature_list`, `feature_read`, `feature_parse`, `feature_lint`, `step_list`, `step_find`, `step_unused`                                                                                                              | read         | features and steps                             |
+| `feature_write`                                                                                                                                                                                                       | write        | validated feature proposal                     |
+| `run_tests`, `run_tests_async`, `run_har_replay`, `run_visual_update`, `run_cancel`                                                                                                                                   | run          | execution                                      |
+| `run_get`, `run_get_scenario`, `run_list`, `run_last_failed`                                                                                                                                                          | read         | results with screenshot URIs and API snapshots |
+| `data_list_datasets`, `data_load`, `data_preview_csv`, `data_pool_status`, `data_factory_generate`                                                                                                                    | read         | data                                           |
+| `heal_events`, `heal_locator_stats`, `heal_suggest`, `insights_flaky`, `insights_health`, `insights_trends`                                                                                                           | read         | learning                                       |
+| `record_start`, `record_convert`, `auth_capture`                                                                                                                                                                      | run          | stdio only for `record_start`                  |
+| `agent_plan`, `agent_generate`, `agent_heal`, `agent_upgrade`, `agent_review`                                                                                                                                         | write        | start cost-capped jobs                         |
+| `proposal_list`, `proposal_get`, `proposal_accept`, `proposal_reject`                                                                                                                                                 | read / write | review                                         |
+| `issue_create`, `issue_link`, `issue_sync`                                                                                                                                                                            | write        | GitHub and Jira                                |
+| `schedule_list`, `schedule_add`, `schedule_run_now`, `schedule_next`                                                                                                                                                  | read / write | schedules                                      |
 
 Resources: `automax://project/{slug}/features/{path}`, `automax://run/{id}/report`, `automax://run/{id}/messages.ndjson`, `automax://screenshot/{id}`, `automax://proposal/{id}`. Prompts: `automax-plan`, `automax-generate`, `automax-heal`, `automax-upgrade`.
 

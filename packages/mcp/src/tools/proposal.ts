@@ -15,18 +15,16 @@ export const proposalTools = [
     domain: 'features',
     capability: 'core',
     handler: async (args, ctx) => {
-      const rows = new ProposalStore(ctx.rootDir)
-        .list(args)
-        .map((m) => ({
-          id: m.id,
-          role: m.role,
-          project: m.project,
-          status: m.status,
-          summary: m.summary,
-          files: m.files.length,
-          createdAt: m.createdAt,
-          costUsd: m.costUsd,
-        }));
+      const rows = new ProposalStore(ctx.rootDir).list(args).map((m) => ({
+        id: m.id,
+        role: m.role,
+        project: m.project,
+        status: m.status,
+        summary: m.summary,
+        files: m.files.length,
+        createdAt: m.createdAt,
+        costUsd: m.costUsd,
+      }));
       return { text: summarize(`Proposals (${rows.length})`, rows), data: rows };
     },
   }),

@@ -4,21 +4,20 @@ description: Install Node 22, Bun or pnpm, the AutoMax workspace and Playwright 
 ---
 
 <Learn>
-Which runtimes AutoMax needs, how to install the workspace with Bun or pnpm, how to install browsers, and how to confirm the setup with `automax doctor`.
+  Which runtimes AutoMax needs, how to install the workspace with Bun or pnpm, how to install
+  browsers, and how to confirm the setup with `automax doctor`.
 </Learn>
 
 ## Requirements
 
-| Requirement | Version | Why |
-|---|---|---|
-| Node.js | 22 or newer | Playwright workers, vitest and native database drivers run on Node |
+| Requirement     | Version             | Why                                                                                                 |
+| --------------- | ------------------- | --------------------------------------------------------------------------------------------------- |
+| Node.js         | 22 or newer         | Playwright workers, vitest and native database drivers run on Node                                  |
 | Bun **or** pnpm | Bun 1.4+ or pnpm 9+ | package manager and script runner. Bun installs and builds faster; nothing executes tests under Bun |
-| Git | any recent | cloning and proposals |
-| Docker | optional | Postgres for the database toggle |
+| Git             | any recent          | cloning and proposals                                                                               |
+| Docker          | optional            | Postgres for the database toggle                                                                    |
 
-<Callout type="info">
-Use `nvm use 22` or `fnm use 22`. The repository ships an `.nvmrc`.
-</Callout>
+<Callout type="info">Use `nvm use 22` or `fnm use 22`. The repository ships an `.nvmrc`.</Callout>
 
 ## Install the workspace
 

@@ -17,14 +17,14 @@ flowchart LR
 
 Later layers win. Layers 4 and 5 are also the sources for `${VAR}` references; layer 5 additionally maps `AUTOMAX_*` variables onto configuration paths.
 
-| Layer | Source | Example |
-|---|---|---|
-| 1 | built-in defaults | screenshot policy, heal timeouts, retries |
-| 2 | `automax.project.yaml` | layers, browsers, tags, routes, data |
-| 3 | `envs/<env>.yaml` | base URLs, API auth, pool size; may override `screenshots`, `heal`, `timeouts`, `perf` |
-| 4 | `.env`, `.env.<env>`, `.env.local`, `.env.<env>.local` in the repo root and the project directory (project wins) | `DEMO_SHOP_PASSWORD=...` |
-| 5 | `process.env` | `AUTOMAX_UI_BASE_URL`, `AUTOMAX_ENV`, `CI` |
-| 6 | flags on `automax run` and friends | `-e local`, `--headed`, `--shard 2/3` |
+| Layer | Source                                                                                                           | Example                                                                                |
+| ----- | ---------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| 1     | built-in defaults                                                                                                | screenshot policy, heal timeouts, retries                                              |
+| 2     | `automax.project.yaml`                                                                                           | layers, browsers, tags, routes, data                                                   |
+| 3     | `envs/<env>.yaml`                                                                                                | base URLs, API auth, pool size; may override `screenshots`, `heal`, `timeouts`, `perf` |
+| 4     | `.env`, `.env.<env>`, `.env.local`, `.env.<env>.local` in the repo root and the project directory (project wins) | `DEMO_SHOP_PASSWORD=...`                                                               |
+| 5     | `process.env`                                                                                                    | `AUTOMAX_UI_BASE_URL`, `AUTOMAX_ENV`, `CI`                                             |
+| 6     | flags on `automax run` and friends                                                                               | `-e local`, `--headed`, `--shard 2/3`                                                  |
 
 ## Merge rules
 
@@ -46,7 +46,8 @@ vars:
 - `.env` files are **parsed**, never injected into `process.env`, so a shell variable always beats a file.
 
 <Callout type="error" title="Literal secrets are refused">
-A key whose name looks like a secret (`password`, `secret`, `token`, `apiKey`, `clientSecret`) must hold a `${VAR}` reference. A literal value fails validation with `CONFIG_SECRET_LITERAL`.
+  A key whose name looks like a secret (`password`, `secret`, `token`, `apiKey`, `clientSecret`)
+  must hold a `${VAR}` reference. A literal value fails validation with `CONFIG_SECRET_LITERAL`.
 </Callout>
 
 ## Explain a value
@@ -71,15 +72,15 @@ Secret-looking values are redacted; add `--show-secrets` when you must see them.
 
 ## Environment variables that map to config
 
-| Variable | Path |
-|---|---|
-| `AUTOMAX_ENV` | environment name |
-| `AUTOMAX_UI_BASE_URL`, `AUTOMAX_API_BASE_URL` | `env.ui.baseUrl`, `env.api.baseUrl` |
-| `AUTOMAX_HEADED`, `AUTOMAX_WORKERS`, `AUTOMAX_SHARD`, `AUTOMAX_RETRIES` | runtime |
-| `AUTOMAX_SHOT_POLICY`, `AUTOMAX_SHOTS_ONLY_ON_FAILURE` | screenshot policy |
-| `AUTOMAX_HEAL` | `project.heal.enabled` |
-| `AUTOMAX_HAR_MODE`, `AUTOMAX_OFFLINE`, `AUTOMAX_UPDATE_SNAPSHOTS` | runtime |
-| `AUTOMAX_RUN_ID`, `AUTOMAX_ARTIFACTS_DIR` | run identity and location |
+| Variable                                                                | Path                                |
+| ----------------------------------------------------------------------- | ----------------------------------- |
+| `AUTOMAX_ENV`                                                           | environment name                    |
+| `AUTOMAX_UI_BASE_URL`, `AUTOMAX_API_BASE_URL`                           | `env.ui.baseUrl`, `env.api.baseUrl` |
+| `AUTOMAX_HEADED`, `AUTOMAX_WORKERS`, `AUTOMAX_SHARD`, `AUTOMAX_RETRIES` | runtime                             |
+| `AUTOMAX_SHOT_POLICY`, `AUTOMAX_SHOTS_ONLY_ON_FAILURE`                  | screenshot policy                   |
+| `AUTOMAX_HEAL`                                                          | `project.heal.enabled`              |
+| `AUTOMAX_HAR_MODE`, `AUTOMAX_OFFLINE`, `AUTOMAX_UPDATE_SNAPSHOTS`       | runtime                             |
+| `AUTOMAX_RUN_ID`, `AUTOMAX_ARTIFACTS_DIR`                               | run identity and location           |
 
 The full list is in the [environment variables reference](/docs/reference/environment-variables).
 

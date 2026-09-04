@@ -4,7 +4,8 @@ description: Where a run writes its artifacts and how to read screenshots, API s
 ---
 
 <Learn>
-The layout of a run directory, how before/after screenshots and API snapshots are named, and which reports AutoMax produces.
+  The layout of a run directory, how before/after screenshots and API snapshots are named, and which
+  reports AutoMax produces.
 </Learn>
 
 ## The run directory
@@ -32,19 +33,29 @@ The fingerprint is stable across runs and browsers, so you can compare the same 
 
 The suite tag chooses the policy:
 
-| Policy | Default for | Captures |
-|---|---|---|
-| `on-failure` | everything else | one screenshot on failure |
-| `scenario` | `@smoke`, `@sanity` | scenario start and end |
-| `step` | `@regression` | before and after every UI step |
-| `visual` | `@visual` | step captures plus a pixel comparison against a baseline |
+| Policy       | Default for         | Captures                                                 |
+| ------------ | ------------------- | -------------------------------------------------------- |
+| `on-failure` | everything else     | one screenshot on failure                                |
+| `scenario`   | `@smoke`, `@sanity` | scenario start and end                                   |
+| `step`       | `@regression`       | before and after every UI step                           |
+| `visual`     | `@visual`           | step captures plus a pixel comparison against a baseline |
 
 API steps attach `request.json` and `response.json` instead of images.
 
 The images below come from the latest demo run and are refreshed on every docs build (see `public/screenshots/README.md`); grey placeholders appear until a run has happened.
 
-<ImageZoom src="/AutoMax/screenshots/scenario-start.png" alt="Scenario start: the SauceDemo login page captured by the scenario policy" width={960} height={540} />
-<ImageZoom src="/AutoMax/screenshots/step-after.png" alt="After a step: the inventory page with one item in the cart" width={960} height={540} />
+<ImageZoom
+  src="/AutoMax/screenshots/scenario-start.png"
+  alt="Scenario start: the SauceDemo login page captured by the scenario policy"
+  width={960}
+  height={540}
+/>
+<ImageZoom
+  src="/AutoMax/screenshots/step-after.png"
+  alt="After a step: the inventory page with one item in the cart"
+  width={960}
+  height={540}
+/>
 
 ## Reports
 
@@ -53,18 +64,20 @@ bun run automax report --last --open      # Playwright HTML report and the AutoM
 bun run automax trace <runId>              # trace viewer for the run's traces
 ```
 
-| Report | Always | Purpose |
-|---|---|---|
-| Cucumber messages (NDJSON) | yes | canonical ingest into the database |
-| Playwright HTML | yes | step-level debugging with traces |
-| AutoMax dashboard | yes | totals, pass rate, flaky list, heals, narrative links; offline, mailable |
-| JUnit | in CI or with `--reporter junit` | CI annotations |
-| Cucumber HTML, Allure | opt-in in the project YAML | stakeholder-facing reports |
+| Report                     | Always                           | Purpose                                                                  |
+| -------------------------- | -------------------------------- | ------------------------------------------------------------------------ |
+| Cucumber messages (NDJSON) | yes                              | canonical ingest into the database                                       |
+| Playwright HTML            | yes                              | step-level debugging with traces                                         |
+| AutoMax dashboard          | yes                              | totals, pass rate, flaky list, heals, narrative links; offline, mailable |
+| JUnit                      | in CI or with `--reporter junit` | CI annotations                                                           |
+| Cucumber HTML, Allure      | opt-in in the project YAML       | stakeholder-facing reports                                               |
 
 ## The run viewer
 
 <Planned phase={10} />
-The web UI pairs before and after images with a slider, an overlay, side-by-side panes or a server-side pixel diff, shows API request and response panels, heal call-outs and a link to the trace.
+The web UI pairs before and after images with a slider, an overlay, side-by-side panes or a
+server-side pixel diff, shows API request and response panels, heal call-outs and a link to the
+trace.
 
 ## Next steps
 

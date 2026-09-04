@@ -343,13 +343,11 @@ export function register(program: Command) {
     .action((_opts, cmd) => {
       const ctx = createContext(cmd);
       json(
-        ctx.registry
-          .entriesList()
-          .map((e) => ({
-            project: e.slug,
-            schedules: e.config.schedules,
-            processes: ctx.registry.processesOf(e.slug).filter((p) => p.schedule),
-          })),
+        ctx.registry.entriesList().map((e) => ({
+          project: e.slug,
+          schedules: e.config.schedules,
+          processes: ctx.registry.processesOf(e.slug).filter((p) => p.schedule),
+        })),
       );
     });
 }

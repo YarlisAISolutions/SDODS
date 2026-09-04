@@ -29,8 +29,12 @@
       "./transports/http": "./dist/transports/http.js"
     }
   },
-  "files": ["dist"],
-  "engines": { "node": ">=22" },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
   "dependencies": {
     "@automax/contracts": "workspace:*",
     "@cucumber/gherkin": "^42.0.1",

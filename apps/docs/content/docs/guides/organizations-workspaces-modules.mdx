@@ -4,7 +4,8 @@ description: The four-level hierarchy AutoMax uses to organise automation across
 ---
 
 <Learn>
-How organizations, workspaces, projects and modules nest, which file declares each level, what a module adds on top of a features folder, and how the demo project is modelled.
+  How organizations, workspaces, projects and modules nest, which file declares each level, what a
+  module adds on top of a features folder, and how the demo project is modelled.
 </Learn>
 
 ## The hierarchy
@@ -21,12 +22,12 @@ flowchart TB
   P1 --> M5["Module hybrid<br/>features/hybrid/"]
 ```
 
-| Level | Declared in | Holds |
-|---|---|---|
-| Organization | `automax.workspace.yaml` → `organization` | a company or product line; membership roles `member`, `admin`, `owner` |
-| Workspace | `automax.workspace.yaml` → `workspace` | one repository of projects; defaults for browsers, suites, test-id attribute and shared processes; membership roles `viewer`, `editor`, `admin` |
-| Project | `projects/<slug>/automax.project.yaml` | one application: layers, browsers, environments, data, auth, screenshots, modules, processes |
-| Module | `modules:` inside the project YAML | one functional area: a folder under `features/`, its testing types, expected tags, owner, Jira component, routes and endpoints |
+| Level        | Declared in                               | Holds                                                                                                                                           |
+| ------------ | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| Organization | `automax.workspace.yaml` → `organization` | a company or product line; membership roles `member`, `admin`, `owner`                                                                          |
+| Workspace    | `automax.workspace.yaml` → `workspace`    | one repository of projects; defaults for browsers, suites, test-id attribute and shared processes; membership roles `viewer`, `editor`, `admin` |
+| Project      | `projects/<slug>/automax.project.yaml`    | one application: layers, browsers, environments, data, auth, screenshots, modules, processes                                                    |
+| Module       | `modules:` inside the project YAML        | one functional area: a folder under `features/`, its testing types, expected tags, owner, Jira component, routes and endpoints                  |
 
 ## The workspace file
 
@@ -44,7 +45,14 @@ defaults:
   suites: [smoke, regression, sanity]
   testIdAttribute: data-testid
   processes:
-    - { name: pr-check, trigger: pr, tags: '@smoke', browsers: [chromium], harMode: replay, gates: { minPassRate: 100 } }
+    - {
+        name: pr-check,
+        trigger: pr,
+        tags: '@smoke',
+        browsers: [chromium],
+        harMode: replay,
+        gates: { minPassRate: 100 },
+      }
 ```
 
 Projects inherit `defaults` and may override any of them. A project names its workspace and organization with `organization:` and `workspace:` keys; when omitted, the repository's workspace file applies.
@@ -57,7 +65,7 @@ workspace: default
 modules:
   - name: auth
     title: Authentication
-    path: auth                      # features/auth/ (default: the module name)
+    path: auth # features/auth/ (default: the module name)
     layers: [ui]
     testingTypes: [functional, smoke, regression, security]
     tags: ['@ui']
@@ -91,7 +99,8 @@ What a module gives you:
 - **Reporting**: the dashboard, insights and issues group by module; `jiraComponent` and `owner` flow into created issues.
 
 <Callout type="info">
-A module is metadata over a folder. Nothing stops you from starting with the plain `features/ui`, `features/api`, `features/hybrid` layout and adding modules when a project grows.
+  A module is metadata over a folder. Nothing stops you from starting with the plain `features/ui`,
+  `features/api`, `features/hybrid` layout and adding modules when a project grows.
 </Callout>
 
 ## Next steps

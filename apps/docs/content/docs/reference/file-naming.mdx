@@ -5,16 +5,16 @@ description: The names AutoMax gives to attachments and files so every tool can 
 
 ## Attachments
 
-| Name | Content |
-|---|---|
-| `automax/shot/scenario/start`, `automax/shot/scenario/end`, `automax/shot/scenario/failure` | scenario-level screenshots |
-| `automax/shot/step/NN/before`, `automax/shot/step/NN/after` | step screenshots; `NN` is the zero-based, two-digit step index in the pickle (background steps included, hooks excluded) |
-| `automax/visual/NN/<name>` | visual baseline comparison |
-| `automax/api/NN/n/request`, `automax/api/NN/n/response` | API call `n` in step `NN` |
-| `automax/heal/NN/n` | heal event |
-| `automax/perf/NN`, `automax/a11y/NN` | metrics and axe results |
-| `automax/meta` | the scenario meta document |
-| `automax/cleanup-errors` | cleanup failures |
+| Name                                                                                        | Content                                                                                                                  |
+| ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `automax/shot/scenario/start`, `automax/shot/scenario/end`, `automax/shot/scenario/failure` | scenario-level screenshots                                                                                               |
+| `automax/shot/step/NN/before`, `automax/shot/step/NN/after`                                 | step screenshots; `NN` is the zero-based, two-digit step index in the pickle (background steps included, hooks excluded) |
+| `automax/visual/NN/<name>`                                                                  | visual baseline comparison                                                                                               |
+| `automax/api/NN/n/request`, `automax/api/NN/n/response`                                     | API call `n` in step `NN`                                                                                                |
+| `automax/heal/NN/n`                                                                         | heal event                                                                                                               |
+| `automax/perf/NN`, `automax/a11y/NN`                                                        | metrics and axe results                                                                                                  |
+| `automax/meta`                                                                              | the scenario meta document                                                                                               |
+| `automax/cleanup-errors`                                                                    | cleanup failures                                                                                                         |
 
 Playwright's own `trace`, `screenshot`, `video` and `<name>-expected.png`/`-actual.png`/`-diff.png` are recognised as well. Names never start with `_`.
 

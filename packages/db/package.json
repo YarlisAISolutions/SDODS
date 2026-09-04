@@ -23,8 +23,12 @@
       "./test-data": "./dist/test-data.js"
     }
   },
-  "files": ["dist"],
-  "engines": { "node": ">=22" },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
   "dependencies": {
     "@automax/contracts": "workspace:*",
     "better-sqlite3": "^13.0.3",

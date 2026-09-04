@@ -4,7 +4,9 @@ description: Check runs, PR comments and deduplicated issues on GitHub; issues, 
 ---
 
 <Learn>
-How the GitHub and Jira providers are configured per project with secret names only, what each does on a finished run, how issues are deduplicated by scenario fingerprint, and how tags link scenarios to existing issues.
+  How the GitHub and Jira providers are configured per project with secret names only, what each
+  does on a finished run, how issues are deduplicated by scenario fingerprint, and how tags link
+  scenarios to existing issues.
 </Learn>
 
 ## Configure
@@ -17,7 +19,7 @@ integrations:
     repo: AutoMax
     checkRun: true
     prComment: true
-    createIssueOnFailure: smoke      # never | smoke | always
+    createIssueOnFailure: smoke # never | smoke | always
     labels: [automax, test-failure]
     tokenEnv: GITHUB_TOKEN
   jira:

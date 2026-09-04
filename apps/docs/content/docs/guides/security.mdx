@@ -4,7 +4,8 @@ description: Secrets, API tokens, roles across organizations and workspaces, ses
 ---
 
 <Learn>
-Where secrets are allowed to live, how free scoped API tokens work, how platform, organization and workspace roles combine, and the boundaries agents cannot cross.
+  Where secrets are allowed to live, how free scoped API tokens work, how platform, organization and
+  workspace roles combine, and the boundaries agents cannot cross.
 </Learn>
 
 ## Secrets
@@ -38,11 +39,11 @@ flowchart LR
 
 The effective role inside a workspace is the higher of the explicit workspace membership and the role implied by organization membership; platform admins are admin everywhere.
 
-| Scope group | viewer | editor | admin |
-|---|---|---|---|
-| `*:read`, `artifacts:read` | ✔ | ✔ | ✔ |
-| `runs:write`, `runs:ingest`, `features:write`, `datasets:write`, `envs:write`, `schedules:write`, `processes:write`, `agents:*` | | ✔ | ✔ |
-| `users:admin`, `orgs:admin`, `workspaces:write`, `integrations:write`, `audit:read` | | | ✔ |
+| Scope group                                                                                                                     | viewer | editor | admin |
+| ------------------------------------------------------------------------------------------------------------------------------- | ------ | ------ | ----- |
+| `*:read`, `artifacts:read`                                                                                                      | ✔      | ✔      | ✔     |
+| `runs:write`, `runs:ingest`, `features:write`, `datasets:write`, `envs:write`, `schedules:write`, `processes:write`, `agents:*` |        | ✔      | ✔     |
+| `users:admin`, `orgs:admin`, `workspaces:write`, `integrations:write`, `audit:read`                                             |        |        | ✔     |
 
 ## Sessions
 

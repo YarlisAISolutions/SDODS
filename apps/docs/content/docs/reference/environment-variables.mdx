@@ -3,24 +3,24 @@ title: Environment variables
 description: Every variable AutoMax reads.
 ---
 
-| Variable | Used by | Meaning |
-|---|---|---|
-| `AUTOMAX_PROJECT`, `AUTOMAX_ENV` | runtime | project and environment selection (`run` sets them for workers) |
-| `AUTOMAX_LAYERS`, `AUTOMAX_BROWSERS`, `AUTOMAX_TAGS` | `playwright.config.ts` | selection passed from the CLI |
-| `AUTOMAX_RUN_ID`, `AUTOMAX_ARTIFACTS_DIR` | runtime | run identity and location (default `.automax/runs`) |
-| `AUTOMAX_CLI_OVERRIDES` | runtime | JSON of explicit CLI flags (set by the CLI) |
-| `AUTOMAX_LINT` | runtime | `1` during lint's undefined-step pass |
-| `AUTOMAX_UI_BASE_URL`, `AUTOMAX_API_BASE_URL` | config | override base URLs |
-| `AUTOMAX_HEADED`, `AUTOMAX_WORKERS`, `AUTOMAX_SHARD`, `AUTOMAX_RETRIES` | config | runtime overrides |
-| `AUTOMAX_SHOT_POLICY`, `AUTOMAX_SHOTS_ONLY_ON_FAILURE` | config | screenshot policy |
-| `AUTOMAX_HEAL` | config | enable or disable healing |
-| `AUTOMAX_HAR_MODE`, `AUTOMAX_OFFLINE`, `AUTOMAX_UPDATE_SNAPSHOTS` | config | HAR mode, offline guard, baseline refresh |
-| `AUTOMAX_PROJECTS_DIR` | registry | where projects live (default `projects`) |
-| `AUTOMAX_LOG_LEVEL`, `AUTOMAX_LOG_JSON`, `AUTOMAX_DEBUG` | logger | `silent`, `error`, `warn`, `info`, `step`, `debug`; JSON lines; stack traces |
-| `AUTOMAX_ALLURE`, `AUTOMAX_INGEST` | runtime | extra reporter; force ingest |
-| `DB_DRIVER`, `DATABASE_URL`, `SQLITE_PATH` | database | driver toggle |
-| `PORT`, `HOST`, `SESSION_SECRET`, `AUTOMAX_PUBLIC_URL`, `AUTH_DISABLED`, `AUTOMAX_MAX_CONCURRENT_RUNS`, `AUTOMAX_INGEST_MAX_MB` | server | web server |
-| `AUTOMAX_SERVER_URL`, `AUTOMAX_TOKEN` | CLI | upload ingest through the server |
-| `AUTOMAX_LLM_PROVIDER`, `ANTHROPIC_API_KEY`, `OPENAI_BASE_URL`, `OPENAI_API_KEY` | agents | adapter selection and provider keys |
-| `GITHUB_TOKEN`, `JIRA_EMAIL`, `JIRA_API_TOKEN` | integrations | default secret names (configurable per project) |
-| `CI` | runtime | selects `retries.ci` |
+| Variable                                                                                                                        | Used by                | Meaning                                                                      |
+| ------------------------------------------------------------------------------------------------------------------------------- | ---------------------- | ---------------------------------------------------------------------------- |
+| `AUTOMAX_PROJECT`, `AUTOMAX_ENV`                                                                                                | runtime                | project and environment selection (`run` sets them for workers)              |
+| `AUTOMAX_LAYERS`, `AUTOMAX_BROWSERS`, `AUTOMAX_TAGS`                                                                            | `playwright.config.ts` | selection passed from the CLI                                                |
+| `AUTOMAX_RUN_ID`, `AUTOMAX_ARTIFACTS_DIR`                                                                                       | runtime                | run identity and location (default `.automax/runs`)                          |
+| `AUTOMAX_CLI_OVERRIDES`                                                                                                         | runtime                | JSON of explicit CLI flags (set by the CLI)                                  |
+| `AUTOMAX_LINT`                                                                                                                  | runtime                | `1` during lint's undefined-step pass                                        |
+| `AUTOMAX_UI_BASE_URL`, `AUTOMAX_API_BASE_URL`                                                                                   | config                 | override base URLs                                                           |
+| `AUTOMAX_HEADED`, `AUTOMAX_WORKERS`, `AUTOMAX_SHARD`, `AUTOMAX_RETRIES`                                                         | config                 | runtime overrides                                                            |
+| `AUTOMAX_SHOT_POLICY`, `AUTOMAX_SHOTS_ONLY_ON_FAILURE`                                                                          | config                 | screenshot policy                                                            |
+| `AUTOMAX_HEAL`                                                                                                                  | config                 | enable or disable healing                                                    |
+| `AUTOMAX_HAR_MODE`, `AUTOMAX_OFFLINE`, `AUTOMAX_UPDATE_SNAPSHOTS`                                                               | config                 | HAR mode, offline guard, baseline refresh                                    |
+| `AUTOMAX_PROJECTS_DIR`                                                                                                          | registry               | where projects live (default `projects`)                                     |
+| `AUTOMAX_LOG_LEVEL`, `AUTOMAX_LOG_JSON`, `AUTOMAX_DEBUG`                                                                        | logger                 | `silent`, `error`, `warn`, `info`, `step`, `debug`; JSON lines; stack traces |
+| `AUTOMAX_ALLURE`, `AUTOMAX_INGEST`                                                                                              | runtime                | extra reporter; force ingest                                                 |
+| `DB_DRIVER`, `DATABASE_URL`, `SQLITE_PATH`                                                                                      | database               | driver toggle                                                                |
+| `PORT`, `HOST`, `SESSION_SECRET`, `AUTOMAX_PUBLIC_URL`, `AUTH_DISABLED`, `AUTOMAX_MAX_CONCURRENT_RUNS`, `AUTOMAX_INGEST_MAX_MB` | server                 | web server                                                                   |
+| `AUTOMAX_SERVER_URL`, `AUTOMAX_TOKEN`                                                                                           | CLI                    | upload ingest through the server                                             |
+| `AUTOMAX_LLM_PROVIDER`, `ANTHROPIC_API_KEY`, `OPENAI_BASE_URL`, `OPENAI_API_KEY`                                                | agents                 | adapter selection and provider keys                                          |
+| `GITHUB_TOKEN`, `JIRA_EMAIL`, `JIRA_API_TOKEN`                                                                                  | integrations           | default secret names (configurable per project)                              |
+| `CI`                                                                                                                            | runtime                | selects `retries.ci`                                                         |
