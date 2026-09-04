@@ -185,10 +185,17 @@ export function register(program: Command) {
       'claude | claude-code | codex | openai | ollama | fake; default: auto-detect',
     )
     .option('--model <id>', 'model override')
+    .option('--profile <name>', 'auto | full | small — how much of the platform the model is shown')
     .action(
       async (
         spec: string,
-        opts: { project?: string; dryRun?: boolean; adapter?: string; model?: string },
+        opts: {
+          project?: string;
+          dryRun?: boolean;
+          adapter?: string;
+          model?: string;
+          profile?: string;
+        },
         cmd: Command,
       ) => {
         const ctx = createContext(cmd);
@@ -205,6 +212,7 @@ export function register(program: Command) {
         if (opts.dryRun) args.push('--dry-run');
         if (opts.adapter) args.push('--adapter', opts.adapter);
         if (opts.model) args.push('--model', opts.model);
+        if (opts.profile) args.push('--profile', opts.profile);
         if (ctx.opts.json) args.push('--json');
         const res = await execa(process.execPath, ['--import', 'tsx', ...args], {
           cwd: ctx.rootDir,
