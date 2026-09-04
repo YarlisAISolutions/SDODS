@@ -70,6 +70,8 @@ $SourceOpt = Coalesce $Source 'SDODS_SOURCE' 'auto'
 $McpClients = Coalesce $Mcp 'SDODS_MCP' ''
 $DoModifyPath = $ModifyPath.IsPresent -or $env:SDODS_MODIFY_PATH -eq '1'
 $AssumeYes = $Yes.IsPresent -or $env:SDODS_YES -eq '1' -or [bool]$env:CI
+# Consent given explicitly, as opposed to inferred from CI. Destructive actions require this form.
+$YesExplicit = $Yes.IsPresent -or $env:SDODS_YES -eq '1'
 $AppDir = Join-Path $SdodsHome 'app'
 $SourceUsed = 'git'
 
@@ -389,6 +391,9 @@ function Remove-SDODS {
   Say "  $SdodsHome"
   Say "  $BinDirPath\sdods.cmd"
   Say ''
+  # Running in CI implies -Yes for installing, but never for deleting: consent to a
+  # destructive action has to be explicit.
+  if (-not $YesExplicit) { $script:AssumeYes = $false }
   if (-not (Confirm-Action 'Remove SDODS?')) { Say 'Cancelled.'; exit 0 }
   if ($DryRun) { Say "   would remove $SdodsHome and the shim"; exit 0 }
   foreach ($shim in @('sdods.cmd', 'sdods.ps1')) {
@@ -486,3 +491,7 @@ if (-not $DryRun) {
   catch { Warn 'doctor reported problems; the items above tell you what to fix.' }
 }
 Show-NextSteps
+
+# Exit explicitly: probes such as `npm view` leave a non-zero $LASTEXITCODE behind, and a shell
+# that checks the exit code would read a successful install as a failure.
+exit 0

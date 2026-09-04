@@ -39,6 +39,9 @@ MCP_CLIENTS="${SDODS_MCP:-}"
 INSTALL_NODE="${SDODS_INSTALL_NODE:-0}"
 MODIFY_PATH="${SDODS_MODIFY_PATH:-0}"
 ASSUME_YES="${SDODS_YES:-0}"
+# Consent given explicitly (--yes or SDODS_YES), as opposed to inferred from CI below.
+# Destructive actions require the explicit form.
+YES_EXPLICIT="${SDODS_YES:-0}"
 VERBOSE="${SDODS_VERBOSE:-0}"
 DO_UNINSTALL=0
 DRY_RUN=0
@@ -194,7 +197,7 @@ while [ $# -gt 0 ]; do
     --mcp=*) MCP_CLIENTS=${1#*=}; shift ;;
     --install-node) INSTALL_NODE=1; shift ;;
     --modify-path) MODIFY_PATH=1; shift ;;
-    --yes | -y) ASSUME_YES=1; shift ;;
+    --yes | -y) ASSUME_YES=1; YES_EXPLICIT=1; shift ;;
     --uninstall) DO_UNINSTALL=1; shift ;;
     --dry-run) DRY_RUN=1; shift ;;
     --verbose | -v) VERBOSE=1; shift ;;
@@ -564,6 +567,9 @@ do_uninstall() {
   if [ -z "$BIN_DIR" ]; then BIN_DIR="${HOME:-/tmp}/.local/bin"; fi
   say "  $BIN_DIR/sdods"
   say ''
+  # Running in CI implies --yes for installing, but never for deleting: consent to a
+  # destructive action has to be explicit.
+  if [ "$YES_EXPLICIT" != 1 ]; then ASSUME_YES=0; fi
   confirm "Remove SDODS?" || { say 'Cancelled.'; exit 0; }
   if [ "$DRY_RUN" = 1 ]; then
     printf '%s   would remove %s and %s/sdods%s\n' "$C_DIM" "$SDODS_HOME" "$BIN_DIR" "$C_RESET"
@@ -688,3 +694,6 @@ if [ "$DRY_RUN" != 1 ]; then
   "$BIN_DIR/sdods" doctor || warn 'doctor reported problems; the items above tell you what to fix.'
 fi
 next_steps
+
+# Exit explicitly for the same reason as install.ps1: a probe's status must not become ours.
+exit 0

@@ -129,9 +129,11 @@ export default function HomePage() {
           Why SDODS
         </h2>
         <p className="muted mt-2 max-w-3xl">
-          Every team rebuilds the same scaffolding around their test runner: environment switching,
-          tagging policy, test data, login reuse, reporting, flaky triage, CI wiring, and now AI
-          helpers. SDODS ships those once, with opinions.
+          Software ships when someone is confident enough to say yes. That confidence is usually
+          scattered across a green pipeline, a manual check and a screenshot in a ticket. SDODS
+          turns it into evidence anyone can point at: every scenario tied to a business capability,
+          every run reproducible from one command, every regression explained by the screenshots and
+          requests that produced it.
         </p>
         <div className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {WHY.map(([title, body]) => (

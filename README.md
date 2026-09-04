@@ -43,19 +43,21 @@ Created by **Sireesh Yarlagadda** · [LinkedIn](https://www.linkedin.com/in/yarl
 
 ## Why SDODS
 
-Every team rebuilds the same scaffolding around their test runner: environment switching, tagging policy, test data, login reuse, reporting, flaky triage, CI wiring, and now AI helpers. SDODS ships all of it once, with opinions:
+Software ships when someone is confident enough to say yes. That confidence is usually scattered: a green pipeline here, a manual check there, a screenshot pasted into a ticket, and one person who remembers why a flow is fragile. SDODS turns it into evidence anyone can point at. Every scenario belongs to a business capability, every run is reproducible from one command, and every regression carries the screenshots, requests and history that explain it.
 
-| Need | What SDODS gives you |
+So the questions that actually decide a release have an answer:
+
+| Question before a release | How SDODS answers it |
 |---|---|
-| UI, API and mixed scenarios in one language | Gherkin features with **one merged fixture set**, so a scenario can seed through the API and assert in the browser |
-| Many apps, many environments | `projects/<slug>/sdods.project.yaml` + `envs/<env>.yaml`; strict, explainable config precedence; secrets only through `${VAR}` |
-| Reusable data | CSV / JSON / YAML / DB tables / faker factories per environment, plus **user pools** leased per worker with login state reuse |
-| Confidence across browsers | chromium, firefox, webkit, mobile emulation, `--project-matrix`, `@skip:<browser>` tags validated by lint |
-| Readable results | before/after screenshots per step (policy by suite tag), API request/response snapshots, a run viewer with slider/overlay/diff |
-| Resilience | scored self-healing locators with persisted heal history and proposals to fix page objects |
-| Institutional memory | cucumber NDJSON ingested into SQLite or Postgres: flakiness, locator fragility, env stability, suite health |
-| Automation for the automation | MCP server (project analysis, run, results, proposals), provider-agnostic agents (plan, generate, heal, upgrade, review) that only write reviewable proposals |
-| Enterprise plumbing | roles, free scoped API tokens, audit log, GitHub check runs and issues, Jira issues and links, cron schedules |
+| Does the whole journey still work, not just the page? | Gherkin features with **one merged fixture set**, so a scenario can seed through the API and assert in the browser |
+| Is this the same suite that passed in staging? | `projects/<slug>/sdods.project.yaml` + `envs/<env>.yaml`; strict, explainable config precedence; secrets only through `${VAR}` |
+| Can we prove it with real data, for every role? | CSV / JSON / YAML / DB tables / faker factories per environment, plus **user pools** leased per worker with login state reuse |
+| Will it work for customers on any browser? | chromium, firefox, webkit, mobile emulation, `--project-matrix`, `@skip:<browser>` tags validated by lint |
+| What exactly did the user see when it broke? | before/after screenshots per step (policy by suite tag), API request/response snapshots, a run viewer with slider/overlay/diff |
+| Will a UI tweak send the team on a false hunt? | scored self-healing locators with persisted heal history and proposals to fix page objects |
+| Which flows are getting less reliable over time? | cucumber NDJSON ingested into SQLite or Postgres: flakiness, locator fragility, env stability, suite health |
+| Can we keep coverage up without more headcount? | MCP server (project analysis, run, results, proposals), provider-agnostic agents (plan, generate, heal, upgrade, review) that only write reviewable proposals |
+| Who ran what, when, and who signed off? | roles, free scoped API tokens, audit log, GitHub check runs and issues, Jira issues and links, cron schedules |
 
 ## Install in one line
 
