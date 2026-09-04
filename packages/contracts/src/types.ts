@@ -265,3 +265,143 @@ export interface RunSummary {
   flaky: Array<{ fingerprint: string; title: string; pwProject: string }>;
   reportPaths: { html?: string; dashboard?: string; messages?: string; junit?: string };
 }
+
+// ── Onboarding analysis (`automax analyze`) and coverage ─────────────────────
+
+export interface Evidence {
+  file: string;
+  line?: number;
+  snippet?: string;
+}
+
+export type FrameworkKind = 'frontend' | 'backend' | 'fullstack' | 'mobile';
+
+export interface DetectedFramework {
+  name: string;
+  kind: FrameworkKind;
+  version?: string;
+  confidence: number;
+  evidence: Evidence[];
+}
+
+export interface DetectedRoute {
+  path: string;
+  kind: 'page' | 'api';
+  method?: string;
+  source: string;
+  file: string;
+  line?: number;
+  params: string[];
+}
+
+export interface DetectedOpenApi {
+  file: string;
+  version?: string;
+  title?: string;
+  endpoints: Array<{ method: string; path: string; tag?: string; operationId?: string }>;
+}
+
+export interface DetectedTests {
+  framework: 'playwright' | 'cypress' | 'cucumber' | 'jest' | 'vitest' | 'other';
+  files: number;
+  sampleFiles: string[];
+  locators: { css: number; xpath: number; role: number; testId: number; text: number };
+}
+
+export interface ChecklistItem {
+  id: string;
+  severity: 'info' | 'warning' | 'error';
+  title: string;
+  detail: string;
+  fix?: string;
+}
+
+export interface AnalysisReport {
+  appPath: string;
+  analyzedAt: string;
+  filesScanned: number;
+  packageManager: {
+    name: 'npm' | 'pnpm' | 'yarn' | 'bun' | 'pip' | 'maven' | 'gradle' | 'unknown';
+    monorepo: boolean;
+    workspaces: string[];
+    evidence: Evidence[];
+  };
+  frameworks: DetectedFramework[];
+  routes: DetectedRoute[];
+  openapi: DetectedOpenApi[];
+  testIds: { attribute: string | null; counts: Record<string, number>; confidence: number };
+  existingTests: DetectedTests[];
+  auth: {
+    pages: string[];
+    libraries: string[];
+    strategyGuess: 'none' | 'form' | 'token' | 'sso' | 'oauth-client-credentials';
+    confidence: number;
+    evidence: Evidence[];
+  };
+  envs: Array<{
+    name: string;
+    file: string;
+    uiBaseUrl?: string;
+    apiBaseUrl?: string;
+    vars: string[];
+  }>;
+  baseUrls: { ui?: string; api?: string; evidence: Evidence[] };
+  ci: {
+    provider: 'github' | 'gitlab' | 'circleci' | 'azure' | 'jenkins' | 'bitbucket' | 'none';
+    files: string[];
+  };
+  i18n: { libraries: string[]; locales: string[] };
+  a11y: { tooling: string[] };
+  checklist: ChecklistItem[];
+}
+
+export interface CoverageScenarioRef {
+  feature: string;
+  scenario: string;
+  suite?: string;
+  tags: string[];
+}
+
+export interface CoverageRow {
+  kind: 'route' | 'endpoint' | 'role';
+  name: string;
+  target: string;
+  module?: string;
+  covered: boolean;
+  scenarios: CoverageScenarioRef[];
+  bySuite: Record<string, number>;
+}
+
+export interface CoverageReport {
+  project: string;
+  generatedAt: string;
+  suites: string[];
+  routes: CoverageRow[];
+  endpoints: CoverageRow[];
+  roles: CoverageRow[];
+  summary: {
+    routes: { covered: number; total: number };
+    endpoints: { covered: number; total: number };
+    roles: { covered: number; total: number };
+    scenarios: number;
+    bySuite: Record<string, number>;
+    uncoveredModules: string[];
+  };
+}
+
+export interface ProjectProposal {
+  slug: string;
+  name: string;
+  projectYaml: string;
+  envYamls: Record<string, string>;
+  starterFeatures: Record<string, string>;
+  files: Record<string, string>;
+  coverageMap: Array<{
+    kind: 'route' | 'endpoint';
+    target: string;
+    module: string;
+    starterFeature?: string;
+  }>;
+  checklist: ChecklistItem[];
+  notes: string[];
+}

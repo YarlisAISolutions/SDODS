@@ -1,0 +1,10 @@
+openapi: 3.0.3
+info: { title: Orders API, version: 1.0.0 }
+paths:
+  /orders:
+    get: { operationId: listOrders, tags: [orders], responses: { '200': { description: ok } } }
+    post: { operationId: createOrder, tags: [orders], responses: { '201': { description: created } } }
+  /orders/{id}:
+    get: { operationId: getOrder, tags: [orders], responses: { '200': { description: ok } } }
+  /health:
+    get: { operationId: health, tags: [ops], responses: { '200': { description: ok } } }

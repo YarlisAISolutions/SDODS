@@ -10,3 +10,4 @@ apps/docs/out
 apps/docs/.next
 apps/docs/.source
 apps/docs/public/screenshots
+packages/core/test/fixtures/apps
