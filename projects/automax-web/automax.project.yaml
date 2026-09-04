@@ -108,3 +108,7 @@ heal:
 # generous: three browsers and the server share one machine during `bun run dogfood --project-matrix`
 timeouts: { test: 90000, expect: 15000, action: 20000, navigation: 30000, api: 15000 }
 retries: { ci: 1, local: 0 }
+
+# Needs its own server: run via `bun run dogfood` (dedicated CI job), not the generic browser matrix.
+ci:
+  enabled: false

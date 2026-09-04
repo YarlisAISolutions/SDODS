@@ -117,17 +117,17 @@ jobs:
       - name: API layer (no browser)
         if: matrix.browser == 'chromium' && matrix.shard == 1
         run: >
-          bun run automax run -p ${{ matrix.project }} -e ${{ env.DEMO_ENV }} -l api
+          bun run automax run -p ${{ matrix.project }} -e ${{ matrix.env }} -l api
           --run-id ${{ env.RUN_ID }}-${{ matrix.project }}-api --no-ingest $HAR_FLAGS
       - name: UI layer · @smoke
         run: >
-          bun run automax run -p ${{ matrix.project }} -e ${{ env.DEMO_ENV }} -l ui -b ${{ matrix.browser }}
+          bun run automax run -p ${{ matrix.project }} -e ${{ matrix.env }} -l ui -b ${{ matrix.browser }}
           -t @smoke --shard ${{ matrix.shard }}/${{ matrix.total }} --reporter blob
           --run-id ${{ env.RUN_ID }}-${{ matrix.project }}-${{ matrix.browser }} --no-ingest $HAR_FLAGS
       - name: UI layer · @regression (nightly, live)
         if: needs.matrix.outputs.live == 'true'
         run: >
-          bun run automax run -p ${{ matrix.project }} -e ${{ env.DEMO_ENV }} -l ui -b ${{ matrix.browser }}
+          bun run automax run -p ${{ matrix.project }} -e ${{ matrix.env }} -l ui -b ${{ matrix.browser }}
           -t @regression --shard ${{ matrix.shard }}/${{ matrix.total }} --reporter blob
           --run-id ${{ env.RUN_ID }}-${{ matrix.project }}-${{ matrix.browser }}-regression --no-ingest
       - name: Pack run artifacts (screenshots, api snapshots, meta) for ingest
@@ -144,6 +144,31 @@ jobs:
           name: automax-${{ matrix.project }}-${{ matrix.browser }}-${{ matrix.shard }}
           path: .automax/runs
           retention-days: 14
+          if-no-files-found: ignore
+
+  dogfood:
+    # AutoMax tests its own web UI: builds the app, starts a scratch server, runs projects/automax-web.
+    # Excluded from the generic matrix via `ci.enabled: false` in its project yaml.
+    name: dogfood · automax-web · chromium
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: bun install --frozen-lockfile
+      - run: npx playwright install --with-deps chromium
+      - run: bun run dogfood
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: automax-dogfood
+          path: .automax/runs
+          retention-days: 7
           if-no-files-found: ignore
 
   report:

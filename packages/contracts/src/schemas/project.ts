@@ -355,6 +355,19 @@ export const ProjectConfigSchema = z.object({
       junit: z.boolean().default(false),
     })
     .default({ cucumberHtml: false, allure: false, junit: false }),
+  /** How the CI matrix (`automax project list --matrix`) treats this project. */
+  ci: z
+    .object({
+      /** false = excluded from the generic browser matrix (e.g. a project that needs its own server) */
+      enabled: z.boolean().default(true),
+      /** environment the matrix runs against (default: envs.default) */
+      env: z.string().optional(),
+      /** tag expression for the matrix run (default: the workflow's choice) */
+      tags: z.string().optional(),
+      /** browsers to include in the matrix (default: project browsers) */
+      browsers: z.array(BrowserSchema).optional(),
+    })
+    .default({ enabled: true }),
 });
 
 /** Root `automax.workspace.yaml`: names the organization and workspace every project in the repo belongs to. */

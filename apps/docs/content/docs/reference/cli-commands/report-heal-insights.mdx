@@ -24,9 +24,23 @@ Summarises heal events (original selector, chosen strategy, score, suggested loc
 ## `insights`
 
 ```text
-automax insights
+automax insights compute -p <slug> [--window <n>] [--flaky-threshold <r>] [--fragility-threshold <r>] [--min-runs <n>]
+automax insights show -p <slug> [--top <n>]
 ```
 
-<Planned phase={8} />
+Computes the improvement-loop metrics over the last `--window` ingested runs of a project (default 30) and stores the result under `.automax/insights/<slug>.json`; `show` prints the last result. Needs a database with ingested runs (`automax run --ingest`, or `automax report ingest`).
 
-The insight metrics (flakiness score, locator fragility, environment stability, suite health) are computed by `@automax/db` and exposed through the web UI dashboard and `GET /api/stats/insights`; the standalone CLI command is not wired yet.
+| Flag                        | Default | Meaning                                                           |
+| --------------------------- | ------- | ----------------------------------------------------------------- |
+| `--window <n>`              | `30`    | most recent runs to consider                                      |
+| `--flaky-threshold <r>`     | `0.2`   | scenarios at or above this flakiness become quarantine candidates |
+| `--fragility-threshold <r>` | `0.1`   | locators at or above this fragility are marked hot                |
+| `--min-runs <n>`            | `10`    | minimum runs before a scenario can be flagged                     |
+| `--top <n>` (show)          | `10`    | rows per table                                                    |
+
+Output: suite health and its trend, scenarios ranked by flakiness (with p95 duration and quarantine candidates), locators ranked by fragility (with the suggested selector from heal history) and environment stability. The same numbers power the web dashboard and `GET /api/stats/insights`.
+
+```bash
+automax insights compute -p demo-shop --window 20
+automax insights show -p demo-shop --top 5 --json
+```
