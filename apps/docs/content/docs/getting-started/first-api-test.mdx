@@ -8,6 +8,16 @@ description: Write and run an API scenario with the shared step library, without
   `sdods run -l api` executes it without launching a browser.
 </Learn>
 
+## Try one before you write one
+
+Nadia ships on Friday and wants four facts about the catalog service before she does. The scenario
+below is the answer, and it is live: press **Run scenario** and every step really executes — the
+request leaves your browser for the same public sandbox `envs/staging.yaml` points at, and the
+exchange it attaches is the one the report would carry. Edit the Gherkin, break an assertion on
+purpose, and read what the failure tells you.
+
+<Playground preset="api-read" />
+
 ## Write the feature
 
 Create `projects/demo-shop/features/api/posts.feature`:
@@ -26,6 +36,9 @@ Two tags matter: `@api` selects the layer, `@smoke` selects the suite. `sdods li
 
 ## Send a body and chain values
 
+Support keeps getting tickets that say "I created a listing and it vanished". One scenario answers
+it: create the listing, keep the id the service handed back, and ask for it again.
+
 ```gherkin
 @api @regression
 Feature: Posts API
@@ -37,10 +50,18 @@ Feature: Posts API
     Then the response status should be 201
     When I save the response JSON path "id" as "postId"
     And I send a GET request to "/posts/{{postId}}"
-    Then the response status should be 200
+    Then the response status should be one of "200, 404"
 ```
 
-`{{postId}}` is rendered from variables captured in the same scenario, plus `vars` from the environment file and any loaded dataset row.
+`{{postId}}` is rendered from variables captured in the same scenario, plus `vars` from the
+environment file and any loaded dataset row.
+
+The last line says `one of "200, 404"` on purpose. JSONPlaceholder answers a create with `201` and
+a server-assigned id but never stores the record, so the read-back is a 404. Against your own API
+that line is `should be 200` — the point is that a scenario states what the service actually
+guarantees rather than what you wish it did. Run it and watch the id travel:
+
+<Playground preset="api-chain" />
 
 ## Validate against a schema
 

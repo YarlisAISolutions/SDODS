@@ -8,6 +8,15 @@ description: Write a UI scenario with a page object and heal-aware locators, the
   declared, and how to run the scenario headless or headed in Chromium.
 </Learn>
 
+## Try one before you write one
+
+Sign-in is the door to the whole store, so Demo Shop runs this scenario on every pull request. The
+panel below is a stand-in for the storefront carrying the same ids and `data-test` attributes as
+the real one, and the steps below really drive it: press **Run scenario** and watch the fields
+fill, the button click and the browser land on `/inventory.html`.
+
+<Playground preset="ui-login" />
+
 ## The feature
 
 `projects/demo-shop/features/ui/login.feature`:
@@ -63,6 +72,13 @@ export class LoginPage extends BasePage {
 ```
 
 The page object is exposed as a fixture in `steps/fixtures.ts`, and `@Fixture('loginPage')` binds the decorated steps to it. `this.heal.locator` keeps your primary locator and records the context SDODS uses when that locator breaks; see [Self-healing locators](/docs/guides/self-healing).
+
+## A longer flow
+
+A shopper adding a product is two pages and one piece of state that has to survive the trip. The
+feature file says the product by name; the page object works out the selector.
+
+<Playground preset="ui-cart" />
 
 ## Run it
 
