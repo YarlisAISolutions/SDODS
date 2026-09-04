@@ -1,0 +1,40 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: automax-postgres
+    environment:
+      POSTGRES_USER: automax
+      POSTGRES_PASSWORD: automax
+      POSTGRES_DB: automax
+    ports:
+      - '5432:5432'
+    volumes:
+      - automax-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U automax -d automax']
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # Optional: the AutoMax web server on Postgres. Build with `docker build -t automax .` first.
+  automax:
+    image: automax:latest
+    profiles: ['server']
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_DRIVER: postgres
+      DATABASE_URL: postgres://automax:automax@postgres:5432/automax
+      HOST: 0.0.0.0
+      PORT: 4444
+      SESSION_SECRET: change-me-32-chars-minimum-please
+    ports:
+      - '4444:4444'
+    volumes:
+      - ./projects:/app/projects
+      - automax-runs:/app/.automax
+
+volumes:
+  automax-pgdata:
+  automax-runs:

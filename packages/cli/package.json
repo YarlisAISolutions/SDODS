@@ -35,7 +35,11 @@
     "zod": "^4.5.4",
     "@playwright/test": "^1.62.1",
     "playwright-core": "^1.62.1",
-    "@automax/integrations": "workspace:*"
+    "@automax/integrations": "workspace:*",
+    "@automax/mcp": "workspace:*",
+    "@automax/agents": "workspace:*",
+    "@automax/db": "workspace:*",
+    "csv-parse": "^7.0.2"
   },
   "devDependencies": {
     "@types/semver": "^7.7.0"
