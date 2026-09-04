@@ -26,6 +26,11 @@ analyzer has to work for its answers, and two of them turn out to be wrong.
   its API. You can point the same chapters at your own application by changing one path.
 </Callout>
 
+The project the workshop builds is committed as `projects/rwa-bank`, so `lint`, `features` and
+`coverage` work straight from a clone. It carries `ci.enabled: false`, because a run needs the
+application cloned and started next to the checkout — which is exactly the decision you make for
+any project whose environment CI cannot provide.
+
 ## Set up, once
 
 <Steps>
