@@ -1,5 +1,6 @@
 import { withBase } from '@/lib/base-path';
 import type { BaseLayoutProps } from 'fumadocs-ui/layouts/shared';
+import { REPO_PUBLIC, REPO_URL } from '@/lib/links';
 
 export function baseOptions(): BaseLayoutProps {
   return {
@@ -11,7 +12,7 @@ export function baseOptions(): BaseLayoutProps {
         </span>
       ),
     },
-    githubUrl: 'https://github.com/siri1410/SDODS',
+    githubUrl: REPO_PUBLIC ? REPO_URL : undefined,
     links: [
       { text: 'Getting started', url: '/docs' },
       { text: 'Guides', url: '/docs/guides/projects-and-environments' },

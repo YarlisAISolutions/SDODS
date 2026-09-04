@@ -16,7 +16,7 @@ description: Install SDODS with one command on macOS, Linux or Windows — then 
 
 ## Install
 
-<Tabs items={['macOS / Linux', 'Windows', 'Verify first', 'From source']}>
+<Tabs items={['macOS / Linux', 'Windows', 'Verify first']}>
 <Tab value="macOS / Linux">
 ```bash
 curl -fsSL https://sdods.com/install.sh | sh
@@ -53,7 +53,11 @@ sh install.sh
 ```
 
 </Tab>
-<Tab value="From source">
+</Tabs>
+
+<RepoOnly>
+### From source
+
 The installer is a convenience wrapper; a clone works just as well:
 
 ```bash
@@ -64,8 +68,7 @@ bun run sdods browsers install --with-deps
 bun run sdods doctor
 ```
 
-</Tab>
-</Tabs>
+</RepoOnly>
 
 <Callout type="info">
   Node.js 22 or newer is the one prerequisite the installer will not install behind your back. It
@@ -262,8 +265,18 @@ RUN curl -fsSL https://sdods.com/install.sh | sh
 ### The server image
 
 The repository builds a container image on the official Playwright base, so the browsers are
-already inside it. Tagged releases publish it to `ghcr.io/siri1410/sdods-server`; until then, or
-for a private registry, build it from the checkout:
+already inside it.
+
+<RepoOnly>
+Tagged releases publish it to the project's GitHub Container Registry package:
+
+```text
+ghcr.io/siri1410/sdods-server
+```
+
+</RepoOnly>
+
+For a private registry, or before the first tagged release, build it from the checkout:
 
 ```bash
 docker build -t sdods-server .

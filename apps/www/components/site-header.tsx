@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { DOCS_URL, REPO_URL } from '@/lib/links';
+import { DOCS_URL, REPO_PUBLIC, REPO_URL } from '@/lib/links';
 
 export function SiteHeader() {
   return (
@@ -28,9 +28,11 @@ export function SiteHeader() {
           <Link href="/feedback/" className="hover:underline">
             Feedback
           </Link>
-          <a href={REPO_URL} className="hover:underline" rel="noreferrer">
-            GitHub
-          </a>
+          {REPO_PUBLIC && (
+            <a href={REPO_URL} className="hover:underline" rel="noreferrer">
+              GitHub
+            </a>
+          )}
         </div>
         <div className="flex items-center gap-3">
           <Link href="/install/" className="btn btn-primary hidden text-sm sm:inline-flex">

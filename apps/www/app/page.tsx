@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { InstallTabs } from '@/components/install-tabs';
-import { DOCS_URL, REPO_URL } from '@/lib/links';
+import { DOCS_URL, REPO_PUBLIC, REPO_URL } from '@/lib/links';
 
 const WHY: Array<[string, string]> = [
   [
@@ -113,9 +113,11 @@ export default function HomePage() {
           <a href={DOCS_URL} className="btn btn-secondary">
             Read the docs
           </a>
-          <a href={REPO_URL} className="btn btn-secondary" rel="noreferrer">
-            View on GitHub
-          </a>
+          {REPO_PUBLIC && (
+            <a href={REPO_URL} className="btn btn-secondary" rel="noreferrer">
+              View on GitHub
+            </a>
+          )}
         </div>
 
         <div className="card mx-auto mt-10 max-w-3xl p-5 text-left">
@@ -261,8 +263,9 @@ sdods run -p demo-shop -e staging -l ui -b chromium -t @smoke`}</code>
             Want a feature? Tell us.
           </h2>
           <p className="muted mt-1 text-sm">
-            Feature requests and feedback go straight to the maintainers as GitHub issues and
-            discussions. No account with us, no tracking.
+            {REPO_PUBLIC
+              ? 'Feature requests and feedback go straight to the maintainers as GitHub issues and discussions. No account with us, no tracking.'
+              : 'Feature requests and feedback go straight to the maintainers by email. No account with us, no tracking.'}
           </p>
           <Link href="/feedback/" className="btn btn-primary mt-4">
             Send feedback

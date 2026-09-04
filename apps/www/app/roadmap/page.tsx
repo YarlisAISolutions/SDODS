@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { HORIZON, LEVELS, NEXT_UP, ROADMAP, VERIFICATION, type HorizonStatus } from '@/lib/roadmap';
 import { RailHero, YEAR_ART } from '@/components/roadmap-art';
-import { DOCS_URL, REPO_URL } from '@/lib/links';
+import { DOCS_URL, REPO_PUBLIC, REPO_URL } from '@/lib/links';
 
 export const metadata: Metadata = {
   title: 'Roadmap',
@@ -270,13 +270,15 @@ export default function RoadmapPage() {
           <a href={`${DOCS_URL}/docs/roadmap/`} className="btn btn-secondary">
             Roadmap in the docs
           </a>
-          <a
-            href={`${REPO_URL}/issues?q=is%3Aissue+label%3Aenhancement`}
-            className="btn btn-secondary"
-            rel="noreferrer"
-          >
-            Open feature requests
-          </a>
+          {REPO_PUBLIC && (
+            <a
+              href={`${REPO_URL}/issues?q=is%3Aissue+label%3Aenhancement`}
+              className="btn btn-secondary"
+              rel="noreferrer"
+            >
+              Open feature requests
+            </a>
+          )}
         </div>
       </section>
     </div>

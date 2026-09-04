@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { FEEDBACK_EMAIL, REPO_URL } from '@/lib/links';
+import { FEEDBACK_EMAIL, REPO_PUBLIC, REPO_URL } from '@/lib/links';
 
 export const metadata: Metadata = {
   title: 'Privacy',
@@ -20,15 +20,22 @@ export default function PrivacyPage() {
           (IP address, user agent, requested path) for a limited time, as any web host does.
         </p>
         <h2 className="mt-6 text-lg font-bold">Feedback and feature requests</h2>
-        <p>
-          The feedback form composes a GitHub issue in your browser and opens GitHub. Nothing is
-          sent to us directly; GitHub's terms and privacy policy apply to what you post there, and
-          issues in the{' '}
-          <a href={REPO_URL} className="underline" rel="noreferrer">
-            SDODS repository
-          </a>{' '}
-          are public. The email fallback sends a normal email to {FEEDBACK_EMAIL}.
-        </p>
+        {REPO_PUBLIC ? (
+          <p>
+            The feedback form composes a GitHub issue in your browser and opens GitHub. Nothing is
+            sent to us directly; GitHub's terms and privacy policy apply to what you post there, and
+            issues in the{' '}
+            <a href={REPO_URL} className="underline" rel="noreferrer">
+              SDODS repository
+            </a>{' '}
+            are public. The email fallback sends a normal email to {FEEDBACK_EMAIL}.
+          </p>
+        ) : (
+          <p>
+            The feedback form composes an email in your own mail client and opens it. Nothing is
+            sent to us until you press send, and nothing is stored by this site.
+          </p>
+        )}
         <h2 className="mt-6 text-lg font-bold">The SDODS software</h2>
         <p>
           SDODS itself runs on your machines. It sends no telemetry. Optional integrations (GitHub,

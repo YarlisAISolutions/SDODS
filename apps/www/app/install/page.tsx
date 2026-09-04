@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { InstallTabs } from '@/components/install-tabs';
-import { DOCS_URL, REPO_URL } from '@/lib/links';
+import { DOCS_URL, REPO_PUBLIC, REPO_URL } from '@/lib/links';
 
 export const metadata: Metadata = {
   title: 'Install SDODS',
@@ -67,11 +67,17 @@ export default function InstallPage() {
         <a className="underline" href="https://sdods.com/install.sh.sha256">
           install.sh.sha256
         </a>
-        . Both scripts live in{' '}
-        <a className="underline" href={`${REPO_URL}/tree/main/installer`} rel="noreferrer">
-          the repository
-        </a>
         .
+        {REPO_PUBLIC && (
+          <>
+            {' '}
+            Both scripts live in{' '}
+            <a className="underline" href={`${REPO_URL}/tree/main/installer`} rel="noreferrer">
+              the repository
+            </a>
+            .
+          </>
+        )}
       </p>
 
       <section className="mt-14" aria-labelledby="what">
