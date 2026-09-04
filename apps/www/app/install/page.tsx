@@ -5,7 +5,7 @@ import { DOCS_URL, REPO_URL } from '@/lib/links';
 export const metadata: Metadata = {
   title: 'Install SDODS',
   description:
-    'One command installs SDODS on macOS, Linux or Windows: Node check, dependencies, Playwright browsers and the sdods command.',
+    'One command installs SDODS on macOS, Linux or Windows: Node check, dependencies, browser engines and the sdods command.',
 };
 
 const STEPS: Array<[string, string]> = [
@@ -56,15 +56,15 @@ export default function InstallPage() {
 
       <p className="muted mt-4 text-sm">
         Prefer to read it first?{' '}
-        <a className="underline" href="https://automax.sdods.com/install.sh">
+        <a className="underline" href="https://sdods.com/install.sh">
           install.sh
         </a>{' '}
         ·{' '}
-        <a className="underline" href="https://automax.sdods.com/install.ps1">
+        <a className="underline" href="https://sdods.com/install.ps1">
           install.ps1
         </a>{' '}
         · checksums at{' '}
-        <a className="underline" href="https://automax.sdods.com/install.sh.sha256">
+        <a className="underline" href="https://sdods.com/install.sh.sha256">
           install.sh.sha256
         </a>
         . Both scripts live in{' '}
@@ -115,17 +115,17 @@ export default function InstallPage() {
         </h2>
         <pre className="mt-6 overflow-x-auto">
           <code>{`# scaffold a workspace and wire up Claude Code in one go
-curl -fsSL https://automax.sdods.com/install.sh | sh -s -- --workspace ~/my-tests --mcp claude
+curl -fsSL https://sdods.com/install.sh | sh -s -- --workspace ~/my-tests --mcp claude
 
 # every browser, and put sdods on PATH permanently
-curl -fsSL https://automax.sdods.com/install.sh | sh -s -- --browsers all --modify-path
+curl -fsSL https://sdods.com/install.sh | sh -s -- --browsers all --modify-path
 
 # pin a release, install somewhere else
-curl -fsSL https://automax.sdods.com/install.sh | sh -s -- --version v0.2.0 --dir /opt/sdods
+curl -fsSL https://sdods.com/install.sh | sh -s -- --version v0.2.0 --dir /opt/sdods
 
 # see what it would do, or remove it
-curl -fsSL https://automax.sdods.com/install.sh | sh -s -- --dry-run
-curl -fsSL https://automax.sdods.com/install.sh | sh -s -- --uninstall --yes`}</code>
+curl -fsSL https://sdods.com/install.sh | sh -s -- --dry-run
+curl -fsSL https://sdods.com/install.sh | sh -s -- --uninstall --yes`}</code>
         </pre>
         <p className="muted mt-3 text-sm">
           Every flag has an environment-variable twin for Docker and CI. The full table is in the{' '}

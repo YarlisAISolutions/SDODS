@@ -6,7 +6,7 @@ import { baseOptions } from '@/lib/layout.shared';
 const features: Array<{ title: string; body: string; href: string }> = [
   {
     title: 'One language for UI, API and hybrid',
-    body: 'Gherkin on playwright-bdd with a single merged fixture set: seed through the API, assert in the browser.',
+    body: 'Gherkin with a single merged fixture set: seed through the API, assert in the browser.',
     href: '/docs/getting-started/hybrid-scenario',
   },
   {
@@ -62,7 +62,7 @@ export default function HomePage() {
         </div>
         <pre className="mt-8 w-full max-w-2xl overflow-x-auto rounded-lg border border-fd-border bg-fd-card p-4 text-left text-sm">
           {`git clone https://github.com/siri1410/SDODS.git && cd SDODS
-bun install && npx playwright install --with-deps
+bun install && bun run sdods browsers install --with-deps
 bun run sdods run -p demo-shop -e staging -l api`}
         </pre>
         <section className="mt-12 grid w-full grid-cols-1 gap-4 text-left md:grid-cols-2 lg:grid-cols-3">

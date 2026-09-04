@@ -7,13 +7,13 @@ export type OsKey = 'unix' | 'windows';
 const COMMANDS: Record<OsKey, { label: string; command: string; note: string }> = {
   unix: {
     label: 'macOS / Linux',
-    command: 'curl -fsSL https://automax.sdods.com/install.sh | sh',
+    command: 'curl -fsSL https://sdods.com/install.sh | sh',
     note: 'Options go after -s --, for example: | sh -s -- --workspace ~/my-tests --mcp claude',
   },
   windows: {
     label: 'Windows',
-    command: 'irm https://automax.sdods.com/install.ps1 | iex',
-    note: 'With options: & ([scriptblock]::Create((irm https://automax.sdods.com/install.ps1))) -Workspace C:\\my-tests',
+    command: 'irm https://sdods.com/install.ps1 | iex',
+    note: 'With options: & ([scriptblock]::Create((irm https://sdods.com/install.ps1))) -Workspace C:\\my-tests',
   },
 };
 

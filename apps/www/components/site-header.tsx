@@ -12,7 +12,7 @@ export function SiteHeader() {
         <Link href="/" className="flex items-center gap-2 font-semibold">
           <img src="/img/favicon.svg" alt="" width={26} height={26} />
           <span>
-            Auto<span className="text-[var(--brand)]">Max</span>
+            SD<span className="text-[var(--brand)]">ODS</span>
           </span>
         </Link>
         <div className="hidden items-center gap-6 text-sm md:flex">

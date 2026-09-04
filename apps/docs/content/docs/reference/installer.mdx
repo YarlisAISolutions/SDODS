@@ -12,8 +12,8 @@ description: Every flag, environment variable, exit code and file the one-line i
 
 | URL                                            | Script                             |
 | ---------------------------------------------- | ---------------------------------- |
-| `https://automax.sdods.com/install.sh`         | macOS and Linux (POSIX `sh`)       |
-| `https://automax.sdods.com/install.ps1`        | Windows (PowerShell 5.1 and 7)     |
+| `https://sdods.com/install.sh`                 | macOS and Linux (POSIX `sh`)       |
+| `https://sdods.com/install.ps1`                | Windows (PowerShell 5.1 and 7)     |
 | `https://sdods.com/install.sh` · `install.ps1` | the same files, mirrored           |
 | `…/install.sh.sha256` · `…/install.ps1.sha256` | checksums in `sha256sum -c` format |
 
@@ -136,7 +136,7 @@ Re-running is safe: the checkout is fetched and checked out again, the shim is r
 ## Automation examples
 
 ```bash title="CI step (Linux)"
-curl -fsSL https://automax.sdods.com/install.sh | sh -s -- \
+curl -fsSL https://sdods.com/install.sh | sh -s -- \
   --browsers chromium --bin-dir /usr/local/bin --yes
 sdods --version
 ```
@@ -144,11 +144,11 @@ sdods --version
 ```dockerfile title="Dockerfile"
 ENV SDODS_HOME=/opt/sdods SDODS_BIN_DIR=/usr/local/bin \
     SDODS_BROWSERS=chromium SDODS_YES=1 SDODS_ALLOW_ROOT=1
-RUN curl -fsSL https://automax.sdods.com/install.sh | sh
+RUN curl -fsSL https://sdods.com/install.sh | sh
 ```
 
 ```powershell title="Windows, unattended"
-& ([scriptblock]::Create((irm https://automax.sdods.com/install.ps1))) -Yes -ModifyPath -Browsers chromium
+& ([scriptblock]::Create((irm https://sdods.com/install.ps1))) -Yes -ModifyPath -Browsers chromium
 ```
 
 ## Next steps
