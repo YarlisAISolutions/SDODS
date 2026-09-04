@@ -93,18 +93,64 @@ ollama show qwen2.5-coder:7b     # capabilities: completion, tools
 A model whose `capabilities` do not include `tools` cannot drive the agent loop at all — SDODS says
 so rather than letting it flail.
 
-## Tools are the real limit
+## The small profile
 
-A role sees 33–35 SDODS tools, and the roles that drive a browser get Playwright's MCP server on
-top — about 24 more. Hosted models handle that; a 7–8B model somewhere past ~20 functions starts
-_describing_ the call it would make instead of making it. If you see the model printing JSON at
-you rather than acting:
+SDODS shows a hosted model everything it has: 33–35 tools for a role, and 24 more when the role
+drives a browser. A 7–8B model cannot choose from a menu that long — past roughly twenty functions
+it stops calling anything and starts _describing_ the call it would make. So a local model gets a
+different menu, chosen automatically:
 
-- give a browser role a larger model (`agents.models.generator: qwen2.5-coder:14b`),
-- narrow `allowedTools` on the MCP servers the project consumes,
-- or use the roles that need fewer tools — `review` and `heal` work well at 7B.
+|                         | full                                    | small                                                                                 |
+| ----------------------- | --------------------------------------- | ------------------------------------------------------------------------------------- |
+| Tools for the generator | 35                                      | **5** (`step_find`, `feature_list`, `feature_read`, `feature_parse`, `feature_write`) |
+| Browser server          | attached for planner, generator, healer | **not attached** — `--browser` adds it                                                |
+| Tool calls per turn     | unlimited                               | **1**                                                                                 |
+| First turn              | model's choice                          | must call a tool                                                                      |
+| System prompt           | full conventions                        | short rules, plus **60 of the project's real step patterns**                          |
+| A call written as prose | ignored                                 | **executed**                                                                          |
 
-## Other local servers
+The profile is picked by `resolveProfile`: any `ollama` model, any OpenAI-compatible endpoint on a
+private address, any model whose name says 7b/8b/14b, any context under 16k, or any model that does
+not advertise tool calling. Override it per run or per project:
+
+```bash
+sdods agent generate -p rwa-bank --adapter ollama --profile small   # or full
+```
+
+```yaml title="sdods.project.yaml"
+agents:
+  profile: auto # auto | full | small
+```
+
+Three of those rows came out of measurement rather than taste, on `llama3.1:8b`:
+
+- **The browser is not "more tools", it is a different job.** With the five generator tools the
+  model called `feature_write`. Adding a _single_ `browser_*` tool made it stop calling anything and
+  describe a plan instead. A small model writes from the step vocabulary; give browser work to a
+  larger one.
+- **Grounding beats brevity.** The longer prompt — the one carrying 60 real step patterns — got a
+  tool call where the short prompt got prose.
+- **Some models write the call instead of making it.** `step_find({"project":"rwa-bank",…})` as
+  plain text, with the structured field empty. Under the small profile that is read out of the
+  answer and executed once, and the run says so:
+  `recovered a step_find call the model wrote as text`.
+
+## What to expect from the result
+
+A real run of `agent generate` on a local 8B, through this profile, produced a proposal in two
+turns — a feature file with the right tags, sensible scenario titles, and steps that were _close
+to_ the project's real patterns rather than exactly them (`I navigate to the Contacts page` where
+the pattern is `I navigate to the {string} page`).
+
+That is the honest shape of the result, and it is why nothing is applied automatically. Read the
+diff, fix the two steps, accept:
+
+```bash
+sdods proposals show <id>
+sdods proposals accept <id> --branch sdods/<id>
+```
+
+## Other local servers## Other local servers
 
 Anything that speaks the OpenAI protocol works through the `openai-compatible` adapter, which no
 longer demands a key for a local address:

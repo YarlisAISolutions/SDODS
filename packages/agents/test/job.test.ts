@@ -33,9 +33,9 @@ const FEATURE =
   '@ui @smoke @auth\nFeature: Login\n  Scenario: ok\n    Given I am on the login page\n';
 
 describe('agent jobs', () => {
-  it('prepareJob resolves budgets from the project yaml and filters tools per role', () => {
+  it('prepareJob resolves budgets from the project yaml and filters tools per role', async () => {
     const root = tempRepo();
-    const prep = prepareJob({
+    const prep = await prepareJob({
       role: 'generator',
       input: { project: 'shop', goal: 'login' },
       rootDir: root,
@@ -50,7 +50,7 @@ describe('agent jobs', () => {
     expect(names).not.toContain('proposal_accept');
     expect(prep.system).toContain('SDODS GENERATOR');
     expect(prep.prompt).toContain('Goal: login');
-    const rev = prepareJob({
+    const rev = await prepareJob({
       role: 'reviewer',
       input: { project: 'shop' },
       rootDir: root,

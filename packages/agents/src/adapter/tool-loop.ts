@@ -27,11 +27,21 @@ export interface NormalizedTurn {
   finishReason: string;
 }
 
+export interface TurnOptions {
+  /** 'required' makes a model act on the first turn instead of narrating what it would do. */
+  toolChoice?: 'auto' | 'required';
+}
+
 export interface ToolLoopTransport<Message> {
   readonly model: string;
   /** The opening history: whatever this provider expects for a system + user turn. */
   start(system: string, prompt: string): Message[];
-  send(history: Message[], tools: AgentSdkToolDef[], signal?: AbortSignal): Promise<NormalizedTurn>;
+  send(
+    history: Message[],
+    tools: AgentSdkToolDef[],
+    signal?: AbortSignal,
+    turnOpts?: TurnOptions,
+  ): Promise<NormalizedTurn>;
   pushAssistant(history: Message[], turn: NormalizedTurn): void;
   pushToolResult(history: Message[], call: NormalizedCall, output: string, isError: boolean): void;
   /** USD for one turn, or undefined when the provider does not price (local models: 0). */
@@ -55,6 +65,8 @@ export async function runToolLoop<Message>(
   let turns = 0;
   let toolCalls = 0;
   let badToolCalls = 0;
+  /** Recovered calls are deduplicated: a model describing what it already did must not repeat it. */
+  const executed = new Set<string>();
   let text = '';
   let cost = 0;
 
@@ -67,7 +79,19 @@ export async function runToolLoop<Message>(
     if (o.signal?.aborted)
       return { text, turns, stopReason: 'aborted', toolCalls, costUsd: cost, usage: usageTotal };
     turns++;
-    const turn = await transport.send(history, o.tools, o.signal);
+    const turn = await transport.send(history, o.tools, o.signal, {
+      toolChoice: turns === 1 ? (o.firstTurnToolChoice ?? 'auto') : 'auto',
+    });
+    // One decision per turn: a small model given two calls at once usually gets the second wrong,
+    // and the dropped call is cheaper to explain than to undo.
+    if (o.maxToolCallsPerTurn && turn.calls.length > o.maxToolCallsPerTurn) {
+      const dropped = turn.calls.slice(o.maxToolCallsPerTurn);
+      turn.calls = turn.calls.slice(0, o.maxToolCallsPerTurn);
+      o.onEvent?.({
+        type: 'status',
+        message: `dropped ${dropped.length} extra tool call(s) this turn: ${dropped.map((c) => c.name).join(', ')}`,
+      });
+    }
     usageTotal.inputTokens! += turn.usage?.inputTokens ?? 0;
     usageTotal.outputTokens! += turn.usage?.outputTokens ?? 0;
     cost += transport.cost(turn.usage) ?? 0;
@@ -76,11 +100,23 @@ export async function runToolLoop<Message>(
       text += turn.text;
       o.onEvent?.({ type: 'text', text: turn.text });
     }
+    if (!turn.calls.length && o.recoverTextToolCalls && turn.text) {
+      const recovered = recoverTextToolCall(turn.text, new Set(byName.keys()));
+      const signature = recovered && `${recovered.name}:${JSON.stringify(recovered.args)}`;
+      if (recovered && signature && !executed.has(signature)) {
+        turn.calls = [{ id: `text_${turns}`, name: recovered.name, args: recovered.args }];
+        o.onEvent?.({
+          type: 'status',
+          message: `recovered a ${recovered.name} call the model wrote as text`,
+        });
+      }
+    }
     transport.pushAssistant(history, turn);
     if (!turn.calls.length) return finish(turn.finishReason, false);
 
     for (const call of turn.calls) {
       toolCalls++;
+      executed.add(`${call.name}:${JSON.stringify(call.args)}`);
       o.onEvent?.({ type: 'tool_call', id: call.id, name: call.name, input: call.args });
       const tool = byName.get(call.name);
       const result = call.error
@@ -116,6 +152,72 @@ export async function runToolLoop<Message>(
     }
   }
   return finish('error_max_turns', true);
+}
+
+/**
+ * Recovers a tool call a model wrote out instead of making.
+ *
+ * Small models often produce exactly the right call in exactly the right shape — as prose:
+ * `step_find({"project":"shop"})`, or a fenced JSON object with `name` and `arguments`. The
+ * structured field stays empty and the job ends having done nothing. Since the arguments are
+ * validated against the tool's schema either way, reading the call out of the text costs nothing
+ * and turns a wasted run into a working one. It only ever runs when the turn made no real call.
+ */
+export function recoverTextToolCall(
+  text: string,
+  known: Set<string>,
+): { name: string; args: Record<string, unknown> } | undefined {
+  if (!text) return undefined;
+  // `tool_name({ ... })`
+  const callSyntax = /\b([a-z][a-z0-9_]{2,})\s*\(\s*(\{[\s\S]*?\})\s*\)/gi;
+  for (const m of text.matchAll(callSyntax)) {
+    const name = m[1]!;
+    if (!known.has(name)) continue;
+    const args = parseObject(m[2]!);
+    if (args) return { name, args };
+  }
+  // `{"name": "tool_name", "arguments"|"parameters": { ... }}`, fenced or not. The object is
+  // found by matching braces rather than by regex: the payload contains nested objects, and a
+  // non-greedy pattern stops at the first inner brace.
+  for (const candidate of balancedObjects(text)) {
+    const obj = parseObject(candidate);
+    if (!obj) continue;
+    const name = typeof obj.name === 'string' ? obj.name : undefined;
+    if (!name || !known.has(name)) continue;
+    const args = obj.arguments ?? obj.parameters ?? obj.input;
+    if (args && typeof args === 'object') return { name, args: args as Record<string, unknown> };
+  }
+  return undefined;
+}
+
+/** Every balanced `{...}` substring, outermost first, so nested payloads survive. */
+function balancedObjects(text: string): string[] {
+  const found: string[] = [];
+  for (let i = 0; i < text.length; i++) {
+    if (text[i] !== '{') continue;
+    let depth = 0;
+    for (let j = i; j < text.length; j++) {
+      if (text[j] === '{') depth++;
+      else if (text[j] === '}') {
+        depth--;
+        if (depth === 0) {
+          found.push(text.slice(i, j + 1));
+          i = j;
+          break;
+        }
+      }
+    }
+  }
+  return found;
+}
+
+function parseObject(raw: string): Record<string, unknown> | undefined {
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' ? (parsed as Record<string, unknown>) : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 /**

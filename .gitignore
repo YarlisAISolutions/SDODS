@@ -13,7 +13,8 @@ allure-results/
 projects/*/.auth/
 projects/*/.env.*
 !projects/*/.env.example
-proposals/*/files/
+# Proposals are run output: the files were already ignored, and a manifest without them is noise.
+proposals/
 apps/docs/build/
 packages/web/dist/
 .DS_Store

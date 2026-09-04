@@ -19,6 +19,14 @@ SDODS is an automation and orchestration platform with a reusable architecture.
 - Secrets are never literals; reference \${VAR}.
 - Stop when you run out of budget or turns and summarise what remains.`;
 
+/** The rules that still apply when there is no room for the full conventions. */
+export const SMALL_CONVENTIONS = `SDODS rules:
+- Every Feature has one layer tag: @ui, @api or @hybrid.
+- Every Scenario has one suite tag: @smoke, @regression or @sanity.
+- Reuse an existing step pattern; never invent one.
+- You never edit files. feature_write creates a proposal a person reviews.
+- Call one tool per reply, with a single JSON object of arguments.`;
+
 export const ROLE_PROMPTS: Record<RoleName, { title: string; description: string; body: string }> =
   {
     planner: {
@@ -90,23 +98,77 @@ Produce a review with: tag-policy violations, duplicated or near-duplicate steps
     },
   };
 
+/**
+ * Prompts for the small profile.
+ *
+ * The full conventions are 600 tokens of dense, multi-clause prose: a frontier model reads all of
+ * it, a 7B model follows the first two bullets and forgets the rest. These say one thing per line,
+ * name the tools in the order they should be called, and show one correct call — which is what the
+ * measured difference between a usable and a useless answer looked like.
+ */
+export const SMALL_MODEL_PROMPTS: Record<RoleName, string> = {
+  planner: `You plan tests for SDODS. One tool call per reply, in this order:
+1. project_get_config({"project":"<slug>"}), then feature_list({"project":"<slug>"}).
+2. analyze_routes or analyze_coverage — find what is untested.
+3. feature_write — save the plan as docs/test-plans/<name>.md via extraFiles.
+Write scenarios as titles plus steps chosen from the step list below. Never invent a step.`,
+
+  generator: `You write Gherkin for SDODS. One tool call per reply, in this order:
+1. step_find({"project":"<slug>","phrase":"<what you are testing>"}) — pick patterns from the result.
+2. feature_parse({"project":"<slug>","text":"<your draft>"}) — fix whatever it reports.
+3. feature_write({"project":"<slug>","path":"<module>/<name>.feature","text":"<final text>"}).
+Rules:
+- The Feature line is preceded by exactly one layer tag (@ui, @api or @hybrid).
+- Every Scenario carries exactly one suite tag (@smoke, @regression or @sanity).
+- Only use step patterns from the list below. Never invent a step.
+Example call:
+feature_write({"project":"shop","path":"auth/login.feature","text":"@ui\nFeature: Login\n\n  @smoke\n  Scenario: Valid credentials\n    Given I am on the login page\n"})`,
+
+  healer: `You fix one failing SDODS scenario. One tool call per reply, in this order:
+1. analyze_failure — read the error.
+2. run_get_scenario or heal_events — see what the locator did.
+3. feature_read — read the file you intend to change.
+4. feature_write — propose the smallest possible change.
+Change one locator or one step. Do not rewrite the scenario. If the application is broken rather
+than the test, say so in the summary and write nothing.`,
+
+  upgrader: `You update SDODS tests after a code change. One tool call per reply, in this order:
+1. analyze_change_impact — which scenarios the change touches.
+2. feature_read — read one of them.
+3. feature_write — propose the update.
+Only change what the diff forces. Use step patterns from the list below.`,
+
+  reviewer: `You review SDODS feature files. One tool call per reply, in this order:
+1. feature_list({"project":"<slug>"}), then feature_read({"project":"<slug>","path":"<file>"}).
+2. analyze_best_practices and analyze_locators — get the findings.
+3. Write your review as text. Do not call feature_write unless asked to change something.
+Report: missing or duplicated tags, steps that could be reused, CSS locators that should be role
+or test-id locators. Be specific: name the file and the line.`,
+};
+
 export interface PromptContext {
   project?: string;
   env?: string;
   goal?: string;
   steps?: string[];
   extra?: string;
+  /** 'small' swaps the conventions and the role body for their short forms. */
+  profile?: 'full' | 'small';
 }
 
 export function renderPrompt(role: RoleName, ctx: PromptContext = {}): string {
   const p = ROLE_PROMPTS[role];
-  const lines = [CONVENTIONS, '', p.body, ''];
+  const lines =
+    ctx.profile === 'small'
+      ? [SMALL_CONVENTIONS, '', SMALL_MODEL_PROMPTS[role], '']
+      : [CONVENTIONS, '', p.body, ''];
   if (ctx.project)
     lines.push(`Project: ${ctx.project}${ctx.env ? ` · environment: ${ctx.env}` : ''}`);
   if (ctx.goal) lines.push(`Goal: ${ctx.goal}`);
   if (ctx.steps?.length) {
+    const limit = ctx.profile === 'small' ? 60 : 400;
     lines.push('', 'Existing step patterns (reuse these first):');
-    for (const s of ctx.steps.slice(0, 400)) lines.push(`- ${s}`);
+    for (const s of ctx.steps.slice(0, limit)) lines.push(`- ${s}`);
   }
   if (ctx.extra) lines.push('', ctx.extra);
   return lines.join('\n');

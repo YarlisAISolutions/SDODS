@@ -74,6 +74,14 @@ agents:
 Every job records model, turns and cost; a job stops at its budget. A local model has no per-token
 cost, so `budgetUsd` never fires there and `maxTurns` is the bound that matters.
 
+## Profile
+
+`agents.profile` (or `--profile`) decides how much of the platform a model is shown: `full` is every
+tool for the role, `small` is a handful plus the project's real step patterns in the prompt, and
+`auto` — the default — picks `small` for a model you are running yourself. See
+[Local models](/docs/guides/local-models/) for what each row of that trade is, and why the browser
+is left out of the small profile.
+
 ## Claude Code
 
 `sdods agent install-claude` writes `.claude/agents/sdods-*.md`, `.mcp.json` and the repository's `AGENT.md`/`SKILL.md`, so Claude Code users get the same roles as the CLI.
