@@ -15,6 +15,14 @@ let ready = false;
 
 async function init(expressions: string[]) {
   try {
+    // The WASM assets are optional: when /wasm/ is not served (the SPA fallback answers with
+    // HTML) skip the parser instead of letting Emscripten abort inside the worker.
+    const head = await fetch('/wasm/tree-sitter.wasm', { method: 'HEAD' }).catch(() => null);
+    const type = head?.headers.get('content-type') ?? '';
+    if (!head?.ok || !type.includes('wasm')) {
+      ready = false;
+      return;
+    }
     const ls: any = await import('@cucumber/language-service');
     const { WasmParserAdapter } = await import('@cucumber/language-service/wasm');
     const adapter = new WasmParserAdapter('/wasm');

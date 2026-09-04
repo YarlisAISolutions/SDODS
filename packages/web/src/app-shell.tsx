@@ -82,6 +82,8 @@ function Shell() {
                 <li key={w.slug}>
                   <button
                     type="button"
+                    data-testid={`workspace-${w.slug}`}
+                    data-role={w.myRole ?? ''}
                     onClick={() => ws.setWorkspace(w.slug)}
                     className={cn(
                       'flex w-full items-center justify-between rounded px-2 py-1 text-left text-sm hover:bg-[var(--panel-2)]',

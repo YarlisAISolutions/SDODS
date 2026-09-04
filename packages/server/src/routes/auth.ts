@@ -20,7 +20,8 @@ export async function hashPassword(password: string): Promise<string> {
 export async function authRoutes(app: FastifyInstance) {
   app.post(
     '/api/auth/login',
-    { config: { rateLimit: { max: 10, timeWindow: '1 minute' } } },
+    // AUTOMAX_LOGIN_RATE_LIMIT raises the per-IP limit for test rigs (dogfood runs sign in a lot).
+    { config: { rateLimit: { max: app.config.loginRateLimit, timeWindow: '1 minute' } } },
     async (req, reply) => {
       const body = parse(LoginBody, req.body);
       const user = await getUserByUsername(app.adb.db, body.username);

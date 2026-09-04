@@ -237,18 +237,44 @@ function McpTab() {
   const url = info.data?.url ?? `${location.origin}/mcp`;
   const test = useMutation({
     mutationFn: async () => {
-      const res = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-          accept: 'application/json, text/event-stream',
-          authorization: `Bearer ${token}`,
+      // Streamable HTTP handshake: initialize → notifications/initialized → tools/list,
+      // carrying the session id the server assigns. Responses may be JSON or SSE.
+      const headers: Record<string, string> = {
+        'content-type': 'application/json',
+        accept: 'application/json, text/event-stream',
+        authorization: `Bearer ${token}`,
+      };
+      const rpc = async (payload: unknown) => {
+        const res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(payload) });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const sid = res.headers.get('mcp-session-id');
+        if (sid) headers['mcp-session-id'] = sid;
+        const text = await res.text();
+        if (!text.trim()) return null;
+        if ((res.headers.get('content-type') ?? '').includes('text/event-stream')) {
+          const data = text
+            .split('\n')
+            .filter((l) => l.startsWith('data:'))
+            .map((l) => l.slice(5).trim())
+            .filter(Boolean)
+            .pop();
+          return data ? JSON.parse(data) : null;
+        }
+        return JSON.parse(text);
+      };
+      await rpc({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'initialize',
+        params: {
+          protocolVersion: '2025-06-18',
+          capabilities: {},
+          clientInfo: { name: 'automax-web', version: '0.1.0' },
         },
-        body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/list' }),
       });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const body = await res.json();
-      return body.result?.tools?.length ?? 0;
+      await rpc({ jsonrpc: '2.0', method: 'notifications/initialized' });
+      const body = await rpc({ jsonrpc: '2.0', id: 2, method: 'tools/list' });
+      return body?.result?.tools?.length ?? 0;
     },
     onSuccess: (n) => setTestResult(`✔ connected · ${n} tools`),
     onError: (e) => setTestResult(`✖ ${(e as Error).message}`),

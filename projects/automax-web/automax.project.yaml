@@ -1,0 +1,110 @@
+# AutoMax tests AutoMax: this project drives the platform's own web UI and REST API (dogfooding).
+# Run it with `bun run dogfood` (builds the web app, starts a server on a scratch DB, runs, stops).
+slug: automax-web
+name: AutoMax Web UI
+description: >-
+  Dogfood project: exercises the AutoMax web UI (login, organization → workspaces with roles,
+  runs, feature editor, settings) and the REST API through the platform's own step library.
+organization: automax
+workspace: platform-qa
+layers: [ui, api]
+browsers: [chromium, firefox, webkit]
+testIdAttribute: data-testid
+
+routes:
+  login: /login
+  dashboard: /
+  workspaces: /workspaces
+  projects: /projects
+  runs: /runs
+  editor: /projects/demo-shop/editor/features/auth/login.feature
+  tokens: /settings/tokens
+  mcp: /settings/mcp
+  users: /users
+
+tags:
+  suites: [smoke, regression, sanity]
+  extra: [platform, roles, contract]
+  roles: [admin, member]
+
+envs:
+  default: local
+  available: [local]
+
+modules:
+  - name: auth
+    title: Sign in and session
+    testingTypes: [functional, smoke]
+    tags: ['@auth']
+    routes: [login, dashboard]
+  - name: workspaces
+    title: Organization, workspaces and roles
+    testingTypes: [functional, regression]
+    tags: ['@workspaces']
+    routes: [workspaces]
+  - name: runs
+    title: Runs and results
+    testingTypes: [functional, smoke]
+    tags: ['@runs']
+    routes: [runs]
+  - name: editor
+    title: Feature editor
+    testingTypes: [functional, regression]
+    tags: ['@editor']
+    routes: [editor]
+  - name: settings
+    title: Tokens and MCP clients
+    testingTypes: [functional, regression]
+    tags: ['@settings']
+    routes: [tokens, mcp]
+  - name: api
+    title: REST API
+    layers: [api]
+    testingTypes: [functional, contract, smoke]
+    tags: ['@platform']
+    endpoints: [/api/health, /api/workspaces, /api/projects, /api/mcp/info]
+
+processes:
+  - name: dogfood
+    title: Dogfood smoke (chromium)
+    trigger: manual
+    tags: '@smoke'
+    browsers: [chromium]
+    gates: { minPassRate: 100 }
+  - name: dogfood-full
+    title: Dogfood regression, every browser
+    trigger: manual
+    tags: '@smoke or @regression'
+
+data:
+  sources:
+    users: { type: csv, path: data/common/users.csv }
+  userPool:
+    dataset: users
+    roleColumn: role
+    leaseStore: file
+
+auth:
+  strategy: form
+  storageState: true
+  maxAgeMinutes: 30
+  form:
+    loginPath: /login
+    usernameSelector: 'input[autocomplete="username"]'
+    passwordSelector: 'input[type="password"]'
+    submitSelector: 'form button'
+    readySelector: '[data-testid^="workspace-"]'
+
+screenshots:
+  policy:
+    default: on-failure
+    '@smoke': scenario
+    '@regression': step
+  viewport: { width: 1400, height: 900 }
+
+heal:
+  enabled: true
+
+# generous: three browsers and the server share one machine during `bun run dogfood --project-matrix`
+timeouts: { test: 90000, expect: 15000, action: 20000, navigation: 30000, api: 15000 }
+retries: { ci: 1, local: 0 }

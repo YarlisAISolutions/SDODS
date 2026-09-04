@@ -4,6 +4,7 @@ import {
   createApiToken,
   createUser,
   getUserById,
+  getUserByUsername,
   listApiTokens,
   listAudit,
   listUsers,
@@ -27,6 +28,36 @@ import { hashPassword, publicUser } from './auth.js';
 const ROLE_RANK: Record<WorkspaceRole, number> = { viewer: 0, editor: 1, admin: 2 };
 
 export async function hierarchyRoutes(app: FastifyInstance) {
+  /**
+   * `:orgId` / `:workspaceId` accept either the id or the slug (the web UI addresses
+   * workspaces by slug). Resolved before route preHandlers (role checks) run.
+   */
+  app.addHook('preValidation', async (req) => {
+    const params = req.params as Record<string, string | undefined>;
+    if (params.orgId) {
+      const orgs = await app.hierarchy.organizations();
+      const hit =
+        orgs.find((o) => o.id === params.orgId) ?? orgs.find((o) => o.slug === params.orgId);
+      if (hit) params.orgId = hit.id;
+    }
+    if (params.workspaceId) {
+      const all = await app.hierarchy.workspaces();
+      const hit =
+        all.find((w) => w.id === params.workspaceId) ??
+        all.find((w) => w.slug === params.workspaceId);
+      if (hit) params.workspaceId = hit.id;
+    }
+  });
+
+  const resolveUserId = async (body: { userId?: string; username?: string }) => {
+    if (body.userId) {
+      if (!(await getUserById(app.adb.db, body.userId))) throw notFound('User');
+      return body.userId;
+    }
+    const u = body.username ? await getUserByUsername(app.adb.db, body.username) : null;
+    if (!u) throw notFound('User');
+    return u.id;
+  };
   // ── organizations ──────────────────────────────────────────────────────
   app.get('/api/orgs', { preHandler: [app.requireScope('orgs:read')] }, async (req) => {
     const p = req.principal!;
@@ -53,8 +84,8 @@ export async function hierarchyRoutes(app: FastifyInstance) {
       const { orgId } = req.params as { orgId: string };
       requireOrgAdmin(req.principal!, orgId);
       const body = parse(OrgMemberBody, req.body);
-      if (!(await getUserById(app.adb.db, body.userId))) throw notFound('User');
-      await app.hierarchy.setOrgRole(orgId, body.userId, body.role as OrgRole);
+      const userId = await resolveUserId(body);
+      await app.hierarchy.setOrgRole(orgId, userId, body.role as OrgRole);
       await audit(app.adb.db, {
         actorUserId: req.principal!.userId,
         actorType: 'user',
@@ -99,6 +130,39 @@ export async function hierarchyRoutes(app: FastifyInstance) {
     const byWs = new Map(counts.map((c) => [c.workspace_id, Number(c.n)]));
     return list.map((w) => ({ ...w, projectCount: byWs.get(w.id) ?? 0 }));
   });
+
+  /** Flat form of the create route: organization by id or slug in the body (default: the only org). */
+  app.post(
+    '/api/workspaces',
+    { preHandler: [app.requireScope('workspaces:write')] },
+    async (req, reply) => {
+      const body = parse(CreateWorkspaceBody, req.body);
+      const orgs = await app.hierarchy.organizations();
+      const org = body.organization
+        ? (orgs.find((o) => o.id === body.organization) ??
+          orgs.find((o) => o.slug === body.organization))
+        : orgs.length === 1
+          ? orgs[0]
+          : undefined;
+      if (!org) throw badRequest('organization (id or slug) is required.');
+      requireOrgAdmin(req.principal!, org.id);
+      const { organization: _org, ...rest } = body;
+      const id = await app.hierarchy.createWorkspace({ organizationId: org.id, ...rest });
+      await app.hierarchy
+        .setWorkspaceRole(id, req.principal!.userId, 'admin')
+        .catch(() => undefined);
+      await audit(app.adb.db, {
+        actorUserId: req.principal!.userId,
+        actorType: 'user',
+        action: 'workspace.create',
+        targetType: 'workspace',
+        targetId: id,
+        details: rest,
+      });
+      reply.code(201);
+      return { id, ...rest, organizationId: org.id, organizationSlug: org.slug };
+    },
+  );
 
   app.post(
     '/api/orgs/:orgId/workspaces',
@@ -157,8 +221,8 @@ export async function hierarchyRoutes(app: FastifyInstance) {
     async (req) => {
       const { workspaceId } = req.params as { workspaceId: string };
       const body = parse(WorkspaceMemberBody, req.body);
-      if (!(await getUserById(app.adb.db, body.userId))) throw notFound('User');
-      await app.hierarchy.setWorkspaceRole(workspaceId, body.userId, body.role as WorkspaceRole);
+      const userId = await resolveUserId(body);
+      await app.hierarchy.setWorkspaceRole(workspaceId, userId, body.role as WorkspaceRole);
       await audit(app.adb.db, {
         actorUserId: req.principal!.userId,
         actorType: 'user',

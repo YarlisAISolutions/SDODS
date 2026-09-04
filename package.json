@@ -29,7 +29,8 @@
     "docs:verify": "bun run --cwd apps/docs verify",
     "web:dev": "bun run --filter @automax/web dev:mocks",
     "web:build": "bun run --filter @automax/web build",
-    "release:check:live": "node --import tsx ./packages/cli/src/bin.ts run -p demo-shop -e staging --project-matrix -t \"@smoke or @sanity or @regression\""
+    "release:check:live": "node --import tsx ./packages/cli/src/bin.ts run -p demo-shop -e staging --project-matrix -t \"@smoke or @sanity or @regression\"",
+    "dogfood": "bash scripts/dogfood.sh"
   },
   "devDependencies": {
     "@types/node": "^22.15.0",

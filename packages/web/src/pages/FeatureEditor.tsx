@@ -17,6 +17,7 @@ import {
   useSaveFeature,
   useSteps,
   useValidateFeature,
+  toDiagnostics,
 } from '../api/queries';
 import type { Diagnostic } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
@@ -308,7 +309,9 @@ export function FeatureEditorPage() {
                       toast('Saved', 'success');
                     },
                     onError: (e: any) => {
-                      setServerDiags(e?.body?.diagnostics ?? []);
+                      setServerDiags(
+                        toDiagnostics(e?.body?.error?.details ?? e?.body?.details ?? e?.body),
+                      );
                       toast(e.message, 'error');
                     },
                   },

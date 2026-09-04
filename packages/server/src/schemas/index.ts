@@ -43,15 +43,23 @@ export const CreateTokenBody = z.object({
   userId: z.string().optional(),
 });
 
-export const OrgMemberBody = z.object({ userId: z.string().min(1), role: z.enum(ORG_ROLES) });
-export const WorkspaceMemberBody = z.object({
-  userId: z.string().min(1),
-  role: z.enum(WORKSPACE_ROLES),
-});
+/** Members can be addressed by user id or by username (the web UI types a username). */
+const memberTarget = {
+  userId: z.string().min(1).optional(),
+  username: z.string().min(1).optional(),
+};
+export const OrgMemberBody = z
+  .object({ ...memberTarget, role: z.enum(ORG_ROLES) })
+  .refine((b) => b.userId || b.username, { message: 'userId or username is required' });
+export const WorkspaceMemberBody = z
+  .object({ ...memberTarget, role: z.enum(WORKSPACE_ROLES) })
+  .refine((b) => b.userId || b.username, { message: 'userId or username is required' });
 export const CreateWorkspaceBody = z.object({
   slug: SlugSchema,
   name: z.string().min(1),
   description: z.string().optional(),
+  /** organization id or slug; optional when the platform has a single organization */
+  organization: z.string().optional(),
 });
 
 export const CreateProjectBody = z.object({
