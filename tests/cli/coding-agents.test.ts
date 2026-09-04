@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 const root = resolve(import.meta.dirname, '..', '..');
 const bin = resolve(root, 'packages', 'cli', 'src', 'bin.ts');
 
-function automax(args: string[], env: NodeJS.ProcessEnv = {}) {
+function sdods(args: string[], env: NodeJS.ProcessEnv = {}) {
   const r = spawnSync(process.execPath, ['--import', 'tsx', bin, ...args], {
     cwd: root,
     encoding: 'utf8',
@@ -17,7 +17,7 @@ function automax(args: string[], env: NodeJS.ProcessEnv = {}) {
 
 describe('coding-agent CLIs: doctor tokens, agent install, mcp install codex', () => {
   it('doctor --json returns checks plus a token matrix with requirement levels', () => {
-    const r = automax(['--json', 'doctor'], {
+    const r = sdods(['--json', 'doctor'], {
       ANTHROPIC_API_KEY: '',
       OPENAI_API_KEY: '',
       GITHUB_TOKEN: 'x',
@@ -46,22 +46,22 @@ describe('coding-agent CLIs: doctor tokens, agent install, mcp install codex', (
   });
 
   it('agent --help lists the CLI adapters and agent install --for', () => {
-    const help = automax(['agent', 'review', '--help']).stdout;
+    const help = sdods(['agent', 'review', '--help']).stdout;
     expect(help).toContain('claude-code');
     expect(help).toContain('codex');
-    const install = automax(['agent', 'install', '--help']).stdout;
+    const install = sdods(['agent', 'install', '--help']).stdout;
     expect(install).toContain('--for <client>');
     expect(install).toContain('--no-mcp');
-    expect(automax(['agent', 'install-claude', '--help']).stdout).toContain('Alias');
+    expect(sdods(['agent', 'install-claude', '--help']).stdout).toContain('Alias');
   });
 
   it('mcp install codex --print shows the TOML table and the codex mcp add command', () => {
-    const r = automax(['mcp', 'install', 'codex', '-p', 'demo-shop', '--print']);
+    const r = sdods(['mcp', 'install', 'codex', '-p', 'demo-shop', '--print']);
     expect(r.code).toBe(0);
-    expect(r.stdout).toContain('[mcp_servers.automax]');
-    expect(r.stdout).toContain('codex mcp add automax -- npx automax mcp --project demo-shop');
+    expect(r.stdout).toContain('[mcp_servers.sdods]');
+    expect(r.stdout).toContain('codex mcp add sdods -- npx sdods mcp --project demo-shop');
     const j = JSON.parse(
-      automax(['--json', 'mcp', 'install', 'codex', '-p', 'demo-shop', '--print']).stdout.replace(
+      sdods(['--json', 'mcp', 'install', 'codex', '-p', 'demo-shop', '--print']).stdout.replace(
         /^[^{]*/,
         '',
       ),

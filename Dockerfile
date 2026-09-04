@@ -1,4 +1,4 @@
-# AutoMax server image (Cloud Run / any container host).
+# SDODS server image (Cloud Run / any container host).
 #
 # Single runtime base: the official Playwright image (Ubuntu noble, Node 22, browsers) so that
 # UI runs triggered from the web UI work inside the container. Bun is installed only as the
@@ -8,9 +8,9 @@
 FROM mcr.microsoft.com/playwright:v1.62.1-noble
 ENV NODE_ENV=production \
     DB_DRIVER=sqlite \
-    SQLITE_PATH=/data/automax.db \
-    AUTOMAX_ARTIFACTS_DIR=/data/runs \
-    AUTOMAX_ROOT=/app \
+    SQLITE_PATH=/data/sdods.db \
+    SDODS_ARTIFACTS_DIR=/data/runs \
+    SDODS_ROOT=/app \
     HOST=0.0.0.0 \
     PORT=8080 \
     BUN_INSTALL=/opt/bun \
@@ -29,16 +29,16 @@ COPY packages ./packages
 COPY apps/docs/package.json ./apps/docs/package.json
 COPY apps/www/package.json ./apps/www/package.json
 COPY projects ./projects
-COPY tsconfig.base.json tsconfig.json playwright.config.ts automax.workspace.yaml ./
+COPY tsconfig.base.json tsconfig.json playwright.config.ts sdods.workspace.yaml ./
 RUN bun install --frozen-lockfile
 
 # Web UI bundle served by the Fastify server
-RUN bun run --filter @automax/web build
+RUN bun run --filter @sdods/web build
 
 COPY deploy/entrypoint.sh /app/deploy/entrypoint.sh
 RUN chmod +x /app/deploy/entrypoint.sh \
-    && mkdir -p /data /tmp/automax \
-    && chown -R pwuser:pwuser /data /app /tmp/automax
+    && mkdir -p /data /tmp/sdods \
+    && chown -R pwuser:pwuser /data /app /tmp/sdods
 USER pwuser
 VOLUME ["/data"]
 EXPOSE 8080

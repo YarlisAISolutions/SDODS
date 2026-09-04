@@ -16,7 +16,7 @@ describe('driver config', () => {
   it('defaults to sqlite and validates postgres', () => {
     expect(resolveDriverConfig({} as any)).toEqual({
       driver: 'sqlite',
-      sqlitePath: '.automax/automax.db',
+      sqlitePath: '.sdods/sdods.db',
     });
     expect(
       resolveDriverConfig({ DB_DRIVER: 'sqlite', SQLITE_PATH: '/tmp/x.db' } as any).sqlitePath,
@@ -81,7 +81,7 @@ describe('migrations (sqlite in-memory)', () => {
     await resetDatabase(adb);
     const tables = await sql<{
       name: string;
-    }>`select name from sqlite_master where type='table' and name not like 'automax_migrations%'`.execute(
+    }>`select name from sqlite_master where type='table' and name not like 'sdods_migrations%'`.execute(
       adb.db,
     );
     expect(tables.rows.length).toBe(0);

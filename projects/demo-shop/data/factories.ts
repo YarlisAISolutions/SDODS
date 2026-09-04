@@ -1,4 +1,4 @@
-import { defineFactories } from '@automax/core/data';
+import { defineFactories } from '@sdods/core/data';
 
 /** Faker factories, seeded per scenario fingerprint so retries regenerate identical data. */
 export default defineFactories({
@@ -9,7 +9,7 @@ export default defineFactories({
     zip: f.location.zipCode('#####'),
   }),
   post: (f) => ({
-    title: `AutoMax ${f.lorem.words(3)}`,
+    title: `SDODS ${f.lorem.words(3)}`,
     body: f.lorem.sentence(),
     userId: f.number.int({ min: 1, max: 10 }),
   }),

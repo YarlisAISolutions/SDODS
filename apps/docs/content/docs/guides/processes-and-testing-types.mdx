@@ -40,7 +40,7 @@ flowchart LR
   PR --> N["notify<br/>github · jira · webhook"]
 ```
 
-```yaml title="projects/demo-shop/automax.project.yaml"
+```yaml title="projects/demo-shop/sdods.project.yaml"
 processes:
   - name: pr-check
     title: Pull request check
@@ -69,7 +69,7 @@ processes:
     tags: '@contract or @smoke'
 ```
 
-The workspace file declares the same `pr-check`, `nightly-regression` (with `schedule: '0 2 * * *'`) and `release-gate` under `defaults.processes`; the project's entries override them by name, so `automax processes list -p demo-shop` shows four processes.
+The workspace file declares the same `pr-check`, `nightly-regression` (with `schedule: '0 2 * * *'`) and `release-gate` under `defaults.processes`; the project's entries override them by name, so `sdods processes list -p demo-shop` shows four processes.
 
 | Field                                          | Purpose                                                                                                                                  |
 | ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
@@ -78,17 +78,17 @@ The workspace file declares the same `pr-check`, `nightly-regression` (with `sch
 | `workers`, `retries`, `harMode`, `failOnFlaky` | how to execute                                                                                                                           |
 | `gates`                                        | conditions that fail the run even when every scenario passed: minimum pass rate, maximum flaky count, performance budgets, accessibility |
 | `notify`                                       | integrations to call after the run                                                                                                       |
-| `schedule`                                     | a cron expression; `automax schedule sync` turns it into a schedule                                                                      |
+| `schedule`                                     | a cron expression; `sdods schedule sync` turns it into a schedule                                                                        |
 
 Workspace-level processes under `defaults.processes` apply to every project; a project process with the same name overrides it.
 
 ## Run a process
 
 ```bash
-bun run automax processes list -p demo-shop
-bun run automax run -p demo-shop --process pr-check
-bun run automax run -p demo-shop --process nightly-regression -b chromium    # flags override process fields
-bun run automax run -p demo-shop --module cart -t @regression
+bun run sdods processes list -p demo-shop
+bun run sdods run -p demo-shop --process pr-check
+bun run sdods run -p demo-shop --process nightly-regression -b chromium    # flags override process fields
+bun run sdods run -p demo-shop --module cart -t @regression
 ```
 
 CI workflows call processes by name, so a change of gate or browser list is a YAML edit, not a workflow edit.

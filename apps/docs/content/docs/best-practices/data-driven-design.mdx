@@ -8,13 +8,13 @@ description: Separate what a scenario does from the data it runs on.
   features, and how to name rows so failures are readable.
 </Learn>
 
-| Need                                           | Use                                                                            |
-| ---------------------------------------------- | ------------------------------------------------------------------------------ |
-| a handful of variants that document behaviour  | Scenario Outline with a `# title-format:` comment                              |
-| many rows, or rows that differ per environment | a CSV, JSON or YAML dataset resolved per environment                           |
-| unique data on every run                       | a factory seeded by the scenario fingerprint                                   |
-| accounts                                       | the user pool, never literal credentials                                       |
-| large relational data                          | a `db` dataset in a `td_<slug>_<name>` table seeded with `automax data import` |
+| Need                                           | Use                                                                          |
+| ---------------------------------------------- | ---------------------------------------------------------------------------- |
+| a handful of variants that document behaviour  | Scenario Outline with a `# title-format:` comment                            |
+| many rows, or rows that differ per environment | a CSV, JSON or YAML dataset resolved per environment                         |
+| unique data on every run                       | a factory seeded by the scenario fingerprint                                 |
+| accounts                                       | the user pool, never literal credentials                                     |
+| large relational data                          | a `db` dataset in a `td_<slug>_<name>` table seeded with `sdods data import` |
 
 Keep business values in data files and structure in features:
 

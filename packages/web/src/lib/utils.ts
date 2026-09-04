@@ -67,7 +67,7 @@ export function safeLocalStorage() {
 
 export function readPref<T>(key: string, fallback: T): T {
   try {
-    const raw = safeLocalStorage()?.getItem(`automax:${key}`);
+    const raw = safeLocalStorage()?.getItem(`sdods:${key}`);
     return raw ? (JSON.parse(raw) as T) : fallback;
   } catch {
     return fallback;
@@ -76,7 +76,7 @@ export function readPref<T>(key: string, fallback: T): T {
 
 export function writePref<T>(key: string, value: T) {
   try {
-    safeLocalStorage()?.setItem(`automax:${key}`, JSON.stringify(value));
+    safeLocalStorage()?.setItem(`sdods:${key}`, JSON.stringify(value));
   } catch {
     /* ignore */
   }

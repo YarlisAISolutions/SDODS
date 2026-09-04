@@ -1,25 +1,25 @@
 ---
-title: automax watch
+title: sdods watch
 description: Regenerate BDD specs on change and re-run them in Playwright UI mode.
 ---
 
 ```text
-automax watch [-p <slug>] [-e <env>] [-t <expr>] [-l <layer>]... [-b <browser>]... [--no-ui] [--headed]
+sdods watch [-p <slug>] [-e <env>] [-t <expr>] [-l <layer>]... [-b <browser>]... [--no-ui] [--headed]
 ```
 
-Two children run with the same `AUTOMAX_*` environment that `automax run` uses:
+Two children run with the same `SDODS_*` environment that `sdods run` uses:
 
 1. `bddgen --watch` regenerates `.features-gen/<slug>/<layer>` whenever a feature or step file changes.
 2. `playwright test --ui` (or `--watch` with `--no-ui`) restricted to the generated projects of the selection.
 
 | Flag                         | Meaning                                      |
 | ---------------------------- | -------------------------------------------- |
-| `-p`, `-e`, `-t`, `-l`, `-b` | same selection flags as `automax run`        |
+| `-p`, `-e`, `-t`, `-l`, `-b` | same selection flags as `sdods run`          |
 | `--no-ui`                    | terminal watch mode instead of the UI window |
 | `--headed`                   | headed browsers in terminal watch mode       |
 
 ```bash
-automax watch -p demo-shop -e staging -l ui -b chromium -t @smoke
+sdods watch -p demo-shop -e staging -l ui -b chromium -t @smoke
 ```
 
 Stop with `Ctrl+C`; both children are terminated together. Exit code `2` when the selection matches no Playwright project.

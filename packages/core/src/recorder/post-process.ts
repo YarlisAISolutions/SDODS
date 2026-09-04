@@ -10,7 +10,7 @@ export interface PostProcessContext {
   /** env.ui.baseUrl + env.aliases: absolute URLs on these origins become relative paths */
   baseUrls: string[];
   tags?: string[];
-  /** import specifier for the merged fixtures (default '@automax/core/test') */
+  /** import specifier for the merged fixtures (default '@sdods/core/test') */
   fixturesImport?: string;
 }
 
@@ -46,7 +46,7 @@ function toRelative(value: string, originList: string[]): string | undefined {
 }
 
 /**
- * Rewrites a `playwright codegen --target playwright-test` file into an AutoMax recorded spec:
+ * Rewrites a `playwright codegen --target playwright-test` file into an SDODS recorded spec:
  * fixtures import, relative URLs, `test.describe` with tags, header comment, fragile-locator markers.
  * Best effort per Playwright minor; guarded by a snapshot test against a checked-in codegen fixture.
  */
@@ -57,7 +57,7 @@ export function postProcessRecording(source: string, ctx: PostProcessContext): P
     .filter(
       (l) =>
         !l.startsWith(RECORDING_HEADER_PREFIX) &&
-        !l.startsWith('// Recorded with AutoMax') &&
+        !l.startsWith('// Recorded with SDODS') &&
         !l.startsWith('// Convert to Gherkin'),
     )
     .join('\n');
@@ -65,7 +65,7 @@ export function postProcessRecording(source: string, ctx: PostProcessContext): P
   const sf: SourceFile = project.createSourceFile('recording.spec.ts', stripped);
 
   // 1. fixtures import
-  const fixturesImport = ctx.fixturesImport ?? '@automax/core/test';
+  const fixturesImport = ctx.fixturesImport ?? '@sdods/core/test';
   const pwImport = sf
     .getImportDeclarations()
     .find((d) => d.getModuleSpecifierValue() === '@playwright/test');
@@ -77,7 +77,7 @@ export function postProcessRecording(source: string, ctx: PostProcessContext): P
       namedImports: ['test', 'expect'],
       moduleSpecifier: fixturesImport,
     });
-    warnings.push('No @playwright/test import found; added the AutoMax fixtures import.');
+    warnings.push('No @playwright/test import found; added the SDODS fixtures import.');
   }
 
   // 2. absolute URLs on known origins → relative
@@ -138,10 +138,10 @@ export function postProcessRecording(source: string, ctx: PostProcessContext): P
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i]!;
     const prev = annotated[annotated.length - 1] ?? '';
-    if (FRAGILE_LOCATOR_RE.test(line) && !prev.includes('automax:fragile')) {
+    if (FRAGILE_LOCATOR_RE.test(line) && !prev.includes('sdods:fragile')) {
       const ws = /^\s*/.exec(line)?.[0] ?? '';
       annotated.push(
-        `${ws}// automax:fragile — prefer getByRole/getByLabel/getByTestId; see docs/guides/self-healing-locators`,
+        `${ws}// sdods:fragile — prefer getByRole/getByLabel/getByTestId; see docs/guides/self-healing-locators`,
       );
       fragileLocators++;
     }

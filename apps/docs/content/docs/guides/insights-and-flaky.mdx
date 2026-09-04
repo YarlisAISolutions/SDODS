@@ -1,6 +1,6 @@
 ---
 title: Insights and flaky management
-description: The signals AutoMax collects, the scores it derives, and the actions those scores trigger.
+description: The signals SDODS collects, the scores it derives, and the actions those scores trigger.
 ---
 
 <Learn>
@@ -22,8 +22,8 @@ Durations, retries and outcomes per attempt, heal events, locator failures parse
 | Suite health           | `0.5 × pass rate + 0.2 × (1 − mean flaky) + 0.2 × (1 − mean fragility) + 0.1 × duration budget` | 7-run moving average                                                |
 
 ```bash
-bun run automax insights compute -p demo-shop --window 30
-bun run automax insights show -p demo-shop
+bun run sdods insights compute -p demo-shop --window 30
+bun run sdods insights show -p demo-shop
 ```
 
 ## Triggers

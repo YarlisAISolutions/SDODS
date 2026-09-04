@@ -1,27 +1,27 @@
 ---
 title: Attachment and file naming
-description: The names AutoMax gives to attachments and files so every tool can find them.
+description: The names SDODS gives to attachments and files so every tool can find them.
 ---
 
 ## Attachments
 
-| Name                                                                                        | Content                                                                                                                  |
-| ------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `automax/shot/scenario/start`, `automax/shot/scenario/end`, `automax/shot/scenario/failure` | scenario-level screenshots                                                                                               |
-| `automax/shot/step/NN/before`, `automax/shot/step/NN/after`                                 | step screenshots; `NN` is the zero-based, two-digit step index in the pickle (background steps included, hooks excluded) |
-| `automax/visual/NN/<name>`                                                                  | visual baseline comparison                                                                                               |
-| `automax/api/NN/n/request`, `automax/api/NN/n/response`                                     | API call `n` in step `NN`                                                                                                |
-| `automax/heal/NN/n`                                                                         | heal event                                                                                                               |
-| `automax/perf/NN`, `automax/a11y/NN`                                                        | metrics and axe results                                                                                                  |
-| `automax/meta`                                                                              | the scenario meta document                                                                                               |
-| `automax/cleanup-errors`                                                                    | cleanup failures                                                                                                         |
+| Name                                                                                  | Content                                                                                                                  |
+| ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `sdods/shot/scenario/start`, `sdods/shot/scenario/end`, `sdods/shot/scenario/failure` | scenario-level screenshots                                                                                               |
+| `sdods/shot/step/NN/before`, `sdods/shot/step/NN/after`                               | step screenshots; `NN` is the zero-based, two-digit step index in the pickle (background steps included, hooks excluded) |
+| `sdods/visual/NN/<name>`                                                              | visual baseline comparison                                                                                               |
+| `sdods/api/NN/n/request`, `sdods/api/NN/n/response`                                   | API call `n` in step `NN`                                                                                                |
+| `sdods/heal/NN/n`                                                                     | heal event                                                                                                               |
+| `sdods/perf/NN`, `sdods/a11y/NN`                                                      | metrics and axe results                                                                                                  |
+| `sdods/meta`                                                                          | the scenario meta document                                                                                               |
+| `sdods/cleanup-errors`                                                                | cleanup failures                                                                                                         |
 
 Playwright's own `trace`, `screenshot`, `video` and `<name>-expected.png`/`-actual.png`/`-diff.png` are recognised as well. Names never start with `_`.
 
 ## Run directory
 
 ```text
-.automax/runs/<runId>/
+.sdods/runs/<runId>/
   run.json  summary.json  run.log
   messages.ndjson | messages.shard-N.ndjson
   pw-results.json          # recorded layer

@@ -20,7 +20,7 @@ A checkout looks different for a standard user, a locked-out user and an admin; 
 ### Record as a standard user on staging
 
 ```bash
-bun run automax record -p demo-shop -e staging --user standard --name checkout
+bun run sdods record -p demo-shop -e staging --user standard --name checkout
 ```
 
 </Step>
@@ -28,7 +28,7 @@ bun run automax record -p demo-shop -e staging --user standard --name checkout
 ### Record as a problem user
 
 ```bash
-bun run automax record -p demo-shop -e staging --user problem --name checkout-problem
+bun run sdods record -p demo-shop -e staging --user problem --name checkout-problem
 ```
 
 The pool leases `problem_user`, applies its cached storage state (capturing it first if needed), and codegen starts logged in.
@@ -38,7 +38,7 @@ The pool leases `problem_user`, applies its cached storage state (capturing it f
 ### Record against local
 
 ```bash
-bun run automax record -p demo-shop -e local --user standard --name checkout-local
+bun run sdods record -p demo-shop -e local --user standard --name checkout-local
 ```
 
 Base URL, locale and timezone come from `envs/local.yaml`; the spec still uses route names, so it runs on staging too.
@@ -48,7 +48,7 @@ Base URL, locale and timezone come from `envs/local.yaml`; the spec still uses r
 ### Record on a phone profile
 
 ```bash
-bun run automax record -p demo-shop -e staging --user standard --device "iPhone 15" --name checkout-mobile
+bun run sdods record -p demo-shop -e staging --user standard --device "iPhone 15" --name checkout-mobile
 ```
 
 </Step>
@@ -62,30 +62,30 @@ flowchart TB
     C["checkout-local.spec.ts<br/>standard · local"]
     D["checkout-mobile.spec.ts<br/>standard · iPhone 15"]
   end
-  A & B --> CV["automax record convert"]
+  A & B --> CV["sdods record convert"]
   CV --> P["proposal:<br/>features/cart/checkout.feature (Scenario Outline by role)<br/>steps/checkout.steps.ts · pages/CheckoutPage.ts"]
   P --> R["review → accept"]
-  C & D --> RUN["automax run -l recorded<br/>-e local · --device"]
+  C & D --> RUN["sdods run -l recorded<br/>-e local · --device"]
 ```
 
 <Screenshot
   src="/screenshots/ui/recorder.png"
   alt="The Recorder page of the web UI: project, environment, start URL, device and pool user, then the recorded spec preview"
-  caption="The same recording flow from the web UI. It spawns automax record with the options you pick."
+  caption="The same recording flow from the web UI. It spawns sdods record with the options you pick."
 />
 
 ## Run the recordings
 
 ```bash
-bun run automax run -p demo-shop -e staging -l recorded
-bun run automax run -p demo-shop -e local   -l recorded
-bun run automax run -p demo-shop -e staging -l recorded --device "iPhone 15"
+bun run sdods run -p demo-shop -e staging -l recorded
+bun run sdods run -p demo-shop -e local   -l recorded
+bun run sdods run -p demo-shop -e staging -l recorded --device "iPhone 15"
 ```
 
 ## Convert into one data-driven feature
 
 ```bash
-bun run automax record convert projects/demo-shop/recorded/checkout.spec.ts projects/demo-shop/recorded/checkout-problem.spec.ts
+bun run sdods record convert projects/demo-shop/recorded/checkout.spec.ts projects/demo-shop/recorded/checkout-problem.spec.ts
 ```
 
 When several recordings share a flow, the generator proposes a Scenario Outline whose examples carry the role, and uses `Given I use a leased user with role "<role>"` so the feature keeps working as the pool changes:
@@ -106,16 +106,16 @@ Feature: Checkout
       | problem  | Error: Last Name is required  |
 ```
 
-Review the proposal, then `automax proposals accept <id>`.
+Review the proposal, then `sdods proposals accept <id>`.
 
 ## Claude Code skills
 
 Two reusable skills ship with the repository so an assistant can run this routine end to end:
 
-- `.claude/skills/automax-record/SKILL.md` — records a flow for a given project, environment, role and device, post-processes it, runs it once and opens a conversion proposal
-- `.claude/skills/automax-run/SKILL.md` — runs a project by tag, layer, browser or process, reads the summary and the run directory, and reports failures with their before/after screenshots
+- `.claude/skills/sdods-record/SKILL.md` — records a flow for a given project, environment, role and device, post-processes it, runs it once and opens a conversion proposal
+- `.claude/skills/sdods-run/SKILL.md` — runs a project by tag, layer, browser or process, reads the summary and the run directory, and reports failures with their before/after screenshots
 
-Invoke them in Claude Code with `/automax-record` and `/automax-run`, or let the MCP `record_start` and `run_tests` tools do the same from other clients.
+Invoke them in Claude Code with `/sdods-record` and `/sdods-run`, or let the MCP `record_start` and `run_tests` tools do the same from other clients.
 
 ## Next steps
 

@@ -11,7 +11,7 @@ export interface CliResult<T = unknown> {
   error?: { code: string; message: string; hint?: string };
 }
 
-/** Build the argv that runs the AutoMax CLI from source (tsx) or from dist. */
+/** Build the argv that runs the SDODS CLI from source (tsx) or from dist. */
 export function cliCommand(config: ServerConfig, args: string[]): { cmd: string; args: string[] } {
   const bin = config.cliBin;
   if (bin.endsWith('.ts'))

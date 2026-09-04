@@ -8,7 +8,7 @@ import * as tar from 'tar';
 // The route must accept artifacts.tgz and hand the files found in the run dir to ingestRun;
 // the DB side of ingest is covered by packages/db, so it is mocked here.
 const ingestCalls: unknown[] = [];
-vi.mock('@automax/db', async (orig) => {
+vi.mock('@sdods/db', async (orig) => {
   const real = (await orig()) as Record<string, unknown>;
   return {
     ...real,
@@ -19,23 +19,23 @@ vi.mock('@automax/db', async (orig) => {
   };
 });
 
-const { createMemoryDb } = await import('@automax/db');
+const { createMemoryDb } = await import('@sdods/db');
 const { buildServer } = await import('../src/index.js');
 const { extractArtifacts, ArchiveTooLargeError } =
   await import('../src/services/artifacts-archive.js');
 const { resolveTraceViewerDir } = await import('../src/config.js');
 
 function repo() {
-  const root = mkdtempSync(join(tmpdir(), 'automax-ingest-'));
+  const root = mkdtempSync(join(tmpdir(), 'sdods-ingest-'));
   writeFileSync(join(root, 'package.json'), '{}');
   writeFileSync(
-    join(root, 'automax.workspace.yaml'),
+    join(root, 'sdods.workspace.yaml'),
     `organization: { slug: acme, name: Acme }\nworkspaces:\n  - { slug: web, name: Web, organization: acme }\ndefaultWorkspace: web\n`,
   );
   const dir = join(root, 'projects', 'shop');
   mkdirSync(join(dir, 'envs'), { recursive: true });
   writeFileSync(
-    join(dir, 'automax.project.yaml'),
+    join(dir, 'sdods.project.yaml'),
     `slug: shop\nname: shop\nlayers: [ui, api]\nenvs: { default: local, available: [local] }\n`,
   );
   writeFileSync(
@@ -66,7 +66,7 @@ async function buildArchive(workDir: string): Promise<string> {
 }
 
 function multipart(files: Array<{ name: string; body: Buffer }>): { body: Buffer; type: string } {
-  const boundary = `----automax${Date.now()}`;
+  const boundary = `----sdods${Date.now()}`;
   const parts: Buffer[] = [];
   for (const f of files) {
     parts.push(
@@ -83,7 +83,7 @@ function multipart(files: Array<{ name: string; body: Buffer }>): { body: Buffer
 
 describe('extractArtifacts', () => {
   it('extracts files, drops traversal entries and enforces the size cap', async () => {
-    const work = mkdtempSync(join(tmpdir(), 'automax-tgz-'));
+    const work = mkdtempSync(join(tmpdir(), 'sdods-tgz-'));
     const archive = await buildArchive(work);
     const out = join(work, 'out');
     mkdirSync(out);
@@ -113,7 +113,7 @@ describe('POST /api/runs/:id/ingest with artifacts.tgz', () => {
       config: {
         rootDir: root,
         projectsDir: join(root, 'projects'),
-        artifactsDir: join(root, '.automax/runs'),
+        artifactsDir: join(root, '.sdods/runs'),
         authDisabled: false,
         sessionSecret: 'test-secret-test-secret-test-secret',
         maxConcurrentRuns: 1,
@@ -143,7 +143,7 @@ describe('POST /api/runs/:id/ingest with artifacts.tgz', () => {
   afterAll(async () => app.close());
 
   it('extracts the archive into the run dir and ingests the files it contains', async () => {
-    const work = mkdtempSync(join(tmpdir(), 'automax-up-'));
+    const work = mkdtempSync(join(tmpdir(), 'sdods-up-'));
     const archive = await buildArchive(work);
     const manifest = Buffer.from(
       JSON.stringify({ runId: 'ci-run-1', projectSlug: 'shop', env: 'local', trigger: 'ci' }),
@@ -162,9 +162,9 @@ describe('POST /api/runs/:id/ingest with artifacts.tgz', () => {
     const json = res.json();
     expect(json.files).toEqual(['run.json', 'artifacts.tgz']);
     expect(json.extracted).toMatchObject({ files: 3, skipped: 1 });
-    const runDir = join(root, '.automax/runs', 'ci-run-1');
+    const runDir = join(root, '.sdods/runs', 'ci-run-1');
     expect(existsSync(join(runDir, 'shop', 'abc123', 'r0', 'meta.json'))).toBe(true);
-    expect(existsSync(join(root, '.automax/runs', 'evil.txt'))).toBe(false);
+    expect(existsSync(join(root, '.sdods/runs', 'evil.txt'))).toBe(false);
     const call = ingestCalls.at(-1) as { runId: string; ndjsonPaths: string[] };
     expect(call.runId).toBe('ci-run-1');
     expect(call.ndjsonPaths).toEqual([join(runDir, 'messages.ndjson')]);

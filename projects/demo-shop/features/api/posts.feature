@@ -40,10 +40,10 @@ Feature: Posts API
 
   @regression @contract
   Scenario: Create a post and chain its id
-    Given I set the variable "title" to "AutoMax created this"
+    Given I set the variable "title" to "SDODS created this"
     When I send a POST request to "/posts" with body:
       """json
-      { "title": "{{title}}", "body": "hello from AutoMax", "userId": 1 }
+      { "title": "{{title}}", "body": "hello from SDODS", "userId": 1 }
       """
     Then the response status should be 201
     And the response JSON path "title" should equal "{{title}}"
@@ -56,16 +56,16 @@ Feature: Posts API
   Scenario: Update a post
     When I send a PUT request to "/posts/1" with body:
       """json
-      { "id": 1, "title": "updated by AutoMax", "body": "changed", "userId": 1 }
+      { "id": 1, "title": "updated by SDODS", "body": "changed", "userId": 1 }
       """
     Then the response status should be 200
-    And the response JSON path "title" should equal "updated by AutoMax"
+    And the response JSON path "title" should equal "updated by SDODS"
     When I send a PATCH request to "/posts/1" with body:
       """json
-      { "title": "patched by AutoMax" }
+      { "title": "patched by SDODS" }
       """
     Then the response status should be 200
-    And the response JSON path "title" should equal "patched by AutoMax"
+    And the response JSON path "title" should equal "patched by SDODS"
 
   @regression
   Scenario: Delete a post

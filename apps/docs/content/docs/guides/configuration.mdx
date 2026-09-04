@@ -4,27 +4,27 @@ description: The six configuration layers, how they merge, how variables and sec
 ---
 
 <Learn>
-The exact order in which AutoMax merges configuration, the merge rules for objects and arrays, how `${VAR}` and `${VAR:-default}` resolve, why literal secrets are refused, and how to see which layer produced a value.
+The exact order in which SDODS merges configuration, the merge rules for objects and arrays, how `${VAR}` and `${VAR:-default}` resolve, why literal secrets are refused, and how to see which layer produced a value.
 </Learn>
 
 ## The six layers
 
 ```mermaid
 flowchart LR
-  D["1. Framework defaults"] --> P["2. automax.project.yaml"] --> E["3. envs/&lt;env&gt;.yaml"] --> F["4. .env + .env.&lt;env&gt;"] --> X["5. process.env<br/>(AUTOMAX_*)"] --> C["6. CLI flags"]
+  D["1. Framework defaults"] --> P["2. sdods.project.yaml"] --> E["3. envs/&lt;env&gt;.yaml"] --> F["4. .env + .env.&lt;env&gt;"] --> X["5. process.env<br/>(SDODS_*)"] --> C["6. CLI flags"]
   C --> R["ResolvedConfig<br/>project · env · runtime · provenance"]
 ```
 
-Later layers win. Layers 4 and 5 are also the sources for `${VAR}` references; layer 5 additionally maps `AUTOMAX_*` variables onto configuration paths.
+Later layers win. Layers 4 and 5 are also the sources for `${VAR}` references; layer 5 additionally maps `SDODS_*` variables onto configuration paths.
 
 | Layer | Source                                                                                                           | Example                                                                                |
 | ----- | ---------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
 | 1     | built-in defaults                                                                                                | screenshot policy, heal timeouts, retries                                              |
-| 2     | `automax.project.yaml`                                                                                           | layers, browsers, tags, routes, data                                                   |
+| 2     | `sdods.project.yaml`                                                                                             | layers, browsers, tags, routes, data                                                   |
 | 3     | `envs/<env>.yaml`                                                                                                | base URLs, API auth, pool size; may override `screenshots`, `heal`, `timeouts`, `perf` |
 | 4     | `.env`, `.env.<env>`, `.env.local`, `.env.<env>.local` in the repo root and the project directory (project wins) | `DEMO_SHOP_PASSWORD=...`                                                               |
-| 5     | `process.env`                                                                                                    | `AUTOMAX_UI_BASE_URL`, `AUTOMAX_ENV`, `CI`                                             |
-| 6     | flags on `automax run` and friends                                                                               | `-e local`, `--headed`, `--shard 2/3`                                                  |
+| 5     | `process.env`                                                                                                    | `SDODS_UI_BASE_URL`, `SDODS_ENV`, `CI`                                                 |
+| 6     | flags on `sdods run` and friends                                                                                 | `-e local`, `--headed`, `--shard 2/3`                                                  |
 
 ## Merge rules
 
@@ -52,8 +52,8 @@ vars:
 
 ## Explain a value
 
-```bash automax-verify
-bun run automax config show -p demo-shop -e staging --explain
+```bash sdods-verify
+bun run sdods config show -p demo-shop -e staging --explain
 ```
 
 Sample output (truncated):
@@ -72,15 +72,15 @@ Secret-looking values are redacted; add `--show-secrets` when you must see them.
 
 ## Environment variables that map to config
 
-| Variable                                                                | Path                                |
-| ----------------------------------------------------------------------- | ----------------------------------- |
-| `AUTOMAX_ENV`                                                           | environment name                    |
-| `AUTOMAX_UI_BASE_URL`, `AUTOMAX_API_BASE_URL`                           | `env.ui.baseUrl`, `env.api.baseUrl` |
-| `AUTOMAX_HEADED`, `AUTOMAX_WORKERS`, `AUTOMAX_SHARD`, `AUTOMAX_RETRIES` | runtime                             |
-| `AUTOMAX_SHOT_POLICY`, `AUTOMAX_SHOTS_ONLY_ON_FAILURE`                  | screenshot policy                   |
-| `AUTOMAX_HEAL`                                                          | `project.heal.enabled`              |
-| `AUTOMAX_HAR_MODE`, `AUTOMAX_OFFLINE`, `AUTOMAX_UPDATE_SNAPSHOTS`       | runtime                             |
-| `AUTOMAX_RUN_ID`, `AUTOMAX_ARTIFACTS_DIR`                               | run identity and location           |
+| Variable                                                        | Path                                |
+| --------------------------------------------------------------- | ----------------------------------- |
+| `SDODS_ENV`                                                     | environment name                    |
+| `SDODS_UI_BASE_URL`, `SDODS_API_BASE_URL`                       | `env.ui.baseUrl`, `env.api.baseUrl` |
+| `SDODS_HEADED`, `SDODS_WORKERS`, `SDODS_SHARD`, `SDODS_RETRIES` | runtime                             |
+| `SDODS_SHOT_POLICY`, `SDODS_SHOTS_ONLY_ON_FAILURE`              | screenshot policy                   |
+| `SDODS_HEAL`                                                    | `project.heal.enabled`              |
+| `SDODS_HAR_MODE`, `SDODS_OFFLINE`, `SDODS_UPDATE_SNAPSHOTS`     | runtime                             |
+| `SDODS_RUN_ID`, `SDODS_ARTIFACTS_DIR`                           | run identity and location           |
 
 The full list is in the [environment variables reference](/docs/reference/environment-variables).
 

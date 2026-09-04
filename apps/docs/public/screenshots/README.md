@@ -12,6 +12,6 @@ Real product output, refreshed by `scripts/collect-screenshots.ts` before every 
 PNG files are committed on purpose; keep them under ~400 KB. Regenerate with:
 
 ```bash
-bun run automax run -p demo-shop -e staging -b chromium -t @regression
+bun run sdods run -p demo-shop -e staging -b chromium -t @regression
 node --import tsx apps/docs/scripts/collect-screenshots.ts
 ```

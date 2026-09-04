@@ -9,7 +9,7 @@
 .dark {
   --color-fd-primary: #818cf8;
 }
-.automax-planned {
+.sdods-planned {
   display: inline-block;
   margin-left: 0.4rem;
   padding: 0.05rem 0.5rem;
@@ -20,22 +20,22 @@
   font-weight: 600;
   vertical-align: middle;
 }
-.dark .automax-planned {
+.dark .sdods-planned {
   background: #78350f;
   color: #fde68a;
 }
-.automax-learn {
+.sdods-learn {
   border-left: 4px solid var(--color-fd-primary);
   padding: 0.75rem 1rem;
   margin: 0 0 1.5rem;
   background: var(--color-fd-card);
   border-radius: 0 6px 6px 0;
 }
-.automax-learn strong {
+.sdods-learn strong {
   display: block;
   margin-bottom: 0.25rem;
 }
-.automax-mermaid svg {
+.sdods-mermaid svg {
   max-width: 100%;
   height: auto;
 }

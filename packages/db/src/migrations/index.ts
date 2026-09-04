@@ -1,4 +1,4 @@
-import type { AutomaxMigration } from '../migrate.js';
+import type { SdodsMigration } from '../migrate.js';
 import * as m0001 from './0001_platform_init.js';
 import * as m0002 from './0002_results.js';
 import * as m0003 from './0003_improvement.js';
@@ -10,7 +10,7 @@ import * as m0007 from './0007_hierarchy.js';
 /**
  * Static registry (bundler-friendly, no runtime file discovery). Order matters: Kysely sorts by key.
  */
-export const MIGRATIONS: Record<string, AutomaxMigration> = {
+export const MIGRATIONS: Record<string, SdodsMigration> = {
   '0001_platform_init': m0001,
   '0002_results': m0002,
   '0003_improvement': m0003,

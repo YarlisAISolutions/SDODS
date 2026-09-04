@@ -1,6 +1,6 @@
 ---
 title: The web UI
-description: What the AutoMax web application offers and how it relates to the CLI.
+description: What the SDODS web application offers and how it relates to the CLI.
 ---
 
 <Learn>
@@ -11,11 +11,11 @@ description: What the AutoMax web application offers and how it relates to the C
 ## Start it
 
 ```bash
-bun run automax users create --admin
-bun run automax serve                 # http://127.0.0.1:4444
+bun run sdods users create --admin
+bun run sdods serve                 # http://127.0.0.1:4444
 ```
 
-The server is a Fastify application. It spawns the same `automax` commands you run by hand and streams their logs over Server-Sent Events, so a run started from a browser looks exactly like one started from a terminal.
+The server is a Fastify application. It spawns the same `sdods` commands you run by hand and streams their logs over Server-Sent Events, so a run started from a browser looks exactly like one started from a terminal.
 
 <Screenshot
   src="/screenshots/ui/dashboard.png"

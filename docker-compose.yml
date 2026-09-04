@@ -1,31 +1,31 @@
 services:
   postgres:
     image: postgres:16
-    container_name: automax-postgres
+    container_name: sdods-postgres
     environment:
-      POSTGRES_USER: automax
-      POSTGRES_PASSWORD: automax
-      POSTGRES_DB: automax
+      POSTGRES_USER: sdods
+      POSTGRES_PASSWORD: sdods
+      POSTGRES_DB: sdods
     ports:
       - '5432:5432'
     volumes:
       - automax-pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U automax -d automax']
+      test: ['CMD-SHELL', 'pg_isready -U sdods -d sdods']
       interval: 5s
       timeout: 3s
       retries: 20
 
-  # Optional: the AutoMax web server on Postgres. Build with `docker build -t automax .` first.
-  automax:
-    image: automax:latest
+  # Optional: the SDODS web server on Postgres. Build with `docker build -t sdods .` first.
+  sdods:
+    image: sdods:latest
     profiles: ['server']
     depends_on:
       postgres:
         condition: service_healthy
     environment:
       DB_DRIVER: postgres
-      DATABASE_URL: postgres://automax:automax@postgres:5432/automax
+      DATABASE_URL: postgres://sdods:sdods@postgres:5432/sdods
       HOST: 0.0.0.0
       PORT: 4444
       SESSION_SECRET: change-me-32-chars-minimum-please
@@ -33,8 +33,8 @@ services:
       - '4444:4444'
     volumes:
       - ./projects:/app/projects
-      - automax-runs:/app/.automax
+      - sdods-runs:/app/.sdods
 
 volumes:
   automax-pgdata:
-  automax-runs:
+  sdods-runs:

@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve as resolvePath } from 'node:path';
 import type { Command } from 'commander';
-import { formatFindings, lintProject } from '@automax/core';
+import { formatFindings, lintProject } from '@sdods/core';
 import { createContext } from '../context.js';
 import { collect, json, ok, out } from '../ui.js';
 

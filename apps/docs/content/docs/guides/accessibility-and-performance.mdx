@@ -17,11 +17,11 @@ Scenario: The inventory page has no serious accessibility violations
   Then the page should have no accessibility violations of impact "serious" or higher
 ```
 
-`@a11y` registers a hook that runs `@axe-core/playwright` after each UI step; violations are attached as JSON (`automax/a11y/<step>`) and counted per impact. The assertion step lets you choose the threshold.
+`@a11y` registers a hook that runs `@axe-core/playwright` after each UI step; violations are attached as JSON (`sdods/a11y/<step>`) and counted per impact. The assertion step lets you choose the threshold.
 
 ## Performance
 
-```yaml title="automax.project.yaml"
+```yaml title="sdods.project.yaml"
 perf:
   budgets: { pageLoadMs: 4000, lcpMs: 3000, apiP95Ms: 1500 }
 ```
@@ -38,7 +38,7 @@ Scenario: Inventory loads within budget
   Then the page should meet the performance budget
 ```
 
-Metrics come from the Navigation Timing, Resource Timing and Paint Timing APIs (TTFB, DOMContentLoaded, load, FCP, LCP, resource count and size) and are attached as `automax/perf/<step>`. API latency per endpoint is collected from every API step and compared with `apiP95Ms` in insights.
+Metrics come from the Navigation Timing, Resource Timing and Paint Timing APIs (TTFB, DOMContentLoaded, load, FCP, LCP, resource count and size) and are attached as `sdods/perf/<step>`. API latency per endpoint is collected from every API step and compared with `apiP95Ms` in insights.
 
 ## In processes
 

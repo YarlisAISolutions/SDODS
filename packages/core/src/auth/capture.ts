@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { execa } from 'execa';
 import type { Browser } from '@playwright/test';
 import type { ResolvedConfig } from '../config/resolve.js';
-import { AutomaxError } from '../errors.js';
+import { SdodsError } from '../errors.js';
 import { Logger } from '../logger.js';
 import { CompositeDataProvider } from '../data/provider.js';
 import { AuthStateCache, type CachedState } from '../fixtures/auth.js';
@@ -50,11 +50,11 @@ export interface CaptureResult {
 export async function poolUsers(config: ResolvedConfig, role?: string): Promise<PoolUserLike[]> {
   const pool = config.project.data.userPool;
   if (!pool) {
-    throw new AutomaxError(
+    throw new SdodsError(
       'CONFIG_INVALID',
       `Project ${config.project.slug} has no data.userPool configured.`,
       {
-        hint: 'Add data.userPool: { dataset: users, roleColumn: role } to automax.project.yaml.',
+        hint: 'Add data.userPool: { dataset: users, roleColumn: role } to sdods.project.yaml.',
         exitCode: 2,
       },
     );
@@ -80,7 +80,7 @@ export async function poolUsers(config: ResolvedConfig, role?: string): Promise<
     perRole.set(u.role, n + 1);
   }
   if (role && !filtered.length) {
-    throw new AutomaxError(
+    throw new SdodsError(
       'USER_POOL_EXHAUSTED',
       `No users with role "${role}" in dataset "${pool.dataset}" (env ${config.env.name}).`,
       {
@@ -114,7 +114,7 @@ export async function loadProjectAuth(config: ResolvedConfig): Promise<AuthStrat
     case 'sso':
       return defineAuth({ strategy: declared });
     default:
-      throw new AutomaxError(
+      throw new SdodsError(
         'CONFIG_INVALID',
         `auth.strategy "${declared}" needs an \`auth\` export in projects/${config.project.slug}/steps/auth.ts.`,
         {
@@ -156,7 +156,7 @@ export async function captureAuth(opts: CaptureOptions): Promise<CaptureResult[]
   const users = await poolUsers(config, opts.role);
   const selected = opts.all ? users : ([users[opts.index ?? 0]].filter(Boolean) as PoolUserLike[]);
   if (!selected.length) {
-    throw new AutomaxError(
+    throw new SdodsError(
       'USER_POOL_EXHAUSTED',
       `Role "${opts.role}" has ${users.length} user(s); index ${opts.index ?? 0} does not exist.`,
       { exitCode: 2 },

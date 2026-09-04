@@ -17,7 +17,7 @@ export interface CreateContextOptions {
   publicUrl?: string;
   ci?: CiInfo;
   dryRun?: boolean;
-  /** absolute artifacts root (`.automax/runs`) used to resolve local screenshot files */
+  /** absolute artifacts root (`.sdods/runs`) used to resolve local screenshot files */
   artifactsRoot?: string;
   env?: NodeJS.ProcessEnv;
 }
@@ -31,7 +31,7 @@ const silentLogger: IntegrationLogger = {
 
 export function createIntegrationContext(opts: CreateContextOptions): IntegrationContext {
   const env = opts.env ?? process.env;
-  const publicUrl = (opts.publicUrl ?? env.AUTOMAX_PUBLIC_URL)?.replace(/\/+$/, '');
+  const publicUrl = (opts.publicUrl ?? env.SDODS_PUBLIC_URL)?.replace(/\/+$/, '');
   const ci = opts.ci ?? detectCi(env);
   const artifactsRoot = opts.artifactsRoot;
   return {

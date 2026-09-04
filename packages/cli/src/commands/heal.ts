@@ -2,7 +2,7 @@ import { existsSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Command } from 'commander';
 import pc from 'picocolors';
-import { AutomaxError, HealHistory, collectHealEvents, summarizeHealEvents } from '@automax/core';
+import { SdodsError, HealHistory, collectHealEvents, summarizeHealEvents } from '@sdods/core';
 import { createContext } from '../context.js';
 import { json, out, table } from '../ui.js';
 
@@ -26,15 +26,15 @@ export function register(program: Command) {
     .option('--write-history', 'persist a heal-history.json used to bias future heals')
     .action((opts, cmd) => {
       const ctx = createContext(cmd);
-      const artifacts = join(ctx.rootDir, process.env.AUTOMAX_ARTIFACTS_DIR ?? '.automax/runs');
+      const artifacts = join(ctx.rootDir, process.env.SDODS_ARTIFACTS_DIR ?? '.sdods/runs');
       const root = opts.all
         ? artifacts
         : opts.run
           ? join(artifacts, opts.run)
           : latestRunDir(artifacts);
       if (!root || !existsSync(root))
-        throw new AutomaxError('RUN_FAILED', 'No run found.', {
-          hint: 'Run `automax run` first or pass --run <id>.',
+        throw new SdodsError('RUN_FAILED', 'No run found.', {
+          hint: 'Run `sdods run` first or pass --run <id>.',
           exitCode: 2,
         });
       const events = collectHealEvents(root);

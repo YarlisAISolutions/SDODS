@@ -9,7 +9,7 @@ import fastifyStatic from '@fastify/static';
  * and nothing else. API artifacts go through /api/runs/:id/files and /api/artifacts.
  */
 export default fp(async function staticPlugin(app: FastifyInstance) {
-  // Playwright HTML reports: /reports/<runId>/... → .automax/runs/<runId>/playwright-report/...
+  // Playwright HTML reports: /reports/<runId>/... → .sdods/runs/<runId>/playwright-report/...
   await app.register(fastifyStatic, {
     root: app.config.artifactsDir,
     prefix: '/reports/',
@@ -63,7 +63,7 @@ export default fp(async function staticPlugin(app: FastifyInstance) {
       reply
         .type('text/html; charset=utf-8')
         .send(
-          `<!doctype html><title>AutoMax</title><body style="font-family:system-ui;padding:2rem"><h1>AutoMax server</h1><p>The web UI is not built yet. API is live at <code>/api/health</code>. Build it with <code>bun run --filter @automax/web build</code>.</p></body>`,
+          `<!doctype html><title>SDODS</title><body style="font-family:system-ui;padding:2rem"><h1>SDODS server</h1><p>The web UI is not built yet. API is live at <code>/api/health</code>. Build it with <code>bun run --filter @sdods/web build</code>.</p></body>`,
         ),
     );
   }

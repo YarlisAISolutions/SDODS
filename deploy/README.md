@@ -1,4 +1,4 @@
-# Hosting the AutoMax server (api.sdods.com)
+# Hosting the SDODS server (api.sdods.com)
 
 ```
 Route 53 (sdods.com)            GCP project automax-docs (us-central1)
@@ -10,7 +10,7 @@ api.sdods.com  CNAME ─────────► Firebase Hosting site `sdods
 
 The container is the same image for everything: `deploy/entrypoint.sh serve` migrates and starts the
 server (Fastify API + web UI + `/mcp`), `bootstrap` creates the admin, and any other argument is passed
-to the `automax` CLI (`db status`, `run -p demo-shop …`). The image is built on the official Playwright
+to the `sdods` CLI (`db status`, `run -p demo-shop …`). The image is built on the official Playwright
 image so UI runs triggered from the web UI work inside the container.
 
 ## One-time setup (already done for automax-docs)
@@ -18,15 +18,15 @@ image so UI runs triggered from the web UI work inside the container.
 | Step | Command |
 | --- | --- |
 | Billing + APIs | `gcloud billing projects link automax-docs --billing-account <id>` · `gcloud services enable run artifactregistry cloudbuild secretmanager sqladmin` |
-| Artifact Registry | `gcloud artifacts repositories create automax --repository-format=docker --location=us-central1` |
+| Artifact Registry | `gcloud artifacts repositories create sdods --repository-format=docker --location=us-central1` |
 | Secrets | `automax-session-secret`, `automax-db-password`, `automax-admin-password` (random, Secret Manager) |
-| Cloud SQL | `gcloud sql instances create automax-pg --database-version=POSTGRES_16 --edition=ENTERPRISE --tier=db-f1-micro --region=us-central1 --storage-size=10 --storage-type=HDD --availability-type=zonal --no-backup` then `gcloud sql databases create automax --instance automax-pg` and `gcloud sql users create automax --instance automax-pg --password "$(gcloud secrets versions access latest --secret automax-db-password)"` |
+| Cloud SQL | `gcloud sql instances create automax-pg --database-version=POSTGRES_16 --edition=ENTERPRISE --tier=db-f1-micro --region=us-central1 --storage-size=10 --storage-type=HDD --availability-type=zonal --no-backup` then `gcloud sql databases create sdods --instance automax-pg` and `gcloud sql users create sdods --instance automax-pg --password "$(gcloud secrets versions access latest --secret automax-db-password)"` |
 | Service accounts | runtime `automax-api-runtime@` (secretAccessor, cloudsql.client); CI `github-deploy-api@` (run.admin, cloudbuild.builds.editor, artifactregistry.writer, iam.serviceAccountUser, storage.admin, serviceUsageConsumer) — its key is the GitHub secret `GCP_SA_KEY_AUTOMAX` |
 
 ## Deploy
 
 ```bash
-bun run api:build            # Cloud Build → us-central1-docker.pkg.dev/automax-docs/automax/automax-api:latest
+bun run api:build            # Cloud Build → us-central1-docker.pkg.dev/automax-docs/sdods/automax-api:latest
 bun run api:deploy           # gcloud run deploy automax-api (secrets, Cloud SQL connector, env)
 bun run api:bootstrap        # Cloud Run job: migrate + sync hierarchy + create admin (idempotent)
 bun run api:deploy-hosting   # Firebase Hosting site sdods-automax-api → rewrite to Cloud Run
@@ -56,9 +56,9 @@ gcloud secrets versions access latest --secret automax-admin-password --project 
 | Task | How |
 | --- | --- |
 | Logs | `gcloud run services logs read automax-api --region us-central1 --limit 100` |
-| Migrations | run automatically at container start (`automax db migrate`); manual: `gcloud run jobs execute automax-bootstrap --region us-central1 --wait` |
+| Migrations | run automatically at container start (`sdods db migrate`); manual: `gcloud run jobs execute automax-bootstrap --region us-central1 --wait` |
 | Rotate a secret | `gcloud secrets versions add automax-session-secret --data-file=<(openssl rand -base64 36)` then `bun run api:deploy` (services read `:latest` on new revisions) |
-| Rotate the DB password | add a new secret version, then `gcloud sql users set-password automax --instance automax-pg --password "$(gcloud secrets versions access latest --secret automax-db-password)"`, then redeploy |
+| Rotate the DB password | add a new secret version, then `gcloud sql users set-password sdods --instance automax-pg --password "$(gcloud secrets versions access latest --secret automax-db-password)"`, then redeploy |
 | Scale | `MIN_INSTANCES=1 bun run api:deploy` for no cold starts (adds ~$8/month) |
 | Tear down | `gcloud run services delete automax-api --region us-central1` · `gcloud run jobs delete automax-bootstrap --region us-central1` · `gcloud sql instances delete automax-pg` · delete the three secrets · `firebase hosting:sites:delete sdods-automax-api` · restore the Route 53 A record |
 
@@ -73,5 +73,5 @@ gcloud secrets versions access latest --secret automax-admin-password --project 
 | Firebase Hosting rewrite traffic | free tier (10 GB/month egress) |
 
 Notes: run artifacts written by UI-triggered runs live in `/tmp` and disappear with the instance; use
-`automax report ingest --server` from CI for durable results, or mount a bucket later. Postgres is the
-only stateful component; `automax db export` produces a JSONL backup.
+`sdods report ingest --server` from CI for durable results, or mount a bucket later. Postgres is the
+only stateful component; `sdods db export` produces a JSONL backup.

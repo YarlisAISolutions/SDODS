@@ -20,8 +20,8 @@ When I mock "**/api/banner" with JSON:
 
 ```mermaid
 flowchart LR
-  R["automax har record -t @har:products"] --> F["projects/demo-shop/har/staging/products.har<br/>+ products.har.json sidecar"]
-  F --> P["automax har replay --strict<br/>AUTOMAX_OFFLINE=1"]
+  R["sdods har record -t @har:products"] --> F["projects/demo-shop/har/staging/products.har<br/>+ products.har.json sidecar"]
+  F --> P["sdods har replay --strict<br/>SDODS_OFFLINE=1"]
   P --> CI["CI runs with no network"]
 ```
 
@@ -33,18 +33,18 @@ Scenario: Products render from recorded traffic
 ```
 
 ```bash
-bun run automax har record -p demo-shop -e staging -t @har:products     # update mode
-bun run automax har replay -p demo-shop -e staging --strict              # abort on any request not in the file
-bun run automax har list -p demo-shop
+bun run sdods har record -p demo-shop -e staging -t @har:products     # update mode
+bun run sdods har replay -p demo-shop -e staging --strict              # abort on any request not in the file
+bun run sdods har list -p demo-shop
 ```
 
-| Mode   | `AUTOMAX_HAR_MODE`                      | Behaviour                                                                        |
+| Mode   | `SDODS_HAR_MODE`                        | Behaviour                                                                        |
 | ------ | --------------------------------------- | -------------------------------------------------------------------------------- |
 | off    | `off`                                   | no HAR routing                                                                   |
 | update | `update`                                | requests go to the network and the file is rewritten                             |
 | replay | `replay` (default when the file exists) | responses come from the file; misses fall through unless `:strict` or `--strict` |
 
-`AUTOMAX_OFFLINE=1` additionally aborts every request the HAR does not answer, which is how CI proves a suite has no hidden network dependency.
+`SDODS_OFFLINE=1` additionally aborts every request the HAR does not answer, which is how CI proves a suite has no hidden network dependency.
 
 ## API layer
 

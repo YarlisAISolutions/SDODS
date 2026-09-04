@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import type { AutomaxDb } from '../src/create-db.js';
+import type { SdodsDb } from '../src/create-db.js';
 import { createDb } from '../src/create-db.js';
 import { migrateToLatest } from '../src/migrate.js';
 import { ensureProject } from '../src/repos/projects.js';
@@ -15,7 +15,7 @@ import { importRowsToTable, listTdTables, readTableRows, tdTableName } from '../
 import { testDb, tmpDir } from './helpers.js';
 
 describe('export / import / switch / prune', () => {
-  let adb: AutomaxDb;
+  let adb: SdodsDb;
   let projectId: string;
   beforeAll(async () => {
     adb = await testDb();
@@ -61,7 +61,7 @@ describe('export / import / switch / prune', () => {
   });
 
   it('round-trips through JSONL into a fresh sqlite database', async () => {
-    const dir = tmpDir('automax-export-');
+    const dir = tmpDir('sdods-export-');
     const exp = await exportAll(adb, dir);
     const runs = exp.tables.find((t) => t.table === 'runs')!;
     expect(runs.rows).toBe(3);
@@ -71,7 +71,7 @@ describe('export / import / switch / prune', () => {
 
     const target = createDb({
       driver: 'sqlite',
-      sqlitePath: join(tmpDir('automax-target-'), 'target.db'),
+      sqlitePath: join(tmpDir('sdods-target-'), 'target.db'),
     });
     try {
       await migrateToLatest(target);
@@ -89,7 +89,7 @@ describe('export / import / switch / prune', () => {
   });
 
   it('switchDriver copies, verifies and rewrites .env (sqlite → sqlite file)', async () => {
-    const envDir = tmpDir('automax-env-');
+    const envDir = tmpDir('sdods-env-');
     const envFile = join(envDir, '.env');
     writeFileSync(envFile, 'PORT=4444\nDB_DRIVER=sqlite\n# DATABASE_URL=postgres://old\n');
     const targetPath = join(envDir, 'switched.db');
@@ -144,15 +144,15 @@ describe('export / import / switch / prune', () => {
   });
 
   it('rewriteEnv switches to postgres and comments out the sqlite path', () => {
-    const envFile = join(tmpDir('automax-env2-'), '.env');
-    writeFileSync(envFile, 'DB_DRIVER=sqlite\nSQLITE_PATH=.automax/automax.db\n');
+    const envFile = join(tmpDir('sdods-env2-'), '.env');
+    writeFileSync(envFile, 'DB_DRIVER=sqlite\nSQLITE_PATH=.sdods/sdods.db\n');
     rewriteEnv(envFile, {
       driver: 'postgres',
-      databaseUrl: 'postgres://automax:automax@localhost:5432/automax',
+      databaseUrl: 'postgres://sdods:sdods@localhost:5432/sdods',
     });
     const env = readFileSync(envFile, 'utf8');
     expect(env).toContain('DB_DRIVER=postgres');
-    expect(env).toContain('DATABASE_URL=postgres://automax:automax@localhost:5432/automax');
+    expect(env).toContain('DATABASE_URL=postgres://sdods:sdods@localhost:5432/sdods');
   });
 
   it('prune keeps the newest runs', async () => {

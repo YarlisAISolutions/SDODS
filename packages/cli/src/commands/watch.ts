@@ -2,8 +2,8 @@ import { join } from 'node:path';
 import type { Command } from 'commander';
 import { execa, type ResultPromise } from 'execa';
 import pc from 'picocolors';
-import { newRunId } from '@automax/contracts';
-import { AutomaxError, listGeneratedProjects, normalizeTagExpr } from '@automax/core';
+import { newRunId } from '@sdods/contracts';
+import { SdodsError, listGeneratedProjects, normalizeTagExpr } from '@sdods/core';
 import { createContext } from '../context.js';
 import { collect, out } from '../ui.js';
 
@@ -19,7 +19,7 @@ interface WatchFlags {
 
 /**
  * `bddgen --watch` regenerates specs when features/steps change while Playwright UI mode
- * re-runs them. Both children share the same AUTOMAX_* environment that `automax run` uses.
+ * re-runs them. Both children share the same SDODS_* environment that `sdods run` uses.
  */
 export function register(program: Command) {
   program
@@ -41,13 +41,9 @@ export function register(program: Command) {
       const tags = normalizeTagExpr(flags.tags);
       for (const l of flags.layer) {
         if (!entry.config.layers.includes(l as (typeof entry.config.layers)[number])) {
-          throw new AutomaxError(
-            'CONFIG_INVALID',
-            `Layer "${l}" is not enabled for ${entry.slug}.`,
-            {
-              exitCode: 2,
-            },
-          );
+          throw new SdodsError('CONFIG_INVALID', `Layer "${l}" is not enabled for ${entry.slug}.`, {
+            exitCode: 2,
+          });
         }
       }
       const selection = {
@@ -60,19 +56,19 @@ export function register(program: Command) {
       };
       const childEnv: NodeJS.ProcessEnv = {
         ...process.env,
-        AUTOMAX_ROOT: ctx.rootDir,
-        AUTOMAX_PROJECT: entry.slug,
-        AUTOMAX_ENV: cfg.env.name,
-        AUTOMAX_TAGS: tags ?? '',
-        AUTOMAX_LAYERS: selection.layers?.join(',') ?? '',
-        AUTOMAX_BROWSERS: selection.browsers?.join(',') ?? '',
-        AUTOMAX_RUN_ID: cfg.runtime.runId,
-        AUTOMAX_REPORTER_MODE: 'quiet',
+        SDODS_ROOT: ctx.rootDir,
+        SDODS_PROJECT: entry.slug,
+        SDODS_ENV: cfg.env.name,
+        SDODS_TAGS: tags ?? '',
+        SDODS_LAYERS: selection.layers?.join(',') ?? '',
+        SDODS_BROWSERS: selection.browsers?.join(',') ?? '',
+        SDODS_RUN_ID: cfg.runtime.runId,
+        SDODS_REPORTER_MODE: 'quiet',
       };
       const configPath = join(ctx.rootDir, 'playwright.config.ts');
       const names = listGeneratedProjects(ctx.registry, selection).map((p) => p.name);
       if (!names.length) {
-        throw new AutomaxError(
+        throw new SdodsError(
           'CONFIG_INVALID',
           'Nothing to watch: no Playwright projects match the selection.',
           {
@@ -98,7 +94,7 @@ export function register(program: Command) {
         reject: false,
       });
       if (gen.exitCode !== 0) {
-        throw new AutomaxError('RUN_FAILED', 'bddgen failed; fix the errors above and retry.', {
+        throw new SdodsError('RUN_FAILED', 'bddgen failed; fix the errors above and retry.', {
           exitCode: 1,
         });
       }

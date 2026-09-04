@@ -28,7 +28,7 @@ export function ProjectsPage() {
       {projects.length === 0 && (
         <EmptyState
           title="No projects in this workspace"
-          hint="Create one here or run `automax project create <slug>` and set `workspace:` in its yaml."
+          hint="Create one here or run `sdods project create <slug>` and set `workspace:` in its yaml."
         />
       )}
       <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">

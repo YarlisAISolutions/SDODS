@@ -1,7 +1,7 @@
 import { z, type ZodRawShape } from 'zod';
-import { hasScope, isScope, scopeForToolAccess, type Scope } from '@automax/contracts';
+import { hasScope, isScope, scopeForToolAccess, type Scope } from '@sdods/contracts';
 
-export const DOCS_BASE_URL = 'https://automax.sdods.com';
+export const DOCS_BASE_URL = 'https://docs.sdods.com';
 
 export type ToolAccess = 'read' | 'run' | 'write';
 export type Capability = 'core' | 'analyze' | 'run' | 'data' | 'agents' | 'issues' | 'schedules';
@@ -59,7 +59,7 @@ export interface ToolResult {
   images?: Array<{ data: string; mimeType: string }>;
 }
 
-export interface AutomaxTool<S extends ZodRawShape = ZodRawShape> {
+export interface SdodsTool<S extends ZodRawShape = ZodRawShape> {
   name: string;
   title: string;
   description: string;
@@ -82,44 +82,44 @@ export interface McpToolResultShape {
   _meta?: Record<string, unknown>;
 }
 
-export function defineTool<S extends ZodRawShape>(tool: AutomaxTool<S>): AutomaxTool<S> {
+export function defineTool<S extends ZodRawShape>(tool: SdodsTool<S>): SdodsTool<S> {
   return tool;
 }
 
-export function requiredScope(tool: AutomaxTool<any>): Scope | null {
+export function requiredScope(tool: SdodsTool<any>): Scope | null {
   // agents has no read/write pair: run → agents:run, review/apply → agents:review
   if (tool.domain === 'agents') return tool.access === 'run' ? 'agents:run' : 'agents:review';
   return scopeForToolAccess(tool.access, tool.domain);
 }
 
 export class ToolRegistry {
-  private readonly tools = new Map<string, AutomaxTool<any>>();
+  private readonly tools = new Map<string, SdodsTool<any>>();
 
-  register<S extends ZodRawShape>(tool: AutomaxTool<S>): this {
+  register<S extends ZodRawShape>(tool: SdodsTool<S>): this {
     if (this.tools.has(tool.name)) throw new Error(`Tool already registered: ${tool.name}`);
     this.tools.set(tool.name, tool);
     return this;
   }
 
-  registerAll(tools: Array<AutomaxTool<any>>): this {
+  registerAll(tools: Array<SdodsTool<any>>): this {
     for (const t of tools) this.register(t);
     return this;
   }
 
-  get(name: string): AutomaxTool<any> | undefined {
+  get(name: string): SdodsTool<any> | undefined {
     return this.tools.get(name);
   }
 
-  all(): AutomaxTool<any>[] {
+  all(): SdodsTool<any>[] {
     return [...this.tools.values()];
   }
 
   /** Tools visible to a principal with the given capabilities (scope + capability gating). */
-  list(ctx: Pick<ToolContext, 'principal' | 'caps'>): AutomaxTool<any>[] {
+  list(ctx: Pick<ToolContext, 'principal' | 'caps'>): SdodsTool<any>[] {
     return this.all().filter((t) => this.isAllowed(t, ctx));
   }
 
-  isAllowed(tool: AutomaxTool<any>, ctx: Pick<ToolContext, 'principal' | 'caps'>): boolean {
+  isAllowed(tool: SdodsTool<any>, ctx: Pick<ToolContext, 'principal' | 'caps'>): boolean {
     if (!ctx.caps.has(tool.capability)) return false;
     const scope = requiredScope(tool);
     if (!scope) return true;
@@ -172,7 +172,7 @@ export class ToolRegistry {
   }
 }
 
-export function toMcpResult(tool: AutomaxTool<any>, result: ToolResult): McpToolResultShape {
+export function toMcpResult(tool: SdodsTool<any>, result: ToolResult): McpToolResultShape {
   const content: McpToolResultShape['content'] = [{ type: 'text', text: result.text }];
   for (const img of result.images ?? [])
     content.push({ type: 'image', data: img.data, mimeType: img.mimeType });

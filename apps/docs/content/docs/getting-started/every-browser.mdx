@@ -4,9 +4,8 @@ description: Run a project across Chromium, Firefox, WebKit and mobile emulation
 ---
 
 <Learn>
-  Which browsers AutoMax supports, how the project YAML declares them, how `-b` and
-  `--project-matrix` select them, and how to exclude a scenario from one engine without hiding the
-  exclusion in code.
+  Which browsers SDODS supports, how the project YAML declares them, how `-b` and `--project-matrix`
+  select them, and how to exclude a scenario from one engine without hiding the exclusion in code.
 </Learn>
 
 ## Supported browsers
@@ -28,9 +27,9 @@ browsers: [chromium, firefox, webkit]
 ```
 
 ```bash
-bun run automax run -p demo-shop -l ui -b chromium
-bun run automax run -p demo-shop -l ui -b firefox -b webkit
-bun run automax run -p demo-shop -l ui --list          # prints the generated Playwright project names
+bun run sdods run -p demo-shop -l ui -b chromium
+bun run sdods run -p demo-shop -l ui -b firefox -b webkit
+bun run sdods run -p demo-shop -l ui --list          # prints the generated Playwright project names
 ```
 
 Each browser becomes a Playwright project named `demo-shop--ui--<browser>`. Generation happens once per layer; browsers share the generated spec files.
@@ -38,7 +37,7 @@ Each browser becomes a Playwright project named `demo-shop--ui--<browser>`. Gene
 ## The whole matrix
 
 ```bash
-bun run automax run -p demo-shop --project-matrix -t @smoke
+bun run sdods run -p demo-shop --project-matrix -t @smoke
 ```
 
 ## Exclude a scenario from one engine
@@ -48,7 +47,7 @@ bun run automax run -p demo-shop --project-matrix -t @smoke
 Scenario: Uses a Chromium-only DevTools feature
 ```
 
-`@skip:<browser>` is validated by `automax lint` and applied by a hook. Do not branch inside steps on the browser name; the exclusion stays visible in the feature and in reports.
+`@skip:<browser>` is validated by `sdods lint` and applied by a hook. Do not branch inside steps on the browser name; the exclusion stays visible in the feature and in reports.
 
 ## Continuous integration
 

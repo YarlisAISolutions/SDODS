@@ -1,6 +1,6 @@
 export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://sdods.com';
-export const DOCS_URL = 'https://automax.sdods.com';
-export const REPO_URL = 'https://github.com/siri1410/AutoMax';
+export const DOCS_URL = 'https://docs.sdods.com';
+export const REPO_URL = 'https://github.com/siri1410/SDODS';
 export const DISCUSSIONS_URL = `${REPO_URL}/discussions`;
 export const IDEAS_URL = `${REPO_URL}/discussions/categories/ideas`;
 export const GENERAL_URL = `${REPO_URL}/discussions/categories/general`;
@@ -33,7 +33,7 @@ export function issueUrl(kind: FeedbackKind, fields: Record<string, string> = {}
 }
 
 export function mailtoUrl(kind: FeedbackKind, subject: string, body: string): string {
-  const s = encodeURIComponent(`[AutoMax ${kind}] ${subject || ''}`.trim());
+  const s = encodeURIComponent(`[SDODS ${kind}] ${subject || ''}`.trim());
   const b = encodeURIComponent(body);
   return `mailto:${FEEDBACK_EMAIL}?subject=${s}&body=${b}`;
 }

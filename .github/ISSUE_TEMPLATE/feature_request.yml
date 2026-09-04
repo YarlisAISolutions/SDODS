@@ -1,13 +1,13 @@
 name: Feature request
-description: Ask for a new AutoMax capability or an improvement to an existing one.
+description: Ask for a new SDODS capability or an improvement to an existing one.
 title: '[Feature] '
 labels: ['enhancement', 'triage']
 body:
   - type: markdown
     attributes:
       value: |
-        Thanks for helping shape AutoMax. Tell us about the problem first; the solution can come later.
-        Not sure yet? Start in [Discussions → Ideas](https://github.com/siri1410/AutoMax/discussions/categories/ideas).
+        Thanks for helping shape SDODS. Tell us about the problem first; the solution can come later.
+        Not sure yet? Start in [Discussions → Ideas](https://github.com/siri1410/SDODS/discussions/categories/ideas).
   - type: textarea
     id: problem
     attributes:
@@ -57,10 +57,10 @@ body:
     validations:
       required: true
   - type: input
-    id: automax-version
+    id: sdods-version
     attributes:
-      label: AutoMax version
-      description: From `automax --version` (or "web ui" if you came from the app).
+      label: SDODS version
+      description: From `sdods --version` (or "web ui" if you came from the app).
   - type: checkboxes
     id: contribute
     attributes:

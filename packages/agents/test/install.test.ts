@@ -9,7 +9,7 @@ import {
 } from '../src/claude-code/install.js';
 
 function tempRepo(): string {
-  const root = mkdtempSync(join(tmpdir(), 'automax-install-'));
+  const root = mkdtempSync(join(tmpdir(), 'sdods-install-'));
   mkdirSync(join(root, 'projects'), { recursive: true });
   return root;
 }
@@ -21,8 +21,8 @@ describe('agent install --for claude|codex|all', () => {
     const rel = written.map((w) => w.replace(root + '/', ''));
     expect(rel).toEqual(
       expect.arrayContaining([
-        '.claude/agents/automax-planner.md',
-        '.claude/agents/automax-healer.md',
+        '.claude/agents/sdods-planner.md',
+        '.claude/agents/sdods-healer.md',
         'CLAUDE.md',
         'AGENTS.md',
         'AGENT.md',
@@ -32,10 +32,10 @@ describe('agent install --for claude|codex|all', () => {
     expect(existsSync(join(root, '.mcp.json'))).toBe(false); // MCP registration is the CLI's job
     const claudeMd = readFileSync(join(root, 'CLAUDE.md'), 'utf8');
     expect(claudeMd).toContain('AGENT.md');
-    expect(claudeMd).toContain('automax lint -p shop -e staging');
+    expect(claudeMd).toContain('sdods lint -p shop -e staging');
     const agentsMd = readFileSync(join(root, 'AGENTS.md'), 'utf8');
-    expect(agentsMd).toContain('### automax-generator');
-    expect(agentsMd).toContain('automax mcp install codex');
+    expect(agentsMd).toContain('### sdods-generator');
+    expect(agentsMd).toContain('sdods mcp install codex');
     expect(agentsMd).toContain('~/.codex/config.toml');
     // idempotent
     expect(installCodingAgents(root, { for: 'all' })).toEqual([]);
@@ -51,6 +51,6 @@ describe('agent install --for claude|codex|all', () => {
 
   it('content generators mention the wording rule and the conventions', () => {
     expect(claudeMdContent()).toContain('automation platform with a reusable architecture');
-    expect(agentsMdContent({ project: 'p' })).toContain('automax run -p p -l api');
+    expect(agentsMdContent({ project: 'p' })).toContain('sdods run -p p -l api');
   });
 });

@@ -25,7 +25,7 @@ export const IGNORED_DIRS = new Set([
   'venv',
   '.idea',
   '.vscode',
-  '.automax',
+  '.sdods',
   '.features-gen',
   'playwright-report',
   'test-results',
@@ -84,7 +84,7 @@ export interface ScannedFile {
 
 /**
  * Cheap file index over an application repository with lazy, cached reads.
- * Bounded by file count, size and depth so `automax analyze` stays fast on large monorepos.
+ * Bounded by file count, size and depth so `sdods analyze` stays fast on large monorepos.
  */
 export class Scan {
   readonly root: string;

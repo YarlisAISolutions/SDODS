@@ -39,7 +39,7 @@ export function Mermaid({ chart }: { chart: string }) {
 
   return (
     <div
-      className="automax-mermaid my-6 overflow-x-auto"
+      className="sdods-mermaid my-6 overflow-x-auto"
       ref={containerRef}
       dangerouslySetInnerHTML={{ __html: svg }}
     />

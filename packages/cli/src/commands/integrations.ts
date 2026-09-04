@@ -2,13 +2,13 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Command } from 'commander';
 import pc from 'picocolors';
-import { AutomaxError, DEFAULT_ARTIFACTS_DIR, Logger } from '@automax/core';
+import { SdodsError, DEFAULT_ARTIFACTS_DIR, Logger } from '@sdods/core';
 import { createContext } from '../context.js';
 import { json, ok, out, table, warn } from '../ui.js';
 
-const LINKS_FILE = ['.automax', 'issue-links.json'] as const;
+const LINKS_FILE = ['.sdods', 'issue-links.json'] as const;
 
-/** `automax integrations test|notify|sync|links` — GitHub and Jira without the server or a database. */
+/** `sdods integrations test|notify|sync|links` — GitHub and Jira without the server or a database. */
 export function register(program: Command) {
   const cmd = program
     .command('integrations')
@@ -22,7 +22,7 @@ export function register(program: Command) {
     .action(async (opts, c) => {
       const ctx = createContext(c);
       const entry = ctx.registry.entry(opts.project);
-      const { getProviders } = await import('@automax/integrations');
+      const { getProviders } = await import('@sdods/integrations');
       const providers = await getProviders(entry.config, {
         only: opts.provider ? [opts.provider] : undefined,
         projectRoot: entry.root,
@@ -34,7 +34,7 @@ export function register(program: Command) {
             provider: p.name,
             enabled: false,
             ok: '-',
-            detail: 'disabled in automax.project.yaml',
+            detail: 'disabled in sdods.project.yaml',
             secrets: fmtSecrets(p.secrets),
           });
           continue;
@@ -91,12 +91,12 @@ export function register(program: Command) {
         getProviders,
         createIntegrationContext,
         FileIssueLinkStore,
-      } = await import('@automax/integrations');
+      } = await import('@sdods/integrations');
       const artifactsRoot = join(ctx.rootDir, opts.artifactsDir);
       const runDir = join(artifactsRoot, opts.runId);
       if (!existsSync(runDir)) {
-        throw new AutomaxError('RUN_FAILED', `Run directory not found: ${runDir}`, {
-          hint: 'Pass --artifacts-dir or check the run id (automax report --last).',
+        throw new SdodsError('RUN_FAILED', `Run directory not found: ${runDir}`, {
+          hint: 'Pass --artifacts-dir or check the run id (sdods report --last).',
           exitCode: 2,
         });
       }
@@ -165,8 +165,8 @@ export function register(program: Command) {
     .action(async (opts, c) => {
       const ctx = createContext(c);
       const entry = ctx.registry.entry(opts.project);
-      const { getProviders, FileIssueLinkStore } = await import('@automax/integrations');
-      const { fingerprint } = await import('@automax/contracts');
+      const { getProviders, FileIssueLinkStore } = await import('@sdods/integrations');
+      const { fingerprint } = await import('@sdods/contracts');
       const store = new FileIssueLinkStore(join(ctx.rootDir, ...LINKS_FILE));
       const providers = await getProviders(entry.config, {
         only: opts.provider ? [opts.provider] : undefined,
@@ -246,7 +246,7 @@ export function register(program: Command) {
     .action(async (opts, c) => {
       const ctx = createContext(c);
       ctx.registry.entry(opts.project);
-      const { FileIssueLinkStore } = await import('@automax/integrations');
+      const { FileIssueLinkStore } = await import('@sdods/integrations');
       const store = new FileIssueLinkStore(join(ctx.rootDir, ...LINKS_FILE));
       const links = await store.list(opts.project, opts.provider);
       if (ctx.opts.json) return json(links);

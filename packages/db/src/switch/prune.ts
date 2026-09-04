@@ -1,7 +1,7 @@
 import { existsSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { sql } from 'kysely';
-import type { AutomaxDb } from '../create-db.js';
+import type { SdodsDb } from '../create-db.js';
 import { deleteRun } from '../repos/runs.js';
 
 export interface PruneOptions {
@@ -18,7 +18,7 @@ export interface PruneResult {
 }
 
 /** Delete old runs (and their artifact directories) beyond `keepRuns` per project or older than `keepDays`. */
-export async function prune(adb: AutomaxDb, opts: PruneOptions): Promise<PruneResult> {
+export async function prune(adb: SdodsDb, opts: PruneOptions): Promise<PruneResult> {
   const { db } = adb;
   let q = db
     .selectFrom('runs')

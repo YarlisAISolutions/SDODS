@@ -4,13 +4,13 @@ import type {
   ProcessConfig,
   ProjectConfig,
   WorkspaceFile,
-} from '@automax/contracts/schemas';
+} from '@sdods/contracts/schemas';
 import {
   effectiveWorkspaceRole,
   type OrgRole,
   type Role,
   type WorkspaceRole,
-} from '@automax/contracts/scopes';
+} from '@sdods/contracts/scopes';
 import { enc, nowIso, readBool, readJson, readTs } from '../col.js';
 import type { Driver } from '../driver.js';
 import { newId } from '../ids.js';

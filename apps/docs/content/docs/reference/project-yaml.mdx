@@ -1,14 +1,14 @@
 ---
-title: automax.project.yaml and automax.workspace.yaml
+title: sdods.project.yaml and sdods.workspace.yaml
 description: Field-by-field reference for the project file and the workspace file.
 ---
 
 <Learn>
-  Every field of `automax.project.yaml` and of the root `automax.workspace.yaml`, its type, default
-  and purpose, derived from the Zod schemas in `@automax/contracts`.
+  Every field of `sdods.project.yaml` and of the root `sdods.workspace.yaml`, its type, default and
+  purpose, derived from the Zod schemas in `@sdods/contracts`.
 </Learn>
 
-## automax.project.yaml
+## sdods.project.yaml
 
 ### Identity and hierarchy
 
@@ -204,7 +204,7 @@ description: Field-by-field reference for the project file and the workspace fil
       type: 'boolean',
       default: 'true',
       description:
-        'false excludes the project from the generic CI browser matrix (`automax project list --matrix`); use a dedicated job instead, as projects/automax-web does with `bun run dogfood`.',
+        'false excludes the project from the generic CI browser matrix (`sdods project list --matrix`); use a dedicated job instead, as projects/sdods-web does with `bun run dogfood`.',
     },
     'ci.env': {
       type: 'string',
@@ -266,7 +266,7 @@ retries: { ci: 2, local: 0, byTag: { '@flaky': 2 } }
 perf: { budgets: { pageLoadMs: 4000, lcpMs: 3000, apiP95Ms: 1500 } }
 ```
 
-## automax.workspace.yaml
+## sdods.workspace.yaml
 
 The root file names the organization and workspace every project in the repository belongs to and holds defaults.
 
@@ -292,8 +292,8 @@ The root file names the organization and workspace every project in the reposito
 />
 
 ```yaml
-organization: { slug: automax, name: AutoMax, url: https://github.com/siri1410/AutoMax }
-workspace: { slug: default, name: Default workspace, organization: automax }
+organization: { slug: sdods, name: SDODS, url: https://github.com/siri1410/SDODS }
+workspace: { slug: default, name: Default workspace, organization: sdods }
 defaults:
   browsers: [chromium, firefox, webkit]
   suites: [smoke, regression, sanity]

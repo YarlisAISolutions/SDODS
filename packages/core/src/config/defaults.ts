@@ -1,4 +1,4 @@
-import type { ProjectConfigInput } from '@automax/contracts';
+import type { ProjectConfigInput } from '@sdods/contracts';
 
 /** Framework defaults: only the sections that make sense without a project. */
 export const FRAMEWORK_DEFAULTS: Partial<ProjectConfigInput> = {
@@ -23,23 +23,23 @@ export const FRAMEWORK_DEFAULTS: Partial<ProjectConfigInput> = {
 
 /** Environment variables that map onto config paths (process.env layer). */
 export const ENV_TO_CONFIG_PATH: Record<string, string> = {
-  AUTOMAX_UI_BASE_URL: 'env.ui.baseUrl',
-  AUTOMAX_API_BASE_URL: 'env.api.baseUrl',
-  AUTOMAX_HEADED: 'runtime.headed',
-  AUTOMAX_WORKERS: 'runtime.workers',
-  AUTOMAX_SHARD: 'runtime.shard',
-  AUTOMAX_RETRIES: 'runtime.retries',
-  AUTOMAX_RUN_ID: 'runtime.runId',
-  AUTOMAX_ARTIFACTS_DIR: 'runtime.artifactsDir',
-  AUTOMAX_SHOT_POLICY: 'project.screenshots.policy.default',
-  AUTOMAX_SHOTS_ONLY_ON_FAILURE: 'project.screenshots.onlyOnFailure',
-  AUTOMAX_HEAL: 'project.heal.enabled',
-  AUTOMAX_HAR_MODE: 'runtime.harMode',
-  AUTOMAX_OFFLINE: 'runtime.offline',
-  AUTOMAX_UPDATE_SNAPSHOTS: 'runtime.updateSnapshots',
+  SDODS_UI_BASE_URL: 'env.ui.baseUrl',
+  SDODS_API_BASE_URL: 'env.api.baseUrl',
+  SDODS_HEADED: 'runtime.headed',
+  SDODS_WORKERS: 'runtime.workers',
+  SDODS_SHARD: 'runtime.shard',
+  SDODS_RETRIES: 'runtime.retries',
+  SDODS_RUN_ID: 'runtime.runId',
+  SDODS_ARTIFACTS_DIR: 'runtime.artifactsDir',
+  SDODS_SHOT_POLICY: 'project.screenshots.policy.default',
+  SDODS_SHOTS_ONLY_ON_FAILURE: 'project.screenshots.onlyOnFailure',
+  SDODS_HEAL: 'project.heal.enabled',
+  SDODS_HAR_MODE: 'runtime.harMode',
+  SDODS_OFFLINE: 'runtime.offline',
+  SDODS_UPDATE_SNAPSHOTS: 'runtime.updateSnapshots',
 };
 
-export const DEFAULT_ARTIFACTS_DIR = '.automax/runs';
+export const DEFAULT_ARTIFACTS_DIR = '.sdods/runs';
 export const DEFAULT_PROJECTS_DIR = 'projects';
-export const PROJECT_FILE = 'automax.project.yaml';
-export const WORKSPACE_FILE = 'automax.workspace.yaml';
+export const PROJECT_FILE = 'sdods.project.yaml';
+export const WORKSPACE_FILE = 'sdods.workspace.yaml';

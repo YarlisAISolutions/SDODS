@@ -7,32 +7,32 @@ import { AfterScenario, AfterStep, BeforeScenario, BeforeStep } from '../fixture
 const UI = '@ui or @hybrid';
 
 /** `@skip:<browser>`: per-browser exclusion validated by lint, applied here for every layer. */
-BeforeScenario({ name: 'automax:skip-browser' }, async ({ automax, $tags, $testInfo }) => {
+BeforeScenario({ name: 'sdods:skip-browser' }, async ({ sdods, $tags, $testInfo }) => {
   const skips = $tags.filter((t) => t.startsWith('@skip:')).map((t) => t.slice('@skip:'.length));
-  if (automax.browser && skips.includes(automax.browser)) {
-    $testInfo.skip(true, `skipped on ${automax.browser} by @skip:${automax.browser}`);
+  if (sdods.browser && skips.includes(sdods.browser)) {
+    $testInfo.skip(true, `skipped on ${sdods.browser} by @skip:${sdods.browser}`);
   }
 });
 
-BeforeScenario({ name: 'automax:shots:start', tags: UI }, async ({ shots }) => {
+BeforeScenario({ name: 'sdods:shots:start', tags: UI }, async ({ shots }) => {
   await shots.scenarioStart();
 });
 
-BeforeStep({ name: 'automax:shots:before', tags: UI }, async ({ shots, $bddContext }) => {
+BeforeStep({ name: 'sdods:shots:before', tags: UI }, async ({ shots, $bddContext }) => {
   await shots.beforeStep($bddContext.stepIndex, $bddContext.step.title);
 });
 
-AfterStep({ name: 'automax:shots:after', tags: UI }, async ({ shots, $bddContext }) => {
+AfterStep({ name: 'sdods:shots:after', tags: UI }, async ({ shots, $bddContext }) => {
   await shots.afterStep($bddContext.stepIndex, $bddContext.step.title);
 });
 
-AfterScenario({ name: 'automax:shots:end', tags: UI }, async ({ shots, $testInfo }) => {
+AfterScenario({ name: 'sdods:shots:end', tags: UI }, async ({ shots, $testInfo }) => {
   if ($testInfo.status && $testInfo.status !== 'passed' && $testInfo.status !== 'skipped')
     await shots.failure();
   await shots.scenarioEnd();
 });
 
-AfterScenario({ name: 'automax:finalize' }, async ({ scenario, apiContext, heal, $testInfo }) => {
+AfterScenario({ name: 'sdods:finalize' }, async ({ scenario, apiContext, heal, $testInfo }) => {
   scenario.finalize({
     status: ($testInfo.status as any) ?? 'unknown',
     errorMessage: $testInfo.error?.message,

@@ -1,9 +1,8 @@
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { CONVENTIONS, ROLE_PROMPTS, installClientConfig, type RoleName } from '@automax/mcp';
+import { CONVENTIONS, ROLE_PROMPTS, installClientConfig, type RoleName } from '@sdods/mcp';
 
-const TAGLINE =
-  'AutoMax is an automation platform with a reusable architecture built on Playwright.';
+const TAGLINE = 'SDODS is an automation platform with a reusable architecture built on Playwright.';
 
 export type CodingAgentTarget = 'claude' | 'codex' | 'all';
 
@@ -12,7 +11,7 @@ export interface InstallCodingAgentsOptions {
   project?: string;
   env?: string;
   force?: boolean;
-  /** also write `.mcp.json` for Claude Code (the CLI normally registers MCP via `automax mcp install`) */
+  /** also write `.mcp.json` for Claude Code (the CLI normally registers MCP via `sdods mcp install`) */
   mcp?: boolean;
 }
 
@@ -29,8 +28,8 @@ function roleUse(role: RoleName): string {
 }
 
 /**
- * Set up coding-agent CLIs for an AutoMax repo:
- * - Claude Code: `.claude/agents/automax-<role>.md` (one subagent per role) + `CLAUDE.md`
+ * Set up coding-agent CLIs for an SDODS repo:
+ * - Claude Code: `.claude/agents/sdods-<role>.md` (one subagent per role) + `CLAUDE.md`
  * - Codex: `AGENTS.md` (Codex reads it as project instructions; roles become sections)
  * - both: `AGENT.md` and `SKILL.md` with the conventions
  * Returns the paths written. Existing files are kept unless `force`.
@@ -53,8 +52,8 @@ export function installCodingAgents(
     for (const role of Object.keys(ROLE_PROMPTS) as RoleName[]) {
       const p = ROLE_PROMPTS[role];
       writeIfMissing(
-        join(agentsDir, `automax-${role}.md`),
-        `---\nname: automax-${role}\ndescription: ${p.description} Use when the user asks AutoMax to ${roleUse(role)}.\ntools: Read, Glob, Grep, mcp__automax__*, mcp__playwright__*\n---\n\n${CONVENTIONS}\n\n${p.body}\n`,
+        join(agentsDir, `sdods-${role}.md`),
+        `---\nname: sdods-${role}\ndescription: ${p.description} Use when the user asks SDODS to ${roleUse(role)}.\ntools: Read, Glob, Grep, mcp__sdods__*, mcp__playwright__*\n---\n\n${CONVENTIONS}\n\n${p.body}\n`,
       );
     }
     writeIfMissing(join(rootDir, 'CLAUDE.md'), claudeMdContent(opts));
@@ -62,7 +61,7 @@ export function installCodingAgents(
       const mcp = installClientConfig(rootDir, 'claude', {
         project: opts.project,
         env: opts.env,
-        args: ['automax', 'mcp'],
+        args: ['sdods', 'mcp'],
       });
       written.push(mcp.file);
     }
@@ -89,16 +88,16 @@ function projectFlags(opts: { project?: string; env?: string }): string {
 
 /** CLAUDE.md: what Claude Code loads automatically. Short pointer plus the rules that matter. */
 export function claudeMdContent(opts: { project?: string; env?: string } = {}): string {
-  return `# CLAUDE.md — AutoMax
+  return `# CLAUDE.md — SDODS
 
 ${TAGLINE} Read \`AGENT.md\` for the mental model and \`SKILL.md\` for the command reference.
 
 ## Working in this repo
 
-- Use the AutoMax MCP server (\`automax mcp\`) for anything about projects, features, steps, runs and results — it is registered in \`.mcp.json\` (\`automax mcp install claude\` re-registers it).
-- Subagents live in \`.claude/agents/automax-*.md\`: planner, generator, healer, upgrader, reviewer. Delegate matching requests to them.
-- Never edit features/steps/pages directly when acting as an AutoMax agent: write a proposal (\`write_proposal\` / \`feature_write\`) and let a person accept it with \`automax proposals accept <id>\`.
-- Verify with \`automax lint${projectFlags(opts)}\` and \`automax run${projectFlags(opts)} -l api\` / \`-l ui -b chromium -t @smoke\` before claiming done.
+- Use the SDODS MCP server (\`sdods mcp\`) for anything about projects, features, steps, runs and results — it is registered in \`.mcp.json\` (\`sdods mcp install claude\` re-registers it).
+- Subagents live in \`.claude/agents/sdods-*.md\`: planner, generator, healer, upgrader, reviewer. Delegate matching requests to them.
+- Never edit features/steps/pages directly when acting as an SDODS agent: write a proposal (\`write_proposal\` / \`feature_write\`) and let a person accept it with \`sdods proposals accept <id>\`.
+- Verify with \`sdods lint${projectFlags(opts)}\` and \`sdods run${projectFlags(opts)} -l api\` / \`-l ui -b chromium -t @smoke\` before claiming done.
 
 ## Rules
 
@@ -111,18 +110,18 @@ export function agentsMdContent(opts: { project?: string; env?: string } = {}): 
   const roles = (Object.keys(ROLE_PROMPTS) as RoleName[])
     .map(
       (role) =>
-        `### automax-${role}\n\n${ROLE_PROMPTS[role].description}\n\n${ROLE_PROMPTS[role].body}`,
+        `### sdods-${role}\n\n${ROLE_PROMPTS[role].description}\n\n${ROLE_PROMPTS[role].body}`,
     )
     .join('\n\n');
-  return `# AGENTS.md — AutoMax instructions for Codex
+  return `# AGENTS.md — SDODS instructions for Codex
 
 ${TAGLINE} This file is read by the OpenAI Codex CLI. \`AGENT.md\` holds the mental model and \`SKILL.md\` the command reference.
 
 ## Tools
 
-- The AutoMax MCP server is registered as \`automax\` (\`automax mcp install codex\` re-registers it in \`~/.codex/config.toml\`); use its tools for projects, features, steps, runs, results, proposals.
+- The SDODS MCP server is registered as \`sdods\` (\`sdods mcp install codex\` re-registers it in \`~/.codex/config.toml\`); use its tools for projects, features, steps, runs, results, proposals.
 - The bundled Playwright MCP server is registered as \`playwright\` for driving a browser.
-- Commands: \`automax lint${projectFlags(opts)}\`, \`automax run${projectFlags(opts)} -l api\`, \`automax run${projectFlags(opts)} -l ui -b chromium -t @smoke\`, \`automax steps list${projectFlags(opts)}\`, \`automax proposals list|show|accept\`.
+- Commands: \`sdods lint${projectFlags(opts)}\`, \`sdods run${projectFlags(opts)} -l api\`, \`sdods run${projectFlags(opts)} -l ui -b chromium -t @smoke\`, \`sdods steps list${projectFlags(opts)}\`, \`sdods proposals list|show|accept\`.
 
 ## Rules
 
@@ -137,17 +136,17 @@ ${roles}
 }
 
 export function agentMdContent(): string {
-  return `# AGENT.md — AutoMax for coding agents
+  return `# AGENT.md — SDODS for coding agents
 
 ${TAGLINE} This file orients an AI coding assistant working in this repository.
 
 ## Mental model
 
-- **Hierarchy**: organization → workspace(s) → project (\`projects/<slug>\`) → module (\`features/<module>/\`). \`automax.workspace.yaml\` at the root names the org and workspaces; each project has \`automax.project.yaml\` and \`envs/<env>.yaml\`.
-- **Layers**: \`@ui\`, \`@api\`, \`@hybrid\` scenarios share ONE merged Playwright/BDD fixture set (\`@automax/core/fixtures\`). A scenario can seed through the API and assert in the browser.
-- **Processes**: named run recipes (pr-check, nightly-regression, release-gate). \`automax run --process <name>\`.
-- **Everything is CLI-first**: \`automax run\`, \`lint\`, \`steps list\`, \`features list\`, \`report\`, \`heal report\`, \`record\`, \`har\`, \`db\`, \`mcp\`, \`agent\`, \`proposals\`, \`serve\`.
-- **Agents never edit the working tree**; they write proposals under \`proposals/<id>/\` that a person accepts with \`automax proposals accept <id>\`.
+- **Hierarchy**: organization → workspace(s) → project (\`projects/<slug>\`) → module (\`features/<module>/\`). \`sdods.workspace.yaml\` at the root names the org and workspaces; each project has \`sdods.project.yaml\` and \`envs/<env>.yaml\`.
+- **Layers**: \`@ui\`, \`@api\`, \`@hybrid\` scenarios share ONE merged Playwright/BDD fixture set (\`@sdods/core/fixtures\`). A scenario can seed through the API and assert in the browser.
+- **Processes**: named run recipes (pr-check, nightly-regression, release-gate). \`sdods run --process <name>\`.
+- **Everything is CLI-first**: \`sdods run\`, \`lint\`, \`steps list\`, \`features list\`, \`report\`, \`heal report\`, \`record\`, \`har\`, \`db\`, \`mcp\`, \`agent\`, \`proposals\`, \`serve\`.
+- **Agents never edit the working tree**; they write proposals under \`proposals/<id>/\` that a person accepts with \`sdods proposals accept <id>\`.
 
 ## Conventions
 
@@ -159,7 +158,7 @@ ${CONVENTIONS.split('\n').slice(3).join('\n')}
 |---|---|
 | \`packages/contracts\` | schemas, ids, attachment names, scopes (leaf package) |
 | \`packages/core\` | config precedence, registry, fixtures, step library, data, screenshots, heal, recorder, lint, analyze |
-| \`packages/cli\` | the \`automax\` command |
+| \`packages/cli\` | the \`sdods\` command |
 | \`packages/db\` | Kysely, SQLite ⇄ Postgres, ingest, insights |
 | \`packages/mcp\` | tool registry, MCP server (stdio + HTTP), proposals, prompts |
 | \`packages/agents\` | LLM adapters, roles, jobs |
@@ -171,34 +170,34 @@ ${CONVENTIONS.split('\n').slice(3).join('\n')}
 
 \`\`\`bash
 bun run typecheck && bun run lint && bun run test
-bun run automax lint -p <slug>
-bun run automax run -p <slug> -e <env> -l api
-bun run automax run -p <slug> -e <env> -l ui -b chromium -t @smoke
+bun run sdods lint -p <slug>
+bun run sdods run -p <slug> -e <env> -l api
+bun run sdods run -p <slug> -e <env> -l ui -b chromium -t @smoke
 \`\`\`
 `;
 }
 
 export function skillMdContent(): string {
   return `---
-name: automax
-description: Work inside an AutoMax repository — an automation platform with a reusable architecture built on Playwright. Use for writing or fixing Gherkin features, page objects, step definitions, project/env yaml, running suites, reading results, and driving the automax CLI or MCP tools.
+name: sdods
+description: Work inside an SDODS repository — an automation platform with a reusable architecture built on Playwright. Use for writing or fixing Gherkin features, page objects, step definitions, project/env yaml, running suites, reading results, and driving the sdods CLI or MCP tools.
 ---
 
-# AutoMax skill
+# SDODS skill
 
 ## Quick reference
 
 | Task | Command |
 |---|---|
-| See projects / hierarchy | \`automax project list\`, \`automax workspace tree\` |
-| Resolve config with provenance | \`automax config show -p <slug> -e <env> --explain\` |
-| Validate features | \`automax lint -p <slug>\` |
-| Run a slice | \`automax run -p <slug> -e <env> -l api\` · \`-l ui -b chromium -t @smoke\` · \`--process pr-check\` |
-| Results | \`automax report --last\`, \`automax heal report --last\` |
-| Steps available | \`automax steps list -p <slug>\` |
-| Record / replay | \`automax record -p <slug> -e <env> --user <role> --name <name>\`, \`automax har replay --strict\` |
-| Agents | \`automax agent plan|generate|heal|upgrade|review -p <slug> [--dry-run]\`, \`automax proposals list|show|accept|reject\` |
-| MCP | \`automax mcp --project <slug>\`, \`automax mcp install claude\` |
+| See projects / hierarchy | \`sdods project list\`, \`sdods workspace tree\` |
+| Resolve config with provenance | \`sdods config show -p <slug> -e <env> --explain\` |
+| Validate features | \`sdods lint -p <slug>\` |
+| Run a slice | \`sdods run -p <slug> -e <env> -l api\` · \`-l ui -b chromium -t @smoke\` · \`--process pr-check\` |
+| Results | \`sdods report --last\`, \`sdods heal report --last\` |
+| Steps available | \`sdods steps list -p <slug>\` |
+| Record / replay | \`sdods record -p <slug> -e <env> --user <role> --name <name>\`, \`sdods har replay --strict\` |
+| Agents | \`sdods agent plan|generate|heal|upgrade|review -p <slug> [--dry-run]\`, \`sdods proposals list|show|accept|reject\` |
+| MCP | \`sdods mcp --project <slug>\`, \`sdods mcp install claude\` |
 
 ## Rules
 
@@ -208,8 +207,8 @@ ${CONVENTIONS.split('\n').slice(3).join('\n')}
 
 1. Pick the module directory under \`features/\` and the module tag.
 2. Tag the Feature: one layer (\`@ui|@api|@hybrid\`) + one suite (\`@smoke|@regression|@sanity\`).
-3. Reuse steps from \`automax steps list\`; add project steps in \`steps/<module>.steps.ts\` only when needed.
+3. Reuse steps from \`sdods steps list\`; add project steps in \`steps/<module>.steps.ts\` only when needed.
 4. Data through datasets (\`Given I load dataset "users" row 1\`) or \`@user:<role>\`; never literal secrets.
-5. \`automax lint -p <slug>\` then run the scenario; check before/after screenshots in \`.automax/runs/<runId>/\`.
+5. \`sdods lint -p <slug>\` then run the scenario; check before/after screenshots in \`.sdods/runs/<runId>/\`.
 `;
 }

@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import { NodeStreamableHTTPServerTransport } from '@modelcontextprotocol/node';
-import { buildAutomaxMcpServer, type BuildServerOptions } from '../server.js';
+import { buildSdodsMcpServer, type BuildServerOptions } from '../server.js';
 import type { Principal } from '../registry/registry.js';
 
 export type Authenticate = (
@@ -52,14 +52,14 @@ export function createMcpHttpHandler(opts: HttpTransportOptions = {}) {
     if (!principal) {
       res.writeHead(401, {
         'content-type': 'application/json',
-        'www-authenticate': 'Bearer realm="automax"',
+        'www-authenticate': 'Bearer realm="sdods"',
       });
       res.end(
         JSON.stringify({
           error: {
             code: 'AUTH_FAILED',
             message: 'A valid bearer token is required.',
-            hint: 'Create one with `automax tokens create` and pass Authorization: Bearer <token>.',
+            hint: 'Create one with `sdods tokens create` and pass Authorization: Bearer <token>.',
           },
         }),
       );
@@ -91,7 +91,7 @@ export function createMcpHttpHandler(opts: HttpTransportOptions = {}) {
         );
         return;
       }
-      const built = buildAutomaxMcpServer({ ...opts, principal: { ...principal, via: 'http' } });
+      const built = buildSdodsMcpServer({ ...opts, principal: { ...principal, via: 'http' } });
       const transport = new NodeStreamableHTTPServerTransport({
         sessionIdGenerator: () => randomUUID(),
         onsessioninitialized: (id: string) => {
@@ -129,8 +129,8 @@ export function createMcpHttpHandler(opts: HttpTransportOptions = {}) {
   };
 }
 
-/** Standalone HTTP server (`automax mcp --http --port 4001`). */
-export function serveAutomaxHttp(
+/** Standalone HTTP server (`sdods mcp --http --port 4001`). */
+export function serveSdodsHttp(
   opts: HttpTransportOptions & { port?: number; host?: string } = {},
 ): Promise<{ server: Server; port: number; close(): Promise<void> }> {
   const path = opts.path ?? '/mcp';

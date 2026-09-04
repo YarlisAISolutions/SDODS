@@ -1,10 +1,10 @@
 import fp from 'fastify-plugin';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { FastifyInstance } from 'fastify';
-import { resolveApiToken } from '@automax/db';
+import { resolveApiToken } from '@sdods/db';
 
 /**
- * Mounts the AutoMax MCP streamable-HTTP endpoint at /mcp using the transport from @automax/mcp.
+ * Mounts the SDODS MCP streamable-HTTP endpoint at /mcp using the transport from @sdods/mcp.
  * Bearer API tokens only (sessions are not accepted: MCP clients must use tokens).
  */
 export default fp(async function mcpPlugin(app: FastifyInstance) {
@@ -12,7 +12,7 @@ export default fp(async function mcpPlugin(app: FastifyInstance) {
     ((req: IncomingMessage, res: ServerResponse, body?: unknown) => Promise<void>) | null = null;
   let close: (() => Promise<void>) | null = null;
   try {
-    const mcp = await import('@automax/mcp');
+    const mcp = await import('@sdods/mcp');
     const created = mcp.createMcpHttpHandler({
       rootDir: app.config.rootDir,
       caps: 'all',

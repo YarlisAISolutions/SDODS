@@ -3,7 +3,7 @@ import { join, resolve as resolvePath } from 'node:path';
 import type { Command } from 'commander';
 import { execa } from 'execa';
 import pc from 'picocolors';
-import { AutomaxError, DEFAULT_ARTIFACTS_DIR } from '@automax/core';
+import { SdodsError, DEFAULT_ARTIFACTS_DIR } from '@sdods/core';
 import { createContext } from '../context.js';
 import { json, out, table } from '../ui.js';
 
@@ -63,24 +63,24 @@ export function register(program: Command) {
       if (zip) {
         const p = resolvePath(ctx.opts.cwd ?? process.cwd(), zip);
         if (!existsSync(p))
-          throw new AutomaxError('CONFIG_NOT_FOUND', `No such file: ${p}`, { exitCode: 2 });
+          throw new SdodsError('CONFIG_NOT_FOUND', `No such file: ${p}`, { exitCode: 2 });
         zips = statSync(p).isDirectory() ? findTraceZips(p) : [p];
         source = p;
       } else {
         const artifactsDir = resolvePath(
           ctx.rootDir,
-          opts.artifactsDir ?? process.env.AUTOMAX_ARTIFACTS_DIR ?? DEFAULT_ARTIFACTS_DIR,
+          opts.artifactsDir ?? process.env.SDODS_ARTIFACTS_DIR ?? DEFAULT_ARTIFACTS_DIR,
         );
         const runs = listRuns(artifactsDir);
         const run = opts.run ? runs.find((r) => r.runId === opts.run) : runs[0];
         if (!run) {
-          throw new AutomaxError(
+          throw new SdodsError(
             'CONFIG_NOT_FOUND',
             opts.run
               ? `Run ${opts.run} not found under ${artifactsDir}.`
               : `No runs under ${artifactsDir}.`,
             {
-              hint: 'Run `automax run …` first. Traces are kept on the first retry and on failure (trace: on-first-retry).',
+              hint: 'Run `sdods run …` first. Traces are kept on the first retry and on failure (trace: on-first-retry).',
               exitCode: 2,
             },
           );
@@ -89,7 +89,7 @@ export function register(program: Command) {
         source = run.dir;
       }
       if (!zips.length) {
-        throw new AutomaxError('CONFIG_NOT_FOUND', `No trace.zip under ${source}.`, {
+        throw new SdodsError('CONFIG_NOT_FOUND', `No trace.zip under ${source}.`, {
           hint: 'Traces are recorded on the first retry and for failures. Re-run with `--retries 1` or set trace: on in the project timeouts/use.',
           exitCode: 2,
         });

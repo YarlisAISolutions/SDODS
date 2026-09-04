@@ -1,9 +1,9 @@
 ---
 title: MCP tools
-description: The 37 tools, prompts and resources of the AutoMax MCP server.
+description: The 37 tools, prompts and resources of the SDODS MCP server.
 ---
 
-Tools are grouped by capability (`automax mcp --caps core,analyze,run,data,agents,issues,schedules`; default `core,analyze,run,data,schedules`). Access levels map to scopes: `read` needs the matching `*:read` scope, `run` needs `runs:write`, `write` produces proposals and needs `features:write`. Print the live catalogue with `automax mcp --list-tools`.
+Tools are grouped by capability (`sdods mcp --caps core,analyze,run,data,agents,issues,schedules`; default `core,analyze,run,data,schedules`). Access levels map to scopes: `read` needs the matching `*:read` scope, `run` needs `runs:write`, `write` produces proposals and needs `features:write`. Print the live catalogue with `sdods mcp --list-tools`.
 
 | Tool                                                                                                                                                                           | Capability | Access | Purpose                                                                                                     |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------- | ------ | ----------------------------------------------------------------------------------------------------------- |
@@ -12,15 +12,15 @@ Tools are grouped by capability (`automax mcp --caps core,analyze,run,data,agent
 | `feature_list`, `feature_read`, `feature_parse`, `feature_lint`, `step_list`, `step_find`                                                                                      | core       | read   | features, Gherkin parsing, lint, step catalogue and fuzzy step reuse                                        |
 | `feature_write`                                                                                                                                                                | core       | write  | validated feature staged as a proposal (never the working tree)                                             |
 | `proposal_list`, `proposal_get`                                                                                                                                                | core       | read   | review proposals written by agents and write tools                                                          |
-| `run_tests`, `run_tests_async`                                                                                                                                                 | run        | run    | execute a project slice through `automax run`, with progress                                                |
-| `run_list`, `run_get`, `run_get_scenario`, `run_last_failed`                                                                                                                   | run        | read   | runs, scenario detail with `automax://screenshot/…` URIs and API snapshots                                  |
+| `run_tests`, `run_tests_async`                                                                                                                                                 | run        | run    | execute a project slice through `sdods run`, with progress                                                  |
+| `run_list`, `run_get`, `run_get_scenario`, `run_last_failed`                                                                                                                   | run        | read   | runs, scenario detail with `sdods://screenshot/…` URIs and API snapshots                                    |
 | `heal_events`, `heal_locator_stats`                                                                                                                                            | run        | read   | self-healing events and aggregated locator statistics                                                       |
 | `data_list_datasets`, `data_preview`, `data_pool_status`                                                                                                                       | data       | read   | datasets per environment (masked), pool users and leases                                                    |
 | `analyze_project`, `analyze_routes`, `analyze_coverage`, `analyze_best_practices`, `analyze_locators`, `analyze_change_impact`, `analyze_failure`, `analyze_suggest_scenarios` | analyze    | read   | onboarding analysis, coverage, best practices, locator audit, change impact, failure triage, Gherkin drafts |
 | `schedule_list`, `schedule_next`                                                                                                                                               | schedules  | read   | schedules from YAML and next fire times                                                                     |
 
-Resources: `automax://project/{slug}/features/{path}`, `automax://run/{runId}/summary`, `automax://run/{runId}/messages.ndjson`, `automax://screenshot/{runId}/{fingerprint}/{retry}/{file}`, `automax://proposal/{id}`.
+Resources: `sdods://project/{slug}/features/{path}`, `sdods://run/{runId}/summary`, `sdods://run/{runId}/messages.ndjson`, `sdods://screenshot/{runId}/{fingerprint}/{retry}/{file}`, `sdods://proposal/{id}`.
 
-Prompts: `automax-plan`, `automax-generate`, `automax-heal`, `automax-upgrade`, `automax-review`.
+Prompts: `sdods-plan`, `sdods-generate`, `sdods-heal`, `sdods-upgrade`, `sdods-review`.
 
-Browser driving is not reimplemented: `automax mcp install` configures the bundled `npx playwright mcp` alongside, so agents get `browser_navigate`, `browser_snapshot`, `browser_click` and friends from the upstream server while AutoMax tools drive the automation project.
+Browser driving is not reimplemented: `sdods mcp install` configures the bundled `npx playwright mcp` alongside, so agents get `browser_navigate`, `browser_snapshot`, `browser_click` and friends from the upstream server while SDODS tools drive the automation project.

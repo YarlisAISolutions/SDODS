@@ -1,4 +1,4 @@
-import type { ProjectConfig } from '@automax/contracts';
+import type { ProjectConfig } from '@sdods/contracts';
 
 export interface TemplateInput {
   config: ProjectConfig;
@@ -7,7 +7,7 @@ export interface TemplateInput {
   apiUrl: string;
 }
 
-/** Files written by `automax project create` (relative path → content). */
+/** Files written by `sdods project create` (relative path → content). */
 export function projectTemplateFiles({
   config,
   envName,
@@ -30,12 +30,12 @@ users:
 vars: {}
 `,
     '.env.example': `# Copy to .env.${envName} (gitignored). Values referenced as \${VAR} in yaml.\n# API_TOKEN=\n`,
-    'steps/fixtures.ts': `import { test as base, createBdd } from '@automax/core/fixtures';
+    'steps/fixtures.ts': `import { test as base, createBdd } from '@sdods/core/fixtures';
 import { HomePage } from '../pages/HomePage.js';
 import { auth } from './auth.js';
 
 /**
- * Project-level test object: extends the AutoMax merged fixtures with this project's
+ * Project-level test object: extends the SDODS merged fixtures with this project's
  * auth strategy and page objects. playwright-bdd imports this file (importTestFrom).
  */
 export const test = base.extend<{ homePage: HomePage }>({
@@ -48,7 +48,7 @@ export const test = base.extend<{ homePage: HomePage }>({
 export const { Given, When, Then, Step, BeforeScenario, AfterScenario, BeforeStep, AfterStep, BeforeWorker, AfterWorker } =
   createBdd(test);
 `,
-    'steps/auth.ts': `import { defineAuth } from '@automax/core/auth';
+    'steps/auth.ts': `import { defineAuth } from '@sdods/core/auth';
 
 /** Login strategy used for storageState reuse. Replace with your app's flow. */
 export const auth = defineAuth({
@@ -58,13 +58,13 @@ export const auth = defineAuth({
     [`steps/${slug}.steps.ts`]: `import { expect } from '@playwright/test';
 import { Then } from './fixtures.js';
 
-// Project-specific steps. Generic UI/API/data steps come from @automax/core/steps.
+// Project-specific steps. Generic UI/API/data steps come from @sdods/core/steps.
 Then('the ${config.name} title should be visible', async ({ homePage }) => {
   await expect(homePage.title).toBeVisible();
 });
 `,
     'pages/HomePage.ts': `import { Fixture, Given } from 'playwright-bdd/decorators';
-import { BasePage } from '@automax/core/pages';
+import { BasePage } from '@sdods/core/pages';
 import type { test } from '../steps/fixtures.js';
 
 @Fixture<typeof test>('homePage')
@@ -96,7 +96,7 @@ Feature: ${config.name} home page
 `,
     'data/common/users.csv': `id,username,password,role\n1,user1,\${USER1_PASSWORD},standard\n2,user2,\${USER2_PASSWORD},standard\n3,admin1,\${ADMIN1_PASSWORD},admin\n`,
     [`data/${envName}/.gitkeep`]: '',
-    'data/factories.ts': `import { defineFactories } from '@automax/core/data';
+    'data/factories.ts': `import { defineFactories } from '@sdods/core/data';
 
 export default defineFactories({
   user: (f) => ({
@@ -110,15 +110,15 @@ export default defineFactories({
     'har/.gitkeep': '',
     'README.md': `# ${config.name} (${slug})
 
-AutoMax project. Run:
+SDODS project. Run:
 
 \`\`\`bash
-automax run -p ${slug} -e ${envName} -l api
-automax run -p ${slug} -e ${envName} -l ui -b chromium -t @smoke
-automax lint -p ${slug}
+sdods run -p ${slug} -e ${envName} -l api
+sdods run -p ${slug} -e ${envName} -l ui -b chromium -t @smoke
+sdods lint -p ${slug}
 \`\`\`
 
-- \`automax.project.yaml\` — project settings (layers, browsers, tags, data, auth, screenshots)
+- \`sdods.project.yaml\` — project settings (layers, browsers, tags, data, auth, screenshots)
 - \`envs/\` — one yaml per environment; secrets via \`\${VAR}\` from \`.env.<env>\`
 - \`features/\` — Gherkin; \`steps/\` — project steps + fixtures; \`pages/\` — page objects (decorators)
 - \`data/\` — CSV/JSON/YAML per environment with \`data/common\` fallback

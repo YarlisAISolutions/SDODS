@@ -8,7 +8,7 @@ export function SiteFooter() {
         <div>
           <div className="flex items-center gap-2 font-semibold">
             <img src="/img/favicon.svg" alt="" width={22} height={22} />
-            AutoMax
+            SDODS
           </div>
           <p className="muted mt-2">
             An automation platform with a reusable architecture. Open source, Apache-2.0. API tokens
@@ -18,6 +18,11 @@ export function SiteFooter() {
         <div>
           <h2 className="mb-2 font-semibold">Product</h2>
           <ul className="space-y-1">
+            <li>
+              <Link href="/install/" className="hover:underline">
+                Install
+              </Link>
+            </li>
             <li>
               <a href={DOCS_URL} className="hover:underline">
                 Documentation
@@ -92,7 +97,7 @@ export function SiteFooter() {
         <a href={LINKEDIN_URL} className="underline" rel="noreferrer">
           Sireesh Yarlagadda
         </a>{' '}
-        · © {new Date().getFullYear()} AutoMax contributors
+        · © {new Date().getFullYear()} SDODS contributors
       </div>
     </footer>
   );

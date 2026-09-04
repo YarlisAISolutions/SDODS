@@ -7,11 +7,11 @@ export function baseOptions(): BaseLayoutProps {
       title: (
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
           <img src={withBase('/img/favicon.svg')} alt="" width={22} height={22} />
-          AutoMax
+          SDODS
         </span>
       ),
     },
-    githubUrl: 'https://github.com/siri1410/AutoMax',
+    githubUrl: 'https://github.com/siri1410/SDODS',
     links: [
       { text: 'Getting started', url: '/docs' },
       { text: 'Guides', url: '/docs/guides/projects-and-environments' },

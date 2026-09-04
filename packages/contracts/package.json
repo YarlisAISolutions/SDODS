@@ -1,7 +1,7 @@
 {
-  "name": "@automax/contracts",
+  "name": "@sdods/contracts",
   "version": "0.1.0",
-  "description": "Shared schemas, identifiers, naming conventions and DTO types for AutoMax packages.",
+  "description": "Shared schemas, identifiers, naming conventions and DTO types for SDODS packages.",
   "license": "Apache-2.0",
   "type": "module",
   "exports": {

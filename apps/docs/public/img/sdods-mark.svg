@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="t">
+  <title id="t">SDODS</title>
+  <rect width="512" height="512" rx="116" fill="#0B1020"/>
+  <g transform="translate(256,256)" fill="none">
+    <line x1="-160" y1="0" x2="160" y2="0" stroke="#2F5BFF" stroke-width="24" stroke-linecap="round" opacity="0.5"/>
+    <circle cx="-160" cy="0" r="22" fill="#2F5BFF"/>
+    <circle cx="160" cy="0" r="22" fill="#2F5BFF"/>
+    <path d="M-80 -52 A 52 52 0 0 0 -80 52" stroke="#FFFFFF" stroke-width="28" stroke-linecap="round"/>
+    <path d="M80 -52 A 52 52 0 0 1 80 52" stroke="#FFFFFF" stroke-width="28" stroke-linecap="round"/>
+    <circle cx="0" cy="0" r="48" stroke="#FFFFFF" stroke-width="28"/>
+    <circle cx="0" cy="0" r="16" fill="#FFB020"/>
+  </g>
+</svg>

@@ -1,6 +1,6 @@
 import { relative, resolve as resolvePath } from 'node:path';
-import type { ModuleConfig, ProjectConfig } from '@automax/contracts';
-import { AutomaxError } from '../errors.js';
+import type { ModuleConfig, ProjectConfig } from '@sdods/contracts';
+import { SdodsError } from '../errors.js';
 
 /** Directory (absolute) of a module's features. */
 export function moduleDir(projectRoot: string, mod: ModuleConfig): string {
@@ -27,7 +27,7 @@ export function moduleForFeature(
 export function moduleByName(project: ProjectConfig, name: string): ModuleConfig {
   const mod = project.modules.find((m) => m.name === name);
   if (!mod) {
-    throw new AutomaxError(
+    throw new SdodsError(
       'CONFIG_INVALID',
       `Unknown module "${name}" for project ${project.slug}.`,
       {

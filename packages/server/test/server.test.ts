@@ -6,10 +6,10 @@ import type { ChildProcess } from 'node:child_process';
 import { PNG } from 'pngjs';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import type { FastifyInstance } from 'fastify';
-import { createMemoryDb } from '@automax/db';
+import { createMemoryDb } from '@sdods/db';
 import { buildServer, nextTimes } from '../src/index.js';
 
-/** Fake `automax run` child: prints lines, exits 0 (or 1 when the tags mention "fail"), obeys SIGTERM. */
+/** Fake `sdods run` child: prints lines, exits 0 (or 1 when the tags mention "fail"), obeys SIGTERM. */
 function fakeSpawn(_config: unknown, args: string[]): ChildProcess {
   const child = new EventEmitter() as ChildProcess & {
     stdout: EventEmitter;
@@ -41,10 +41,10 @@ function fakeSpawn(_config: unknown, args: string[]): ChildProcess {
 }
 
 function repo() {
-  const root = mkdtempSync(join(tmpdir(), 'automax-srv-'));
+  const root = mkdtempSync(join(tmpdir(), 'sdods-srv-'));
   writeFileSync(join(root, 'package.json'), '{}');
   writeFileSync(
-    join(root, 'automax.workspace.yaml'),
+    join(root, 'sdods.workspace.yaml'),
     `organization: { slug: acme, name: Acme }\nworkspaces:\n  - { slug: web, name: Web, organization: acme }\n  - { slug: mobile, name: Mobile, organization: acme }\ndefaultWorkspace: web\n`,
   );
   const mk = (slug: string, ws?: string) => {
@@ -52,7 +52,7 @@ function repo() {
     mkdirSync(join(dir, 'envs'), { recursive: true });
     mkdirSync(join(dir, 'features', 'auth'), { recursive: true });
     writeFileSync(
-      join(dir, 'automax.project.yaml'),
+      join(dir, 'sdods.project.yaml'),
       `slug: ${slug}\nname: ${slug}\n${ws ? `workspace: ${ws}\n` : ''}layers: [ui, api]\nenvs: { default: local, available: [local] }\nmodules:\n  - { name: auth, testingTypes: [smoke] }\nschedules:\n  - { name: nightly, cron: '0 2 * * *', tags: '@regression' }\n`,
     );
     writeFileSync(
@@ -80,7 +80,7 @@ function png(w: number, h: number, color: number): string {
   return PNG.sync.write(p).toString('base64');
 }
 
-describe('AutoMax server', () => {
+describe('SDODS server', () => {
   let app: FastifyInstance;
   let root: string;
   let adminCookie = '';
@@ -96,7 +96,7 @@ describe('AutoMax server', () => {
       config: {
         rootDir: root,
         projectsDir: join(root, 'projects'),
-        artifactsDir: join(root, '.automax/runs'),
+        artifactsDir: join(root, '.sdods/runs'),
         authDisabled: false,
         sessionSecret: 'test-secret-test-secret-test-secret',
         maxConcurrentRuns: 1,
@@ -344,7 +344,7 @@ describe('AutoMax server', () => {
     expect(list.find((f) => f.path.endsWith('good.feature'))?.module).toBe('auth');
     const escape = await app.inject({
       method: 'GET',
-      url: '/api/projects/shop/features/../automax.project.yaml',
+      url: '/api/projects/shop/features/../sdods.project.yaml',
       headers: { cookie: adminCookie },
     });
     expect([400, 403, 404]).toContain(escape.statusCode);
@@ -406,7 +406,7 @@ describe('AutoMax server', () => {
 
   it('diffs two screenshots of a run (padded canvases) and caches the result', async () => {
     const runId = 'diff-run';
-    const dir = join(root, '.automax/runs', runId, 'shop', 'abc', 'r0');
+    const dir = join(root, '.sdods/runs', runId, 'shop', 'abc', 'r0');
     mkdirSync(dir, { recursive: true });
     writeFileSync(join(dir, '00-before.png'), Buffer.from(png(4, 4, 0), 'base64'));
     writeFileSync(join(dir, '00-after.png'), Buffer.from(png(6, 4, 255), 'base64'));

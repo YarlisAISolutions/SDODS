@@ -5,7 +5,7 @@ import { DISCUSSIONS_URL, IDEAS_URL, issueUrl } from '@/lib/links';
 export const metadata: Metadata = {
   title: 'Feedback and feature requests',
   description:
-    'Request a feature, report a bug or start a discussion. Everything goes to the public AutoMax GitHub repository.',
+    'Request a feature, report a bug or start a discussion. Everything goes to the public SDODS GitHub repository.',
 };
 
 const CARDS = [
@@ -17,7 +17,7 @@ const CARDS = [
   },
   {
     title: 'Report a bug',
-    body: 'Command, expected vs actual, run id and logs. The form asks for `automax doctor --json` output.',
+    body: 'Command, expected vs actual, run id and logs. The form asks for `sdods doctor --json` output.',
     href: issueUrl('bug'),
     cta: 'Open the bug form',
   },
@@ -36,7 +36,7 @@ export default function FeedbackPage() {
         Feedback and feature requests
       </h1>
       <p className="muted mt-3 max-w-2xl">
-        AutoMax is built in the open. Every request lands as a GitHub issue or discussion where the
+        SDODS is built in the open. Every request lands as a GitHub issue or discussion where the
         maintainers triage it, label it and reply. No login with us, no tracking.
       </p>
       <div className="mt-8 grid gap-4 md:grid-cols-3">

@@ -1,74 +1,173 @@
 ---
 title: Installation
-description: Install Node 22, Bun or pnpm, the AutoMax workspace and Playwright browsers.
+description: Install SDODS with one command on macOS, Linux or Windows, or from source.
 ---
 
 <Learn>
-  Which runtimes AutoMax needs, how to install the workspace with Bun or pnpm, how to install
-  browsers, and how to confirm the setup with `automax doctor`.
+  The one-line installer for each operating system, every option it takes, how to upgrade and
+  uninstall, and what to do when something goes wrong.
 </Learn>
 
-## Requirements
+## One line
 
-| Requirement     | Version             | Why                                                                                                 |
-| --------------- | ------------------- | --------------------------------------------------------------------------------------------------- |
-| Node.js         | 22 or newer         | Playwright workers, vitest and native database drivers run on Node                                  |
-| Bun **or** pnpm | Bun 1.4+ or pnpm 9+ | package manager and script runner. Bun installs and builds faster; nothing executes tests under Bun |
-| Git             | any recent          | cloning and proposals                                                                               |
-| Docker          | optional            | Postgres for the database toggle                                                                    |
+<Tabs items={['macOS / Linux', 'Windows', 'Verify first', 'From source']}>
+<Tab value="macOS / Linux">
+```bash
+curl -fsSL https://sdods.com/install.sh | sh
+```
 
-<Callout type="info">Use `nvm use 22` or `fnm use 22`. The repository ships an `.nvmrc`.</Callout>
-
-## Install the workspace
+Pass options after `-s --`:
 
 ```bash
-git clone https://github.com/siri1410/AutoMax.git
-cd AutoMax
+curl -fsSL https://sdods.com/install.sh | sh -s -- --workspace ~/my-tests --mcp claude
+```
+
+</Tab>
+<Tab value="Windows">
+```powershell
+irm https://sdods.com/install.ps1 | iex
+```
+
+With options, run it as a script block, because `iex` cannot forward parameters:
+
+```powershell
+& ([scriptblock]::Create((irm https://sdods.com/install.ps1))) -Workspace C:\my-tests -Mcp claude
+```
+
+</Tab>
+<Tab value="Verify first">
+Download, check the published checksum, read it, then run it:
+
+```bash
+curl -fsSLO https://sdods.com/install.sh
+curl -fsSLO https://sdods.com/install.sh.sha256
+sha256sum -c install.sh.sha256      # macOS: shasum -a 256 -c install.sh.sha256
+less install.sh
+sh install.sh
+```
+
+</Tab>
+<Tab value="From source">
+The installer is a convenience wrapper; a clone works just as well:
+
+```bash
+git clone https://github.com/siri1410/SDODS.git
+cd SDODS
 bun install                # or: pnpm install
 npx playwright install --with-deps
+bun run sdods doctor
 ```
 
-`bun install` links every workspace package (`packages/*`, `apps/*`). The `automax` command runs from source through `tsx`, so there is no build step during development.
+</Tab>
+</Tabs>
 
-## Check the setup
+The installer checks Node, installs Bun if you do not have it, fetches SDODS into `~/.sdods`, installs dependencies and Chromium, and writes an `sdods` command. It finishes with `sdods doctor` and a list of next commands. Running it again upgrades in place.
+
+<Callout type="info">
+  Node.js 22 or newer is the one prerequisite the installer will not install behind your back. It
+  prints the exact command for your platform, or you can pass `--install-node` to set up
+  [fnm](https://github.com/Schniz/fnm) inside the SDODS directory.
+</Callout>
+
+## What it installs, and where
+
+| Path                                                        | What                                                   |
+| ----------------------------------------------------------- | ------------------------------------------------------ |
+| `~/.sdods/app`                                              | the SDODS checkout (shallow clone, upgraded in place)  |
+| `~/.sdods/.bun`                                             | Bun, only when it was not already installed            |
+| `~/.local/bin/sdods`                                        | the command shim (Windows: `%LOCALAPPDATA%\SDODS\bin`) |
+| `~/Library/Caches/ms-playwright` · `~/.cache/ms-playwright` | browsers, in Playwright's shared cache                 |
+
+Nothing else on your system is touched. Your shell profile is edited only when you pass `--modify-path`. Budget about 1.5 GB for the checkout and its dependencies, plus roughly 500 MB per browser.
+
+## Options
+
+Every flag has an environment-variable equivalent, so the same behaviour works in a Dockerfile or a CI step.
+
+| Flag                             | Environment          | Default                | Meaning                                                   |
+| -------------------------------- | -------------------- | ---------------------- | --------------------------------------------------------- |
+| `--version <ref>`                | `SDODS_VERSION`      | latest release or main | git tag, branch or commit to install                      |
+| `--dir <path>`                   | `SDODS_HOME`         | `~/.sdods`             | install root                                              |
+| `--bin-dir <path>`               | `SDODS_BIN_DIR`      | `~/.local/bin`         | where the `sdods` command goes                            |
+| `--pm bun\|pnpm\|npm`            | `SDODS_PM`           | `bun`                  | package manager for the dependency install                |
+| `--browsers all\|chromium\|none` | `SDODS_BROWSERS`     | `chromium`             | which Playwright browsers to download                     |
+| `--workspace <dir>`              | `SDODS_WORKSPACE`    | none                   | also run `sdods init <dir>` when the install finishes     |
+| `--source git\|npm\|auto`        | `SDODS_SOURCE`       | `auto`                 | fetch from a clone or from the npm registry               |
+| `--mcp claude\|codex\|all`       | `SDODS_MCP`          | none                   | register the MCP server with those CLIs                   |
+| `--install-node`                 | `SDODS_INSTALL_NODE` | off                    | install Node 22 through fnm when it is missing or too old |
+| `--modify-path`                  | `SDODS_MODIFY_PATH`  | off                    | append the PATH line to your shell profile                |
+| `--yes`                          | `SDODS_YES`          | off                    | never prompt (also implied when `CI` is set)              |
+| `--uninstall`                    |                      |                        | remove the command and the install root                   |
+| `--dry-run`                      |                      |                        | print every step, change nothing                          |
+| `--verbose`                      | `SDODS_VERBOSE`      | off                    | show the output of every command                          |
+| `--version-check`                |                      |                        | print the versions and paths it resolved, then exit       |
+| `--help`                         |                      |                        | the option list                                           |
+
+Windows takes the same names as PowerShell parameters: `-Version`, `-Dir`, `-BinDir`, `-Pm`, `-Browsers`, `-Workspace`, `-Source`, `-Mcp`, `-ModifyPath`, `-Yes`, `-Uninstall`, `-DryRun`, `-Verbose`, `-VersionCheck`, `-Help`.
+
+Exit codes and security notes are in [Reference → Installer](/docs/reference/installer/).
+
+## First run
+
+Projects are discovered from the current directory, so start in the checkout the installer made, or in a workspace you created with `--workspace`:
 
 ```bash
-bun run automax doctor
+cd ~/.sdods/app
+sdods run -p demo-shop -e staging -l api                        # API layer, no browser
+sdods run -p demo-shop -e staging -l ui -b chromium -t @smoke   # UI smoke
+sdods report --last --open                                      # HTML report and dashboard
 ```
 
-`doctor` checks Node, Bun, Playwright, the three browser engines, every project's environment files and the variables they reference, and database reachability. Add `--fix` to install missing browsers.
-
-Sample output:
-
-```text
-✔ node                         v22.22.2
-✔ bun                          1.4.0
-✔ npx playwright               Version 1.62.1
-✔ browser:chromium             /Users/you/Library/Caches/ms-playwright/chromium-.../chrome
-✔ browser:firefox              ...
-✔ browser:webkit               ...
-✔ projects                     demo-shop
-✔ demo-shop/local vars         0 var(s) resolved
-✔ demo-shop/staging vars       0 var(s) resolved
-✔ database                     sqlite (.automax/automax.db)
-```
-
-## Look around
-
-```bash automax-verify
-bun run automax project list
-bun run automax config validate
-```
-
-## Install as a dependency of your own repository
-
-Once packages are published, a new workspace is one command away:
+Then point SDODS at something of your own:
 
 ```bash
-npx automax init my-tests
+sdods init ~/my-tests                    # new workspace with the demo project
+sdods analyze /path/to/your-app --apply  # detect routes, API endpoints and test ids
 ```
+
+Inside a clone, the same commands run through the package manager:
+
+```bash sdods-verify
+bun run sdods project list
+bun run sdods config validate
+```
+
+## Upgrade and uninstall
+
+```bash
+curl -fsSL https://sdods.com/install.sh | sh                          # upgrade: same command
+curl -fsSL https://sdods.com/install.sh | sh -s -- --version v0.2.0   # pin a release
+curl -fsSL https://sdods.com/install.sh | sh -s -- --uninstall --yes  # remove
+```
+
+Uninstalling removes `~/.sdods` and the command shim. Workspaces you created stay where they are, and Playwright's browser cache is shared with other tools, so remove that yourself if you want the space back.
+
+## Docker
+
+The server image carries the CLI and the browsers, so nothing is installed on the host:
+
+```bash
+docker run --rm -it ghcr.io/siri1410/sdods:latest sdods doctor
+```
+
+## Troubleshooting
+
+| Symptom                                     | Fix                                                                                                                     |
+| ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `Node v20 is too old`                       | `nvm use 22`, `fnm use 22`, or re-run with `--install-node`                                                             |
+| `sdods: command not found` after installing | the bin directory is not on PATH; the installer printed the line to add, or re-run with `--modify-path`                 |
+| Browsers fail to start on Linux             | system libraries need root: `cd ~/.sdods/app && sudo npx playwright install-deps`                                       |
+| Behind a corporate proxy                    | export `HTTPS_PROXY`; git and npm read it. Add `git config --global http.proxy "$HTTPS_PROXY"` if the clone still fails |
+| Corporate SSL interception                  | point `NODE_EXTRA_CA_CERTS` at your CA bundle before running the installer                                              |
+| macOS quarantine                            | piping to `sh` is not affected; if you saved the file first, run `xattr -d com.apple.quarantine install.sh`             |
+| WSL                                         | use the macOS/Linux one-liner inside WSL, not the PowerShell one                                                        |
+| `Unknown project "demo-shop"`               | run from `~/.sdods/app`, or from a workspace created by `sdods init`                                                    |
+| Install seems stuck                         | re-run with `--verbose`; the dependency install is the long step                                                        |
+
+`sdods doctor` re-checks all of this and prints what to fix; add `--fix` to install missing browsers.
 
 ## Next steps
 
-- [Onboard an existing app](/docs/getting-started/onboard-existing-app)
-- [Your first API test](/docs/getting-started/first-api-test)
+- [Onboard an existing app](/docs/getting-started/onboard-existing-app/)
+- [Your first API test](/docs/getting-started/first-api-test/)
+- [Use it from Claude Code or Codex](/docs/guides/claude-code-and-codex/)

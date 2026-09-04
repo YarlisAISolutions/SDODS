@@ -9,7 +9,7 @@ import {
   type Layer,
   type ScenarioMeta as ScenarioMetaDto,
   type SuiteStatus,
-} from '@automax/contracts';
+} from '@sdods/contracts';
 import type { ResolvedConfig } from '../config/resolve.js';
 import { suiteOfTags } from '../config/tags.js';
 import { moduleForFeature } from '../config/workspace.js';
@@ -20,7 +20,7 @@ export interface ScenarioInit {
   featureUri: string;
   tags: string[];
   pickleLine?: number;
-  automax: { project: string; layer: Layer; browser?: BrowserName };
+  sdods: { project: string; layer: Layer; browser?: BrowserName };
 }
 
 /** Per-scenario identity + on-disk directory. Writes meta.json at start and on finalize. */
@@ -33,8 +33,8 @@ export class ScenarioMeta {
     const { config, testInfo, tags } = init;
     const featureUri = relative(config.project.root, init.featureUri).replace(/\\/g, '/');
     const parts = parsePwProjectName(testInfo.project.name);
-    const layer = (parts?.layer ?? init.automax.layer) as Layer;
-    const browser = (parts?.browser ?? init.automax.browser) as BrowserName | undefined;
+    const layer = (parts?.layer ?? init.sdods.layer) as Layer;
+    const browser = (parts?.browser ?? init.sdods.browser) as BrowserName | undefined;
     const fp = makeFingerprint({
       project: config.project.slug,
       featureUri,
@@ -62,7 +62,7 @@ export class ScenarioMeta {
       exampleIndex: null,
       tags,
       module: moduleForFeature(config.project, init.featureUri)?.name,
-      process: process.env.AUTOMAX_PROCESS || undefined,
+      process: process.env.SDODS_PROCESS || undefined,
       retry: testInfo.retry,
       workerIndex: testInfo.workerIndex,
       parallelIndex: testInfo.parallelIndex,

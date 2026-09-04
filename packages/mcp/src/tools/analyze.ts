@@ -367,7 +367,7 @@ interface ProjectYaml {
 }
 
 function loadProjectYaml(root: string): ProjectYaml {
-  return readYaml<ProjectYaml>(join(root, 'automax.project.yaml')) ?? {};
+  return readYaml<ProjectYaml>(join(root, 'sdods.project.yaml')) ?? {};
 }
 
 export function analyzeCoverage(root: string) {
@@ -698,7 +698,7 @@ export function analyzeChangeImpact(root: string, rootDir: string, range: string
         )
           add(f.rel, `data changed: ${file}`);
     if (
-      file.startsWith(`${projectRel}/automax.project.yaml`) ||
+      file.startsWith(`${projectRel}/sdods.project.yaml`) ||
       file.startsWith(`${projectRel}/envs/`)
     )
       for (const f of features) add(f.rel, `config changed: ${file}`);
@@ -714,7 +714,7 @@ export function analyzeChangeImpact(root: string, rootDir: string, range: string
     reasons: [...reasons],
   }));
   const tagExpr = rows.length
-    ? `re-run: automax run -p <slug> --feature ${rows.map((r) => r.feature).join(' --feature ')}`
+    ? `re-run: sdods run -p <slug> --feature ${rows.map((r) => r.feature).join(' --feature ')}`
     : 'no impacted features detected';
   return { range, changedFiles: changed, impacted: rows, suggestion: tagExpr };
 }
@@ -724,11 +724,11 @@ export const analyzeTools = [
     name: 'analyze_project',
     title: 'Analyze an application',
     description:
-      'Scan an application repository: framework, routes, OpenAPI spec, test-id attribute, auth hints, env files, CI. Returns evidence, a proposed automax.project.yaml and an onboarding checklist.',
+      'Scan an application repository: framework, routes, OpenAPI spec, test-id attribute, auth hints, env files, CI. Returns evidence, a proposed sdods.project.yaml and an onboarding checklist.',
     shape: {
       path: z
         .string()
-        .describe('path to the application repo (absolute or relative to the AutoMax repo)'),
+        .describe('path to the application repo (absolute or relative to the SDODS repo)'),
     },
     access: 'read',
     domain: 'projects',

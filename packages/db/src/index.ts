@@ -11,12 +11,12 @@ export * from './insights.js';
 export * from './test-data.js';
 export * from './scopes.js';
 
-import { createDb, type AutomaxDb } from './create-db.js';
+import { createDb, type SdodsDb } from './create-db.js';
 import { resolveDriverConfig, type DriverConfig } from './driver.js';
 import { migrateToLatest } from './migrate.js';
 
-/** Open + migrate in one call (what `automax serve` and `automax run --ingest` do on boot). */
-export async function openDb(cfg: DriverConfig = resolveDriverConfig()): Promise<AutomaxDb> {
+/** Open + migrate in one call (what `sdods serve` and `sdods run --ingest` do on boot). */
+export async function openDb(cfg: DriverConfig = resolveDriverConfig()): Promise<SdodsDb> {
   const adb = createDb(cfg);
   await migrateToLatest(adb);
   return adb;

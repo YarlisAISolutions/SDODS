@@ -3,12 +3,12 @@ title: REST API
 description: The server's HTTP API.
 ---
 
-All routes live under `/api` on the server started by `automax serve`. Request and response bodies are validated with Zod; the schemas are exported from `@automax/server/schemas` for typed clients.
+All routes live under `/api` on the server started by `sdods serve`. Request and response bodies are validated with Zod; the schemas are exported from `@sdods/server/schemas` for typed clients.
 
 ## Authentication
 
-- Browser: session cookie `automax_sid` (HttpOnly, SameSite=Lax, sliding 7 days). Non-GET requests carry the `x-csrf-token` header returned by `GET /api/auth/me`.
-- Automation and MCP clients: `Authorization: Bearer amx_…` tokens created with `automax tokens create` or in Settings. Tokens carry scopes; a route requires a scope such as `runs:write`.
+- Browser: session cookie `sdods_sid` (HttpOnly, SameSite=Lax, sliding 7 days). Non-GET requests carry the `x-csrf-token` header returned by `GET /api/auth/me`.
+- Automation and MCP clients: `Authorization: Bearer amx_…` tokens created with `sdods tokens create` or in Settings. Tokens carry scopes; a route requires a scope such as `runs:write`.
 - Workspace access: a project route is allowed when the user's effective role in the project's workspace permits it (`viewer` reads, `editor` runs and edits, `admin` manages).
 
 ## Routes

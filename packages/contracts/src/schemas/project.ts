@@ -115,7 +115,7 @@ export const GitHubIntegrationSchema = z.object({
   prComment: z.boolean().default(true),
   createIssueOnFailure: z.enum(['never', 'smoke', 'always']).default('never'),
   closeOnPass: z.boolean().default(false),
-  labels: z.array(z.string()).default(['automax']),
+  labels: z.array(z.string()).default(['sdods']),
   tokenEnv: z.string().default('GITHUB_TOKEN'),
   uploadToRelease: z.string().optional(),
 });
@@ -131,7 +131,7 @@ export const JiraIntegrationSchema = z.object({
   createIssueOnFailure: z.enum(['never', 'smoke', 'always']).default('never'),
   transitionOnPass: z.string().optional(),
   linkTaggedScenarios: z.boolean().default(true),
-  labels: z.array(z.string()).default(['automax']),
+  labels: z.array(z.string()).default(['sdods']),
   maxAttachmentMb: z.number().positive().default(10),
 });
 
@@ -356,7 +356,7 @@ export const ProjectConfigSchema = z.object({
       junit: z.boolean().default(false),
     })
     .default({ cucumberHtml: false, allure: false, junit: false }),
-  /** How the CI matrix (`automax project list --matrix`) treats this project. */
+  /** How the CI matrix (`sdods project list --matrix`) treats this project. */
   ci: z
     .object({
       /** false = excluded from the generic browser matrix (e.g. a project that needs its own server) */
@@ -371,7 +371,7 @@ export const ProjectConfigSchema = z.object({
     .default({ enabled: true }),
 });
 
-/** Root `automax.workspace.yaml`: names the organization and workspace every project in the repo belongs to. */
+/** Root `sdods.workspace.yaml`: names the organization and workspace every project in the repo belongs to. */
 export const WorkspaceFileSchema = z.object({
   organization: OrganizationSchema,
   /** one organization can hold many workspaces; projects pick one via `workspace:` */

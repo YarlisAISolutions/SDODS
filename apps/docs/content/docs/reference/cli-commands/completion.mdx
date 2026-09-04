@@ -1,25 +1,25 @@
 ---
-title: automax completion
+title: sdods completion
 description: Print a shell completion script generated from the command tree.
 ---
 
 ```text
-automax completion bash|zsh|fish
+sdods completion bash|zsh|fish
 ```
 
 The script is generated from the live commander metadata, so it always matches the installed version: top-level commands, subcommands, and the flags of each.
 
 ```bash
 # bash
-automax completion bash > ~/.automax-completion.bash
-echo 'source ~/.automax-completion.bash' >> ~/.bashrc
+sdods completion bash > ~/.sdods-completion.bash
+echo 'source ~/.sdods-completion.bash' >> ~/.bashrc
 
 # zsh
-automax completion zsh > "${fpath[1]}/_automax"
+sdods completion zsh > "${fpath[1]}/_sdods"
 autoload -Uz compinit && compinit
 
 # fish
-automax completion fish > ~/.config/fish/completions/automax.fish
+sdods completion fish > ~/.config/fish/completions/sdods.fish
 ```
 
 Exit code `2` for an unknown shell.

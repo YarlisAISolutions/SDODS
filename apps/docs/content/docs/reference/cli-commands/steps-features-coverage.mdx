@@ -1,12 +1,12 @@
 ---
-title: automax steps, features, coverage, browsers, processes, workspace
+title: sdods steps, features, coverage, browsers, processes, workspace
 description: Inventory commands for a project and its hierarchy.
 ---
 
 ## `steps list`
 
 ```text
-automax steps list -p <slug> [--unused] [--grep <text>]
+sdods steps list -p <slug> [--unused] [--grep <text>]
 ```
 
 Lists every step definition available to the project (shared library plus project steps) as seen by `bddgen export`. `--unused` keeps only steps no feature uses; `--grep` filters by substring.
@@ -14,7 +14,7 @@ Lists every step definition available to the project (shared library plus projec
 ## `features list`
 
 ```text
-automax features list -p <slug> [--tags <expr>] [--scenarios]
+sdods features list -p <slug> [--tags <expr>] [--scenarios]
 ```
 
 One row per feature with module, layer, suite, scenario count and tags; `--scenarios` prints one row per scenario. `--tags` accepts a simple `@tag` filter.
@@ -22,7 +22,7 @@ One row per feature with module, layer, suite, scenario count and tags; `--scena
 ## `coverage`
 
 ```text
-automax coverage -p <slug> [-e <env>] [--openapi [file]] [--routes] [--endpoints] [--roles] [--uncovered]
+sdods coverage -p <slug> [-e <env>] [--openapi [file]] [--routes] [--endpoints] [--roles] [--uncovered]
 ```
 
 Joins the routes declared in the project YAML and its modules, the module endpoints (and, with `--openapi`, the paths of the spec named by `env.api.openapi` or the given file) and the pool roles with the scenarios that reference them, split by suite tag. Exit code `1` when a module has no covered target.
@@ -30,8 +30,8 @@ Joins the routes declared in the project YAML and its modules, the module endpoi
 ## `browsers`
 
 ```text
-automax browsers install [-b <name>]... [--with-deps] [-p <slug>]
-automax browsers list [-p <slug>]
+sdods browsers install [-b <name>]... [--with-deps] [-p <slug>]
+sdods browsers list [-p <slug>]
 ```
 
 `install` wraps `playwright install` (default engines: chromium, firefox, webkit; `--with-deps` adds OS packages on Linux CI; `-p` installs what a project declares). `list` shows which engines are installed and where, including the mobile emulation mappings.
@@ -39,7 +39,7 @@ automax browsers list [-p <slug>]
 ## `processes list`
 
 ```text
-automax processes list -p <slug>
+sdods processes list -p <slug>
 ```
 
 Processes visible to a project: workspace defaults overridden by same-named project processes, with trigger, tags, layers, browsers, environment, gates and schedule.
@@ -47,8 +47,8 @@ Processes visible to a project: workspace defaults overridden by same-named proj
 ## `workspace`
 
 ```text
-automax workspace tree
-automax workspace list
+sdods workspace tree
+sdods workspace list
 ```
 
-`tree` prints organization → workspaces → projects → modules → processes from `automax.workspace.yaml` and `projects/*`; `list` shows the workspaces with their project counts and marks the default one. Both accept `--json`.
+`tree` prints organization → workspaces → projects → modules → processes from `sdods.workspace.yaml` and `projects/*`; `list` shows the workspaces with their project counts and marks the default one. Both accept `--json`.

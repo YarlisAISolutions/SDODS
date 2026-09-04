@@ -53,7 +53,7 @@ function Shell() {
     <div className="flex h-full">
       <aside className="flex w-60 shrink-0 flex-col border-r border-line bg-[var(--panel)]">
         <div className="flex items-center gap-2 px-3 py-3">
-          <img src="/automax-logo.svg" alt="AutoMax" className="h-8" />
+          <img src="/sdods-logo.svg" alt="SDODS" className="h-8" />
         </div>
         <div className="space-y-2 px-3 pb-3">
           <label className="block">
@@ -162,10 +162,10 @@ function feedbackUrl(): string {
     template: 'feature_request.yml',
     title: '[Feature] ',
     labels: 'enhancement,triage,feedback',
-    'automax-version':
-      `web ui ${typeof __AUTOMAX_VERSION__ !== 'undefined' ? __AUTOMAX_VERSION__ : ''}`.trim(),
+    'sdods-version':
+      `web ui ${typeof __SDODS_VERSION__ !== 'undefined' ? __SDODS_VERSION__ : ''}`.trim(),
   });
-  return `https://github.com/siri1410/AutoMax/issues/new?${params.toString()}`;
+  return `https://github.com/siri1410/SDODS/issues/new?${params.toString()}`;
 }
 
-declare const __AUTOMAX_VERSION__: string | undefined;
+declare const __SDODS_VERSION__: string | undefined;

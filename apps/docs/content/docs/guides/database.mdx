@@ -5,16 +5,16 @@ description: One schema on two drivers, ingest of run results, and a verified sw
 
 <Learn>
   What the database stores, how `DB_DRIVER` selects SQLite or Postgres, what ingest writes, and how
-  `automax db switch` copies and verifies data.
+  `sdods db switch` copies and verifies data.
 </Learn>
 
 ## Toggle
 
 ```bash
-DB_DRIVER=sqlite  bun run automax db migrate          # default: .automax/automax.db
+DB_DRIVER=sqlite  bun run sdods db migrate          # default: .sdods/sdods.db
 docker compose up -d postgres
-DB_DRIVER=postgres DATABASE_URL=postgres://automax:automax@localhost:5432/automax bun run automax db migrate
-bun run automax db status
+DB_DRIVER=postgres DATABASE_URL=postgres://sdods:sdods@localhost:5432/sdods bun run sdods db migrate
+bun run sdods db status
 ```
 
 Kysely serves one schema on both drivers; primary keys are application-generated UUID v7 strings, timestamps are ISO text on SQLite and `timestamptz` on Postgres, JSON is text or `jsonb`.
@@ -45,16 +45,16 @@ flowchart LR
 Scenarios are counted, attempts are kept; a scenario that failed once and passed on retry is `flaky`. Re-ingesting the same files is idempotent, and shards merge into one run.
 
 ```bash
-bun run automax run -p demo-shop -e staging -l api --ingest
-bun run automax report ingest --run-id <id> .automax/runs/<id>/messages.ndjson
+bun run sdods run -p demo-shop -e staging -l api --ingest
+bun run sdods report ingest --run-id <id> .sdods/runs/<id>/messages.ndjson
 ```
 
 ## Switch drivers
 
 ```bash
-bun run automax db switch postgres --target-url postgres://automax:automax@localhost:5432/automax --dry-run
-bun run automax db switch postgres --target-url postgres://automax:automax@localhost:5432/automax --yes
-bun run automax db switch sqlite --yes
+bun run sdods db switch postgres --target-url postgres://sdods:sdods@localhost:5432/sdods --dry-run
+bun run sdods db switch postgres --target-url postgres://sdods:sdods@localhost:5432/sdods --yes
+bun run sdods db switch sqlite --yes
 ```
 
 The switch migrates the target, exports every table in foreign-key order, imports in one transaction, verifies row counts, and only then rewrites `.env`. `db export` and `db import` expose the two halves for backups; `db prune --keep-runs 200 --keep-days 90` deletes old runs and their artifact directories.

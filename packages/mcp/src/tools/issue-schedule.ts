@@ -1,6 +1,6 @@
 import { join } from 'node:path';
 import { z } from 'zod';
-import { AutomaxCliError, automaxCli, cliOrNote } from '../cli.js';
+import { SdodsCliError, sdodsCli, cliOrNote } from '../cli.js';
 import { projectRoot, readYaml } from '../fs.js';
 import { defineTool, summarize } from '../registry/registry.js';
 
@@ -9,7 +9,7 @@ export const issueTools = [
     name: 'issue_create',
     title: 'Create an issue for a failed run',
     description:
-      'Create (or comment on an existing) GitHub/Jira issue for the failures of a run via `automax integrations notify`. Use dryRun to preview.',
+      'Create (or comment on an existing) GitHub/Jira issue for the failures of a run via `sdods integrations notify`. Use dryRun to preview.',
     shape: {
       runId: z.string(),
       project: z.string().optional(),
@@ -68,14 +68,14 @@ export const issueTools = [
     annotations: { openWorldHint: true },
     handler: async (args, ctx) => {
       try {
-        const r = await automaxCli(['integrations', 'sync', '-p', args.project], {
+        const r = await sdodsCli(['integrations', 'sync', '-p', args.project], {
           cwd: ctx.rootDir,
           signal: ctx.signal,
           timeoutMs: 120_000,
         });
         return { text: summarize(`Synced ${args.project}`, r.json), data: r.json };
       } catch (e) {
-        if (e instanceof AutomaxCliError)
+        if (e instanceof SdodsCliError)
           return { text: `Sync failed: ${e.message}`, data: e.error, isError: true };
         throw e;
       }
@@ -98,10 +98,10 @@ export const scheduleTools = [
       const yaml = readYaml<{
         schedules?: unknown[];
         processes?: Array<{ name: string; schedule?: string; trigger?: string }>;
-      }>(join(root, 'automax.project.yaml'));
+      }>(join(root, 'sdods.project.yaml'));
       const ws = readYaml<{
         defaults?: { processes?: Array<{ name: string; schedule?: string; trigger?: string }> };
-      }>(join(ctx.rootDir, 'automax.workspace.yaml'));
+      }>(join(ctx.rootDir, 'sdods.workspace.yaml'));
       const scheduledProcesses = [...(ws?.defaults?.processes ?? []), ...(yaml?.processes ?? [])]
         .filter((p) => p.schedule)
         .map((p) => ({ process: p.name, cron: p.schedule, trigger: p.trigger }));

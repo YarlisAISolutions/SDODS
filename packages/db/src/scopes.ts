@@ -1,1 +1,1 @@
-export * from '@automax/contracts/scopes';
+export * from '@sdods/contracts/scopes';

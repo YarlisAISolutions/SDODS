@@ -1,9 +1,9 @@
 import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { ChildProcess } from 'node:child_process';
-import type { AutomaxDb } from '@automax/db';
-import { getProjectBySlug, upsertRun } from '@automax/db';
-import { newRunId, runFiles, type RunRecord, type RunTrigger } from '@automax/contracts';
+import type { SdodsDb } from '@sdods/db';
+import { getProjectBySlug, upsertRun } from '@sdods/db';
+import { newRunId, runFiles, type RunRecord, type RunTrigger } from '@sdods/contracts';
 import type { ServerConfig } from '../config.js';
 import { spawnCli } from './cli.js';
 import { LogBuffer } from './log-buffer.js';
@@ -46,7 +46,7 @@ export interface RunnerHooks {
   onFinished?: (job: RunJob) => void | Promise<void>;
 }
 
-/** Spawns `automax run …`, tracks logs/status, enforces concurrency and supports cancel. */
+/** Spawns `sdods run …`, tracks logs/status, enforces concurrency and supports cancel. */
 export class RunManager {
   private readonly jobs = new Map<string, RunJob>();
   private readonly queue: RunJob[] = [];
@@ -54,7 +54,7 @@ export class RunManager {
 
   constructor(
     private readonly config: ServerConfig,
-    private readonly adb: AutomaxDb,
+    private readonly adb: SdodsDb,
     private readonly hooks: RunnerHooks = {},
   ) {}
 
@@ -170,9 +170,9 @@ export class RunManager {
     job.status = 'running';
     job.startedAt = Date.now();
     const args = this.args(job);
-    job.log.push('sys', `automax ${args.join(' ')}`);
+    job.log.push('sys', `sdods ${args.join(' ')}`);
     const spawner = this.hooks.spawn ?? spawnCli;
-    const child = spawner(this.config, args, { AUTOMAX_TRIGGER: job.input.trigger ?? 'ui' });
+    const child = spawner(this.config, args, { SDODS_TRIGGER: job.input.trigger ?? 'ui' });
     job.child = child;
     void this.setStatus(job, 'running');
     const onLine = (stream: 'out' | 'err') => {

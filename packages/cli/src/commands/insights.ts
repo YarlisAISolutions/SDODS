@@ -2,12 +2,12 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Command } from 'commander';
 import pc from 'picocolors';
-import { AutomaxError } from '@automax/core';
+import { SdodsError } from '@sdods/core';
 import { createContext } from '../context.js';
 import { json, ok, out, table } from '../ui.js';
 
 /**
- * `automax insights compute|show` — flakiness, locator fragility, environment stability and
+ * `sdods insights compute|show` — flakiness, locator fragility, environment stability and
  * suite health over the last N ingested runs (needs a database with ingested results).
  */
 export function register(program: Command) {
@@ -17,9 +17,7 @@ export function register(program: Command) {
 
   insights
     .command('compute')
-    .description(
-      'Compute insights from ingested runs and store the result under .automax/insights/',
-    )
+    .description('Compute insights from ingested runs and store the result under .sdods/insights/')
     .requiredOption('-p, --project <slug>', 'project slug')
     .option('--window <n>', 'number of most recent runs to consider', '30')
     .option('--flaky-threshold <r>', 'quarantine candidate when flakiness ≥ r', '0.2')
@@ -59,14 +57,10 @@ export function register(program: Command) {
       const ctx = createContext(cmd);
       const file = resultFile(ctx.rootDir, opts.project);
       if (!existsSync(file)) {
-        throw new AutomaxError(
-          'CONFIG_NOT_FOUND',
-          `No insights computed yet for ${opts.project}.`,
-          {
-            hint: `Run \`automax insights compute -p ${opts.project}\` after ingesting some runs.`,
-            exitCode: 2,
-          },
-        );
+        throw new SdodsError('CONFIG_NOT_FOUND', `No insights computed yet for ${opts.project}.`, {
+          hint: `Run \`sdods insights compute -p ${opts.project}\` after ingesting some runs.`,
+          exitCode: 2,
+        });
       }
       const result = JSON.parse(readFileSync(file, 'utf8'));
       if (ctx.opts.json) return json(result);
@@ -75,18 +69,18 @@ export function register(program: Command) {
 }
 
 function resultFile(rootDir: string, slug: string): string {
-  return join(rootDir, '.automax', 'insights', `${slug}.json`);
+  return join(rootDir, '.sdods', 'insights', `${slug}.json`);
 }
 
 async function loadDb() {
   try {
-    return await import('@automax/db');
+    return await import('@sdods/db');
   } catch (e) {
-    throw new AutomaxError(
+    throw new SdodsError(
       'DB_REQUIRED',
-      'Insights need the @automax/db package and a configured database.',
+      'Insights need the @sdods/db package and a configured database.',
       {
-        hint: 'Set DB_DRIVER=sqlite (default), run `automax db migrate`, and ingest runs with `automax run --ingest`.',
+        hint: 'Set DB_DRIVER=sqlite (default), run `sdods db migrate`, and ingest runs with `sdods run --ingest`.',
         cause: e,
       },
     );

@@ -1,15 +1,15 @@
 ---
-title: automax data, db
+title: sdods data, db
 description: Import and preview datasets; migrate, inspect and switch the platform database.
 ---
 
 ## `data`
 
 ```text
-automax data preview <file> [--limit <n>]
-automax data import <dataset> <file> -p <slug> [-e <env>] [--to db|table] [--truncate]
-automax data list -p <slug>
-automax data seed -p <slug> [-e <env>] [--to db|table]
+sdods data preview <file> [--limit <n>]
+sdods data import <dataset> <file> -p <slug> [-e <env>] [--to db|table] [--truncate]
+sdods data list -p <slug>
+sdods data seed -p <slug> [-e <env>] [--to db|table]
 ```
 
 | Command   | Purpose                                                                                                                                                                                                           |
@@ -22,25 +22,25 @@ automax data seed -p <slug> [-e <env>] [--to db|table]
 ## `db`
 
 ```text
-automax db migrate [--to <name>] [--down]
-automax db status
-automax db sync
-automax db reset --yes                                                     # sqlite only
-automax db switch <sqlite|postgres> [--target-url <url>] [--target-path <file>] [--dry-run] [--truncate] [--env-file <file>] [--yes]
-automax db export <dir>
-automax db import <dir>
-automax db prune [--keep-runs <n>] [--keep-days <n>] [-p <slug>] [--dry-run]
+sdods db migrate [--to <name>] [--down]
+sdods db status
+sdods db sync
+sdods db reset --yes                                                     # sqlite only
+sdods db switch <sqlite|postgres> [--target-url <url>] [--target-path <file>] [--dry-run] [--truncate] [--env-file <file>] [--yes]
+sdods db export <dir>
+sdods db import <dir>
+sdods db prune [--keep-runs <n>] [--keep-days <n>] [-p <slug>] [--dry-run]
 ```
 
 | Command   | Purpose                                                                                                                                                      |
 | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `migrate` | apply pending migrations (creates the SQLite file on first use); `--to` targets one migration, `--down` rolls back one                                       |
 | `status`  | applied and pending migrations                                                                                                                               |
-| `sync`    | upsert organization, workspaces, projects, modules and processes from `automax.workspace.yaml` and the project YAML files                                    |
-| `reset`   | drop every AutoMax table (SQLite only)                                                                                                                       |
+| `sync`    | upsert organization, workspaces, projects, modules and processes from `sdods.workspace.yaml` and the project YAML files                                      |
+| `reset`   | drop every SDODS table (SQLite only)                                                                                                                         |
 | `switch`  | migrate the target, copy every table, verify row counts and rewrite `DB_DRIVER` / `DATABASE_URL` / `SQLITE_PATH` in the env file (`--dry-run` only verifies) |
 | `export`  | one JSONL file per table                                                                                                                                     |
 | `import`  | load JSONL files with `ON CONFLICT DO NOTHING`                                                                                                               |
 | `prune`   | delete old runs and their artifact directories                                                                                                               |
 
-Environment: `DB_DRIVER` (`sqlite` default, `postgres`), `DATABASE_URL`, `SQLITE_PATH` (default `.automax/automax.db`).
+Environment: `DB_DRIVER` (`sqlite` default, `postgres`), `DATABASE_URL`, `SQLITE_PATH` (default `.sdods/sdods.db`).

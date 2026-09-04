@@ -1,10 +1,10 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
-import { newId } from '@automax/contracts';
+import { newId } from '@sdods/contracts';
 import type { IssueLink, IssueLinkStore, ProviderName } from './types.js';
 
 /**
- * JSON-file store so the CLI works without a database (`.automax/issue-links.json`).
+ * JSON-file store so the CLI works without a database (`.sdods/issue-links.json`).
  * Pass `null` as the file for an in-memory store (tests). Not safe for concurrent writers across machines.
  */
 export class FileIssueLinkStore implements IssueLinkStore {

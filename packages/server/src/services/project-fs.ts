@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { join, relative, resolve, sep } from 'node:path';
 import { parseDocument } from 'yaml';
-import { PROJECT_FILE } from '@automax/core/config';
+import { PROJECT_FILE } from '@sdods/core/config';
 import { forbidden, notFound } from '../errors.js';
 
 const WRITABLE_DIRS = ['features', 'steps', 'pages', 'data', 'envs', 'recorded', 'har', 'schemas'];

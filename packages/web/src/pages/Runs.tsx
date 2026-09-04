@@ -234,7 +234,7 @@ export function StartRunDialog({
       open={open}
       onOpenChange={(o) => !o && onClose()}
       title="Start a run"
-      description="Same as `automax run`. Pick a process to reuse a named recipe, or set tags, layers and browsers by hand."
+      description="Same as `sdods run`. Pick a process to reuse a named recipe, or set tags, layers and browsers by hand."
       footer={
         <>
           <Button onClick={onClose}>Cancel</Button>

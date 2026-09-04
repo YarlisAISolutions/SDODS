@@ -34,7 +34,7 @@ export function ProcessesPage() {
     <div className="space-y-4">
       <PageHeader
         title="Processes"
-        subtitle="Named run recipes. Workspace defaults apply unless the project defines the same name. CLI: automax run --process <name>"
+        subtitle="Named run recipes. Workspace defaults apply unless the project defines the same name. CLI: sdods run --process <name>"
       />
       <DataTable<ProcessView>
         data={q.data ?? []}

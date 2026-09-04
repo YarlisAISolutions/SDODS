@@ -1,9 +1,9 @@
 import { readFileSync, statSync } from 'node:fs';
 import { parse as parseCsv } from 'csv-parse/sync';
 import { parse as parseYaml } from 'yaml';
-import type { DataSource } from '@automax/contracts';
-import type * as DbModule from '@automax/db';
-import { AutomaxError } from '../errors.js';
+import type { DataSource } from '@sdods/contracts';
+import type * as DbModule from '@sdods/db';
+import { SdodsError } from '../errors.js';
 import { interpolateString } from '../config/interpolate.js';
 import type { ResolvedConfig } from '../config/resolve.js';
 import type { Row } from './types.js';
@@ -27,7 +27,7 @@ function normalizeRows(raw: unknown, file: string): Row[] {
       ? (raw as any).rows
       : undefined;
   if (!arr)
-    throw new AutomaxError(
+    throw new SdodsError(
       'CONFIG_INVALID',
       `${file} must contain an array of rows (or { rows: [...] }).`,
     );
@@ -91,7 +91,7 @@ export async function loadFileSource(
       const schema = openApiComponentSchema(doc, spec.schema) as
         { example?: unknown; examples?: unknown[] } | undefined;
       if (!schema)
-        throw new AutomaxError(
+        throw new SdodsError(
           'DATASET_NOT_FOUND',
           `OpenAPI component schema "${spec.schema}" not found in ${spec.spec}.`,
         );
@@ -100,18 +100,18 @@ export async function loadFileSource(
     }
     case 'db': {
       if (!config.env.db)
-        throw new AutomaxError(
+        throw new SdodsError(
           'DB_REQUIRED',
           `Dataset table "${spec.table}" needs env.db in envs/${config.env.name}.yaml.`,
         );
       let mod: typeof DbModule;
       try {
-        mod = await import('@automax/db');
+        mod = await import('@sdods/db');
       } catch {
-        throw new AutomaxError(
+        throw new SdodsError(
           'DB_REQUIRED',
-          `Dataset uses type "db" but @automax/db is not available.`,
-          { hint: 'Install @automax/db and configure env.db in envs/<env>.yaml.' },
+          `Dataset uses type "db" but @sdods/db is not available.`,
+          { hint: 'Install @sdods/db and configure env.db in envs/<env>.yaml.' },
         );
       }
       const adb = mod.createDb(

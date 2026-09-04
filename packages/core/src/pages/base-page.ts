@@ -1,7 +1,7 @@
 import type { Download, Locator, Page } from '@playwright/test';
 import { expect } from '@playwright/test';
 import type { ResolvedConfig } from '../config/resolve.js';
-import { AutomaxError } from '../errors.js';
+import { SdodsError } from '../errors.js';
 import type { Healer, HealedLocator } from '../heal/healer.js';
 import type { HealContext } from '../heal/types.js';
 import { Logger } from '../logger.js';
@@ -33,16 +33,16 @@ export class BasePage {
     return renderTemplate(text, this.vars);
   }
 
-  /** Path for a named route from automax.project.yaml, or the raw path when not a route name. */
+  /** Path for a named route from sdods.project.yaml, or the raw path when not a route name. */
   routePath(nameOrPath: string): string {
     const routes = this.config.project.routes;
     if (nameOrPath in routes) return routes[nameOrPath]!;
     if (nameOrPath.startsWith('/') || /^https?:\/\//.test(nameOrPath)) return nameOrPath;
-    throw new AutomaxError(
+    throw new SdodsError(
       'CONFIG_INVALID',
       `Unknown route "${nameOrPath}" for project ${this.config.project.slug}.`,
       {
-        hint: `Known routes: ${Object.keys(routes).join(', ') || '(none)'}. Add it under routes: in automax.project.yaml or pass a path starting with "/".`,
+        hint: `Known routes: ${Object.keys(routes).join(', ') || '(none)'}. Add it under routes: in sdods.project.yaml or pass a path starting with "/".`,
       },
     );
   }

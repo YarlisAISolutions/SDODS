@@ -1,12 +1,12 @@
 import type { Command } from 'commander';
 import pc from 'picocolors';
-import { WORKSPACE_FILE } from '@automax/core';
+import { WORKSPACE_FILE } from '@sdods/core';
 import { createContext } from '../context.js';
 import { json, out, table } from '../ui.js';
 
 /**
  * Hierarchy commands: organization → workspaces → projects → modules → processes.
- * File-based (no database needed). Membership roles are shown by `automax users` / the web UI
+ * File-based (no database needed). Membership roles are shown by `sdods users` / the web UI
  * once a database is configured.
  */
 export function registerWorkspaceCommands(program: Command) {

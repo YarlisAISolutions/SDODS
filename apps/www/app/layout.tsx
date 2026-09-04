@@ -9,23 +9,23 @@ import './global.css';
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    template: '%s | AutoMax',
-    default: 'AutoMax — an automation platform with a reusable architecture',
+    template: '%s | SDODS',
+    default: 'SDODS — an automation platform with a reusable architecture',
   },
   description:
-    'AutoMax: BDD for UI, API and hybrid automation, multi-project and multi-environment, data-driven, self-healing, with before/after screenshot narratives, SQLite or Postgres, an MCP server, AI agents, GitHub and Jira integration and a web UI. Open source, Apache-2.0.',
+    'SDODS: BDD for UI, API and hybrid automation, multi-project and multi-environment, data-driven, self-healing, with before/after screenshot narratives, SQLite or Postgres, an MCP server, AI agents, GitHub and Jira integration and a web UI. Open source, Apache-2.0.',
   icons: { icon: '/img/favicon.svg' },
   openGraph: {
-    title: 'AutoMax',
+    title: 'SDODS',
     description: 'An automation platform with a reusable architecture.',
     url: SITE_URL,
-    siteName: 'AutoMax',
+    siteName: 'SDODS',
     type: 'website',
-    images: [{ url: '/img/automax-logo.svg', width: 640, height: 160, alt: 'AutoMax' }],
+    images: [{ url: '/img/sdods-logo.svg', width: 640, height: 160, alt: 'SDODS' }],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'AutoMax',
+    title: 'SDODS',
     description: 'An automation platform with a reusable architecture.',
   },
   alternates: { canonical: SITE_URL },

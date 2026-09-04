@@ -1,7 +1,7 @@
 {
-  "name": "@automax/server",
+  "name": "@sdods/server",
   "version": "0.1.0",
-  "description": "AutoMax web server: Fastify REST API, SSE run streams, sessions/roles/API tokens, run manager, cron scheduler, MCP over HTTP, static reports and the web UI.",
+  "description": "SDODS web server: Fastify REST API, SSE run streams, sessions/roles/API tokens, run manager, cron scheduler, MCP over HTTP, static reports and the web UI.",
   "license": "Apache-2.0",
   "author": "Sireesh Yarlagadda (https://www.linkedin.com/in/yarlagadda/)",
   "type": "module",
@@ -22,10 +22,10 @@
     "node": ">=22"
   },
   "dependencies": {
-    "@automax/contracts": "workspace:*",
-    "@automax/core": "workspace:*",
-    "@automax/db": "workspace:*",
-    "@automax/mcp": "workspace:*",
+    "@sdods/contracts": "workspace:*",
+    "@sdods/core": "workspace:*",
+    "@sdods/db": "workspace:*",
+    "@sdods/mcp": "workspace:*",
     "@fastify/cookie": "^11.1.2",
     "@fastify/multipart": "^10.1.1",
     "@fastify/rate-limit": "^11.2.0",

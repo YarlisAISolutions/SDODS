@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
-import { migrationStatus } from '@automax/db';
-import { VERSION } from '@automax/core';
-import { SCOPES } from '@automax/contracts';
+import { migrationStatus } from '@sdods/db';
+import { VERSION } from '@sdods/core';
+import { SCOPES } from '@sdods/contracts';
 
 export async function miscRoutes(app: FastifyInstance) {
   app.get('/api/health', async () => {
@@ -20,8 +20,8 @@ export async function miscRoutes(app: FastifyInstance) {
     const base = app.config.publicUrl ?? `${req.protocol}://${req.headers.host}`;
     let tools: Array<{ name: string; scope: string | null }> = [];
     try {
-      const mcp = await import('@automax/mcp');
-      const built = mcp.buildAutomaxMcpServer({ rootDir: app.config.rootDir, caps: 'all' });
+      const mcp = await import('@sdods/mcp');
+      const built = mcp.buildSdodsMcpServer({ rootDir: app.config.rootDir, caps: 'all' });
       tools = built.registry
         .list(built.ctx)
         .map((t) => ({ name: t.name, scope: mcp.requiredScope(t) }));
@@ -35,10 +35,10 @@ export async function miscRoutes(app: FastifyInstance) {
       tools,
       scopes: SCOPES,
       snippets: {
-        claudeCode: `claude mcp add --transport http automax ${base}/mcp --header "Authorization: Bearer <token>"`,
+        claudeCode: `claude mcp add --transport http sdods ${base}/mcp --header "Authorization: Bearer <token>"`,
         json: {
           mcpServers: {
-            automax: {
+            sdods: {
               type: 'http',
               url: `${base}/mcp`,
               headers: { Authorization: 'Bearer <token>' },
@@ -47,16 +47,16 @@ export async function miscRoutes(app: FastifyInstance) {
         },
         vscode: {
           servers: {
-            automax: {
+            sdods: {
               type: 'http',
               url: `${base}/mcp`,
-              headers: { Authorization: 'Bearer ${input:automax-token}' },
+              headers: { Authorization: 'Bearer ${input:sdods-token}' },
             },
           },
         },
         stdio: {
           mcpServers: {
-            automax: { command: 'npx', args: ['automax', 'mcp'], cwd: app.config.rootDir },
+            sdods: { command: 'npx', args: ['sdods', 'mcp'], cwd: app.config.rootDir },
           },
         },
       },

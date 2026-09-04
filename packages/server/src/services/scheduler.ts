@@ -1,13 +1,13 @@
 import { Cron } from 'croner';
-import type { AutomaxDb } from '@automax/db';
+import type { SdodsDb } from '@sdods/db';
 import {
   getProjectBySlug,
   listSchedules,
   recordScheduleRun,
   updateScheduleState,
   upsertSchedule,
-} from '@automax/db';
-import type { ProjectRegistry } from '@automax/core/config';
+} from '@sdods/db';
+import type { ProjectRegistry } from '@sdods/core/config';
 import type { RunManager, StartRunInput } from './run-manager.js';
 
 export interface ScheduleView {
@@ -36,7 +36,7 @@ export class Scheduler {
   private started = false;
 
   constructor(
-    private readonly adb: AutomaxDb,
+    private readonly adb: SdodsDb,
     private readonly runManager: RunManager,
     private readonly log: { info(msg: string): void; warn(msg: string): void } = console,
   ) {}

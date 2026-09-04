@@ -1,10 +1,10 @@
 ---
-title: automax analyze
-description: Analyze an application repository and propose an AutoMax project.
+title: sdods analyze
+description: Analyze an application repository and propose an SDODS project.
 ---
 
 ```text
-automax analyze [path] [-p <slug> | --slug <slug>] [--name <name>] [--openapi <file>] [--browsers <list>]
+sdods analyze [path] [-p <slug> | --slug <slug>] [--name <name>] [--openapi <file>] [--browsers <list>]
                 [--apply] [--force] [--no-import-specs] [--report-only]
 ```
 
@@ -20,12 +20,12 @@ automax analyze [path] [-p <slug> | --slug <slug>] [--name <name>] [--openapi <f
 | `--no-import-specs`    | do not copy existing Playwright specs into `recorded/imported`                       |
 | `--report-only`        | print the analysis and skip the proposal                                             |
 
-Read-only unless `--apply`. Detects the package manager and monorepo shape, the framework, routes (Next.js, React Router, Vue Router, Nuxt, Angular, Express, Fastify, NestJS, Spring, Flask, FastAPI, Django), OpenAPI documents, the test-id attribute in use, existing tests and their locator quality, authentication libraries and login pages, env files and dev-server ports, CI provider, i18n and accessibility tooling. The proposal contains a validated `automax.project.yaml` (modules by route segment or OpenAPI tag, processes, routes), `envs/*.yaml`, starter `@smoke` features per module, a coverage map and a checklist.
+Read-only unless `--apply`. Detects the package manager and monorepo shape, the framework, routes (Next.js, React Router, Vue Router, Nuxt, Angular, Express, Fastify, NestJS, Spring, Flask, FastAPI, Django), OpenAPI documents, the test-id attribute in use, existing tests and their locator quality, authentication libraries and login pages, env files and dev-server ports, CI provider, i18n and accessibility tooling. The proposal contains a validated `sdods.project.yaml` (modules by route segment or OpenAPI tag, processes, routes), `envs/*.yaml`, starter `@smoke` features per module, a coverage map and a checklist.
 
 ```bash
-bun run automax analyze ../my-app --report-only
-bun run automax analyze ../my-app --apply --slug my-app
-bun run automax lint -p my-app && bun run automax run -p my-app -e local -t @smoke
+bun run sdods analyze ../my-app --report-only
+bun run sdods analyze ../my-app --apply --slug my-app
+bun run sdods lint -p my-app && bun run sdods run -p my-app -e local -t @smoke
 ```
 
-`automax init --from <app>` runs the same analysis while scaffolding a new workspace.
+`sdods init --from <app>` runs the same analysis while scaffolding a new workspace.

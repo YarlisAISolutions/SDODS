@@ -1,14 +1,14 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { Client, StreamableHTTPClientTransport } from '@modelcontextprotocol/client';
 import { findRepoRoot } from '../src/cli.js';
-import { serveAutomaxHttp } from '../src/transports/http.js';
+import { serveSdodsHttp } from '../src/transports/http.js';
 
-describe('automax mcp (streamable HTTP)', () => {
+describe('sdods mcp (streamable HTTP)', () => {
   const root = findRepoRoot(process.cwd());
-  let srv: Awaited<ReturnType<typeof serveAutomaxHttp>>;
+  let srv: Awaited<ReturnType<typeof serveSdodsHttp>>;
 
   beforeAll(async () => {
-    srv = await serveAutomaxHttp({
+    srv = await serveSdodsHttp({
       rootDir: root,
       port: 0,
       caps: 'all',

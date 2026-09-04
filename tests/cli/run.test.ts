@@ -18,7 +18,7 @@ const cli = (...args: string[]) =>
     env: { ...process.env, FORCE_COLOR: '0' },
   });
 
-describe('automax CLI (end to end against projects/demo-shop)', () => {
+describe('sdods CLI (end to end against projects/demo-shop)', () => {
   it('project list --json describes the demo project', async () => {
     const r = await cli('--json', 'project', 'list');
     expect(r.exitCode).toBe(0);

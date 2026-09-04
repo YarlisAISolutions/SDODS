@@ -1,5 +1,5 @@
 import type { Command } from 'commander';
-import { AutomaxError } from '@automax/core';
+import { SdodsError } from '@sdods/core';
 import { createContext } from '../context.js';
 import { collect, json, ok, table, warn } from '../ui.js';
 
@@ -17,12 +17,12 @@ export function register(program: Command) {
     .option('--expires <days>', 'expiry in days (default: never)')
     .action(async (opts, cmd) => {
       const ctx = createContext(cmd);
-      const db = await import('@automax/db');
+      const db = await import('@sdods/db');
       const adb = await db.openDb();
       try {
         const u = await db.getUserByUsername(adb.db, opts.user);
         if (!u)
-          throw new AutomaxError('CONFIG_NOT_FOUND', `User ${opts.user} not found.`, {
+          throw new SdodsError('CONFIG_NOT_FOUND', `User ${opts.user} not found.`, {
             exitCode: 2,
           });
         const scopes = opts.scopes.length ? opts.scopes : db.scopesForRole(u.role);
@@ -55,14 +55,14 @@ export function register(program: Command) {
     .option('--user <username>', 'only this user')
     .action(async (opts, cmd) => {
       const ctx = createContext(cmd);
-      const db = await import('@automax/db');
+      const db = await import('@sdods/db');
       const adb = await db.openDb();
       try {
         let userId: string | undefined;
         if (opts.user) {
           const u = await db.getUserByUsername(adb.db, opts.user);
           if (!u)
-            throw new AutomaxError('CONFIG_NOT_FOUND', `User ${opts.user} not found.`, {
+            throw new SdodsError('CONFIG_NOT_FOUND', `User ${opts.user} not found.`, {
               exitCode: 2,
             });
           userId = u.id;
@@ -89,7 +89,7 @@ export function register(program: Command) {
     .description('Revoke a token by id')
     .action(async (id: string, cmd) => {
       const ctx = createContext(cmd);
-      const db = await import('@automax/db');
+      const db = await import('@sdods/db');
       const adb = await db.openDb();
       try {
         await db.revokeApiToken(adb.db, id);

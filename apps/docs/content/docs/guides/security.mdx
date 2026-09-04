@@ -20,9 +20,9 @@ description: Secrets, API tokens, roles across organizations and workspaces, ses
 Tokens are free, unlimited, scoped and revocable. Format `amx_` plus 40 characters; stored as SHA-256; shown once.
 
 ```bash
-bun run automax tokens create --user ci --name ingest --scopes runs:ingest,runs:read --expires 90d
-bun run automax tokens list
-bun run automax tokens revoke <id>
+bun run sdods tokens create --user ci --name ingest --scopes runs:ingest,runs:read --expires 90d
+bun run sdods tokens list
+bun run sdods tokens revoke <id>
 ```
 
 A token's scopes must be a subset of its owner's role, at creation and at use.

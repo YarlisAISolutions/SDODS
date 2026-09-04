@@ -1,7 +1,7 @@
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { createDb, type AutomaxDb } from '../create-db.js';
+import { createDb, type SdodsDb } from '../create-db.js';
 import { DEFAULT_SQLITE_PATH, type Driver, type DriverConfig } from '../driver.js';
 import { migrateToLatest } from '../migrate.js';
 import { TABLES_IN_FK_ORDER } from '../schema.js';
@@ -10,7 +10,7 @@ import { countRows, exportAll } from './export.js';
 import { importAll } from './import.js';
 
 export interface SwitchOptions {
-  source: AutomaxDb;
+  source: SdodsDb;
   target: Driver;
   targetUrl?: string;
   targetPath?: string;
@@ -49,7 +49,7 @@ export async function switchDriver(opts: SwitchOptions): Promise<SwitchResult> {
   }
 
   const target = createDb(targetCfg);
-  const dir = mkdtempSync(join(tmpdir(), 'automax-switch-'));
+  const dir = mkdtempSync(join(tmpdir(), 'sdods-switch-'));
   try {
     await migrateToLatest(target);
 

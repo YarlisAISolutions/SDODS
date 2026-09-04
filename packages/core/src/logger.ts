@@ -10,8 +10,8 @@ const ORDER: Record<LogLevel, number> = {
   debug: 5,
 };
 
-let globalLevel: LogLevel = (process.env.AUTOMAX_LOG_LEVEL as LogLevel) || 'info';
-let jsonMode = process.env.AUTOMAX_LOG_JSON === '1';
+let globalLevel: LogLevel = (process.env.SDODS_LOG_LEVEL as LogLevel) || 'info';
+let jsonMode = process.env.SDODS_LOG_JSON === '1';
 const SECRET_KEY = /(password|secret|token|apikey|api_key|authorization|cookie)/i;
 
 export function setLogLevel(level: LogLevel) {
@@ -104,4 +104,4 @@ export class Logger {
   }
 }
 
-export const rootLogger = new Logger('automax');
+export const rootLogger = new Logger('sdods');

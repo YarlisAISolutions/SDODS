@@ -1,6 +1,6 @@
 ---
 title: Locator strategy
-description: Choose locators that survive refactors, and declare what AutoMax may fall back to.
+description: Choose locators that survive refactors, and declare what SDODS may fall back to.
 ---
 
 <Learn>
@@ -21,6 +21,6 @@ readonly submit = this.heal.locator(this.page.getByRole('button', { name: 'Login
 
 Give every heal context a `description`; it becomes the label in reports and the key for fragility statistics. Avoid contexts that match several elements (`text: 'Add'` on a product grid); uniqueness lowers the score and can pick the wrong element.
 
-Never heal negative assertions; AutoMax refuses to, because "not visible" is trivially satisfied by a wrong locator.
+Never heal negative assertions; SDODS refuses to, because "not visible" is trivially satisfied by a wrong locator.
 
 Run `analyze_locators` (MCP) or the reviewer agent on a project to find CSS-only locators and strict-mode risks.

@@ -7,7 +7,7 @@ import { Kysely, PostgresDialect, SqliteDialect } from 'kysely';
 import type { Database } from './schema.js';
 import { resolveDriverConfig, type Driver, type DriverConfig } from './driver.js';
 
-export interface AutomaxDb {
+export interface SdodsDb {
   db: Kysely<Database>;
   driver: Driver;
   config: DriverConfig;
@@ -15,14 +15,14 @@ export interface AutomaxDb {
 }
 
 /** Open the platform database for the resolved driver. Callers own `close()`. */
-export function createDb(cfg: DriverConfig = resolveDriverConfig()): AutomaxDb {
+export function createDb(cfg: DriverConfig = resolveDriverConfig()): SdodsDb {
   if (cfg.driver === 'postgres') {
     return createPostgres(cfg);
   }
   return createSqlite(cfg);
 }
 
-function createSqlite(cfg: DriverConfig): AutomaxDb {
+function createSqlite(cfg: DriverConfig): SdodsDb {
   // Lazy require keeps `pg` out of the sqlite path and vice versa.
   const path = cfg.sqlitePath ?? ':memory:';
   const SqliteCtor = loadBetterSqlite();
@@ -42,7 +42,7 @@ function createSqlite(cfg: DriverConfig): AutomaxDb {
   };
 }
 
-function createPostgres(cfg: DriverConfig): AutomaxDb {
+function createPostgres(cfg: DriverConfig): SdodsDb {
   const { Pool, types } = loadPg();
   // Return timestamptz/timestamp/date as ISO strings so both dialects look identical to callers.
   const toIso = (v: string | null) => (v == null ? v : new Date(v).toISOString());
@@ -66,6 +66,6 @@ function loadPg(): any {
 }
 
 /** In-memory sqlite, used by tests and `--isolated` modes. */
-export function createMemoryDb(): AutomaxDb {
+export function createMemoryDb(): SdodsDb {
   return createSqlite({ driver: 'sqlite', sqlitePath: ':memory:' });
 }

@@ -13,7 +13,7 @@ export interface HarHookFixtures {
   page?: Page;
   context?: BrowserContext;
   config: ResolvedConfig;
-  /** worker fixture reading AUTOMAX_HAR_MODE / --har-update / --har-replay */
+  /** worker fixture reading SDODS_HAR_MODE / --har-update / --har-replay */
   harMode?: ApiHarMode;
   /** scenario title, for the sidecar */
   title?: string;
@@ -40,7 +40,7 @@ export function effectiveHarMode(
 
 /**
  * Browser layer: for `@har:<name>[:strict]` scenarios, route from the HAR file (record in update
- * mode). With `AUTOMAX_OFFLINE=1` every other request is aborted; the abort route is registered
+ * mode). With `SDODS_OFFLINE=1` every other request is aborted; the abort route is registered
  * BEFORE routeFromHAR because Playwright matches routes newest-first, so the HAR handler runs first
  * and `notFound: 'fallback'` falls through to the abort.
  */
@@ -50,9 +50,7 @@ export async function applyHarToPage(f: HarHookFixtures): Promise<HarApplied | u
   if (!f.page || !f.context) return undefined;
   if (offline && !tag) {
     await f.context.route('**/*', (route) => route.abort('blockedbyclient'));
-    log.warn(
-      'AUTOMAX_OFFLINE=1 but the scenario has no @har tag: all network requests are blocked.',
-    );
+    log.warn('SDODS_OFFLINE=1 but the scenario has no @har tag: all network requests are blocked.');
     return undefined;
   }
   if (!tag) return undefined;
@@ -60,7 +58,7 @@ export async function applyHarToPage(f: HarHookFixtures): Promise<HarApplied | u
   const mode = effectiveHarMode(f.config, f.harMode, file);
   if (mode === 'off') {
     log.warn(
-      `@har:${tag.name} has no recording at ${file}. Run: automax har record -p ${f.config.project.slug} -e ${f.config.env.name} -t @har:${tag.name}`,
+      `@har:${tag.name} has no recording at ${file}. Run: sdods har record -p ${f.config.project.slug} -e ${f.config.env.name} -t @har:${tag.name}`,
     );
     return undefined;
   }
@@ -126,7 +124,7 @@ type BeforeFn = (
  */
 export function registerHarHooks(bdd: { Before: BeforeFn }): void {
   bdd.Before(
-    { tags: '@ui or @hybrid', name: 'automax:har' },
+    { tags: '@ui or @hybrid', name: 'sdods:har' },
     async ({
       $tags,
       page,

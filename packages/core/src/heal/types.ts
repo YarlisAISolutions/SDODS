@@ -1,5 +1,5 @@
 import type { Locator, Page } from '@playwright/test';
-import type { HealCandidate, HealEvent } from '@automax/contracts';
+import type { HealCandidate, HealEvent } from '@sdods/contracts';
 
 export type AriaRole = Parameters<Page['getByRole']>[0];
 

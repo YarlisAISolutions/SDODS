@@ -1,7 +1,7 @@
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
-import { GitHubIntegrationSchema, type RunRecord } from '@automax/contracts';
+import { GitHubIntegrationSchema, type RunRecord } from '@sdods/contracts';
 import { GitHubProvider, PR_COMMENT_MARKER } from '../src/github.js';
 import { createIntegrationContext } from '../src/context.js';
 import { createMemoryStore } from '../src/store.js';
@@ -191,7 +191,7 @@ describe('GitHubProvider', () => {
     ]);
     const res = await p.onRunFinished(s, ctx);
     const check = calls.find((c) => c.path === 'check-runs')!;
-    expect(check.body.name).toBe('AutoMax / shop / chromium');
+    expect(check.body.name).toBe('SDODS / shop / chromium');
     expect(check.body.conclusion).toBe('failure');
     expect(check.body.head_sha).toBe('abcdef1234567890');
     expect(check.body.output.annotations).toHaveLength(1);
@@ -220,17 +220,17 @@ describe('GitHubProvider', () => {
     const ctx = createIntegrationContext({
       store,
       env: {} as any,
-      publicUrl: 'https://automax.test',
+      publicUrl: 'https://sdods.test',
     });
     const first = await p.onRunFinished(summary([scenario()]), ctx);
     const created = calls.find((c) => c.path === 'issues')!;
-    expect(created.body.title).toBe('[AutoMax] Login › Successful login failing (chromium)');
+    expect(created.body.title).toBe('[SDODS] Login › Successful login failing (chromium)');
     expect(created.body.body).toContain('```gherkin');
-    expect(created.body.body).toContain('automax-fingerprint:fp-login');
+    expect(created.body.body).toContain('sdods-fingerprint:fp-login');
     expect(created.body.body).toContain(
-      'https://automax.test/api/runs/run-1/files/shop/fp-login/r0/scenario-failure.png',
+      'https://sdods.test/api/runs/run-1/files/shop/fp-login/r0/scenario-failure.png',
     );
-    expect(created.body.labels).toEqual(['automax']);
+    expect(created.body.labels).toEqual(['sdods']);
     expect(first.actions[0]).toMatchObject({ kind: 'issue-created', target: 'acme/shop#101' });
 
     calls.length = 0;

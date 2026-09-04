@@ -1,6 +1,6 @@
-import type { RunTotals } from '@automax/contracts/types';
+import type { RunTotals } from '@sdods/contracts/types';
 import { enc, nowIso, readBool, readJson, readTs } from '../col.js';
-import type { AutomaxDb } from '../create-db.js';
+import type { SdodsDb } from '../create-db.js';
 import { bumpLocatorStats, recomputeFlakyStats } from '../repos/improvement.js';
 import { emptyTotals } from './types.js';
 
@@ -13,7 +13,7 @@ export interface LocatorCounter {
 }
 
 export interface FinalizeInput {
-  adb: AutomaxDb;
+  adb: SdodsDb;
   runId: string;
   projectId: string;
   locatorCounters: Map<string, LocatorCounter>;

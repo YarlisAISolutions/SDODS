@@ -13,9 +13,9 @@ import {
   poolStatus,
   upsertDataset,
   upsertIntegration,
-} from '@automax/db';
-import { PROJECT_FILE } from '@automax/core/config';
-import { ProjectConfigSchema } from '@automax/contracts';
+} from '@sdods/db';
+import { PROJECT_FILE } from '@sdods/core/config';
+import { ProjectConfigSchema } from '@sdods/contracts';
 import {
   CreateProjectBody,
   EnvBody,
@@ -618,7 +618,7 @@ async function validateFeature(app: FastifyInstance, slug: string, content: stri
   const errors: Array<{ rule: string; message: string; line?: number }> = [];
   const warnings: Array<{ rule: string; message: string; line?: number }> = [];
   try {
-    const mcp = await import('@automax/mcp');
+    const mcp = await import('@sdods/mcp');
     const parsed = mcp.parseGherkin(content) as unknown as {
       errors?: string[];
       tags?: string[];

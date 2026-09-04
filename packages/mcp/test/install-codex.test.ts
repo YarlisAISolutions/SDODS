@@ -16,7 +16,7 @@ describe('MCP install for Codex', () => {
   const originalHome = process.env.CODEX_HOME;
   let home: string;
   beforeEach(() => {
-    home = mkdtempSync(join(tmpdir(), 'automax-codex-home-'));
+    home = mkdtempSync(join(tmpdir(), 'sdods-codex-home-'));
     process.env.CODEX_HOME = home;
   });
   afterEach(() => {
@@ -24,7 +24,7 @@ describe('MCP install for Codex', () => {
     else process.env.CODEX_HOME = originalHome;
   });
 
-  it('merges [mcp_servers.automax] into an existing config.toml without touching other tables', () => {
+  it('merges [mcp_servers.sdods] into an existing config.toml without touching other tables', () => {
     const file = codexConfigPath();
     mkdirSync(join(file, '..'), { recursive: true });
     writeFileSync(
@@ -55,9 +55,9 @@ url = "https://mcp.perplexity.ai"
       env: { NODE_ENV: 'test' },
     });
     expect(parsed.mcp_servers.perplexity).toEqual({ url: 'https://mcp.perplexity.ai' });
-    expect(parsed.mcp_servers.automax).toEqual({
+    expect(parsed.mcp_servers.sdods).toEqual({
       command: 'npx',
-      args: ['automax', 'mcp', '--project', 'demo-shop', '--env', 'staging'],
+      args: ['sdods', 'mcp', '--project', 'demo-shop', '--env', 'staging'],
     });
     expect(parsed.mcp_servers.playwright).toEqual({
       command: 'npx',
@@ -65,11 +65,11 @@ url = "https://mcp.perplexity.ai"
     });
 
     // second install is idempotent and can switch to HTTP
-    installCodexConfig({ httpUrl: 'https://automax.example.com/mcp', withPlaywright: false });
+    installCodexConfig({ httpUrl: 'https://sdods.example.com/mcp', withPlaywright: false });
     const again = parseToml(readFileSync(file, 'utf8')) as any;
-    expect(again.mcp_servers.automax).toEqual({
-      url: 'https://automax.example.com/mcp',
-      bearer_token_env_var: 'AUTOMAX_TOKEN',
+    expect(again.mcp_servers.sdods).toEqual({
+      url: 'https://sdods.example.com/mcp',
+      bearer_token_env_var: 'SDODS_TOKEN',
     });
     expect(again.mcp_servers.node_repl.args).toEqual(['repl.js']);
   });
@@ -78,17 +78,17 @@ url = "https://mcp.perplexity.ai"
     const r = installClientConfig('/unused-root', 'codex', { project: 'shop' });
     expect(r.created).toBe(true);
     const parsed = parseToml(readFileSync(r.file, 'utf8')) as any;
-    expect(parsed.mcp_servers.automax.args).toEqual(['automax', 'mcp', '--project', 'shop']);
+    expect(parsed.mcp_servers.sdods.args).toEqual(['sdods', 'mcp', '--project', 'shop']);
   });
 
   it('exposes snippets and CLI commands for codex', () => {
     const s = snippets({ project: 'shop' });
-    expect(s.codex.toml).toContain('[mcp_servers.automax]');
-    expect(s.codex.cli).toBe('codex mcp add automax -- npx automax mcp --project shop');
+    expect(s.codex.toml).toContain('[mcp_servers.sdods]');
+    expect(s.codex.cli).toBe('codex mcp add sdods -- npx sdods mcp --project shop');
     expect(cliCommands({ httpUrl: 'https://x/mcp' }).codex).toContain('--url https://x/mcp');
     expect(cliCommands({ project: 'shop' }).claude).toBe(
-      'claude mcp add automax -- npx automax mcp --project shop',
+      'claude mcp add sdods -- npx sdods mcp --project shop',
     );
-    expect(Object.keys(codexTomlEntries({ withPlaywright: false }))).toEqual(['automax']);
+    expect(Object.keys(codexTomlEntries({ withPlaywright: false }))).toEqual(['sdods']);
   });
 });

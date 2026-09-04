@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
-import type { AgentSdkToolDef } from '@automax/mcp';
+import type { AgentSdkToolDef } from '@sdods/mcp';
 import { ClaudeAdapter, normalize } from '../src/adapter/claude.js';
 import { FakeAdapter } from '../src/adapter/fake.js';
 import { OpenAiCompatibleAdapter } from '../src/adapter/openai-compat.js';
@@ -50,7 +50,7 @@ describe('ClaudeAdapter', () => {
                 {
                   type: 'tool_use',
                   id: 't1',
-                  name: 'mcp__automax__echo_test',
+                  name: 'mcp__sdods__echo_test',
                   input: { text: 'hi' },
                 },
               ],
@@ -108,9 +108,9 @@ describe('ClaudeAdapter', () => {
     expect(opts.systemPrompt).toBe('sys');
     expect(opts.disallowedTools).toContain('Bash');
     expect(opts.allowedTools).toEqual(
-      expect.arrayContaining(['mcp__automax__*', 'mcp__playwright__*', 'mcp__github__*']),
+      expect.arrayContaining(['mcp__sdods__*', 'mcp__playwright__*', 'mcp__github__*']),
     );
-    expect(Object.keys(opts.mcpServers)).toEqual(['automax', 'playwright', 'github']);
+    expect(Object.keys(opts.mcpServers)).toEqual(['sdods', 'playwright', 'github']);
     expect(opts.mcpServers.playwright.args).toEqual(['playwright', 'mcp', '--headless']);
     expect(sdk.tool).toHaveBeenCalledWith(
       'echo_test',

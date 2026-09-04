@@ -1,11 +1,11 @@
 ---
 title: Claude Code and Codex CLI
-description: Use AutoMax from Claude Code and OpenAI Codex, and run AutoMax agents on their logins without an API key.
+description: Use SDODS from Claude Code and OpenAI Codex, and run SDODS agents on their logins without an API key.
 ---
 
 <Learn>
-  How to register AutoMax with Claude Code and Codex so they can drive your test platform, how to
-  run AutoMax's own agent roles through those CLIs instead of an API key, and what each client sees.
+  How to register SDODS with Claude Code and Codex so they can drive your test platform, how to run
+  SDODS's own agent roles through those CLIs instead of an API key, and what each client sees.
 </Learn>
 
 ## Two directions
@@ -16,9 +16,9 @@ flowchart LR
     CC["Claude Code<br/>claude"]
     CX["Codex CLI<br/>codex"]
   end
-  subgraph automax["AutoMax"]
-    MCP["automax mcp<br/>37 tools · prompts · resources"]
-    AG["automax agent …<br/>planner · generator · healer · upgrader · reviewer"]
+  subgraph sdods["SDODS"]
+    MCP["sdods mcp<br/>37 tools · prompts · resources"]
+    AG["sdods agent …<br/>planner · generator · healer · upgrader · reviewer"]
     PR["proposals/"]
   end
   CC -- "MCP (stdio)" --> MCP
@@ -28,8 +28,20 @@ flowchart LR
   AG --> PR
 ```
 
-1. **The CLI drives AutoMax.** Register the AutoMax MCP server with the client; then ask it to list projects, run a suite, read a scenario's before/after screenshots, or write a feature proposal.
-2. **AutoMax drives the CLI.** `automax agent … --adapter claude-code|codex` runs a role through the CLI's own login. No `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` is needed; the CLI's subscription or account pays.
+1. **The CLI drives SDODS.** Register the SDODS MCP server with the client; then ask it to list projects, run a suite, read a scenario's before/after screenshots, or write a feature proposal.
+2. **SDODS drives the CLI.** `sdods agent … --adapter claude-code|codex` runs a role through the CLI's own login. No `ANTHROPIC_API_KEY` or `OPENAI_API_KEY` is needed; the CLI's subscription or account pays.
+
+## Install SDODS with the MCP registration included
+
+The installer can register the MCP server for you while it sets SDODS up:
+
+```bash
+curl -fsSL https://sdods.com/install.sh | sh -s -- --mcp all
+```
+
+`--mcp claude`, `--mcp codex` or `--mcp all` runs `sdods mcp install <client>` for the CLIs it finds
+on your PATH, and skips (with a note) the ones you do not have. On Windows use `-Mcp all`. Everything
+below works the same if you installed from a clone instead.
 
 ## Set up Claude Code
 
@@ -42,23 +54,23 @@ npm i -g @anthropic-ai/claude-code
 claude login
 ```
 
-### Register AutoMax
+### Register SDODS
 
 ```bash
-bun run automax agent install --for claude -p demo-shop -e staging
+bun run sdods agent install --for claude -p demo-shop -e staging
 ```
 
-This writes `.claude/agents/automax-<role>.md` (one subagent per AutoMax role), `CLAUDE.md`, `AGENT.md` and `SKILL.md`, and runs `claude mcp add -s project automax -- npx automax mcp --project demo-shop --env staging` (plus the bundled Playwright MCP). Use `--no-mcp` to skip the registration, or `automax mcp install claude --file` to write `.mcp.json` instead of calling the CLI.
+This writes `.claude/agents/sdods-<role>.md` (one subagent per SDODS role), `CLAUDE.md`, `AGENT.md` and `SKILL.md`, and runs `claude mcp add -s project sdods -- npx sdods mcp --project demo-shop --env staging` (plus the bundled Playwright MCP). Use `--no-mcp` to skip the registration, or `sdods mcp install claude --file` to write `.mcp.json` instead of calling the CLI.
 
 ### Use it
 
 ```bash
 claude
-# > use the automax tools to run the demo-shop smoke suite on chromium and summarise failures
-# > @automax-healer fix the "Add a product to the cart" scenario from the last run
+# > use the sdods tools to run the demo-shop smoke suite on chromium and summarise failures
+# > @sdods-healer fix the "Add a product to the cart" scenario from the last run
 ```
 
-`claude mcp list` shows `automax` and `playwright`. Every AutoMax tool appears as `mcp__automax__<tool>`.
+`claude mcp list` shows `sdods` and `playwright`. Every SDODS tool appears as `mcp__sdods__<tool>`.
 
 </Steps>
 
@@ -73,50 +85,50 @@ npm i -g @openai/codex
 codex login          # ChatGPT account; or set OPENAI_API_KEY
 ```
 
-### Register AutoMax
+### Register SDODS
 
 ```bash
-bun run automax agent install --for codex -p demo-shop -e staging
+bun run sdods agent install --for codex -p demo-shop -e staging
 ```
 
-This writes `AGENTS.md` (Codex reads it as project instructions; the five roles become sections), `AGENT.md` and `SKILL.md`, and runs `codex mcp add automax -- npx automax mcp --project demo-shop --env staging` (plus Playwright). Without the CLI on PATH the same entries are merged into `~/.codex/config.toml` under `[mcp_servers.automax]`; other servers in that file are kept.
+This writes `AGENTS.md` (Codex reads it as project instructions; the five roles become sections), `AGENT.md` and `SKILL.md`, and runs `codex mcp add sdods -- npx sdods mcp --project demo-shop --env staging` (plus Playwright). Without the CLI on PATH the same entries are merged into `~/.codex/config.toml` under `[mcp_servers.sdods]`; other servers in that file are kept.
 
 ### Use it
 
 ```bash
 codex
-# > use the automax tools to list projects and start the api-contract process for demo-shop
+# > use the sdods tools to list projects and start the api-contract process for demo-shop
 codex mcp list
 ```
 
 </Steps>
 
-## Run AutoMax agents on the CLI logins
+## Run SDODS agents on the CLI logins
 
 ```bash
-bun run automax agent review   -p demo-shop --adapter claude-code
-bun run automax agent heal     -p demo-shop --scenario <fingerprint> --adapter codex --max-turns 20
-bun run automax agent generate -p demo-shop --goal "checkout with a discount code"   # auto-detects
+bun run sdods agent review   -p demo-shop --adapter claude-code
+bun run sdods agent heal     -p demo-shop --scenario <fingerprint> --adapter codex --max-turns 20
+bun run sdods agent generate -p demo-shop --goal "checkout with a discount code"   # auto-detects
 ```
 
 What the adapters do:
 
-| Adapter       | Command executed                                                                                                                                                                                                   | Tools                                          | Cost reporting                                  |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------- | ----------------------------------------------- |
-| `claude-code` | `claude -p <prompt> --output-format stream-json --mcp-config <temp.json> --strict-mcp-config --allowedTools Read Glob Grep mcp__automax__* mcp__playwright__* --disallowedTools Bash Write Edit … --max-turns <n>` | AutoMax + Playwright MCP, read-only file tools | `total_cost_usd` from the CLI when available    |
-| `codex`       | `codex exec --json --ephemeral -s read-only -c mcp_servers.automax.command=… -c mcp_servers.automax.args=… <system + prompt>`                                                                                      | AutoMax + Playwright MCP, read-only sandbox    | token usage only (Codex reports no dollar cost) |
+| Adapter       | Command executed                                                                                                                                                                                                 | Tools                                        | Cost reporting                                  |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- | ----------------------------------------------- |
+| `claude-code` | `claude -p <prompt> --output-format stream-json --mcp-config <temp.json> --strict-mcp-config --allowedTools Read Glob Grep mcp__sdods__* mcp__playwright__* --disallowedTools Bash Write Edit … --max-turns <n>` | SDODS + Playwright MCP, read-only file tools | `total_cost_usd` from the CLI when available    |
+| `codex`       | `codex exec --json --ephemeral -s read-only -c mcp_servers.sdods.command=… -c mcp_servers.sdods.args=… <system + prompt>`                                                                                        | SDODS + Playwright MCP, read-only sandbox    | token usage only (Codex reports no dollar cost) |
 
-Both adapters keep the AutoMax guarantee: roles can only write proposals (`automax proposals list|show|accept`). When no adapter is chosen, AutoMax auto-detects: `ANTHROPIC_API_KEY` → `claude` CLI → `codex` CLI → `OPENAI_API_KEY` → `fake`, and prints which one it picked.
+Both adapters keep the SDODS guarantee: roles can only write proposals (`sdods proposals list|show|accept`). When no adapter is chosen, SDODS auto-detects: `ANTHROPIC_API_KEY` → `claude` CLI → `codex` CLI → `OPENAI_API_KEY` → `fake`, and prints which one it picked.
 
 <Callout type="info">
-  `automax doctor` shows both CLIs (installed, logged in) and the full token matrix. Pin a model
-  with `AUTOMAX_CLAUDE_CODE_MODEL` / `AUTOMAX_CODEX_MODEL` or `--model`; by default the CLI's
-  configured model is used.
+  `sdods doctor` shows both CLIs (installed, logged in) and the full token matrix. Pin a model with
+  `SDODS_CLAUDE_CODE_MODEL` / `SDODS_CODEX_MODEL` or `--model`; by default the CLI's configured
+  model is used.
 </Callout>
 
 ## What each client sees
 
-| Client                    | Reads                                                               | Gets from AutoMax                                                    |
+| Client                    | Reads                                                               | Gets from SDODS                                                      |
 | ------------------------- | ------------------------------------------------------------------- | -------------------------------------------------------------------- |
 | Claude Code               | `CLAUDE.md`, `.claude/agents/*.md`, `.claude/skills/*`, `.mcp.json` | MCP tools, prompts, resources; role subagents; the record/run skills |
 | Codex                     | `AGENTS.md`, `~/.codex/config.toml`                                 | MCP tools, prompts, resources; role instructions as sections         |

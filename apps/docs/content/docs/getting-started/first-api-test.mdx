@@ -5,7 +5,7 @@ description: Write and run an API scenario with the shared step library, without
 
 <Learn>
   How an API scenario is tagged, which shared steps send requests and assert on responses, and how
-  `automax run -l api` executes it without launching a browser.
+  `sdods run -l api` executes it without launching a browser.
 </Learn>
 
 ## Write the feature
@@ -22,7 +22,7 @@ Feature: Posts API
     And the response time should be under 2000 ms
 ```
 
-Two tags matter: `@api` selects the layer, `@smoke` selects the suite. `automax lint` refuses a scenario without exactly one of each.
+Two tags matter: `@api` selects the layer, `@smoke` selects the suite. `sdods lint` refuses a scenario without exactly one of each.
 
 ## Send a body and chain values
 
@@ -32,7 +32,7 @@ Feature: Posts API
   Scenario: Create then read
     When I send a POST request to "/posts" with body:
       """json
-      { "title": "AutoMax", "body": "hello", "userId": 1 }
+      { "title": "SDODS", "body": "hello", "userId": 1 }
       """
     Then the response status should be 201
     When I save the response JSON path "id" as "postId"
@@ -53,8 +53,8 @@ JSON Schema (via ajv), Zod modules and OpenAPI operations are supported. See the
 ## Run it
 
 ```bash
-bun run automax run -p demo-shop -e staging -l api
-bun run automax run -p demo-shop -e staging -l api -t @smoke
+bun run sdods run -p demo-shop -e staging -l api
+bun run sdods run -p demo-shop -e staging -l api -t @smoke
 ```
 
 `-l api` runs the Playwright project `demo-shop--api`, which has no browser device. The base URL, headers and authentication come from `envs/staging.yaml` (`api.baseUrl`, `api.headers`, `api.auth`).

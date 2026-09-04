@@ -8,7 +8,7 @@ import {
   deleteSession,
   getUserByUsername,
   updateUser,
-} from '@automax/db';
+} from '@sdods/db';
 import { LoginBody, SetupBody } from '../schemas/index.js';
 import { badRequest, forbidden, parse, unauthorized } from '../errors.js';
 import { SESSION_COOKIE } from '../plugins/auth.js';
@@ -20,7 +20,7 @@ export async function hashPassword(password: string): Promise<string> {
 export async function authRoutes(app: FastifyInstance) {
   app.post(
     '/api/auth/login',
-    // AUTOMAX_LOGIN_RATE_LIMIT raises the per-IP limit for test rigs (dogfood runs sign in a lot).
+    // SDODS_LOGIN_RATE_LIMIT raises the per-IP limit for test rigs (dogfood runs sign in a lot).
     { config: { rateLimit: { max: app.config.loginRateLimit, timeWindow: '1 minute' } } },
     async (req, reply) => {
       const body = parse(LoginBody, req.body);
@@ -97,7 +97,7 @@ export async function authRoutes(app: FastifyInstance) {
       const body = parse(SetupBody, req.body);
       if ((await countUsers(app.adb.db)) > 0) throw forbidden('Setup already completed.');
       if (!app.setupState.token || body.token !== app.setupState.token)
-        throw badRequest('Invalid setup token. Copy it from the `automax serve` output.');
+        throw badRequest('Invalid setup token. Copy it from the `sdods serve` output.');
       const id = await createUser(app.adb.db, app.adb.driver, {
         username: body.username,
         passwordHash: await hashPassword(body.password),

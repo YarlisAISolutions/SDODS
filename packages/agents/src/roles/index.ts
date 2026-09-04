@@ -1,5 +1,5 @@
-import { renderPrompt, ROLE_PROMPTS, type RoleName } from '@automax/mcp/prompts';
-import { toAgentSdkTools, type ToolContext, type ToolRegistry } from '@automax/mcp';
+import { renderPrompt, ROLE_PROMPTS, type RoleName } from '@sdods/mcp/prompts';
+import { toAgentSdkTools, type ToolContext, type ToolRegistry } from '@sdods/mcp';
 
 export type { RoleName };
 export { ROLE_PROMPTS };

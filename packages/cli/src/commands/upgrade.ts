@@ -4,19 +4,19 @@ import type { Command } from 'commander';
 import { execa } from 'execa';
 import pc from 'picocolors';
 import semver from 'semver';
-import { VERSION } from '@automax/core';
+import { VERSION } from '@sdods/core';
 import { createContext } from '../context.js';
 import { json, ok, out, table, warn } from '../ui.js';
 
-export const AUTOMAX_PACKAGES = [
-  '@automax/cli',
-  '@automax/core',
-  '@automax/contracts',
-  '@automax/db',
-  '@automax/mcp',
-  '@automax/agents',
-  '@automax/integrations',
-  '@automax/server',
+export const SDODS_PACKAGES = [
+  '@sdods/cli',
+  '@sdods/core',
+  '@sdods/contracts',
+  '@sdods/db',
+  '@sdods/mcp',
+  '@sdods/agents',
+  '@sdods/integrations',
+  '@sdods/server',
 ] as const;
 
 export interface UpgradeRow {
@@ -59,8 +59,8 @@ export async function checkUpgrades(
   fetchImpl?: typeof fetch,
 ): Promise<UpgradeRow[]> {
   const rows = await Promise.all(
-    AUTOMAX_PACKAGES.map(async (pkg): Promise<UpgradeRow> => {
-      const installed = installedVersion(rootDir, pkg) ?? (pkg === '@automax/cli' ? VERSION : null);
+    SDODS_PACKAGES.map(async (pkg): Promise<UpgradeRow> => {
+      const installed = installedVersion(rootDir, pkg) ?? (pkg === '@sdods/cli' ? VERSION : null);
       const latest = await latestVersion(pkg, fetchImpl);
       let status: UpgradeRow['status'];
       if (!latest) status = 'unavailable';
@@ -77,7 +77,7 @@ export async function checkUpgrades(
 export function register(program: Command) {
   program
     .command('upgrade')
-    .description('Check the npm registry for newer @automax/* packages')
+    .description('Check the npm registry for newer @sdods/* packages')
     .option('--apply', 'install the latest versions with the package manager')
     .option('--pm <manager>', 'bun | pnpm | npm (default: detected from lockfile)')
     .action(async (opts, cmd) => {
@@ -107,7 +107,7 @@ export function register(program: Command) {
       if (!opts.apply) {
         out(
           pc.dim(
-            `Run \`automax upgrade --apply\` to install ${outdated.map((r) => r.package).join(', ')}.`,
+            `Run \`sdods upgrade --apply\` to install ${outdated.map((r) => r.package).join(', ')}.`,
           ),
         );
         return;

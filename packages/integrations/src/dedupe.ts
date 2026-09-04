@@ -46,9 +46,9 @@ export class IssueDedupe {
 /** Stable, human-readable issue title used by both providers. */
 export function issueTitle(featureName: string, scenarioName: string, browser?: string): string {
   const where = browser ? ` (${browser})` : '';
-  return `[AutoMax] ${featureName} › ${scenarioName} failing${where}`;
+  return `[SDODS] ${featureName} › ${scenarioName} failing${where}`;
 }
 
 export function fingerprintMarker(fingerprint: string): string {
-  return `automax-fingerprint:${fingerprint}`;
+  return `sdods-fingerprint:${fingerprint}`;
 }

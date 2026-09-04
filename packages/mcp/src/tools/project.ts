@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { automaxCli, cliOrNote } from '../cli.js';
+import { sdodsCli, cliOrNote } from '../cli.js';
 import { defineTool, summarize } from '../registry/registry.js';
 
 export const projectTools = [
@@ -7,14 +7,14 @@ export const projectTools = [
     name: 'project_list',
     title: 'List projects',
     description:
-      'List AutoMax projects discovered under projects/ with layers, browsers and environments.',
+      'List SDODS projects discovered under projects/ with layers, browsers and environments.',
     shape: {},
     access: 'read',
     domain: 'projects',
     capability: 'core',
     docsPath: '/docs/reference/mcp-tools',
     handler: async (_args, ctx) => {
-      const r = await automaxCli<unknown[]>(['project', 'list'], {
+      const r = await sdodsCli<unknown[]>(['project', 'list'], {
         cwd: ctx.rootDir,
         signal: ctx.signal,
       });
@@ -38,7 +38,7 @@ export const projectTools = [
       const cli = ['config', 'show', '-p', args.project];
       if (args.env) cli.push('-e', args.env);
       if (args.explain) cli.push('--explain');
-      const r = await automaxCli(cli, { cwd: ctx.rootDir, signal: ctx.signal });
+      const r = await sdodsCli(cli, { cwd: ctx.rootDir, signal: ctx.signal });
       return {
         text: summarize(`Config for ${args.project}${args.env ? ` (${args.env})` : ''}`, r.json),
         data: r.json,
@@ -55,7 +55,7 @@ export const projectTools = [
     domain: 'envs',
     capability: 'core',
     handler: async (args, ctx) => {
-      const r = await automaxCli<unknown[]>(['env', 'list', '-p', args.project], {
+      const r = await sdodsCli<unknown[]>(['env', 'list', '-p', args.project], {
         cwd: ctx.rootDir,
         signal: ctx.signal,
       });
@@ -73,7 +73,7 @@ export const projectTools = [
     handler: async (_args, ctx) => {
       let data: unknown;
       try {
-        data = (await automaxCli(['config', 'validate'], { cwd: ctx.rootDir, signal: ctx.signal }))
+        data = (await sdodsCli(['config', 'validate'], { cwd: ctx.rootDir, signal: ctx.signal }))
           .json;
       } catch (e) {
         // exit code 2 still prints the table as JSON
@@ -100,7 +100,7 @@ export const projectTools = [
       const cli = ['doctor', ...(args.project ? ['-p', args.project] : [])];
       let data: unknown;
       try {
-        data = (await automaxCli(cli, { cwd: ctx.rootDir, signal: ctx.signal, timeoutMs: 60_000 }))
+        data = (await sdodsCli(cli, { cwd: ctx.rootDir, signal: ctx.signal, timeoutMs: 60_000 }))
           .json;
       } catch (e) {
         const err = e as { stderr?: string; message: string };

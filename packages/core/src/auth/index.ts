@@ -114,7 +114,7 @@ export async function formLogin(
   const form = config.project.auth.form;
   if (!form) {
     throw new Error(
-      'auth.strategy is "form" but auth.form selectors are missing in automax.project.yaml.',
+      'auth.strategy is "form" but auth.form selectors are missing in sdods.project.yaml.',
     );
   }
   await page.goto(form.loginPath);

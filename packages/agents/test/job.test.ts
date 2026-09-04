@@ -2,24 +2,24 @@ import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { ProposalStore } from '@automax/mcp';
+import { ProposalStore } from '@sdods/mcp';
 import { FakeAdapter } from '../src/adapter/fake.js';
 import { JobJournal, prepareJob, runJob } from '../src/jobs/runner.js';
 import { installClaudeCode } from '../src/claude-code/install.js';
 
 /** A minimal repo copy: workspace file + one project with a feature dir. */
 function tempRepo(): string {
-  const root = mkdtempSync(join(tmpdir(), 'automax-job-'));
+  const root = mkdtempSync(join(tmpdir(), 'sdods-job-'));
   writeFileSync(join(root, 'package.json'), '{}');
   writeFileSync(
-    join(root, 'automax.workspace.yaml'),
+    join(root, 'sdods.workspace.yaml'),
     'organization: { slug: acme, name: Acme }\nworkspaces: [{ slug: default, name: Default }]\ndefaultWorkspace: default\n',
   );
   const proj = join(root, 'projects', 'shop');
   mkdirSync(join(proj, 'features', 'auth'), { recursive: true });
   mkdirSync(join(proj, 'envs'), { recursive: true });
   writeFileSync(
-    join(proj, 'automax.project.yaml'),
+    join(proj, 'sdods.project.yaml'),
     'slug: shop\nname: Shop\nlayers: [ui, api]\nenvs: { default: local, available: [local] }\nagents: { provider: fake, budgetUsd: { default: 1, generator: 2 }, maxTurns: { generator: 9 } }\n',
   );
   writeFileSync(
@@ -48,7 +48,7 @@ describe('agent jobs', () => {
     expect(names).toContain('feature_write');
     expect(names).toContain('run_tests');
     expect(names).not.toContain('proposal_accept');
-    expect(prep.system).toContain('AutoMax GENERATOR');
+    expect(prep.system).toContain('SDODS GENERATOR');
     expect(prep.prompt).toContain('Goal: login');
     const rev = prepareJob({
       role: 'reviewer',
@@ -102,7 +102,7 @@ describe('agent jobs', () => {
     ]);
     expect(existsSync(join(root, 'projects/shop/features/auth/login.feature'))).toBe(false);
 
-    const target = mkdtempSync(join(tmpdir(), 'automax-apply-'));
+    const target = mkdtempSync(join(tmpdir(), 'sdods-apply-'));
     cpSync(root, target, { recursive: true });
     new ProposalStore(target).accept(m.id, { reviewedBy: 'test' });
     expect(readFileSync(join(target, 'projects/shop/features/auth/login.feature'), 'utf8')).toBe(
@@ -148,16 +148,16 @@ describe('agent jobs', () => {
   it('installs Claude Code agents, .mcp.json, AGENT.md and SKILL.md', () => {
     const root = tempRepo();
     const written = installClaudeCode(root, { project: 'shop' });
-    expect(written.some((w) => w.endsWith('.claude/agents/automax-healer.md'))).toBe(true);
+    expect(written.some((w) => w.endsWith('.claude/agents/sdods-healer.md'))).toBe(true);
     const mcp = JSON.parse(readFileSync(join(root, '.mcp.json'), 'utf8')) as {
       mcpServers: Record<string, { args: string[] }>;
     };
-    expect(mcp.mcpServers.automax!.args).toEqual(['automax', 'mcp', '--project', 'shop']);
+    expect(mcp.mcpServers.sdods!.args).toEqual(['sdods', 'mcp', '--project', 'shop']);
     expect(mcp.mcpServers.playwright).toBeDefined();
     expect(readFileSync(join(root, 'AGENT.md'), 'utf8')).toContain(
       'automation platform with a reusable architecture built on Playwright',
     );
-    expect(readFileSync(join(root, 'SKILL.md'), 'utf8')).toContain('name: automax');
+    expect(readFileSync(join(root, 'SKILL.md'), 'utf8')).toContain('name: sdods');
     expect(installClaudeCode(root, { project: 'shop' })).toEqual([join(root, '.mcp.json')]); // idempotent except the merged config
   });
 });

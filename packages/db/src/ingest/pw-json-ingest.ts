@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { basename, dirname, isAbsolute, join, relative } from 'node:path';
-import { fingerprint as makeFingerprint, newId, parsePwProjectName } from '@automax/contracts/ids';
+import { fingerprint as makeFingerprint, newId, parsePwProjectName } from '@sdods/contracts/ids';
 import { enc, nowIso } from '../col.js';
 import { artifactKindFor, parseAttachmentName, storeFile, targetFileFor } from './attachments.js';
 import type { LocatorCounter } from './finalize.js';

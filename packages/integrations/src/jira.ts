@@ -1,6 +1,6 @@
 import { readFileSync, statSync } from 'node:fs';
 import { basename } from 'node:path';
-import type { RunRecord } from '@automax/contracts';
+import type { RunRecord } from '@sdods/contracts';
 import { gherkinBlock, selectIssueScreenshots, truncate } from './context.js';
 import { IssueDedupe, fingerprintMarker, issueTitle } from './dedupe.js';
 import type {
@@ -238,7 +238,7 @@ export class JiraProvider implements IntegrationProvider<JiraConfig> {
   }
 
   async findByFingerprint(fingerprint: string): Promise<IssueRef | null> {
-    const jql = `project = ${this.config.projectKey} AND labels = automax AND text ~ "${fingerprintMarker(fingerprint)}" AND statusCategory != Done ORDER BY created DESC`;
+    const jql = `project = ${this.config.projectKey} AND labels = sdods AND text ~ "${fingerprintMarker(fingerprint)}" AND statusCategory != Done ORDER BY created DESC`;
     const data = await this.request<{
       issues?: Array<{ key: string; fields?: { status?: { statusCategory?: { key?: string } } } }>;
     }>('POST', '/rest/api/3/search/jql', { jql, maxResults: 1, fields: ['status'] });

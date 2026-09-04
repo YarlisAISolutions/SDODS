@@ -3,7 +3,7 @@ import { join, relative } from 'node:path';
 import { z } from 'zod';
 import { AstBuilder, GherkinClassicTokenMatcher, Parser } from '@cucumber/gherkin';
 import { IdGenerator, type GherkinDocument } from '@cucumber/messages';
-import { AutomaxCliError, automaxCli, cliOrNote } from '../cli.js';
+import { SdodsCliError, sdodsCli, cliOrNote } from '../cli.js';
 import { projectRoot, readYaml, safeJoin, walk } from '../fs.js';
 import { ProposalStore } from '../proposals.js';
 import { defineTool, summarize } from '../registry/registry.js';
@@ -96,7 +96,7 @@ export function basicTagCheck(feature: ParsedFeature, suites: string[]): string[
 }
 
 function suitesOf(root: string): string[] {
-  const yaml = readYaml<{ tags?: { suites?: string[] } }>(join(root, 'automax.project.yaml'));
+  const yaml = readYaml<{ tags?: { suites?: string[] } }>(join(root, 'sdods.project.yaml'));
   return (yaml?.tags?.suites ?? ['smoke', 'regression', 'sanity']).map((s) => `@${s}`);
 }
 
@@ -202,14 +202,14 @@ export const featureTools = [
     name: 'feature_lint',
     title: 'Lint features',
     description:
-      'Run automax lint for a project: Gherkin syntax, tag taxonomy, module rules, undefined steps.',
+      'Run sdods lint for a project: Gherkin syntax, tag taxonomy, module rules, undefined steps.',
     shape: { project: z.string() },
     access: 'read',
     domain: 'features',
     capability: 'core',
     handler: async (args, ctx) => {
       try {
-        const r = await automaxCli(['lint', '-p', args.project], {
+        const r = await sdodsCli(['lint', '-p', args.project], {
           cwd: ctx.rootDir,
           signal: ctx.signal,
           timeoutMs: 120_000,
@@ -219,10 +219,10 @@ export const featureTools = [
           data: r.json ?? { errors: [], warnings: [] },
         };
       } catch (e) {
-        if (e instanceof AutomaxCliError) {
+        if (e instanceof SdodsCliError) {
           if (e.notSupported)
             return {
-              text: 'automax lint is not available in this build; falling back to basic checks.',
+              text: 'sdods lint is not available in this build; falling back to basic checks.',
               data: await basicLint(ctx.rootDir, args.project),
             };
           const m = /\{[\s\S]*\}/.exec(e.stderr) ?? /\{[\s\S]*\}/.exec(e.message);

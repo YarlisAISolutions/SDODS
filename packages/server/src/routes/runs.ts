@@ -23,8 +23,8 @@ import {
   listLocatorStats,
   listRuns,
   computeInsights,
-} from '@automax/db';
-import { runFiles } from '@automax/contracts';
+} from '@sdods/db';
+import { runFiles } from '@sdods/contracts';
 import { CompareQuery, RunListQuery, StartRunBody } from '../schemas/index.js';
 import { badRequest, forbidden, notFound, parse } from '../errors.js';
 import { diffPngs, pngSize } from '../services/image-diff.js';
@@ -269,7 +269,7 @@ export async function runRoutes(app: FastifyInstance) {
    * pw-results*.json) plus an optional `artifacts.tgz` holding the run directory (screenshots,
    * api snapshots, meta.json …). The archive is extracted under the run dir; entries that would
    * escape it (absolute paths, `..`, symlinks/links) are dropped; total size is capped by
-   * AUTOMAX_INGEST_MAX_MB (multipart limit) and the extracted bytes by 4× that.
+   * SDODS_INGEST_MAX_MB (multipart limit) and the extracted bytes by 4× that.
    */
   app.post(
     '/api/runs/:id/ingest',

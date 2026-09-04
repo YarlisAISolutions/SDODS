@@ -3,13 +3,13 @@ import { join, resolve } from 'node:path';
 import type { Command } from 'commander';
 import { execa } from 'execa';
 import pc from 'picocolors';
-import { runFiles } from '@automax/contracts';
-import { AutomaxError } from '@automax/core';
+import { runFiles } from '@sdods/contracts';
+import { SdodsError } from '@sdods/core';
 import { createContext } from '../context.js';
 import { json, ok, out, table } from '../ui.js';
 
 function artifactsRoot(rootDir: string): string {
-  return resolve(rootDir, process.env.AUTOMAX_ARTIFACTS_DIR ?? '.automax/runs');
+  return resolve(rootDir, process.env.SDODS_ARTIFACTS_DIR ?? '.sdods/runs');
 }
 
 function latestRunId(root: string): string | null {
@@ -50,14 +50,14 @@ export function register(program: Command) {
     .option('--run <id>', 'run id')
     .option('--open', 'open the Playwright HTML report and dashboard')
     .option('--html', 'open only the Playwright HTML report')
-    .option('--dashboard', 'open only the AutoMax dashboard')
+    .option('--dashboard', 'open only the SDODS dashboard')
     .action(async (opts, cmd) => {
       const ctx = createContext(cmd);
       const root = artifactsRoot(ctx.rootDir);
       const runId: string | null = opts.run ?? latestRunId(root);
       if (!runId)
-        throw new AutomaxError('RUN_FAILED', `No runs found under ${root}.`, {
-          hint: 'Run `automax run -p <slug>` first.',
+        throw new SdodsError('RUN_FAILED', `No runs found under ${root}.`, {
+          hint: 'Run `sdods run -p <slug>` first.',
           exitCode: 2,
         });
       const dir = join(root, runId);
@@ -106,22 +106,22 @@ export function register(program: Command) {
     .option('-p, --project <slug>', 'project slug when run.json is missing')
     .option('--manifest <file>', 'explicit run.json path')
     .option('--format <fmt>', 'auto|cucumber|pw-json', 'auto')
-    .option('--artifacts-dir <dir>', 'artifacts root (default .automax/runs)')
+    .option('--artifacts-dir <dir>', 'artifacts root (default .sdods/runs)')
     .option('--replace', 'delete previously ingested rows of this run first')
     .option('-e, --env <name>', 'environment name when run.json is missing')
     .option(
       '--server <url>',
-      'upload to an AutoMax server (POST /api/runs/:id/ingest) instead of writing to a local database',
+      'upload to an SDODS server (POST /api/runs/:id/ingest) instead of writing to a local database',
     )
-    .option('--token <token>', 'API token for --server (or AUTOMAX_TOKEN)')
+    .option('--token <token>', 'API token for --server (or SDODS_TOKEN)')
     .action(async (files: string[], opts, cmd) => {
       const ctx = createContext(cmd);
-      const serverUrl: string | undefined = opts.server ?? process.env.AUTOMAX_SERVER_URL;
+      const serverUrl: string | undefined = opts.server ?? process.env.SDODS_SERVER_URL;
       if (serverUrl) {
         // CI path: no DB credentials on the runner; the server ingests with a scoped token.
-        const token: string | undefined = opts.token ?? process.env.AUTOMAX_TOKEN;
+        const token: string | undefined = opts.token ?? process.env.SDODS_TOKEN;
         if (!token)
-          throw new AutomaxError('AUTH_FAILED', '--server needs --token (or AUTOMAX_TOKEN).', {
+          throw new SdodsError('AUTH_FAILED', '--server needs --token (or SDODS_TOKEN).', {
             exitCode: 2,
           });
         const { readFileSync, existsSync } = await import('node:fs');
@@ -135,7 +135,7 @@ export function register(program: Command) {
           count++;
         }
         if (!count)
-          throw new AutomaxError('CONFIG_INVALID', 'No existing files to upload.', { exitCode: 2 });
+          throw new SdodsError('CONFIG_INVALID', 'No existing files to upload.', { exitCode: 2 });
         const url = `${serverUrl.replace(/\/$/, '')}/api/runs/${encodeURIComponent(opts.runId)}/ingest`;
         const res = await fetch(url, {
           method: 'POST',
@@ -144,7 +144,7 @@ export function register(program: Command) {
         });
         const body = (await res.json().catch(() => ({}))) as Record<string, unknown>;
         if (!res.ok)
-          throw new AutomaxError(
+          throw new SdodsError(
             'RUN_FAILED',
             `Server ingest failed (${res.status}): ${JSON.stringify(body)}`,
             {
@@ -154,7 +154,7 @@ export function register(program: Command) {
         if (ctx.opts.json) return json(body);
         return ok(`Uploaded ${count} file(s) for run ${opts.runId} to ${serverUrl}`);
       }
-      const m = await import('@automax/db');
+      const m = await import('@sdods/db');
       const adb = m.createDb();
       try {
         await m.migrateToLatest(adb);
@@ -211,10 +211,10 @@ export function register(program: Command) {
       const root = artifactsRoot(ctx.rootDir);
       const runId: string | null = opts.run ?? latestRunId(root);
       if (!runId)
-        throw new AutomaxError('RUN_FAILED', `No runs found under ${root}.`, { exitCode: 2 });
+        throw new SdodsError('RUN_FAILED', `No runs found under ${root}.`, { exitCode: 2 });
       const html = join(root, runId, runFiles.pwReport, 'index.html');
       if (!existsSync(html))
-        throw new AutomaxError('RUN_FAILED', `No HTML report at ${html}.`, { exitCode: 2 });
+        throw new SdodsError('RUN_FAILED', `No HTML report at ${html}.`, { exitCode: 2 });
       await execa('npx', ['playwright', 'show-report', join(root, runId, runFiles.pwReport)], {
         stdio: 'inherit',
         cwd: ctx.rootDir,

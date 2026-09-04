@@ -1,9 +1,9 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
-import type { HealEvent } from '@automax/contracts';
+import type { HealEvent } from '@sdods/contracts';
 import type { HealHistoryEntry } from './types.js';
 
-/** Cross-run memory of successful heals (file-backed; DB-backed variant lives in @automax/db). */
+/** Cross-run memory of successful heals (file-backed; DB-backed variant lives in @sdods/db). */
 export class HealHistory {
   private entries = new Map<string, HealHistoryEntry>();
 

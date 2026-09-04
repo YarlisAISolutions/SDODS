@@ -1,5 +1,5 @@
 /**
- * Deep merge with AutoMax semantics: plain objects merge recursively, arrays REPLACE,
+ * Deep merge with SDODS semantics: plain objects merge recursively, arrays REPLACE,
  * `undefined` is skipped, `null` clears the key.
  */
 export type LayerName = 'defaults' | 'project' | 'envYaml' | 'dotenv' | 'processEnv' | 'cli';

@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { AuthStateCache } from '../src/fixtures/auth.js';
 
 function cache(maxAgeMinutes = 120) {
-  const root = mkdtempSync(join(tmpdir(), 'automax-auth-'));
+  const root = mkdtempSync(join(tmpdir(), 'sdods-auth-'));
   const config = {
     project: { root, auth: { maxAgeMinutes, strategy: 'form', storageState: true } },
     env: { name: 'staging' },

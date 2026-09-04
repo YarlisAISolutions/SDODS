@@ -14,7 +14,7 @@ export default function PrivacyPage() {
       <div className="prose mt-8 max-w-none text-sm leading-7">
         <h2 className="text-lg font-bold">This site</h2>
         <p>
-          sdods.com and automax.sdods.com are static pages served by Firebase Hosting. They set no
+          sdods.com and docs.sdods.com are static pages served by Firebase Hosting. They set no
           cookies and load no third-party scripts. The only thing stored in your browser is your
           light/dark theme preference, in local storage. Firebase Hosting keeps standard server logs
           (IP address, user agent, requested path) for a limited time, as any web host does.
@@ -25,16 +25,15 @@ export default function PrivacyPage() {
           sent to us directly; GitHub's terms and privacy policy apply to what you post there, and
           issues in the{' '}
           <a href={REPO_URL} className="underline" rel="noreferrer">
-            AutoMax repository
+            SDODS repository
           </a>{' '}
           are public. The email fallback sends a normal email to {FEEDBACK_EMAIL}.
         </p>
-        <h2 className="mt-6 text-lg font-bold">The AutoMax software</h2>
+        <h2 className="mt-6 text-lg font-bold">The SDODS software</h2>
         <p>
-          AutoMax itself runs on your machines. It sends no telemetry. Optional integrations
-          (GitHub, Jira, LLM providers) only contact the services you configure with your own
-          credentials, which are read from environment variables and never stored in YAML or the
-          database.
+          SDODS itself runs on your machines. It sends no telemetry. Optional integrations (GitHub,
+          Jira, LLM providers) only contact the services you configure with your own credentials,
+          which are read from environment variables and never stored in YAML or the database.
         </p>
         <h2 className="mt-6 text-lg font-bold">Contact</h2>
         <p>Questions: {FEEDBACK_EMAIL}.</p>

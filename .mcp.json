@@ -1,10 +1,10 @@
 {
   "mcpServers": {
-    "automax": {
+    "sdods": {
       "type": "stdio",
       "command": "npx",
       "args": [
-        "automax",
+        "sdods",
         "mcp",
         "--project",
         "demo-shop",

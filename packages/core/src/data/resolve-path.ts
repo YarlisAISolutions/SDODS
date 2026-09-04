@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import { basename, isAbsolute, join, resolve as resolvePath } from 'node:path';
-import type { DataSource } from '@automax/contracts';
-import { AutomaxError } from '../errors.js';
+import type { DataSource } from '@sdods/contracts';
+import { SdodsError } from '../errors.js';
 
 /**
  * Resolve a file-backed data source for an environment:
@@ -27,7 +27,7 @@ export function resolveDataPath(
     .map((c) => (isAbsolute(c) ? c : resolvePath(projectRoot, c)));
   const found = candidates.find((c) => existsSync(c));
   if (!found) {
-    throw new AutomaxError(
+    throw new SdodsError(
       'DATASET_NOT_FOUND',
       `No data file for "${spec.path}" in env "${envName}".`,
       {

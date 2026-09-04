@@ -23,7 +23,7 @@ export interface RunManifest {
   shardTotal?: number;
   process?: string;
   modules?: string[];
-  automaxVersion: string;
+  sdodsVersion: string;
   playwrightVersion?: string;
   exitCode?: number;
   ingestedAt?: string;
@@ -266,7 +266,7 @@ export interface RunSummary {
   reportPaths: { html?: string; dashboard?: string; messages?: string; junit?: string };
 }
 
-// ── Onboarding analysis (`automax analyze`) and coverage ─────────────────────
+// ── Onboarding analysis (`sdods analyze`) and coverage ─────────────────────
 
 export interface Evidence {
   file: string;

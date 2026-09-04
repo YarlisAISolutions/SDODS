@@ -6,16 +6,16 @@ import './global.css';
 
 export const metadata: Metadata = {
   metadataBase: new URL(`${siteUrl}${basePath}/`),
-  title: { template: '%s | AutoMax', default: 'AutoMax' },
+  title: { template: '%s | SDODS', default: 'SDODS' },
   description:
-    'AutoMax is an automation platform with a reusable architecture: BDD for UI, API and hybrid automation, multi-project, data-driven, self-healing, with an MCP server and AI agents.',
+    'SDODS is an automation platform with a reusable architecture: BDD for UI, API and hybrid automation, multi-project, data-driven, self-healing, with an MCP server and AI agents.',
   icons: { icon: withBase('/img/favicon.svg') },
   openGraph: {
-    title: 'AutoMax',
+    title: 'SDODS',
     description: 'An automation platform with a reusable architecture.',
     url: `${siteUrl}${basePath}/`,
-    siteName: 'AutoMax',
-    images: [{ url: withBase('/img/automax-logo.svg') }],
+    siteName: 'SDODS',
+    images: [{ url: withBase('/img/sdods-logo.svg') }],
   },
 };
 

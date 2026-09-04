@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { newId } from '@automax/contracts';
+import { newId } from '@sdods/contracts';
 import {
   ProposalStore,
   buildToolContext,
@@ -9,7 +9,7 @@ import {
   readYaml,
   type ToolContext,
   type ToolRegistry,
-} from '@automax/mcp';
+} from '@sdods/mcp';
 import {
   createAdapter,
   type AgentEvent,
@@ -66,7 +66,7 @@ export interface RunJobOptions {
   keepEvents?: boolean;
 }
 
-export const JOBS_DIR = '.automax/agent-jobs';
+export const JOBS_DIR = '.sdods/agent-jobs';
 
 export class JobJournal {
   readonly dir: string;
@@ -132,9 +132,9 @@ export function prepareJob(o: RunJobOptions): {
     ? readYaml<ProjectAgentsYaml>(
         join(
           rootDir,
-          process.env.AUTOMAX_PROJECTS_DIR ?? 'projects',
+          process.env.SDODS_PROJECTS_DIR ?? 'projects',
           o.input.project,
-          'automax.project.yaml',
+          'sdods.project.yaml',
         ),
       )
     : undefined;

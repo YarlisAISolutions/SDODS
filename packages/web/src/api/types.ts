@@ -1,6 +1,6 @@
 /**
  * REST DTOs mirroring the server route table (plan §10). Kept local so the UI builds before
- * `@automax/server/schemas` exists; keep in sync with the server's zod schemas.
+ * `@sdods/server/schemas` exists; keep in sync with the server's zod schemas.
  */
 import type {
   BrowserName,
@@ -17,7 +17,7 @@ import type {
   ApiSnapshot,
   HealEvent,
   TestingType,
-} from '@automax/contracts';
+} from '@sdods/contracts';
 
 export type {
   BrowserName,

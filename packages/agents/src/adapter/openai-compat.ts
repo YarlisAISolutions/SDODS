@@ -93,7 +93,7 @@ export class OpenAiCompatibleAdapter implements LlmAdapter {
       o.onEvent?.({
         type: 'status',
         message:
-          'OpenAI-compatible adapter ignores external MCP servers (v1); only AutoMax tools are available.',
+          'OpenAI-compatible adapter ignores external MCP servers (v1); only SDODS tools are available.',
       });
     }
     const model = o.model ?? this.defaultModel;

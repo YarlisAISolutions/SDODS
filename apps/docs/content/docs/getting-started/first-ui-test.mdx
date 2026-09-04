@@ -50,7 +50,7 @@ export class LoginPage extends BasePage {
 
   @Given('I am on the login page')
   async open() {
-    await this.goto('login'); // route name from automax.project.yaml
+    await this.goto('login'); // route name from sdods.project.yaml
   }
 
   @When('I login with {string} and {string}')
@@ -62,14 +62,14 @@ export class LoginPage extends BasePage {
 }
 ```
 
-The page object is exposed as a fixture in `steps/fixtures.ts`, and `@Fixture('loginPage')` binds the decorated steps to it. `this.heal.locator` keeps your primary locator and records the context AutoMax uses when that locator breaks; see [Self-healing locators](/docs/guides/self-healing).
+The page object is exposed as a fixture in `steps/fixtures.ts`, and `@Fixture('loginPage')` binds the decorated steps to it. `this.heal.locator` keeps your primary locator and records the context SDODS uses when that locator breaks; see [Self-healing locators](/docs/guides/self-healing).
 
 ## Run it
 
 ```bash
-bun run automax run -p demo-shop -e staging -l ui -b chromium -t @smoke
-bun run automax run -p demo-shop -e staging -l ui -b chromium -t @smoke --headed
-bun run automax run -p demo-shop -e staging -l ui -b chromium --ui        # Playwright UI mode
+bun run sdods run -p demo-shop -e staging -l ui -b chromium -t @smoke
+bun run sdods run -p demo-shop -e staging -l ui -b chromium -t @smoke --headed
+bun run sdods run -p demo-shop -e staging -l ui -b chromium --ui        # Playwright UI mode
 ```
 
 `@smoke` uses the `scenario` screenshot policy by default: one capture at the start and one at the end. Switch to `@regression` and you get before and after captures for every step.

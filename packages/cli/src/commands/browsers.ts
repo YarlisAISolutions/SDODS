@@ -3,8 +3,8 @@ import { createRequire } from 'node:module';
 import type { Command } from 'commander';
 import { execa } from 'execa';
 import pc from 'picocolors';
-import { BrowserSchema } from '@automax/contracts';
-import { AutomaxError } from '@automax/core';
+import { BrowserSchema } from '@sdods/contracts';
+import { SdodsError } from '@sdods/core';
 import { createContext } from '../context.js';
 import { collect, json, ok, table } from '../ui.js';
 
@@ -113,8 +113,8 @@ export function register(program: Command) {
       );
       if (statuses.some((s) => !s.installed)) {
         process.exitCode = 1;
-        throw new AutomaxError('NOT_SUPPORTED', 'Some browsers are not installed.', {
-          hint: 'Run `automax browsers install --with-deps`.',
+        throw new SdodsError('NOT_SUPPORTED', 'Some browsers are not installed.', {
+          hint: 'Run `sdods browsers install --with-deps`.',
           exitCode: 1,
         });
       }

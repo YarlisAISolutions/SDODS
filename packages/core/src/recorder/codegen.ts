@@ -2,7 +2,7 @@ import { existsSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { execa } from 'execa';
 import type { ResolvedConfig } from '../config/resolve.js';
-import { AutomaxError } from '../errors.js';
+import { SdodsError } from '../errors.js';
 import { harPath, safeHarName } from '../har/paths.js';
 
 export type CodegenBrowser = 'chromium' | 'firefox' | 'webkit';
@@ -103,7 +103,7 @@ export async function runCodegen(opts: CodegenOptions): Promise<CodegenResult> {
   const exitCode = res.exitCode ?? 1;
   const produced = existsSync(outputFile);
   if (exitCode !== 0 && !produced) {
-    throw new AutomaxError(
+    throw new SdodsError(
       'RUN_FAILED',
       `playwright codegen exited with code ${exitCode} and produced no spec.`,
       {

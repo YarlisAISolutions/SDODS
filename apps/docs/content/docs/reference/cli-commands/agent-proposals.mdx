@@ -1,17 +1,17 @@
 ---
-title: automax agent, proposals
+title: sdods agent, proposals
 description: Run agent roles and review their proposals.
 ---
 
 ## `agent`
 
 ```text
-automax agent plan|generate|heal|upgrade|review [-p <slug>] [-e <env>] [--goal <text>] [--plan <file>] [--spec <file>]
+sdods agent plan|generate|heal|upgrade|review [-p <slug>] [-e <env>] [--goal <text>] [--plan <file>] [--spec <file>]
                 [--scenario <fingerprint>] [--run-id <id>] [--diff <range>] [--files <list>]
                 [--adapter claude|claude-code|codex|openai|fake] [--model <id>] [--max-turns <n>] [--budget-usd <n>] [--dry-run] [--events]
-automax agent jobs [--limit <n>]
-automax agent install [--for claude|codex|all] [-p <slug>] [-e <env>] [--force] [--no-mcp]
-automax agent install-claude [-p <slug>] [-e <env>] [--force] [--no-mcp]      # alias of install --for claude
+sdods agent jobs [--limit <n>]
+sdods agent install [--for claude|codex|all] [-p <slug>] [-e <env>] [--force] [--no-mcp]
+sdods agent install-claude [-p <slug>] [-e <env>] [--force] [--no-mcp]      # alias of install --for claude
 ```
 
 | Role       | Input                                          | Output (a proposal)                                      |
@@ -22,19 +22,19 @@ automax agent install-claude [-p <slug>] [-e <env>] [--force] [--no-mcp]      # 
 | `upgrade`  | `--diff main..HEAD`                            | new or updated scenarios for the changed code            |
 | `review`   | `--files`                                      | a review with tagging, reuse and best-practice findings  |
 
-Every role shares the flags above; the ones it does not use are ignored. `--dry-run` selects the fake adapter and prints the prompt, tools and budget without calling a model. `--adapter` overrides `AUTOMAX_LLM_PROVIDER` or the project's `agents.provider`: `claude` (Anthropic API key), `claude-code` (your logged-in Claude Code CLI, no key), `codex` (your logged-in Codex CLI, no key), `openai` (any OpenAI-compatible endpoint) or `fake`; unset means auto-detect in that order. Budgets come from `agents.budgetUsd` and `agents.maxTurns` in the project YAML (the CLI adapters report cost when their CLI does). `jobs` lists recent jobs from `.automax/agent-jobs/`.
+Every role shares the flags above; the ones it does not use are ignored. `--dry-run` selects the fake adapter and prints the prompt, tools and budget without calling a model. `--adapter` overrides `SDODS_LLM_PROVIDER` or the project's `agents.provider`: `claude` (Anthropic API key), `claude-code` (your logged-in Claude Code CLI, no key), `codex` (your logged-in Codex CLI, no key), `openai` (any OpenAI-compatible endpoint) or `fake`; unset means auto-detect in that order. Budgets come from `agents.budgetUsd` and `agents.maxTurns` in the project YAML (the CLI adapters report cost when their CLI does). `jobs` lists recent jobs from `.sdods/agent-jobs/`.
 
-`install --for claude` writes `.claude/agents/automax-*.md` (one subagent per role) and `CLAUDE.md`; `--for codex` writes `AGENTS.md` (Codex reads it as project instructions, roles become sections); both write `AGENT.md` and `SKILL.md` and register the AutoMax MCP server with the client (`automax mcp install <client>`, skip with `--no-mcp`). `--for all` (default) does both.
+`install --for claude` writes `.claude/agents/sdods-*.md` (one subagent per role) and `CLAUDE.md`; `--for codex` writes `AGENTS.md` (Codex reads it as project instructions, roles become sections); both write `AGENT.md` and `SKILL.md` and register the SDODS MCP server with the client (`sdods mcp install <client>`, skip with `--no-mcp`). `--for all` (default) does both.
 
 Agents never write to the working tree: every output is a proposal.
 
 ## `proposals`
 
 ```text
-automax proposals list [--status pending|accepted|rejected] [-p <slug>]
-automax proposals show <id>
-automax proposals accept <id> [--branch <name>] [--reviewed-by <name>] [--no-lint]
-automax proposals reject <id> [--reason <text>]
+sdods proposals list [--status pending|accepted|rejected] [-p <slug>]
+sdods proposals show <id>
+sdods proposals accept <id> [--branch <name>] [--reviewed-by <name>] [--no-lint]
+sdods proposals reject <id> [--reason <text>]
 ```
 
-`accept` applies the files to the working tree (optionally on a new git branch) and runs `automax lint` unless `--no-lint`. Proposals live under `proposals/<id>/` with a manifest, the files and a diff.
+`accept` applies the files to the working tree (optionally on a new git branch) and runs `sdods lint` unless `--no-lint`. Proposals live under `proposals/<id>/` with a manifest, the files and a diff.

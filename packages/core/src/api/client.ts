@@ -1,7 +1,7 @@
 import { writeFileSync } from 'node:fs';
 import type { APIRequestContext, APIResponse, TestInfo } from '@playwright/test';
-import { attachmentNames, scenarioFiles, type ApiSnapshot } from '@automax/contracts';
-import type { ApiAuthConfig } from '@automax/contracts';
+import { attachmentNames, scenarioFiles, type ApiSnapshot } from '@sdods/contracts';
+import type { ApiAuthConfig } from '@sdods/contracts';
 import type { ResolvedConfig } from '../config/resolve.js';
 import { Logger, redact } from '../logger.js';
 import type { ApiContext } from '../fixtures/api-context.js';

@@ -1,9 +1,9 @@
 import { serveStdio } from '@modelcontextprotocol/server/stdio';
-import { buildAutomaxMcpServer, type BuildServerOptions } from '../server.js';
+import { buildSdodsMcpServer, type BuildServerOptions } from '../server.js';
 
-/** Serve AutoMax over stdio (used by `automax mcp`). Logs go to stderr only. */
-export function serveAutomaxStdio(opts: BuildServerOptions = {}): { close(): Promise<void> } {
-  const built = buildAutomaxMcpServer({
+/** Serve SDODS over stdio (used by `sdods mcp`). Logs go to stderr only. */
+export function serveSdodsStdio(opts: BuildServerOptions = {}): { close(): Promise<void> } {
+  const built = buildSdodsMcpServer({
     ...opts,
     principal: opts.principal ?? { name: 'local', scopes: ['*'], via: 'stdio' },
   });

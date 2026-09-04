@@ -1,4 +1,4 @@
-const REPO = 'https://github.com/siri1410/AutoMax';
+const REPO = 'https://github.com/siri1410/SDODS';
 
 function issue(kind: 'helpful' | 'not-helpful' | 'feature', path: string, title: string): string {
   const params = new URLSearchParams();

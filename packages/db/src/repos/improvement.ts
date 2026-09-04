@@ -1,6 +1,6 @@
 import type { Kysely } from 'kysely';
 import { sql } from 'kysely';
-import type { HealEvent } from '@automax/contracts/types';
+import type { HealEvent } from '@sdods/contracts/types';
 import { enc, nowIso, readBool, readJson, readTs } from '../col.js';
 import type { Driver } from '../driver.js';
 import { newId } from '../ids.js';

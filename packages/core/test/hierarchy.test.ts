@@ -5,11 +5,11 @@ import { describe, expect, it } from 'vitest';
 import { ProjectRegistry, loadWorkspaceFile } from '../src/config/registry.js';
 
 function repo(opts: { workspaceYaml?: string | null; projects?: Record<string, string> } = {}) {
-  const root = mkdtempSync(join(tmpdir(), 'automax-ws-'));
+  const root = mkdtempSync(join(tmpdir(), 'sdods-ws-'));
   writeFileSync(join(root, 'package.json'), '{}');
   if (opts.workspaceYaml !== null) {
     writeFileSync(
-      join(root, 'automax.workspace.yaml'),
+      join(root, 'sdods.workspace.yaml'),
       opts.workspaceYaml ??
         `organization: { slug: acme, name: Acme }
 workspaces:
@@ -30,7 +30,7 @@ defaults:
   for (const [slug, yaml] of Object.entries(projects)) {
     const dir = join(root, 'projects', slug);
     mkdirSync(join(dir, 'envs'), { recursive: true });
-    writeFileSync(join(dir, 'automax.project.yaml'), yaml);
+    writeFileSync(join(dir, 'sdods.project.yaml'), yaml);
     writeFileSync(
       join(dir, 'envs', 'local.yaml'),
       `ui: { baseUrl: http://localhost:3000 }\napi: { baseUrl: http://localhost:3000/api }\n`,

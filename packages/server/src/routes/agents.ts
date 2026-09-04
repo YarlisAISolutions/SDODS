@@ -1,5 +1,5 @@
 import type { FastifyInstance } from 'fastify';
-import { audit } from '@automax/db';
+import { audit } from '@sdods/db';
 import { AgentJobBody } from '../schemas/index.js';
 import { forbidden, notFound, parse } from '../errors.js';
 import { runCliJson } from '../services/cli.js';

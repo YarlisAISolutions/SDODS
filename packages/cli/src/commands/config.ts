@@ -1,6 +1,6 @@
 import type { Command } from 'commander';
 import pc from 'picocolors';
-import { explainConfig, redact } from '@automax/core';
+import { explainConfig, redact } from '@sdods/core';
 import { createContext } from '../context.js';
 import { json, out, table } from '../ui.js';
 

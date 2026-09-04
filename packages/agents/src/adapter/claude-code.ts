@@ -21,9 +21,9 @@ const INSTALL_HINT =
   'Install Claude Code (`npm i -g @anthropic-ai/claude-code`) and run `claude login`, or use --adapter claude with ANTHROPIC_API_KEY, --adapter codex, or --dry-run.';
 
 /**
- * Runs AutoMax agent roles through the user's logged-in Claude Code CLI (`claude -p`).
+ * Runs SDODS agent roles through the user's logged-in Claude Code CLI (`claude -p`).
  * No ANTHROPIC_API_KEY is needed: the CLI's own login (claude.ai subscription or key) is used.
- * Tools reach the CLI through the automax MCP server (stdio) plus the bundled Playwright MCP;
+ * Tools reach the CLI through the sdods MCP server (stdio) plus the bundled Playwright MCP;
  * file tools are restricted to Read/Glob/Grep and Bash/Write/Edit are disallowed.
  */
 export class ClaudeCodeCliAdapter implements LlmAdapter {
@@ -32,13 +32,13 @@ export class ClaudeCodeCliAdapter implements LlmAdapter {
 
   constructor(private readonly ctx: CliAdapterContext & { model?: string } = {}) {
     this.defaultModel =
-      ctx.model ?? process.env.AUTOMAX_CLAUDE_CODE_MODEL ?? DEFAULT_MODELS['claude-code'];
+      ctx.model ?? process.env.SDODS_CLAUDE_CODE_MODEL ?? DEFAULT_MODELS['claude-code'];
   }
 
-  /** Path to the binary, or a clear error. Also verifies the login unless AUTOMAX_SKIP_CLI_AUTH_CHECK=1. */
+  /** Path to the binary, or a clear error. Also verifies the login unless SDODS_SKIP_CLI_AUTH_CHECK=1. */
   bin(): string {
     const bin = requireCli(this.ctx.bin ?? 'claude', INSTALL_HINT);
-    if (process.env.AUTOMAX_SKIP_CLI_AUTH_CHECK !== '1') {
+    if (process.env.SDODS_SKIP_CLI_AUTH_CHECK !== '1') {
       const r = runQuiet(bin, ['auth', 'status']);
       if (r.ok && /"loggedIn"\s*:\s*false/.test(r.stdout)) {
         throw new AgentsConfigError(
@@ -132,7 +132,7 @@ export class ClaudeCodeCliAdapter implements LlmAdapter {
   async runAgent(o: RunAgentOptions): Promise<RunAgentResult> {
     const bin = this.bin();
     const servers = mcpServerMap({ ...this.ctx, rootDir: this.ctx.rootDir ?? o.cwd }, o.mcpServers);
-    const mcpFile = writeTempJson('automax-claude-code-', { mcpServers: servers });
+    const mcpFile = writeTempJson('sdods-claude-code-', { mcpServers: servers });
     const allowed = ['Read', 'Glob', 'Grep', ...Object.keys(servers).map((n) => `mcp__${n}__*`)];
     const args = [
       '-p',

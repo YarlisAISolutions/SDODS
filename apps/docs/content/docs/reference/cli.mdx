@@ -1,10 +1,10 @@
 ---
 title: CLI overview
-description: Global options, exit codes and the full command map of the automax command.
+description: Global options, exit codes and the full command map of the sdods command.
 ---
 
 <Learn>
-  How the `automax` command is organised, which global options every command accepts, what the exit
+  How the `sdods` command is organised, which global options every command accepts, what the exit
   codes mean, and where each command group is documented.
 </Learn>
 
@@ -13,23 +13,23 @@ description: Global options, exit codes and the full command map of the automax 
 Inside the repository the command runs from source:
 
 ```bash
-bun run automax <command> [options]
+bun run sdods <command> [options]
 ```
 
-After publishing, `npx automax <command>` or a global install do the same.
+After publishing, `npx sdods <command>` or a global install do the same.
 
 ## Global options
 
-| Option          | Effect                                                                                                                                                |
-| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--json`        | machine-readable output; errors become `{ "error": { code, message, hint, docsUrl } }` on stderr                                                      |
-| `-q, --quiet`   | errors only                                                                                                                                           |
-| `--verbose`     | debug logging                                                                                                                                         |
-| `--cwd <dir>`   | repository root; by default AutoMax walks up from the current directory to find `automax.workspace.yaml`, `automax.config.ts` or a `projects/` folder |
-| `--no-color`    | disable colours                                                                                                                                       |
-| `-V, --version` | print the version                                                                                                                                     |
+| Option          | Effect                                                                                                                                          |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--json`        | machine-readable output; errors become `{ "error": { code, message, hint, docsUrl } }` on stderr                                                |
+| `-q, --quiet`   | errors only                                                                                                                                     |
+| `--verbose`     | debug logging                                                                                                                                   |
+| `--cwd <dir>`   | repository root; by default SDODS walks up from the current directory to find `sdods.workspace.yaml`, `sdods.config.ts` or a `projects/` folder |
+| `--no-color`    | disable colours                                                                                                                                 |
+| `-V, --version` | print the version                                                                                                                               |
 
-Every flag has an `AUTOMAX_*` environment equivalent, listed in [Environment variables](/docs/reference/environment-variables).
+Every flag has an `SDODS_*` environment equivalent, listed in [Environment variables](/docs/reference/environment-variables).
 
 ## Exit codes
 
@@ -53,8 +53,8 @@ Every flag has an `AUTOMAX_*` environment equivalent, listed in [Environment var
 | Agents                  | [`agent`, `proposals`](/docs/reference/cli-commands/agent-proposals)                                                                                                                                                                                                                           | Phase 8                                        |
 | Platform                | [`mcp`, `serve`](/docs/reference/cli-commands/mcp-serve), [`users`, `tokens`, `schedule`, `integrations`, `completion`, `upgrade`](/docs/reference/cli-commands/users-tokens-schedule-integrations)                                                                                            | Phases 7, 9, 11                                |
 
-Run `bun run automax --help` or `bun run automax <command> --help` for the live surface.
+Run `bun run sdods --help` or `bun run sdods <command> --help` for the live surface.
 
-```bash automax-verify
-bun run automax --help
+```bash sdods-verify
+bun run sdods --help
 ```

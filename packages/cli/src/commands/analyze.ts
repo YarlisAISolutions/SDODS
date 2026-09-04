@@ -2,8 +2,8 @@ import { resolve as resolvePath } from 'node:path';
 import type { Command } from 'commander';
 import pc from 'picocolors';
 import { parse as parseYaml } from 'yaml';
-import type { AnalysisReport, ProjectProposal } from '@automax/contracts';
-import { ProjectConfigSchema } from '@automax/contracts';
+import type { AnalysisReport, ProjectProposal } from '@sdods/contracts';
+import { ProjectConfigSchema } from '@sdods/contracts';
 import { createContext } from '../context.js';
 import { heading, json, ok, out, table, warn } from '../ui.js';
 import { projectTemplateFiles } from '../templates/project.js';
@@ -19,9 +19,9 @@ export interface InitFromAppOptions {
   browsers?: string[];
 }
 
-/** Programmatic entry used by `automax init --from <app>`: analyze → propose → apply. */
+/** Programmatic entry used by `sdods init --from <app>`: analyze → propose → apply. */
 export async function initFromApp(opts: InitFromAppOptions) {
-  const { analyzeProject, proposeProject, applyProposal } = await import('@automax/core/analyze');
+  const { analyzeProject, proposeProject, applyProposal } = await import('@sdods/core/analyze');
   const report = analyzeProject(opts.appPath, { openapi: opts.openapi });
   const proposal = proposeProject(report, {
     slug: opts.slug,
@@ -59,7 +59,7 @@ export function register(program: Command) {
   program
     .command('analyze [path]')
     .description(
-      'Analyze an application repository and propose an AutoMax project (read-only unless --apply)',
+      'Analyze an application repository and propose an SDODS project (read-only unless --apply)',
     )
     .option(
       '-p, --project <slug>',
@@ -77,10 +77,9 @@ export function register(program: Command) {
     .option('--report-only', 'print the analysis, skip the proposal')
     .action(async (path: string | undefined, opts, cmd) => {
       const ctx = createContext(cmd);
-      // the app path is relative to where the command was typed, not to --cwd (the AutoMax repo)
+      // the app path is relative to where the command was typed, not to --cwd (the SDODS repo)
       const appPath = resolvePath(process.cwd(), path ?? '.');
-      const { analyzeProject, proposeProject, applyProposal } =
-        await import('@automax/core/analyze');
+      const { analyzeProject, proposeProject, applyProposal } = await import('@sdods/core/analyze');
       const report = analyzeProject(appPath, { openapi: opts.openapi });
       const slug = opts.project ?? opts.slug;
       const proposal = opts.reportOnly
@@ -122,7 +121,7 @@ export function register(program: Command) {
         }
         const envName = Object.keys(proposal.envYamls)[0] ?? 'local';
         out(
-          `\nNext:\n  automax lint -p ${proposal.slug}\n  automax run -p ${proposal.slug} -e ${envName} -l api\n  automax run -p ${proposal.slug} -e ${envName} -l ui -b chromium -t @smoke`,
+          `\nNext:\n  sdods lint -p ${proposal.slug}\n  sdods run -p ${proposal.slug} -e ${envName} -l api\n  sdods run -p ${proposal.slug} -e ${envName} -l ui -b chromium -t @smoke`,
         );
       } else if (proposal) {
         out(pc.dim('\nRun again with --apply to write the project.'));
@@ -238,7 +237,7 @@ function printProposal(p: ProjectProposal) {
     ),
   );
   for (const n of p.notes) warn(n);
-  out(pc.dim('--- automax.project.yaml ---'));
+  out(pc.dim('--- sdods.project.yaml ---'));
   const lines = p.projectYaml.split('\n');
   out(lines.slice(0, 60).join('\n'));
   if (lines.length > 60) out(pc.dim('  …'));

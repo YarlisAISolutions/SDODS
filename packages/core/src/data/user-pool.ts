@@ -11,7 +11,7 @@ import {
 } from 'node:fs';
 import { join } from 'node:path';
 import type { ResolvedConfig } from '../config/resolve.js';
-import { AutomaxError } from '../errors.js';
+import { SdodsError } from '../errors.js';
 import { Logger } from '../logger.js';
 import type { DataProvider, LeaseStore, LeasedUser, Row, UserPool } from './types.js';
 
@@ -128,11 +128,11 @@ export class FileUserPool implements UserPool {
     if (!this.rows) {
       const pool = this.config.project.data.userPool;
       if (!pool) {
-        throw new AutomaxError(
+        throw new SdodsError(
           'CONFIG_INVALID',
           `Project ${this.config.project.slug} has no data.userPool configured.`,
           {
-            hint: 'Add data.userPool: { dataset: users, roleColumn: role } to automax.project.yaml.',
+            hint: 'Add data.userPool: { dataset: users, roleColumn: role } to sdods.project.yaml.',
           },
         );
       }
@@ -149,13 +149,13 @@ export class FileUserPool implements UserPool {
     if (existing) return existing;
     const pool = this.config.project.data.userPool!;
     const rows = await this.users();
-    // `index` is the position WITHIN the role, matching `automax auth capture --index` and the
+    // `index` is the position WITHIN the role, matching `sdods auth capture --index` and the
     // storage-state file name `<role>-<index>.json`.
     const candidates = rows
       .filter((r) => String(r[pool.roleColumn] ?? 'standard') === role)
       .map((r, index) => ({ r, index }));
     if (!candidates.length) {
-      throw new AutomaxError(
+      throw new SdodsError(
         'USER_POOL_EXHAUSTED',
         `No users with role "${role}" in dataset "${pool.dataset}" (env ${this.config.env.name}).`,
         {
@@ -187,7 +187,7 @@ export class FileUserPool implements UserPool {
       }
       if (Date.now() - started > waitMs) {
         const owners = await this.store.owners();
-        throw new AutomaxError(
+        throw new SdodsError(
           'USER_POOL_EXHAUSTED',
           `All ${candidates.length} user(s) with role "${role}" are leased.`,
           {

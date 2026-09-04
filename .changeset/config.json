@@ -2,10 +2,10 @@
   "$schema": "https://unpkg.com/@changesets/config@3.0.0/schema.json",
   "changelog": "@changesets/cli/changelog",
   "commit": false,
-  "fixed": [["@automax/*"]],
+  "fixed": [["@sdods/*"]],
   "linked": [],
   "access": "public",
   "baseBranch": "main",
   "updateInternalDependencies": "patch",
-  "ignore": ["automax-monorepo", "@automax/web", "@automax/docs"]
+  "ignore": ["sdods-monorepo", "@sdods/web", "@sdods/docs"]
 }

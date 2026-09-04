@@ -13,7 +13,7 @@ import { parseFeatureFile, scenariosOf } from '../src/lint/gherkin.js';
 import { lintProject } from '../src/lint/index.js';
 
 function project(opts: { yaml?: string } = {}) {
-  const root = mkdtempSync(join(tmpdir(), 'automax-data-'));
+  const root = mkdtempSync(join(tmpdir(), 'sdods-data-'));
   const proj = join(root, 'projects', 'shop');
   mkdirSync(join(proj, 'envs'), { recursive: true });
   mkdirSync(join(proj, 'data', 'common'), { recursive: true });
@@ -21,7 +21,7 @@ function project(opts: { yaml?: string } = {}) {
   mkdirSync(join(proj, 'features', 'auth'), { recursive: true });
   writeFileSync(join(root, 'package.json'), '{}');
   writeFileSync(
-    join(proj, 'automax.project.yaml'),
+    join(proj, 'sdods.project.yaml'),
     opts.yaml ??
       `slug: shop
 name: Shop
@@ -54,7 +54,7 @@ screenshots: { policy: { default: on-failure, '@smoke': scenario, '@regression':
     rootDir: root,
     projectRoot: proj,
     processEnv: {} as any,
-    cliOverrides: { runId: 'run-1', artifactsDir: join(root, '.automax/runs') },
+    cliOverrides: { runId: 'run-1', artifactsDir: join(root, '.sdods/runs') },
   });
   return { root, proj, cfg };
 }

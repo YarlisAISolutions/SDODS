@@ -4,7 +4,7 @@ import { isAbsolute, resolve as resolvePath } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { Faker, en } from '@faker-js/faker';
 import type { ResolvedConfig } from '../config/resolve.js';
-import { AutomaxError } from '../errors.js';
+import { SdodsError } from '../errors.js';
 import { Logger } from '../logger.js';
 import { loadFileSource } from './loaders.js';
 import type { DataProvider, Row } from './types.js';
@@ -33,11 +33,11 @@ export class CompositeDataProvider implements DataProvider {
   async load<T extends Row = Row>(dataset: string): Promise<T[]> {
     const spec = this.config.project.data.sources[dataset];
     if (!spec) {
-      throw new AutomaxError(
+      throw new SdodsError(
         'DATASET_NOT_FOUND',
         `Dataset "${dataset}" is not declared for project ${this.config.project.slug}.`,
         {
-          hint: `Known datasets: ${Object.keys(this.config.project.data.sources).join(', ') || '(none)'}. Add it under data.sources in automax.project.yaml.`,
+          hint: `Known datasets: ${Object.keys(this.config.project.data.sources).join(', ') || '(none)'}. Add it under data.sources in sdods.project.yaml.`,
         },
       );
     }
@@ -48,7 +48,7 @@ export class CompositeDataProvider implements DataProvider {
     const rows = await this.load<T>(dataset);
     const r = rows[index];
     if (!r) {
-      throw new AutomaxError(
+      throw new SdodsError(
         'DATASET_ROW_NOT_FOUND',
         `Dataset "${dataset}" has ${rows.length} row(s); row ${index} does not exist (0-based).`,
       );
@@ -67,7 +67,7 @@ export class CompositeDataProvider implements DataProvider {
     const factories = await this.loadFactories();
     const fn = factories[name];
     if (!fn) {
-      throw new AutomaxError('DATASET_NOT_FOUND', `Factory "${name}" not found.`, {
+      throw new SdodsError('DATASET_NOT_FOUND', `Factory "${name}" not found.`, {
         hint: `Known factories: ${Object.keys(factories).join(', ') || '(none)'}. Define it in ${this.config.project.data.factories ?? 'data/factories.ts'}.`,
       });
     }

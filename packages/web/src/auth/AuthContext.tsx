@@ -7,7 +7,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
-import { effectiveWorkspaceRole, type Scope, type WorkspaceRole } from '@automax/contracts/scopes';
+import { effectiveWorkspaceRole, type Scope, type WorkspaceRole } from '@sdods/contracts/scopes';
 import { api, ApiError, setCsrfToken } from '../api/client';
 import type { Me } from '../api/types';
 import { normalizeMe } from '../api/normalize';

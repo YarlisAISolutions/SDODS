@@ -1,10 +1,10 @@
 import type { Command } from 'commander';
-import { AutomaxError } from '@automax/core';
+import { SdodsError } from '@sdods/core';
 import { createContext } from '../context.js';
 import { json, ok, table } from '../ui.js';
 
 async function openDb() {
-  const db = await import('@automax/db');
+  const db = await import('@sdods/db');
   return db.openDb();
 }
 
@@ -25,20 +25,20 @@ export function register(program: Command) {
     .action(async (opts, cmd) => {
       const ctx = createContext(cmd);
       if (String(opts.password).length < 8)
-        throw new AutomaxError('CONFIG_INVALID', 'Password must be at least 8 characters.', {
+        throw new SdodsError('CONFIG_INVALID', 'Password must be at least 8 characters.', {
           exitCode: 2,
         });
       const adb = await openDb();
       try {
-        const db = await import('@automax/db');
-        const { hashPassword } = await import('@automax/server');
+        const db = await import('@sdods/db');
+        const { hashPassword } = await import('@sdods/server');
         if (await db.getUserByUsername(adb.db, opts.username))
-          throw new AutomaxError('CONFIG_INVALID', `User ${opts.username} already exists.`, {
+          throw new SdodsError('CONFIG_INVALID', `User ${opts.username} already exists.`, {
             exitCode: 2,
           });
         const role = opts.admin ? 'admin' : opts.role;
         if (!['viewer', 'editor', 'admin'].includes(role))
-          throw new AutomaxError('CONFIG_INVALID', `Unknown role ${role}.`, { exitCode: 2 });
+          throw new SdodsError('CONFIG_INVALID', `Unknown role ${role}.`, { exitCode: 2 });
         const id = await db.createUser(adb.db, adb.driver, {
           username: opts.username,
           passwordHash: await hashPassword(opts.password),
@@ -46,7 +46,7 @@ export function register(program: Command) {
           email: opts.email ?? null,
         });
         // make sure the hierarchy exists before granting ownership
-        const { HierarchyService } = await import('@automax/server');
+        const { HierarchyService } = await import('@sdods/server');
         const h = new HierarchyService(adb);
         await h.sync(ctx.registry).catch(() => undefined);
         const ownerOf = opts.admin || opts.orgOwner ? await h.bootstrapOwner(id) : [];
@@ -73,7 +73,7 @@ export function register(program: Command) {
       const ctx = createContext(cmd);
       const adb = await openDb();
       try {
-        const db = await import('@automax/db');
+        const db = await import('@sdods/db');
         const rows = (await db.listUsers(adb.db)).map((u) => ({
           id: u.id,
           username: u.username,
@@ -96,10 +96,10 @@ export function register(program: Command) {
       const ctx = createContext(cmd);
       const adb = await openDb();
       try {
-        const db = await import('@automax/db');
+        const db = await import('@sdods/db');
         const u = await db.getUserByUsername(adb.db, username);
         if (!u)
-          throw new AutomaxError('CONFIG_NOT_FOUND', `User ${username} not found.`, {
+          throw new SdodsError('CONFIG_NOT_FOUND', `User ${username} not found.`, {
             exitCode: 2,
           });
         await db.updateUser(adb.db, adb.driver, u.id, {
@@ -119,10 +119,10 @@ export function register(program: Command) {
       const ctx = createContext(cmd);
       const adb = await openDb();
       try {
-        const db = await import('@automax/db');
+        const db = await import('@sdods/db');
         const u = await db.getUserByUsername(adb.db, username);
         if (!u)
-          throw new AutomaxError('CONFIG_NOT_FOUND', `User ${username} not found.`, {
+          throw new SdodsError('CONFIG_NOT_FOUND', `User ${username} not found.`, {
             exitCode: 2,
           });
         await db.updateUser(adb.db, adb.driver, u.id, { active: false });
@@ -145,31 +145,31 @@ export function register(program: Command) {
       const ctx = createContext(cmd);
       const adb = await openDb();
       try {
-        const db = await import('@automax/db');
-        const { HierarchyService } = await import('@automax/server');
+        const db = await import('@sdods/db');
+        const { HierarchyService } = await import('@sdods/server');
         const h = new HierarchyService(adb);
         await h.sync(ctx.registry);
         const u = await db.getUserByUsername(adb.db, username);
         if (!u)
-          throw new AutomaxError('CONFIG_NOT_FOUND', `User ${username} not found.`, {
+          throw new SdodsError('CONFIG_NOT_FOUND', `User ${username} not found.`, {
             exitCode: 2,
           });
         if (opts.workspace) {
           const ws = (await h.workspaces()).find((w) => w.slug === opts.workspace);
           if (!ws)
-            throw new AutomaxError('CONFIG_NOT_FOUND', `Workspace ${opts.workspace} not found.`, {
+            throw new SdodsError('CONFIG_NOT_FOUND', `Workspace ${opts.workspace} not found.`, {
               exitCode: 2,
             });
           await h.setWorkspaceRole(ws.id, u.id, opts.role);
         } else if (opts.org) {
           const org = (await h.organizations()).find((o) => o.slug === opts.org);
           if (!org)
-            throw new AutomaxError('CONFIG_NOT_FOUND', `Organization ${opts.org} not found.`, {
+            throw new SdodsError('CONFIG_NOT_FOUND', `Organization ${opts.org} not found.`, {
               exitCode: 2,
             });
           await h.setOrgRole(org.id, u.id, opts.role);
         } else
-          throw new AutomaxError('CONFIG_INVALID', 'Pass --org <slug> or --workspace <slug>.', {
+          throw new SdodsError('CONFIG_INVALID', 'Pass --org <slug> or --workspace <slug>.', {
             exitCode: 2,
           });
         const list = await h.workspacesForUser(u.id, u.role);

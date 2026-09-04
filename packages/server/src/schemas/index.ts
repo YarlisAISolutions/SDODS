@@ -7,9 +7,9 @@ import {
   SCOPES,
   SlugSchema,
   WORKSPACE_ROLES,
-} from '@automax/contracts';
+} from '@sdods/contracts';
 
-/** Request/response schemas shared with the web app (type-only import from `@automax/server/schemas`). */
+/** Request/response schemas shared with the web app (type-only import from `@sdods/server/schemas`). */
 
 export const LoginBody = z.object({ username: z.string().min(1), password: z.string().min(1) });
 export const SetupBody = z.object({

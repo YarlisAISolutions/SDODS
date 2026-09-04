@@ -11,16 +11,16 @@ import {
   type OrgRole,
   type Role,
   type WorkspaceRole,
-} from '@automax/contracts';
-import { getSession, getUserById, resolveApiToken, touchSession } from '@automax/db';
+} from '@sdods/contracts';
+import { getSession, getUserById, resolveApiToken, touchSession } from '@sdods/db';
 import { forbidden, unauthorized } from '../errors.js';
 import type { Principal } from '../types.js';
 
 /**
  * Session cookie name. Behind Firebase Hosting rewrites only a cookie named `__session` reaches
- * Cloud Run, so deployments set AUTOMAX_SESSION_COOKIE=__session.
+ * Cloud Run, so deployments set SDODS_SESSION_COOKIE=__session.
  */
-export const SESSION_COOKIE = process.env.AUTOMAX_SESSION_COOKIE || 'automax_sid';
+export const SESSION_COOKIE = process.env.SDODS_SESSION_COOKIE || 'sdods_sid';
 const ROLE_RANK: Record<WorkspaceRole, number> = { viewer: 0, editor: 1, admin: 2 };
 const PUBLIC_PATHS = new Set([
   '/api/health',

@@ -1,10 +1,10 @@
 ---
-title: automax trace
+title: sdods trace
 description: Open Playwright traces of a run, or a trace zip, in the trace viewer.
 ---
 
 ```text
-automax trace [zip] [--last] [--run <id>] [--artifacts-dir <dir>] [--list] [--json]
+sdods trace [zip] [--last] [--run <id>] [--artifacts-dir <dir>] [--list] [--json]
 ```
 
 | Argument / flag   | Meaning                                                                                |
@@ -12,15 +12,15 @@ automax trace [zip] [--last] [--run <id>] [--artifacts-dir <dir>] [--list] [--js
 | `zip`             | a `trace.zip` file, or a directory to search recursively                               |
 | `--last`          | the most recent run under the artifacts directory (default when nothing else is given) |
 | `--run <id>`      | a specific run id                                                                      |
-| `--artifacts-dir` | where runs live (default `.automax/runs`, or `AUTOMAX_ARTIFACTS_DIR`)                  |
+| `--artifacts-dir` | where runs live (default `.sdods/runs`, or `SDODS_ARTIFACTS_DIR`)                      |
 | `--list`          | print the trace files instead of opening them (`--json` prints `{ source, traces }`)   |
 
 Traces are recorded on the first retry and for failures (`trace: on-first-retry`), so a fully green run has none.
 
 ```bash
-automax trace --last
-automax trace --run 0193f0c2-… --list
-automax trace .automax/runs/<id>/pw-output/demo-shop--ui--chromium/login/trace.zip
+sdods trace --last
+sdods trace --run 0193f0c2-… --list
+sdods trace .sdods/runs/<id>/pw-output/demo-shop--ui--chromium/login/trace.zip
 ```
 
 Exit code `2` when no run or no trace file is found.

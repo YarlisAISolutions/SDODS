@@ -1,6 +1,6 @@
 import { pathToFileURL } from 'node:url';
 import { resolve } from 'node:path';
-import type { ProjectConfig } from '@automax/contracts';
+import type { ProjectConfig } from '@sdods/contracts';
 import { GitHubProvider } from './github.js';
 import { JiraProvider } from './jira.js';
 import { readSecrets, secretPresence } from './secrets.js';

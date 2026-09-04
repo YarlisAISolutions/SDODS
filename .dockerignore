@@ -3,7 +3,7 @@ node_modules
 **/dist
 **/.next
 **/out
-.automax
+.sdods
 .features-gen
 test-results
 playwright-report

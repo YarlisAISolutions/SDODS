@@ -3,7 +3,7 @@ import { extname, resolve } from 'node:path';
 import type { Command } from 'commander';
 import pc from 'picocolors';
 import { parse as parseYaml } from 'yaml';
-import { AutomaxError } from '@automax/core';
+import { SdodsError } from '@sdods/core';
 import { createContext } from '../context.js';
 import { json, ok, out, table } from '../ui.js';
 
@@ -65,7 +65,7 @@ export function register(program: Command) {
       const ctx = createContext(cmd);
       const entry = ctx.registry.entry(opts.project);
       const rows = await readRows(file);
-      const m = await import('@automax/db');
+      const m = await import('@sdods/db');
       const adb = m.createDb();
       try {
         await m.migrateToLatest(adb);
@@ -83,7 +83,7 @@ export function register(program: Command) {
           return;
         }
         if (opts.to !== 'db')
-          throw new AutomaxError('NOT_SUPPORTED', `--to must be db or table (got ${opts.to}).`, {
+          throw new SdodsError('NOT_SUPPORTED', `--to must be db or table (got ${opts.to}).`, {
             exitCode: 2,
           });
         const res = await m.upsertDataset(adb.db, adb.driver, {
@@ -110,7 +110,7 @@ export function register(program: Command) {
     .requiredOption('-p, --project <slug>', 'project slug')
     .action(async (opts, cmd) => {
       const ctx = createContext(cmd);
-      const m = await import('@automax/db');
+      const m = await import('@sdods/db');
       const adb = m.createDb();
       try {
         await m.migrateToLatest(adb);
@@ -149,7 +149,7 @@ export function register(program: Command) {
       const env = opts.env ?? entry.config.envs.default;
       const { existsSync, readdirSync } = await import('node:fs');
       const { join } = await import('node:path');
-      const m = await import('@automax/db');
+      const m = await import('@sdods/db');
       const adb = m.createDb();
       const imported: Array<{ dataset: string; env: string; rows: number }> = [];
       try {

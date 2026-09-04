@@ -1,8 +1,8 @@
 {
-  "name": "@automax/web",
+  "name": "@sdods/web",
   "version": "0.1.0",
   "private": true,
-  "description": "AutoMax web UI: organizations, workspaces, projects, runs with before/after narratives, editor, agents, schedules.",
+  "description": "SDODS web UI: organizations, workspaces, projects, runs with before/after narratives, editor, agents, schedules.",
   "license": "Apache-2.0",
   "author": "Sireesh Yarlagadda (https://www.linkedin.com/in/yarlagadda/)",
   "type": "module",
@@ -16,7 +16,7 @@
     "screenshots": "node --import tsx scripts/screenshot.ts"
   },
   "dependencies": {
-    "@automax/contracts": "workspace:*",
+    "@sdods/contracts": "workspace:*",
     "@codemirror/autocomplete": "^6.18.0",
     "@codemirror/commands": "^6.8.0",
     "@codemirror/language": "^6.11.0",

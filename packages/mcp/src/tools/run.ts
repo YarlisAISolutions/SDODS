@@ -1,8 +1,8 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { z } from 'zod';
-import { runFiles } from '@automax/contracts';
-import { AutomaxCliError, automaxCli } from '../cli.js';
+import { runFiles } from '@sdods/contracts';
+import { SdodsCliError, sdodsCli } from '../cli.js';
 import {
   getRun,
   lastRun,
@@ -83,7 +83,7 @@ export const runTools = [
     name: 'run_tests',
     title: 'Run tests',
     description:
-      'Run a project slice through `automax run` (lint → bddgen → Playwright). Streams progress lines; returns the run id, totals, failed scenarios and report paths. Test failures are returned as data, not as a tool error.',
+      'Run a project slice through `sdods run` (lint → bddgen → Playwright). Streams progress lines; returns the run id, totals, failed scenarios and report paths. Test failures are returned as data, not as a tool error.',
     shape: runArgs,
     access: 'run',
     domain: 'runs',
@@ -106,7 +106,7 @@ export const runTools = [
       let exitCode = 0;
       let json: unknown;
       try {
-        const r = await automaxCli(cli, {
+        const r = await sdodsCli(cli, {
           cwd: ctx.rootDir,
           signal: ctx.signal,
           onLine,
@@ -114,10 +114,10 @@ export const runTools = [
         });
         json = r.json;
       } catch (e) {
-        if (!(e instanceof AutomaxCliError)) throw e;
+        if (!(e instanceof SdodsCliError)) throw e;
         if (e.notSupported)
           return {
-            text: 'automax run is not available in this build.',
+            text: 'sdods run is not available in this build.',
             data: { note: 'command not available in this build' },
           };
         if (e.exitCode !== 1) throw e; // config/lint errors are real errors
@@ -138,17 +138,17 @@ export const runTools = [
     name: 'run_tests_async',
     title: 'Start a run (async)',
     description:
-      'Start `automax run` in the background and return immediately with the run id; poll with run_get.',
+      'Start `sdods run` in the background and return immediately with the run id; poll with run_get.',
     shape: runArgs,
     access: 'run',
     domain: 'runs',
     capability: 'run',
     annotations: { openWorldHint: true },
     handler: async (args, ctx) => {
-      const { newRunId } = await import('@automax/contracts');
+      const { newRunId } = await import('@sdods/contracts');
       const runId = args.runId ?? newRunId();
       const cli = buildRunCli({ ...args, runId });
-      void automaxCli(cli, { cwd: ctx.rootDir, timeoutMs: 60 * 60_000 }).catch(() => undefined);
+      void sdodsCli(cli, { cwd: ctx.rootDir, timeoutMs: 60 * 60_000 }).catch(() => undefined);
       return {
         text: `Run ${runId} started. Poll with run_get { runId: "${runId}" }.`,
         data: { runId, status: 'running' },
@@ -233,7 +233,7 @@ export const runTools = [
     name: 'run_get_scenario',
     title: 'Get scenario result',
     description:
-      'One scenario of a run: meta, steps, before/after screenshot URIs (automax://screenshot/…), API request/response snapshots and heal events.',
+      'One scenario of a run: meta, steps, before/after screenshot URIs (sdods://screenshot/…), API request/response snapshots and heal events.',
     shape: {
       runId: z.string(),
       fingerprint: z.string(),

@@ -1,6 +1,6 @@
 /**
- * Extracts fenced code blocks whose info string contains `automax-verify` from the docs
- * and executes each non-comment line via `bun run automax ...` from the repository root.
+ * Extracts fenced code blocks whose info string contains `sdods-verify` from the docs
+ * and executes each non-comment line via `bun run sdods ...` from the repository root.
  * Exits non-zero on the first failing command so the docs cannot drift from the CLI.
  */
 import { readdirSync, readFileSync, statSync } from 'node:fs';
@@ -34,7 +34,7 @@ function extract(file: string): Block[] {
     const fence = /^```(.*)$/.exec(raw.trim());
     if (fence && !inBlock) {
       inBlock = true;
-      current = fence[1]!.includes('automax-verify') ? { file, line: i + 1, commands: [] } : null;
+      current = fence[1]!.includes('sdods-verify') ? { file, line: i + 1, commands: [] } : null;
       return;
     }
     if (fence && inBlock) {
@@ -53,21 +53,21 @@ function extract(file: string): Block[] {
 
 const blocks = walk(docsDir).flatMap(extract);
 if (blocks.length === 0) {
-  console.log('docs:verify — no automax-verify blocks found');
+  console.log('docs:verify — no sdods-verify blocks found');
   process.exit(0);
 }
 let failed = 0;
 for (const b of blocks) {
   for (const cmd of b.commands) {
     const rel = b.file.replace(repoRoot + '/', '');
-    if (!cmd.startsWith('bun run automax') && !cmd.startsWith('automax ')) {
+    if (!cmd.startsWith('bun run sdods') && !cmd.startsWith('sdods ')) {
       console.log(
-        `✖ ${rel}:${b.line} — only "bun run automax ..." / "automax ..." commands may be verified: ${cmd}`,
+        `✖ ${rel}:${b.line} — only "bun run sdods ..." / "sdods ..." commands may be verified: ${cmd}`,
       );
       failed++;
       continue;
     }
-    const args = cmd.replace(/^bun run automax\s*/, '').replace(/^automax\s*/, '');
+    const args = cmd.replace(/^bun run sdods\s*/, '').replace(/^sdods\s*/, '');
     const res = spawnSync(
       'node',
       ['--import', 'tsx', 'packages/cli/src/bin.ts', ...splitArgs(args)],
@@ -79,11 +79,11 @@ for (const b of blocks) {
       },
     );
     if (res.status === 0) {
-      console.log(`✔ ${rel}:${b.line} — automax ${args}`);
+      console.log(`✔ ${rel}:${b.line} — sdods ${args}`);
     } else {
       failed++;
       console.log(
-        `✖ ${rel}:${b.line} — automax ${args} (exit ${res.status})\n${(res.stderr || res.stdout || '').trim()}`,
+        `✖ ${rel}:${b.line} — sdods ${args} (exit ${res.status})\n${(res.stderr || res.stdout || '').trim()}`,
       );
     }
   }

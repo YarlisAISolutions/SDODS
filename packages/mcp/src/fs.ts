@@ -7,21 +7,21 @@ import {
   type RunManifest,
   type RunSummary,
   type ScenarioMeta,
-} from '@automax/contracts';
+} from '@sdods/contracts';
 
-export const RUNS_DIR = '.automax/runs';
+export const RUNS_DIR = '.sdods/runs';
 export const PROJECTS_DIR = 'projects';
 export const PROPOSALS_DIR = 'proposals';
 
 export function runsRoot(rootDir: string): string {
-  return resolve(rootDir, process.env.AUTOMAX_ARTIFACTS_DIR ?? RUNS_DIR);
+  return resolve(rootDir, process.env.SDODS_ARTIFACTS_DIR ?? RUNS_DIR);
 }
 
 export function projectRoot(rootDir: string, slug: string): string {
-  const dir = resolve(rootDir, process.env.AUTOMAX_PROJECTS_DIR ?? PROJECTS_DIR, slug);
-  if (!existsSync(join(dir, 'automax.project.yaml'))) {
+  const dir = resolve(rootDir, process.env.SDODS_PROJECTS_DIR ?? PROJECTS_DIR, slug);
+  if (!existsSync(join(dir, 'sdods.project.yaml'))) {
     throw Object.assign(
-      new Error(`Unknown project "${slug}" (no automax.project.yaml under ${dir}).`),
+      new Error(`Unknown project "${slug}" (no sdods.project.yaml under ${dir}).`),
       {
         error: { code: 'PROJECT_NOT_FOUND' },
       },
@@ -221,5 +221,5 @@ export function screenshotUri(
   retry: number,
   file: string,
 ): string {
-  return `automax://screenshot/${runId}/${fingerprint}/${retry}/${file}`;
+  return `sdods://screenshot/${runId}/${fingerprint}/${retry}/${file}`;
 }
