@@ -200,6 +200,23 @@ description: Field-by-field reference for the project file and the workspace fil
       type: '{ name, cron, timezone, env?, tags?, layers?, browsers?, workers?, harMode?, overlap, jitterSeconds, catchUp, enabled, notify, retentionRuns? }',
     },
     reports: { type: '{ cucumberHtml, allure, junit }', default: 'all false' },
+    'ci.enabled': {
+      type: 'boolean',
+      default: 'true',
+      description:
+        'false excludes the project from the generic CI browser matrix (`automax project list --matrix`); use a dedicated job instead, as projects/automax-web does with `bun run dogfood`.',
+    },
+    'ci.env': {
+      type: 'string',
+      default: 'envs.default',
+      description: 'environment the matrix runs against',
+    },
+    'ci.tags': { type: 'string', description: 'tag expression for matrix runs' },
+    'ci.browsers': {
+      type: 'browser[]',
+      default: 'browsers',
+      description: 'browsers to include in the matrix',
+    },
   }}
 />
 

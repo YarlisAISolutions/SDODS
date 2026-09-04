@@ -21,16 +21,22 @@ export function registerProjectCommands(program: Command) {
       const entries = ctx.registry.entriesList();
       if (opts.matrix) {
         const shards = Math.max(1, Number(opts.shards));
-        const matrix = entries.flatMap((e) =>
-          e.config.browsers.flatMap((browser) =>
-            Array.from({ length: shards }, (_, i) => ({
-              project: e.slug,
-              browser,
-              shard: i + 1,
-              total: shards,
-            })),
-          ),
-        );
+        // Projects with `ci.enabled: false` (e.g. ones that need their own server, like the
+        // dogfooding project) are left to dedicated jobs.
+        const matrix = entries
+          .filter((e) => e.config.ci.enabled)
+          .flatMap((e) =>
+            (e.config.ci.browsers ?? e.config.browsers).flatMap((browser) =>
+              Array.from({ length: shards }, (_, i) => ({
+                project: e.slug,
+                env: e.config.ci.env ?? e.config.envs.default,
+                tags: e.config.ci.tags ?? '',
+                browser,
+                shard: i + 1,
+                total: shards,
+              })),
+            ),
+          );
         return json(matrix);
       }
       const rows = entries.map((e) => ({
