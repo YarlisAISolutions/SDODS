@@ -335,13 +335,11 @@ function groupModules(
         .toLowerCase() || 'home';
     groups.set(seg, [...(groups.get(seg) ?? []), p]);
   }
-  return [...groups.entries()]
-    .slice(0, 30)
-    .map(([name, routes]) => ({
-      name,
-      routes: routes.slice(0, 20),
-      testingTypes: ['functional', 'smoke', 'regression'],
-    }));
+  return [...groups.entries()].slice(0, 30).map(([name, routes]) => ({
+    name,
+    routes: routes.slice(0, 20),
+    testingTypes: ['functional', 'smoke', 'regression'],
+  }));
 }
 
 function safeRead(f: string): string {

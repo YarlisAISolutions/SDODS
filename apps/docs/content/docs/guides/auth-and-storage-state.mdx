@@ -4,19 +4,20 @@ description: Log in once per user, reuse the browser state across scenarios, and
 ---
 
 <Learn>
-Which authentication strategies AutoMax supports, where storage state is cached, how a leased user's state is applied to a browser context, and how to capture state for the recorder.
+  Which authentication strategies AutoMax supports, where storage state is cached, how a leased
+  user's state is applied to a browser context, and how to capture state for the recorder.
 </Learn>
 
 ## Strategies
 
-| Strategy | How state is produced |
-|---|---|
-| `none` | no login |
-| `form` | a headless login with the selectors in `auth.form`, then `context.storageState()` |
-| `token` | fetch a token, place it as a header, cookie or local-storage entry |
-| `oauth-client-credentials` | client-credentials grant against `tokenUrl` |
-| `sso` | interactive: `automax auth capture --interactive` opens codegen so a person completes SSO |
-| `custom` | your `defineAuth` implementation in `steps/auth.ts` |
+| Strategy                   | How state is produced                                                                     |
+| -------------------------- | ----------------------------------------------------------------------------------------- |
+| `none`                     | no login                                                                                  |
+| `form`                     | a headless login with the selectors in `auth.form`, then `context.storageState()`         |
+| `token`                    | fetch a token, place it as a header, cookie or local-storage entry                        |
+| `oauth-client-credentials` | client-credentials grant against `tokenUrl`                                               |
+| `sso`                      | interactive: `automax auth capture --interactive` opens codegen so a person completes SSO |
+| `custom`                   | your `defineAuth` implementation in `steps/auth.ts`                                       |
 
 ```yaml title="automax.project.yaml"
 auth:

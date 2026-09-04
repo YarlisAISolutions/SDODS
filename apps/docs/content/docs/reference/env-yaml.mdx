@@ -3,25 +3,52 @@ title: envs/<env>.yaml
 description: Field reference for environment files.
 ---
 
-<TypeTable type={{
-  name: { type: 'string', description: 'Set automatically from the file name.' },
-  description: { type: 'string' },
-  'ui.baseUrl': { type: 'url', required: true },
-  'api.baseUrl': { type: 'url', required: true },
-  'api.headers': { type: 'Record<string, string>', default: '{}' },
-  'api.auth': { type: "none | bearer{token} | basic{username,password} | header{name,value} | oauth-client-credentials{tokenUrl,clientId,clientSecret,scope?,audience?}", default: '{ type: none }', description: 'Secret fields must be ${VAR} references.' },
-  'api.openapi': { type: 'string', description: 'Path or URL of the specification for contract steps.' },
-  aliases: { type: 'url[]', default: '[]', description: 'Other origins of the same environment (recorder rewrites them to routes).' },
-  db: { type: "{ driver: 'sqlite'|'postgres', url }", description: 'Test-data database for db datasets.' },
-  'users.poolSize': { type: 'number', description: 'Maximum accounts a run may lease.' },
-  vars: { type: 'Record<string, string|number|boolean>', default: '{}', description: 'Available to steps as {{name}}.' },
-  use: { type: '{ locale?, timezoneId?, geolocation?, permissions?, colorScheme?, ignoreHTTPSErrors?, extraHTTPHeaders?, httpCredentials? }', default: '{}', description: 'Merged into Playwright use for every browser project.' },
-  screenshots: { type: 'partial ScreenshotConfig', description: 'Overrides the project section for this environment.' },
-  heal: { type: 'partial HealConfig' },
-  timeouts: { type: 'partial Timeouts' },
-  'perf.budgets': { type: 'partial PerfBudgets' },
-  ci: { type: 'boolean', description: 'Treat this environment as CI (retries.ci applies).' },
-}} />
+<TypeTable
+  type={{
+    name: { type: 'string', description: 'Set automatically from the file name.' },
+    description: { type: 'string' },
+    'ui.baseUrl': { type: 'url', required: true },
+    'api.baseUrl': { type: 'url', required: true },
+    'api.headers': { type: 'Record<string, string>', default: '{}' },
+    'api.auth': {
+      type: 'none | bearer{token} | basic{username,password} | header{name,value} | oauth-client-credentials{tokenUrl,clientId,clientSecret,scope?,audience?}',
+      default: '{ type: none }',
+      description: 'Secret fields must be ${VAR} references.',
+    },
+    'api.openapi': {
+      type: 'string',
+      description: 'Path or URL of the specification for contract steps.',
+    },
+    aliases: {
+      type: 'url[]',
+      default: '[]',
+      description: 'Other origins of the same environment (recorder rewrites them to routes).',
+    },
+    db: {
+      type: "{ driver: 'sqlite'|'postgres', url }",
+      description: 'Test-data database for db datasets.',
+    },
+    'users.poolSize': { type: 'number', description: 'Maximum accounts a run may lease.' },
+    vars: {
+      type: 'Record<string, string|number|boolean>',
+      default: '{}',
+      description: 'Available to steps as {{name}}.',
+    },
+    use: {
+      type: '{ locale?, timezoneId?, geolocation?, permissions?, colorScheme?, ignoreHTTPSErrors?, extraHTTPHeaders?, httpCredentials? }',
+      default: '{}',
+      description: 'Merged into Playwright use for every browser project.',
+    },
+    screenshots: {
+      type: 'partial ScreenshotConfig',
+      description: 'Overrides the project section for this environment.',
+    },
+    heal: { type: 'partial HealConfig' },
+    timeouts: { type: 'partial Timeouts' },
+    'perf.budgets': { type: 'partial PerfBudgets' },
+    ci: { type: 'boolean', description: 'Treat this environment as CI (retries.ci applies).' },
+  }}
+/>
 
 ```yaml title="projects/demo-shop/envs/staging.yaml"
 name: staging

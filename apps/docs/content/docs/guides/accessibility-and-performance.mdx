@@ -4,7 +4,8 @@ description: Gate scenarios on axe-core violations and web-vitals budgets per en
 ---
 
 <Learn>
-How `@a11y` runs axe-core after each page, how `@perf` collects navigation and paint timings, and how budgets are declared per project and per environment.
+  How `@a11y` runs axe-core after each page, how `@perf` collects navigation and paint timings, and
+  how budgets are declared per project and per environment.
 </Learn>
 
 ## Accessibility
@@ -27,7 +28,7 @@ perf:
 
 ```yaml title="envs/staging.yaml"
 perf:
-  budgets: { pageLoadMs: 5000 }    # looser on staging
+  budgets: { pageLoadMs: 5000 } # looser on staging
 ```
 
 ```gherkin

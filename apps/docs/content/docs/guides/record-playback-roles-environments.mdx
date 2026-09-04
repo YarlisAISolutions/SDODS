@@ -4,7 +4,9 @@ description: Re-record the same flow for different users, roles, environments an
 ---
 
 <Learn>
-How to record one flow several times as different pool users, against different environments and device profiles, how to keep those recordings organised, how conversion produces a single data-driven feature, and which Claude Code skills package the routine.
+  How to record one flow several times as different pool users, against different environments and
+  device profiles, how to keep those recordings organised, how conversion produces a single
+  data-driven feature, and which Claude Code skills package the routine.
 </Learn>
 
 ## Why re-record
@@ -20,6 +22,7 @@ A checkout looks different for a standard user, a locked-out user and an admin; 
 ```bash
 bun run automax record -p demo-shop -e staging --user standard --name checkout
 ```
+
 </Step>
 <Step>
 ### Record as a problem user
@@ -29,6 +32,7 @@ bun run automax record -p demo-shop -e staging --user problem --name checkout-pr
 ```
 
 The pool leases `problem_user`, applies its cached storage state (capturing it first if needed), and codegen starts logged in.
+
 </Step>
 <Step>
 ### Record against local
@@ -38,6 +42,7 @@ bun run automax record -p demo-shop -e local --user standard --name checkout-loc
 ```
 
 Base URL, locale and timezone come from `envs/local.yaml`; the spec still uses route names, so it runs on staging too.
+
 </Step>
 <Step>
 ### Record on a phone profile
@@ -45,6 +50,7 @@ Base URL, locale and timezone come from `envs/local.yaml`; the spec still uses r
 ```bash
 bun run automax record -p demo-shop -e staging --user standard --device "iPhone 15" --name checkout-mobile
 ```
+
 </Step>
 </Steps>
 

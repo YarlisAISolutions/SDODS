@@ -4,7 +4,8 @@ description: Bind Gherkin steps to page-object methods with playwright-bdd decor
 ---
 
 <Learn>
-How `@Fixture` and step decorators bind Gherkin to methods, what `BasePage` provides, how `heal.locator` declares recovery context, and how page objects are exposed as fixtures.
+  How `@Fixture` and step decorators bind Gherkin to methods, what `BasePage` provides, how
+  `heal.locator` declares recovery context, and how page objects are exposed as fixtures.
 </Learn>
 
 ## Anatomy
@@ -17,7 +18,10 @@ import type { test } from '../steps/fixtures.js';
 
 @Fixture<typeof test>('inventoryPage')
 export class InventoryPage extends BasePage {
-  readonly title = this.heal.locator(this.page.locator('.title'), { text: 'Products', description: 'page title' });
+  readonly title = this.heal.locator(this.page.locator('.title'), {
+    text: 'Products',
+    description: 'page title',
+  });
   readonly cartBadge = this.page.getByTestId('shopping-cart-badge');
 
   @Given('I am on the inventory page')
@@ -28,7 +32,11 @@ export class InventoryPage extends BasePage {
   @When('I add {string} to the cart')
   async add(product: string) {
     const card = this.page.locator('.inventory_item', { hasText: product });
-    await this.heal.click(card.getByRole('button', { name: 'Add to cart' }), { role: 'button', name: 'Add to cart', description: `add ${product}` });
+    await this.heal.click(card.getByRole('button', { name: 'Add to cart' }), {
+      role: 'button',
+      name: 'Add to cart',
+      description: `add ${product}`,
+    });
   }
 
   @Then('the cart should show {int} item(s)')
@@ -57,15 +65,16 @@ export const { Given, When, Then } = createBdd(test);
 
 ## What `BasePage` gives you
 
-| Member | Purpose |
-|---|---|
-| `goto(routeName)` | navigates to a route declared in `routes:` relative to the environment base URL |
-| `heal` | the scenario's healer: `locator()`, `click()`, `fill()`, `selectOption()`, `expectVisible()` |
-| `waitForPopup()`, `frame(name)`, `setInputFiles()`, `waitForDownload()` | multi-tab, iframe, upload and download helpers |
-| `shots` | the screenshot narrator, for explicit captures |
+| Member                                                                  | Purpose                                                                                      |
+| ----------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `goto(routeName)`                                                       | navigates to a route declared in `routes:` relative to the environment base URL              |
+| `heal`                                                                  | the scenario's healer: `locator()`, `click()`, `fill()`, `selectOption()`, `expectVisible()` |
+| `waitForPopup()`, `frame(name)`, `setInputFiles()`, `waitForDownload()` | multi-tab, iframe, upload and download helpers                                               |
+| `shots`                                                                 | the screenshot narrator, for explicit captures                                               |
 
 <Callout type="info">
-Keep the primary locator you believe in and describe the element in the heal context. AutoMax only probes alternatives when the primary fails, and it tells you which alternative won.
+  Keep the primary locator you believe in and describe the element in the heal context. AutoMax only
+  probes alternatives when the primary fails, and it tells you which alternative won.
 </Callout>
 
 ## Next steps

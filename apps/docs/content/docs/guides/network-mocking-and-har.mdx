@@ -38,10 +38,10 @@ bun run automax har replay -p demo-shop -e staging --strict              # abort
 bun run automax har list -p demo-shop
 ```
 
-| Mode | `AUTOMAX_HAR_MODE` | Behaviour |
-|---|---|---|
-| off | `off` | no HAR routing |
-| update | `update` | requests go to the network and the file is rewritten |
+| Mode   | `AUTOMAX_HAR_MODE`                      | Behaviour                                                                        |
+| ------ | --------------------------------------- | -------------------------------------------------------------------------------- |
+| off    | `off`                                   | no HAR routing                                                                   |
+| update | `update`                                | requests go to the network and the file is rewritten                             |
 | replay | `replay` (default when the file exists) | responses come from the file; misses fall through unless `:strict` or `--strict` |
 
 `AUTOMAX_OFFLINE=1` additionally aborts every request the HAR does not answer, which is how CI proves a suite has no hidden network dependency.

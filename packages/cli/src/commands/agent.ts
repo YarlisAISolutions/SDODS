@@ -156,18 +156,16 @@ export function register(program: Command) {
     .action(async (opts, cmd) => {
       const ctx = createContext(cmd);
       const { JobJournal } = await import('@automax/agents');
-      const rows = new JobJournal(ctx.rootDir)
-        .list(Number(opts.limit))
-        .map((j) => ({
-          id: j.id,
-          role: j.role,
-          project: j.project ?? '',
-          status: j.status,
-          cost: `$${(j.costUsd ?? 0).toFixed(3)}`,
-          turns: j.turns ?? 0,
-          proposals: j.proposalIds.length,
-          started: j.startedAt,
-        }));
+      const rows = new JobJournal(ctx.rootDir).list(Number(opts.limit)).map((j) => ({
+        id: j.id,
+        role: j.role,
+        project: j.project ?? '',
+        status: j.status,
+        cost: `$${(j.costUsd ?? 0).toFixed(3)}`,
+        turns: j.turns ?? 0,
+        proposals: j.proposalIds.length,
+        started: j.startedAt,
+      }));
       if (ctx.opts.json) return json(rows);
       table(rows);
     });

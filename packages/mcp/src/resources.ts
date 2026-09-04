@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import type { McpServer} from '@modelcontextprotocol/server';
+import type { McpServer } from '@modelcontextprotocol/server';
 import { ResourceTemplate } from '@modelcontextprotocol/server';
 import { runFiles } from '@automax/contracts';
 import { getRun, listRuns, projectRoot, safeJoin, walk } from './fs.js';
@@ -128,13 +128,11 @@ export function registerResources(server: McpServer, ctx: ToolContext): void {
     'proposal',
     new ResourceTemplate('automax://proposal/{id}', {
       list: async () => ({
-        resources: new ProposalStore(ctx.rootDir)
-          .list()
-          .map((p) => ({
-            uri: `automax://proposal/${p.id}`,
-            name: p.summary,
-            mimeType: 'application/json',
-          })),
+        resources: new ProposalStore(ctx.rootDir).list().map((p) => ({
+          uri: `automax://proposal/${p.id}`,
+          name: p.summary,
+          mimeType: 'application/json',
+        })),
       }),
     }),
     {

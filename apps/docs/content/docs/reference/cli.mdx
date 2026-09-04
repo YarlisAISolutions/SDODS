@@ -4,7 +4,8 @@ description: Global options, exit codes and the full command map of the automax 
 ---
 
 <Learn>
-How the `automax` command is organised, which global options every command accepts, what the exit codes mean, and where each command group is documented.
+  How the `automax` command is organised, which global options every command accepts, what the exit
+  codes mean, and where each command group is documented.
 </Learn>
 
 ## Invocation
@@ -19,38 +20,38 @@ After publishing, `npx automax <command>` or a global install do the same.
 
 ## Global options
 
-| Option | Effect |
-|---|---|
-| `--json` | machine-readable output; errors become `{ "error": { code, message, hint, docsUrl } }` on stderr |
-| `-q, --quiet` | errors only |
-| `--verbose` | debug logging |
-| `--cwd <dir>` | repository root; by default AutoMax walks up from the current directory to find `automax.workspace.yaml`, `automax.config.ts` or a `projects/` folder |
-| `--no-color` | disable colours |
-| `-V, --version` | print the version |
+| Option          | Effect                                                                                                                                                |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--json`        | machine-readable output; errors become `{ "error": { code, message, hint, docsUrl } }` on stderr                                                      |
+| `-q, --quiet`   | errors only                                                                                                                                           |
+| `--verbose`     | debug logging                                                                                                                                         |
+| `--cwd <dir>`   | repository root; by default AutoMax walks up from the current directory to find `automax.workspace.yaml`, `automax.config.ts` or a `projects/` folder |
+| `--no-color`    | disable colours                                                                                                                                       |
+| `-V, --version` | print the version                                                                                                                                     |
 
 Every flag has an `AUTOMAX_*` environment equivalent, listed in [Environment variables](/docs/reference/environment-variables).
 
 ## Exit codes
 
-| Code | Meaning |
-|---|---|
-| `0` | success |
-| `1` | test failures, or a runtime error |
-| `2` | configuration or usage error (unknown project, missing environment, invalid YAML, unresolved variable) |
-| `3` | lint errors |
-| `130` | cancelled |
+| Code  | Meaning                                                                                                |
+| ----- | ------------------------------------------------------------------------------------------------------ |
+| `0`   | success                                                                                                |
+| `1`   | test failures, or a runtime error                                                                      |
+| `2`   | configuration or usage error (unknown project, missing environment, invalid YAML, unresolved variable) |
+| `3`   | lint errors                                                                                            |
+| `130` | cancelled                                                                                              |
 
 ## Command map
 
-| Group | Commands | Status |
-|---|---|---|
-| Onboarding | [`init`](/docs/reference/cli-commands/init), [`analyze`](/docs/reference/cli-commands/analyze), [`project`](/docs/reference/cli-commands/project), [`env`](/docs/reference/cli-commands/env), [`config`](/docs/reference/cli-commands/config), [`doctor`](/docs/reference/cli-commands/doctor) | `project`, `env`, `config`, `doctor` available |
-| Authoring and execution | [`run` / `test` / `watch`](/docs/reference/cli-commands/run), [`lint`](/docs/reference/cli-commands/lint), [`steps`, `features`, `coverage`, `browsers`, `processes`](/docs/reference/cli-commands/steps-features-coverage) | Phases 1–2, 12 |
-| Record and playback | [`record` / `codegen`, `har`, `auth`](/docs/reference/cli-commands/record-har-auth) | Phases 3, 6 |
-| Data and database | [`data`, `db`](/docs/reference/cli-commands/data-db) | Phase 5 |
-| Results and learning | [`report`, `show-report`, `trace`, `heal`, `insights`](/docs/reference/cli-commands/report-heal-insights) | Phases 2, 5, 8 |
-| Agents | [`agent`, `proposals`](/docs/reference/cli-commands/agent-proposals) | Phase 8 |
-| Platform | [`mcp`, `serve`](/docs/reference/cli-commands/mcp-serve), [`users`, `tokens`, `schedule`, `integrations`, `completion`, `upgrade`](/docs/reference/cli-commands/users-tokens-schedule-integrations) | Phases 7, 9, 11 |
+| Group                   | Commands                                                                                                                                                                                                                                                                                       | Status                                         |
+| ----------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
+| Onboarding              | [`init`](/docs/reference/cli-commands/init), [`analyze`](/docs/reference/cli-commands/analyze), [`project`](/docs/reference/cli-commands/project), [`env`](/docs/reference/cli-commands/env), [`config`](/docs/reference/cli-commands/config), [`doctor`](/docs/reference/cli-commands/doctor) | `project`, `env`, `config`, `doctor` available |
+| Authoring and execution | [`run` / `test` / `watch`](/docs/reference/cli-commands/run), [`lint`](/docs/reference/cli-commands/lint), [`steps`, `features`, `coverage`, `browsers`, `processes`](/docs/reference/cli-commands/steps-features-coverage)                                                                    | Phases 1–2, 12                                 |
+| Record and playback     | [`record` / `codegen`, `har`, `auth`](/docs/reference/cli-commands/record-har-auth)                                                                                                                                                                                                            | Phases 3, 6                                    |
+| Data and database       | [`data`, `db`](/docs/reference/cli-commands/data-db)                                                                                                                                                                                                                                           | Phase 5                                        |
+| Results and learning    | [`report`, `show-report`, `trace`, `heal`, `insights`](/docs/reference/cli-commands/report-heal-insights)                                                                                                                                                                                      | Phases 2, 5, 8                                 |
+| Agents                  | [`agent`, `proposals`](/docs/reference/cli-commands/agent-proposals)                                                                                                                                                                                                                           | Phase 8                                        |
+| Platform                | [`mcp`, `serve`](/docs/reference/cli-commands/mcp-serve), [`users`, `tokens`, `schedule`, `integrations`, `completion`, `upgrade`](/docs/reference/cli-commands/users-tokens-schedule-integrations)                                                                                            | Phases 7, 9, 11                                |
 
 Run `bun run automax --help` or `bun run automax <command> --help` for the live surface.
 

@@ -22,8 +22,12 @@
       "./types": "./dist/types.js"
     }
   },
-  "files": ["dist"],
-  "engines": { "node": ">=22" },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
   "dependencies": {
     "zod": "^4.5.4"
   }

@@ -4,7 +4,8 @@ description: Write a UI scenario with a page object and heal-aware locators, the
 ---
 
 <Learn>
-How a UI scenario maps to a page object with playwright-bdd decorators, how heal-aware locators are declared, and how to run the scenario headless or headed in Chromium.
+  How a UI scenario maps to a page object with playwright-bdd decorators, how heal-aware locators
+  are declared, and how to run the scenario headless or headed in Chromium.
 </Learn>
 
 ## The feature
@@ -27,17 +28,24 @@ Feature: Login
 `projects/demo-shop/pages/LoginPage.ts`:
 
 ```ts
-
 @Fixture<typeof test>('loginPage')
 export class LoginPage extends BasePage {
   readonly username = this.heal.locator(this.page.locator('#user-name'), {
-    label: 'Username', placeholder: 'Username', testId: 'username', description: 'username input',
+    label: 'Username',
+    placeholder: 'Username',
+    testId: 'username',
+    description: 'username input',
   });
   readonly password = this.heal.locator(this.page.locator('#password'), {
-    placeholder: 'Password', testId: 'password', description: 'password input',
+    placeholder: 'Password',
+    testId: 'password',
+    description: 'password input',
   });
   readonly submit = this.heal.locator(this.page.locator('#login-button'), {
-    role: 'button', name: 'Login', testId: 'login-button', description: 'login button',
+    role: 'button',
+    name: 'Login',
+    testId: 'login-button',
+    description: 'login button',
   });
 
   @Given('I am on the login page')

@@ -4,18 +4,19 @@ description: Provider-agnostic AI roles that plan, generate, heal, upgrade and r
 ---
 
 <Learn>
-Which agent roles exist, what each reads and produces, how the adapter keeps AutoMax independent of one LLM vendor, how proposals are reviewed, and how cost is bounded.
+  Which agent roles exist, what each reads and produces, how the adapter keeps AutoMax independent
+  of one LLM vendor, how proposals are reviewed, and how cost is bounded.
 </Learn>
 
 ## Roles
 
-| Role | Input | Output |
-|---|---|---|
-| planner | a goal, the running app through Playwright MCP or the source tree and OpenAPI | `docs/test-plans/<name>.md` with tagged scenarios |
-| generator | a plan, a goal or a recorded spec | feature file, only-unmatched steps, page object |
-| healer | a failing scenario, its error, ARIA snapshot and locator stats | a page-object or step patch, re-run result |
-| upgrader | a git diff range or two OpenAPI versions | new and updated scenarios, data rows, deprecation list |
-| reviewer | changed features | review notes and optional data-driven refactors |
+| Role      | Input                                                                         | Output                                                 |
+| --------- | ----------------------------------------------------------------------------- | ------------------------------------------------------ |
+| planner   | a goal, the running app through Playwright MCP or the source tree and OpenAPI | `docs/test-plans/<name>.md` with tagged scenarios      |
+| generator | a plan, a goal or a recorded spec                                             | feature file, only-unmatched steps, page object        |
+| healer    | a failing scenario, its error, ARIA snapshot and locator stats                | a page-object or step patch, re-run result             |
+| upgrader  | a git diff range or two OpenAPI versions                                      | new and updated scenarios, data rows, deprecation list |
+| reviewer  | changed features                                                              | review notes and optional data-driven refactors        |
 
 ```mermaid
 flowchart LR

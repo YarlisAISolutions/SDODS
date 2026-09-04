@@ -9,19 +9,19 @@ automax lint [paths...] -p <slug> [--fix-tags] [--json] [--no-undefined]
 
 Rules:
 
-| Rule | Severity |
-|---|---|
-| Gherkin parse error | error |
-| not exactly one layer tag | error |
-| not exactly one suite tag from `tags.suites` | error |
-| `@user:`, `@data:`, `@env:`, `@har:`, `@skip:` value unknown to the project | error |
-| `@jira:` / `@github:` pattern invalid | error |
-| duplicate scenario titles in a feature | error |
-| undefined step (via `bddgen` with `missingSteps: fail-on-gen`) | error, skipped with `--no-undefined` |
-| Scenario Outline without a `# title-format:` comment | warning |
-| unknown tag | warning |
-| module expects a tag the scenario lacks | warning |
-| unused step definition | warning |
+| Rule                                                                        | Severity                             |
+| --------------------------------------------------------------------------- | ------------------------------------ |
+| Gherkin parse error                                                         | error                                |
+| not exactly one layer tag                                                   | error                                |
+| not exactly one suite tag from `tags.suites`                                | error                                |
+| `@user:`, `@data:`, `@env:`, `@har:`, `@skip:` value unknown to the project | error                                |
+| `@jira:` / `@github:` pattern invalid                                       | error                                |
+| duplicate scenario titles in a feature                                      | error                                |
+| undefined step (via `bddgen` with `missingSteps: fail-on-gen`)              | error, skipped with `--no-undefined` |
+| Scenario Outline without a `# title-format:` comment                        | warning                              |
+| unknown tag                                                                 | warning                              |
+| module expects a tag the scenario lacks                                     | warning                              |
+| unused step definition                                                      | warning                              |
 
 `--fix-tags` inserts a missing layer tag when the folder name makes it unambiguous. Exit code `3` on errors.
 

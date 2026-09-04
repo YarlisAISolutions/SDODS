@@ -3,18 +3,16 @@ title: Keeping suites fast
 description: Where time goes in a suite and the AutoMax settings that recover it.
 ---
 
-<Learn>
-The main costs in a suite and the levers AutoMax provides for each.
-</Learn>
+<Learn>The main costs in a suite and the levers AutoMax provides for each.</Learn>
 
-| Cost | Lever |
-|---|---|
-| logging in per scenario | `auth.storageState: true` and `@user:<role>`; login happens once per pool user |
-| browser startup | keep API scenarios `@api` so they never open a browser |
-| slow third-party network | HAR replay with `--strict`; offline CI |
-| screenshots | `step` policy only for `@regression`; `onlyOnFailure` on slow environments |
-| locator timeouts | heal contexts resolve in seconds, not minutes; fix the primary locator when a heal repeats |
-| serial suites | `--workers`, `--shard`, `fullyParallel` by default; use `@mode:serial` only where state demands it |
-| retries hiding slowness | `insights show` lists the slowest and flakiest scenarios; fix, do not retry |
+| Cost                     | Lever                                                                                              |
+| ------------------------ | -------------------------------------------------------------------------------------------------- |
+| logging in per scenario  | `auth.storageState: true` and `@user:<role>`; login happens once per pool user                     |
+| browser startup          | keep API scenarios `@api` so they never open a browser                                             |
+| slow third-party network | HAR replay with `--strict`; offline CI                                                             |
+| screenshots              | `step` policy only for `@regression`; `onlyOnFailure` on slow environments                         |
+| locator timeouts         | heal contexts resolve in seconds, not minutes; fix the primary locator when a heal repeats         |
+| serial suites            | `--workers`, `--shard`, `fullyParallel` by default; use `@mode:serial` only where state demands it |
+| retries hiding slowness  | `insights show` lists the slowest and flakiest scenarios; fix, do not retry                        |
 
 Measure with `run --json` (durations in `summary.json`) and the dashboard's duration chart.
