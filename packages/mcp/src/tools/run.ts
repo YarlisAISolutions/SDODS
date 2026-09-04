@@ -89,7 +89,7 @@ export const runTools = [
     domain: 'runs',
     capability: 'run',
     annotations: { openWorldHint: true },
-    docsPath: '/docs/reference/cli/run',
+    docsPath: '/docs/reference/cli-commands/run',
     handler: async (args, ctx) => {
       const cli = buildRunCli(args);
       let runId = args.runId;

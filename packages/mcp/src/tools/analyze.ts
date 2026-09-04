@@ -734,7 +734,7 @@ export const analyzeTools = [
     domain: 'projects',
     capability: 'analyze',
     annotations: { openWorldHint: false },
-    docsPath: '/docs/getting-started/onboard-an-existing-app',
+    docsPath: '/docs/getting-started/onboard-existing-app',
     handler: async (args, ctx) => {
       const data = analyzeApp(resolve(ctx.rootDir, args.path));
       return {
