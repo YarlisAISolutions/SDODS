@@ -92,6 +92,10 @@ Behind the Firebase rewrite only a cookie named `__session` reaches Cloud Run, s
 
 ## Secrets and identities
 
+Cloud resource names below still carry the pre-rebrand prefix. They identify infrastructure that
+is already serving traffic, so renaming them would mean new service URLs, new DNS records and a
+fresh set of secrets for no user-visible gain. Treat them as opaque identifiers, not as branding.
+
 | Name                                    | Where           | Used for                                                                                                     |
 | --------------------------------------- | --------------- | ------------------------------------------------------------------------------------------------------------ |
 | `automax-session-secret`                | Secret Manager  | signs session cookies                                                                                        |

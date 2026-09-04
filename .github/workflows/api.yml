@@ -55,9 +55,27 @@ jobs:
         if: steps.creds.outputs.present == 'true'
       - name: Build image (Cloud Build)
         if: steps.creds.outputs.present == 'true'
-        run: >
-          gcloud builds submit --project $GCP_PROJECT --region $GCP_REGION
-          --tag $IMAGE:${{ github.sha }} --timeout=40m --machine-type=e2-highcpu-8 .
+        # Submitted async and polled, so the step's exit code reflects the build result.
+        # Streaming instead makes a green build fail whenever gcloud cannot read the log bucket.
+        run: |
+          id=$(gcloud builds submit --project "$GCP_PROJECT" --region "$GCP_REGION" \
+            --tag "$IMAGE:${{ github.sha }}" --timeout=40m --machine-type=e2-highcpu-8 \
+            --async --format='value(id)' .)
+          echo "Cloud Build $id"
+          echo "https://console.cloud.google.com/cloud-build/builds;region=$GCP_REGION/$id?project=$GCP_PROJECT"
+          for _ in $(seq 1 160); do
+            status=$(gcloud builds describe "$id" --project "$GCP_PROJECT" --region "$GCP_REGION" --format='value(status)')
+            case "$status" in
+              SUCCESS) echo "build succeeded"; exit 0 ;;
+              FAILURE | TIMEOUT | CANCELLED | EXPIRED)
+                echo "::error::Cloud Build $status - open the link above for the log"
+                gcloud builds log "$id" --project "$GCP_PROJECT" --region "$GCP_REGION" | tail -60 || true
+                exit 1 ;;
+            esac
+            sleep 15
+          done
+          echo "::error::timed out waiting for Cloud Build $id"
+          exit 1
       - name: Tag latest
         if: steps.creds.outputs.present == 'true'
         run: gcloud artifacts docker tags add $IMAGE:${{ github.sha }} $IMAGE:latest

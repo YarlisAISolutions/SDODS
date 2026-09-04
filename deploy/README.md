@@ -53,6 +53,10 @@ gcloud secrets versions access latest --secret automax-admin-password --project 
 
 ## Operate
 
+Cloud resource names below still carry the pre-rebrand prefix. They identify infrastructure that
+is already serving traffic, so renaming them would mean new service URLs, new DNS records and a
+fresh set of secrets for no user-visible gain. Treat them as opaque identifiers, not as branding.
+
 | Task | How |
 | --- | --- |
 | Logs | `gcloud run services logs read automax-api --region us-central1 --limit 100` |
