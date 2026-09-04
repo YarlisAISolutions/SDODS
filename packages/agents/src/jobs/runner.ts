@@ -56,6 +56,10 @@ export interface RunJobOptions {
   rootDir?: string;
   provider?: string;
   model?: string;
+  /** Model server endpoint, for a provider you host yourself. */
+  baseUrl?: string;
+  /** Context window to load a local model with. */
+  contextTokens?: number;
   maxTurns?: number;
   budgetUsd?: number;
   dryRun?: boolean;
@@ -98,6 +102,13 @@ interface ProjectAgentsYaml {
     maxTurns?: Record<string, number>;
     budgetUsd?: Record<string, number>;
     maxRunsPerJob?: number;
+    /** Settings for a model server the team runs itself (ollama, vLLM, LM Studio …). */
+    local?: {
+      baseUrl?: string;
+      contextTokens?: number;
+      temperature?: number;
+      requestTimeoutMs?: number;
+    };
   };
   mcp?: {
     servers?: Record<
@@ -145,7 +156,11 @@ export function prepareJob(o: RunJobOptions): {
     createAdapter(
       {
         provider,
-        model: o.model ?? yaml?.agents?.models?.[o.role],
+        model: o.model ?? yaml?.agents?.models?.[o.role] ?? yaml?.agents?.models?.default,
+        baseUrl: o.baseUrl ?? yaml?.agents?.local?.baseUrl,
+        contextTokens: o.contextTokens ?? yaml?.agents?.local?.contextTokens,
+        temperature: yaml?.agents?.local?.temperature,
+        timeoutMs: yaml?.agents?.local?.requestTimeoutMs,
         rootDir,
         project: o.input.project,
         env: o.input.env,
@@ -191,7 +206,11 @@ export function prepareJob(o: RunJobOptions): {
     env: o.input.env,
     status: 'queued',
     provider: adapter.provider,
-    model: o.model ?? yaml?.agents?.models?.[o.role] ?? adapter.defaultModel,
+    model:
+      o.model ??
+      yaml?.agents?.models?.[o.role] ??
+      yaml?.agents?.models?.default ??
+      adapter.defaultModel,
     input: o.input,
     startedAt: new Date().toISOString(),
     proposalIds: [],

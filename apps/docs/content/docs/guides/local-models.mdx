@@ -1,0 +1,152 @@
+---
+title: Local models
+description: Run the agents on a model on your own machine — Ollama with qwen, gemma or llama — with no key, no cost and nothing leaving the laptop.
+---
+
+<Learn>
+  How to point SDODS at a model running on your own machine, the one setting that decides whether it
+  works at all, which jobs a small model can finish, and how to tell the difference between a model
+  that is wrong and a setup that is broken.
+</Learn>
+
+## Why
+
+Agents in SDODS only ever write [proposals](/docs/guides/agents) a human reviews. That makes a
+local model a reasonable place to start: nothing it produces reaches your suite without a review,
+and nothing you send it reaches anyone else. Two situations make it the _only_ option — source that
+may not be sent to a hosted provider, and a team that wants the agent features without a per-token
+bill.
+
+```bash
+brew install ollama            # or: curl -fsSL https://ollama.com/install.sh | sh
+ollama serve &
+ollama pull qwen2.5-coder:7b
+
+sdods doctor                   # the "local models (ollama)" row should be green
+sdods agent review -p demo-shop --adapter ollama --model qwen2.5-coder:7b
+```
+
+That is the whole setup. There is no key to create, and `agents.budgetUsd` stops meaning anything
+because nothing is billed.
+
+## The setting that decides everything: context
+
+Ollama loads a model with a **4096-token context by default**, whatever its weights allow — and it
+truncates a longer prompt **silently**. An agent prompt carries the tool schemas, so it passes 4096
+on the first turn. The model then answers confidently from a fraction of the question, and nothing
+in the output says so. It looks like a stupid model. It is a truncated prompt.
+
+```bash
+ollama ps
+# NAME           ...  CONTEXT
+# llama3.1:8b         4096      ← the weights allow 131072
+```
+
+Set it, either per project or on the server:
+
+```yaml title="sdods.project.yaml"
+agents:
+  provider: ollama
+  models:
+    default: qwen2.5-coder:14b
+    reviewer: llama3.1:8b # a cheaper role can use a cheaper model
+  local:
+    contextTokens: 16384 # → options.num_ctx
+    requestTimeoutMs: 300000
+    keepAlive: 10m
+```
+
+```bash
+OLLAMA_CONTEXT_LENGTH=16384 ollama serve    # the same thing, server-wide
+```
+
+SDODS refuses to start a job whose prompt cannot fit, rather than letting it be truncated:
+
+```
+✖ The prompt for this job is about 11,200 tokens, but qwen2.5-coder:7b is running with a
+  4,096-token context. Ollama would truncate it without saying so.
+  → Set agents.contextTokens: 32768 in the project yaml, or start the server with
+    OLLAMA_CONTEXT_LENGTH=32768 (this model supports up to 32,768).
+```
+
+<Callout type="warn">
+  Raise the context to what the job needs, not to the model's maximum. An oversized `num_ctx` on a
+  laptop spills the KV cache out of memory and turns ten-second turns into minutes.
+</Callout>
+
+## Which model
+
+`sdods doctor` reports what is installed and how it is loaded. Two properties matter: the model must
+be able to **call tools**, and it should be a coding model.
+
+```bash
+ollama show qwen2.5-coder:7b     # capabilities: completion, tools
+```
+
+| Model               | Size | Good for                                               |
+| ------------------- | ---- | ------------------------------------------------------ |
+| `qwen2.5-coder:14b` | 9 GB | the best small-model results for generate and heal     |
+| `qwen2.5-coder:7b`  | 5 GB | review, heal, converting a recording                   |
+| `llama3.1:8b`       | 5 GB | review and reading; calls tools reliably               |
+| `gemma4`            | 6 GB | review; also does vision, if you want screenshots read |
+
+A model whose `capabilities` do not include `tools` cannot drive the agent loop at all — SDODS says
+so rather than letting it flail.
+
+## Other local servers
+
+Anything that speaks the OpenAI protocol works through the `openai-compatible` adapter, which no
+longer demands a key for a local address:
+
+```bash
+# vLLM, LM Studio, llama.cpp …
+sdods agent review -p demo-shop \
+  --adapter openai-compatible \
+  --base-url http://127.0.0.1:1234/v1 \
+  --model qwen2.5-coder-14b
+```
+
+The difference is that the OpenAI protocol has no way to set the context size, so that path relies
+on the server being started with the right one. The `ollama` adapter uses the native API precisely
+so SDODS can set it and check it.
+
+## What a small model can and cannot do
+
+Local 7–8B models are good at bounded, well-described work and bad at long open-ended plans. In
+practice:
+
+| Job                                  | 7–8B    | 14B+    |
+| ------------------------------------ | ------- | ------- |
+| `agent review`                       | good    | good    |
+| `agent heal` on a locator            | usually | good    |
+| `record convert` (a recorded spec)   | usually | good    |
+| `agent generate` from a plan         | patchy  | usually |
+| `agent plan` for a whole application | no      | patchy  |
+
+Mix them: `agents.models` takes a model per role, so planning can use a hosted model while
+generation stays local, or the other way round.
+
+Every job is still a proposal:
+
+```bash
+sdods proposals list
+sdods proposals show <id>
+sdods proposals accept <id> --branch sdods/<id>
+```
+
+## When something looks wrong
+
+| Symptom                                         | Cause                                                                                |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------ |
+| The answer ignores half the instructions        | the context is too small — check `ollama ps`, raise `contextTokens`                  |
+| `model 'x' not found`                           | it is not pulled: `ollama pull x`                                                    |
+| `Cannot reach Ollama at http://127.0.0.1:11434` | the server is not running: `ollama serve`                                            |
+| The job stops with `error_tool_arguments`       | the model cannot form a tool call — use a coding model, or a larger one              |
+| Turns take minutes                              | the model is being reloaded between turns, or `num_ctx` is too large for the machine |
+| `sdods doctor` shows no local row               | no server answered on `OLLAMA_HOST` or `127.0.0.1:11434`                             |
+
+## Next steps
+
+- [Agents](/docs/guides/agents) — the roles, the proposal flow and the budgets
+- [Claude Code and Codex](/docs/guides/claude-code-and-codex) — the other keyless option
+- [Tokens and keys](/docs/reference/tokens-and-keys) — every credential SDODS knows about

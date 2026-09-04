@@ -110,7 +110,11 @@ export function registerDoctorCommand(program: Command) {
       const cliStatus = await codingCliStatus();
       for (const c of cliStatus) checks.push(c);
 
-      const tokens = tokenMatrix(cliStatus);
+      // A model server on this machine is the fourth way to reach a model, and the only free one.
+      const localLlm = await localModelStatus();
+      checks.push(localLlm);
+
+      const tokens = tokenMatrix(cliStatus, localLlm);
 
       if (ctx.opts.json) return json({ checks, tokens });
       for (const c of checks) {
@@ -157,7 +161,7 @@ interface TokenRow {
  * The token matrix. "one-of" rows form a group: agents need ANY one of them.
  * Platform features never need an external token.
  */
-function tokenMatrix(cliStatus: Check[]): TokenRow[] {
+function tokenMatrix(cliStatus: Check[], localLlm?: Check): TokenRow[] {
   const has = (k: string) => Boolean(process.env[k]);
   const claudeOk = cliStatus.find((c) => c.name === 'cli:claude')?.ok ?? false;
   const codexOk = cliStatus.find((c) => c.name === 'cli:codex')?.ok ?? false;
@@ -184,7 +188,15 @@ function tokenMatrix(cliStatus: Check[]): TokenRow[] {
       name: 'OPENAI_API_KEY (+OPENAI_BASE_URL)',
       present: has('OPENAI_API_KEY'),
       detail: 'any OpenAI-compatible chat-completions endpoint',
-      hint: 'optional OPENAI_BASE_URL for Azure/Ollama/others',
+      hint: 'optional OPENAI_BASE_URL for Azure, vLLM, LM Studio',
+    },
+    {
+      name: 'local models (ollama)',
+      present: localLlm?.ok ?? false,
+      detail: localLlm?.ok
+        ? `adapter ollama: ${localLlm.detail}`
+        : 'adapter ollama: a model on this machine — no key, no per-token cost',
+      hint: localLlm?.fix ?? 'ollama serve && ollama pull qwen2.5-coder:7b',
     },
   ];
   const groupSatisfied = agentsGroup.some((g) => g.present);
@@ -241,6 +253,60 @@ function tokenMatrix(cliStatus: Check[]): TokenRow[] {
     },
   );
   return rows;
+}
+
+/**
+ * `llm:local` row: is a model server answering, and is the model it would use pulled?
+ *
+ * Optional, and quick — a laptop without Ollama must not pay for this check. The context the
+ * models are loaded with is reported because that, not the model, is what usually makes a local
+ * agent run produce nonsense.
+ */
+async function localModelStatus(): Promise<Check> {
+  const name = 'llm:local';
+  try {
+    const { OllamaAdapter } = await import('@sdods/agents');
+    if (!(await OllamaAdapter.reachable()))
+      return {
+        name,
+        ok: false,
+        optional: true,
+        detail: 'no model server answering (optional)',
+        fix: 'ollama serve && ollama pull qwen2.5-coder:7b',
+      };
+    const adapter = new OllamaAdapter();
+    const [version, models] = await Promise.all([
+      adapter.version().catch(() => 'unknown'),
+      adapter.models().catch(() => []),
+    ]);
+    if (!models.length)
+      return {
+        name,
+        ok: false,
+        optional: true,
+        detail: `ollama ${version} · no models pulled`,
+        fix: 'ollama pull qwen2.5-coder:7b',
+      };
+    const configured = models.find((m) => m.name === adapter.defaultModel);
+    const preferred = configured ?? models[0]!;
+    const loaded = await adapter.loadedContext(preferred.name).catch(() => undefined);
+    const tight = loaded !== undefined && loaded < 8192;
+    return {
+      name,
+      ok: true,
+      optional: true,
+      detail: `ollama ${version} · ${models.length} model(s) · ${preferred.name}${
+        loaded ? ` · loaded ctx ${loaded}` : ''
+      }${tight ? ' (small)' : ''}${configured ? '' : ` · default ${adapter.defaultModel} not pulled`}`,
+      fix: !configured
+        ? `ollama pull ${adapter.defaultModel}, or set agents.models.default to one you have`
+        : tight
+          ? 'agents.local.contextTokens: 16384, or OLLAMA_CONTEXT_LENGTH=16384 ollama serve'
+          : undefined,
+    };
+  } catch {
+    return { name, ok: false, optional: true, detail: 'agents package unavailable' };
+  }
 }
 
 /** `cli:claude` / `cli:codex` rows: installed + logged in. Missing CLIs are not failures. */

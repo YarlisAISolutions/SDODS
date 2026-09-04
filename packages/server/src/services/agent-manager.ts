@@ -72,7 +72,7 @@ export class AgentManager {
     if (input.plan) args.push('--plan', input.plan);
     if (input.scenario) args.push('--scenario', input.scenario);
     if (input.diff) args.push('--diff', input.diff);
-    if (input.spec) args.push('--from-spec', input.spec);
+    if (input.spec) args.push('--spec', input.spec);
     if (input.adapter) args.push('--adapter', input.adapter);
     if (input.model) args.push('--model', input.model);
     if (input.dryRun) args.push('--dry-run');

@@ -120,7 +120,7 @@ export const AgentJobBody = z.object({
   scenario: z.string().optional(),
   diff: z.string().optional(),
   spec: z.string().optional(),
-  adapter: z.enum(['claude', 'openai', 'fake']).optional(),
+  adapter: z.enum(['claude', 'claude-code', 'codex', 'openai', 'ollama', 'fake']).optional(),
   model: z.string().optional(),
   dryRun: z.boolean().optional(),
   budgetUsd: z.number().positive().optional(),

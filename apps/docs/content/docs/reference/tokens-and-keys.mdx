@@ -21,14 +21,15 @@ Nothing is mandatory for the platform itself: running suites, screenshots, HAR r
 
 ## Agents (one-of)
 
-| Credential                             | Adapter             | How to get it                                               | Billing                                           |
-| -------------------------------------- | ------------------- | ----------------------------------------------------------- | ------------------------------------------------- |
-| `ANTHROPIC_API_KEY`                    | `claude`            | [console.anthropic.com](https://console.anthropic.com)      | Anthropic, per token                              |
-| Claude Code login                      | `claude-code`       | `npm i -g @anthropic-ai/claude-code && claude login`        | your Claude subscription (or a key the CLI holds) |
-| Codex login                            | `codex`             | `npm i -g @openai/codex && codex login`                     | your ChatGPT plan (or `OPENAI_API_KEY`)           |
-| `OPENAI_API_KEY` (+ `OPENAI_BASE_URL`) | `openai-compatible` | provider console; `OPENAI_BASE_URL` for Azure, Ollama, vLLM | the provider                                      |
+| Credential                             | Adapter             | How to get it                                                  | Billing                                           |
+| -------------------------------------- | ------------------- | -------------------------------------------------------------- | ------------------------------------------------- |
+| `ANTHROPIC_API_KEY`                    | `claude`            | [console.anthropic.com](https://console.anthropic.com)         | Anthropic, per token                              |
+| Claude Code login                      | `claude-code`       | `npm i -g @anthropic-ai/claude-code && claude login`           | your Claude subscription (or a key the CLI holds) |
+| Codex login                            | `codex`             | `npm i -g @openai/codex && codex login`                        | your ChatGPT plan (or `OPENAI_API_KEY`)           |
+| `OPENAI_API_KEY` (+ `OPENAI_BASE_URL`) | `openai-compatible` | provider console; `OPENAI_BASE_URL` for Azure, vLLM, LM Studio | the provider                                      |
+| nothing                                | `ollama`            | `ollama serve && ollama pull qwen2.5-coder:7b`                 | nothing — the model runs on your machine          |
 
-Auto-detection order when nothing is set: `ANTHROPIC_API_KEY` → `claude` CLI on PATH → `codex` CLI on PATH → `OPENAI_API_KEY` → `fake`. `--dry-run` and `--adapter fake` never need a credential.
+Auto-detection order when nothing is set: `ANTHROPIC_API_KEY` → `claude` CLI on PATH → `codex` CLI on PATH → `OPENAI_API_KEY` → a local Ollama → `fake`. `--dry-run` and `--adapter fake` never need a credential.
 
 ## Platform
 

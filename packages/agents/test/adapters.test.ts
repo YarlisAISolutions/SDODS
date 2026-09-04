@@ -220,6 +220,141 @@ describe('OpenAiCompatibleAdapter', () => {
     expect(r.stopReason).toBe('error_max_budget_usd');
     expect(r.isError).toBe(true);
   });
+
+  it('describes tool parameters the way local servers expect', async () => {
+    const calls: Array<Record<string, any>> = [];
+    const fetchImpl = vi.fn(async (_url: string, init: RequestInit) => {
+      calls.push(JSON.parse(String(init.body)));
+      return new Response(
+        JSON.stringify({ choices: [{ message: { content: 'ok' }, finish_reason: 'stop' }] }),
+      );
+    });
+    const withDefault: AgentSdkToolDef = {
+      ...echoTool,
+      name: 'echo_default',
+      inputSchema: { text: z.string(), mode: z.string().default('loud') },
+    };
+    const adapter = new OpenAiCompatibleAdapter({
+      apiKey: 'k',
+      model: 'm',
+      fetchImpl: fetchImpl as never,
+    });
+    await adapter.runAgent({ system: 's', prompt: 'p', tools: [withDefault] });
+    const params = calls[0]!.tools[0].function.parameters;
+    // A field with a default is optional to the caller; io:'output' would have made it required.
+    expect(params.required).toEqual(['text']);
+    // Some grammar-constrained servers reject an embedded $schema.
+    expect(params.$schema).toBeUndefined();
+  });
+
+  it('answers a malformed tool call with a correction instead of calling the tool empty', async () => {
+    const handler = vi.fn(async () => ({ content: [{ type: 'text' as const, text: 'never' }] }));
+    const responses = [
+      {
+        choices: [
+          {
+            message: {
+              content: null,
+              tool_calls: [{ id: 'c1', function: { name: 'echo_test', arguments: '{"text": ' } }],
+            },
+          },
+        ],
+      },
+      { choices: [{ message: { content: 'recovered' }, finish_reason: 'stop' }] },
+    ];
+    const bodies: Array<Record<string, any>> = [];
+    const fetchImpl = vi.fn(async (_url: string, init: RequestInit) => {
+      bodies.push(JSON.parse(String(init.body)));
+      return new Response(JSON.stringify(responses.shift()));
+    });
+    const adapter = new OpenAiCompatibleAdapter({
+      apiKey: 'k',
+      model: 'm',
+      fetchImpl: fetchImpl as never,
+    });
+    const r = await adapter.runAgent({
+      system: 's',
+      prompt: 'p',
+      tools: [{ ...echoTool, handler }],
+    });
+    expect(handler).not.toHaveBeenCalled();
+    expect(r.text).toBe('recovered');
+    const correction = (bodies[1]!.messages as Array<{ role: string; content: string }>).find(
+      (m) => m.role === 'tool',
+    );
+    expect(correction?.content).toMatch(/not valid JSON/);
+  });
+
+  it('accepts tool arguments sent as an object', async () => {
+    const responses = [
+      {
+        choices: [
+          {
+            message: {
+              content: null,
+              tool_calls: [
+                { id: 'c1', function: { name: 'echo_test', arguments: { text: 'obj' } } },
+              ],
+            },
+          },
+        ],
+      },
+      { choices: [{ message: { content: 'done' }, finish_reason: 'stop' }] },
+    ];
+    const bodies: Array<Record<string, any>> = [];
+    const fetchImpl = vi.fn(async (_url: string, init: RequestInit) => {
+      bodies.push(JSON.parse(String(init.body)));
+      return new Response(JSON.stringify(responses.shift()));
+    });
+    const adapter = new OpenAiCompatibleAdapter({
+      apiKey: 'k',
+      model: 'm',
+      fetchImpl: fetchImpl as never,
+    });
+    const r = await adapter.runAgent({ system: 's', prompt: 'p', tools: [echoTool] });
+    expect(r.toolCalls).toBe(1);
+    const toolMessage = (bodies[1]!.messages as Array<{ role: string; content: string }>).find(
+      (m) => m.role === 'tool',
+    );
+    expect(toolMessage?.content).toBe('echo:obj');
+  });
+
+  it('retries once on a transient failure and gives up on a bad request', async () => {
+    let attempts = 0;
+    const flaky = vi.fn(async () => {
+      attempts++;
+      return attempts === 1
+        ? new Response('busy', { status: 503 })
+        : new Response(
+            JSON.stringify({ choices: [{ message: { content: 'ok' }, finish_reason: 'stop' }] }),
+          );
+    });
+    const ok = new OpenAiCompatibleAdapter({ apiKey: 'k', fetchImpl: flaky as never });
+    expect((await ok.complete({ prompt: 'p' })).text).toBe('ok');
+    expect(attempts).toBe(2);
+
+    const notFound = vi.fn(async () => new Response('model not found', { status: 404 }));
+    const bad = new OpenAiCompatibleAdapter({ apiKey: 'k', fetchImpl: notFound as never });
+    await expect(bad.complete({ prompt: 'p' })).rejects.toThrow(/404/);
+    expect(notFound).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not require a key for a local endpoint', async () => {
+    const saved = process.env.OPENAI_API_KEY;
+    delete process.env.OPENAI_API_KEY;
+    const fetchImpl = vi.fn(
+      async () =>
+        new Response(
+          JSON.stringify({ choices: [{ message: { content: 'local' }, finish_reason: 'stop' }] }),
+        ),
+    );
+    const adapter = new OpenAiCompatibleAdapter({
+      baseUrl: 'http://localhost:11434/v1',
+      fetchImpl: fetchImpl as never,
+    });
+    expect((await adapter.complete({ prompt: 'p' })).text).toBe('local');
+    if (saved) process.env.OPENAI_API_KEY = saved;
+  });
 });
 
 describe('FakeAdapter and factory', () => {

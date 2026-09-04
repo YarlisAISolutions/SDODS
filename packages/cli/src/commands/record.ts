@@ -178,28 +178,47 @@ export function register(program: Command) {
     .description(
       'Ask the generator agent to turn a recorded spec into a feature + steps proposal (reviewed, never auto-applied)',
     )
+    .option('-p, --project <slug>', 'project slug (default: inferred from the spec path)')
     .option('--dry-run', 'print the prompt and plan without calling a model')
-    .option('--adapter <name>', 'claude | openai | fake')
-    .action(async (spec: string, opts: { dryRun?: boolean; adapter?: string }, cmd: Command) => {
-      const ctx = createContext(cmd);
-      if (!existsSync(spec))
-        throw new SdodsError('CONFIG_NOT_FOUND', `Spec not found: ${spec}`, { exitCode: 2 });
-      const args = [process.argv[1]!, 'agent', 'generate', '--from-spec', spec];
-      if (opts.dryRun) args.push('--dry-run');
-      if (opts.adapter) args.push('--adapter', opts.adapter);
-      if (ctx.opts.json) args.push('--json');
-      const res = await execa(process.execPath, ['--import', 'tsx', ...args], {
-        cwd: ctx.rootDir,
-        stdio: 'inherit',
-        reject: false,
-      });
-      if (res.exitCode === 2) {
-        warn(
-          'The agent layer is not available in this build yet; the recording stays runnable under recorded/.',
-        );
-      }
-      process.exitCode = res.exitCode ?? 1;
-    });
+    .option(
+      '--adapter <name>',
+      'claude | claude-code | codex | openai | ollama | fake; default: auto-detect',
+    )
+    .option('--model <id>', 'model override')
+    .action(
+      async (
+        spec: string,
+        opts: { project?: string; dryRun?: boolean; adapter?: string; model?: string },
+        cmd: Command,
+      ) => {
+        const ctx = createContext(cmd);
+        if (!existsSync(spec))
+          throw new SdodsError('CONFIG_NOT_FOUND', `Spec not found: ${spec}`, { exitCode: 2 });
+        // The generator agent works on a project; a spec under projects/<slug>/recorded names it.
+        const project = opts.project ?? /(?:^|\/)projects\/([^/]+)\//.exec(spec)?.[1];
+        if (!project)
+          throw new SdodsError('CONFIG_INVALID', `Cannot tell which project ${spec} belongs to.`, {
+            hint: 'Pass -p <slug>, or keep recordings under projects/<slug>/recorded/.',
+            exitCode: 2,
+          });
+        const args = [process.argv[1]!, 'agent', 'generate', '-p', project, '--spec', spec];
+        if (opts.dryRun) args.push('--dry-run');
+        if (opts.adapter) args.push('--adapter', opts.adapter);
+        if (opts.model) args.push('--model', opts.model);
+        if (ctx.opts.json) args.push('--json');
+        const res = await execa(process.execPath, ['--import', 'tsx', ...args], {
+          cwd: ctx.rootDir,
+          stdio: 'inherit',
+          reject: false,
+        });
+        if (res.exitCode === 2) {
+          warn(
+            'The agent layer is not available in this build yet; the recording stays runnable under recorded/.',
+          );
+        }
+        process.exitCode = res.exitCode ?? 1;
+      },
+    );
 
   const codegen = addRecordOptions(program.command('codegen').description('Alias of record'));
   codegen.action(recordAction);

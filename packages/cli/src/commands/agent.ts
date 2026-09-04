@@ -49,9 +49,11 @@ export function register(program: Command) {
       .option('--files <list>', 'feature files (review)', collect, [])
       .option(
         '--adapter <name>',
-        'claude (API key) | claude-code (logged-in Claude Code CLI) | codex (logged-in Codex CLI) | openai | fake; default: auto-detect',
+        'claude (API key) | claude-code (logged-in Claude Code CLI) | codex (logged-in Codex CLI) | openai | ollama (a model on this machine) | fake; default: auto-detect',
       )
       .option('--model <id>', 'model override')
+      .option('--base-url <url>', 'model server endpoint (ollama, vLLM, LM Studio, Azure)')
+      .option('--context-tokens <n>', 'context window to load a local model with (num_ctx)')
       .option('--max-turns <n>', 'turn budget')
       .option('--budget-usd <n>', 'cost budget in USD')
       .option(
@@ -81,6 +83,8 @@ export function register(program: Command) {
           rootDir: ctx.rootDir,
           provider: opts.dryRun ? 'fake' : opts.adapter,
           model: opts.model,
+          baseUrl: opts.baseUrl,
+          contextTokens: opts.contextTokens ? Number(opts.contextTokens) : undefined,
           maxTurns: opts.maxTurns ? Number(opts.maxTurns) : undefined,
           budgetUsd: opts.budgetUsd ? Number(opts.budgetUsd) : undefined,
           dryRun: Boolean(opts.dryRun),

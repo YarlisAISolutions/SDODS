@@ -180,8 +180,11 @@ export function AgentsPage() {
                   value={form.adapter}
                   onChange={(e) => setForm({ ...form, adapter: e.target.value })}
                 >
-                  <option value="claude">claude</option>
+                  <option value="claude">claude (API key)</option>
+                  <option value="claude-code">claude-code (CLI login)</option>
+                  <option value="codex">codex (CLI login)</option>
                   <option value="openai">openai-compatible</option>
+                  <option value="ollama">ollama (local model)</option>
                   <option value="fake">fake (no LLM)</option>
                 </Select>
               </Field>
