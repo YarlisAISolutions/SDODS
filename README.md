@@ -17,8 +17,6 @@
 
 SDODS is an automation and orchestration platform. You describe behaviour in Gherkin, keep one YAML file per project and one per environment, and drive everything from a single command line. It is open source (Apache-2.0) and free to use, including its API tokens.
 
-Created by **Sireesh Yarlagadda** · [LinkedIn](https://www.linkedin.com/in/yarlagadda/)
-
 ## Table of contents
 
 1. [Why SDODS](#why-sdods)

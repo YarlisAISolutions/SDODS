@@ -4,8 +4,15 @@ export const REPO_URL = 'https://github.com/siri1410/SDODS';
 export const DISCUSSIONS_URL = `${REPO_URL}/discussions`;
 export const IDEAS_URL = `${REPO_URL}/discussions/categories/ideas`;
 export const GENERAL_URL = `${REPO_URL}/discussions/categories/general`;
-export const LINKEDIN_URL = 'https://www.linkedin.com/in/yarlagadda/';
 export const FEEDBACK_EMAIL = 'sireesh.yarlagadda@gmail.com';
+export const LICENSE_URL = 'https://www.apache.org/licenses/LICENSE-2.0';
+
+/**
+ * The repository is private. Everything that links to it — the GitHub buttons, Discussions,
+ * prefilled issue forms, `blob/main/...` links — 404s for a visitor, so it stays hidden.
+ * Set NEXT_PUBLIC_REPO_PUBLIC=true at build time to show it again once the repo is public.
+ */
+export const REPO_PUBLIC = process.env.NEXT_PUBLIC_REPO_PUBLIC === 'true';
 
 export type FeedbackKind = 'feature' | 'bug' | 'feedback';
 

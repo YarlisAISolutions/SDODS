@@ -2,6 +2,7 @@ import { withBase } from '@/lib/base-path';
 import Link from 'next/link';
 import { HomeLayout } from 'fumadocs-ui/layouts/home';
 import { baseOptions } from '@/lib/layout.shared';
+import { REPO_PUBLIC } from '@/lib/links';
 
 const features: Array<{ title: string; body: string; href: string }> = [
   {
@@ -61,8 +62,12 @@ export default function HomePage() {
           </Link>
         </div>
         <pre className="mt-8 w-full max-w-2xl overflow-x-auto rounded-lg border border-fd-border bg-fd-card p-4 text-left text-sm">
-          {`git clone https://github.com/siri1410/SDODS.git && cd SDODS
+          {REPO_PUBLIC
+            ? `git clone https://github.com/siri1410/SDODS.git && cd SDODS
 bun install && bun run sdods browsers install --with-deps
+bun run sdods run -p demo-shop -e staging -l api`
+            : `curl -fsSL https://sdods.com/install.sh | sh
+bun run sdods browsers install --with-deps
 bun run sdods run -p demo-shop -e staging -l api`}
         </pre>
         <section className="mt-12 grid w-full grid-cols-1 gap-4 text-left md:grid-cols-2 lg:grid-cols-3">
@@ -77,13 +82,7 @@ bun run sdods run -p demo-shop -e staging -l api`}
             </Link>
           ))}
         </section>
-        <p className="mt-12 text-sm text-fd-muted-foreground">
-          Created by{' '}
-          <a className="underline" href="https://www.linkedin.com/in/yarlagadda/">
-            Sireesh Yarlagadda
-          </a>{' '}
-          · Apache-2.0
-        </p>
+        <p className="mt-12 text-sm text-fd-muted-foreground">Apache-2.0</p>
       </main>
     </HomeLayout>
   );

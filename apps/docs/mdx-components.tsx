@@ -12,6 +12,7 @@ import { Learn } from '@/components/learn';
 import { Screenshot } from '@/components/screenshot';
 import { Art, ArtRow } from '@/components/art';
 import { Playground } from '@/components/playground';
+import { RepoOnly } from '@/components/repo-only';
 
 export function getMDXComponents(components?: MDXComponents): MDXComponents {
   return {
@@ -32,6 +33,7 @@ export function getMDXComponents(components?: MDXComponents): MDXComponents {
     Art,
     ArtRow,
     Playground,
+    RepoOnly,
     ...components,
   };
 }

@@ -1,11 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { issueUrl, mailtoUrl, type FeedbackKind } from '@/lib/links';
+import { REPO_PUBLIC, issueUrl, mailtoUrl, type FeedbackKind } from '@/lib/links';
 
 /**
- * Client-only form: builds a prefilled GitHub issue URL and opens it. Nothing is sent to us;
- * the browser hands the text to GitHub. A mailto fallback covers people without a GitHub account.
+ * Client-only form: builds a prefilled URL and opens it. Nothing is sent to us; the browser hands
+ * the text to GitHub, or — while the repository is private — to the visitor's own mail client.
  */
 export function FeedbackForm() {
   const [kind, setKind] = useState<FeedbackKind>('feature');
@@ -27,7 +27,7 @@ export function FeedbackForm() {
     const fields: Record<string, string> = { title };
     if (kind === 'bug') fields.actual = body;
     else fields.problem = body;
-    const url = issueUrl(kind, fields);
+    const url = REPO_PUBLIC ? issueUrl(kind, fields) : mailtoUrl(kind, title, body);
     window.open(url, '_blank', 'noopener');
     setOpened(url);
   }
@@ -89,16 +89,22 @@ export function FeedbackForm() {
       </label>
       <div className="flex flex-wrap items-center gap-3">
         <button type="submit" className="btn btn-primary">
-          Open on GitHub
+          {REPO_PUBLIC ? 'Open on GitHub' : 'Send by email'}
         </button>
-        <a href={mailtoUrl(kind, title, body)} className="btn btn-secondary">
-          Send by email instead
-        </a>
-        <span className="muted text-xs">Opens a prefilled GitHub issue in a new tab.</span>
+        {REPO_PUBLIC && (
+          <a href={mailtoUrl(kind, title, body)} className="btn btn-secondary">
+            Send by email instead
+          </a>
+        )}
+        <span className="muted text-xs">
+          {REPO_PUBLIC
+            ? 'Opens a prefilled GitHub issue in a new tab.'
+            : 'Opens a prefilled email in your own mail client.'}
+        </span>
       </div>
       {opened && (
         <p className="text-sm">
-          If the tab did not open,{' '}
+          If nothing opened,{' '}
           <a href={opened} className="underline" target="_blank" rel="noreferrer">
             use this link
           </a>

@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { DISCUSSIONS_URL, DOCS_URL, LINKEDIN_URL, REPO_URL } from '@/lib/links';
+import { DISCUSSIONS_URL, DOCS_URL, LICENSE_URL, REPO_PUBLIC, REPO_URL } from '@/lib/links';
 
 export function SiteFooter() {
   return (
@@ -46,16 +46,20 @@ export function SiteFooter() {
         <div>
           <h2 className="mb-2 font-semibold">Community</h2>
           <ul className="space-y-1">
-            <li>
-              <a href={REPO_URL} className="hover:underline" rel="noreferrer">
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href={DISCUSSIONS_URL} className="hover:underline" rel="noreferrer">
-                Discussions
-              </a>
-            </li>
+            {REPO_PUBLIC && (
+              <>
+                <li>
+                  <a href={REPO_URL} className="hover:underline" rel="noreferrer">
+                    GitHub
+                  </a>
+                </li>
+                <li>
+                  <a href={DISCUSSIONS_URL} className="hover:underline" rel="noreferrer">
+                    Discussions
+                  </a>
+                </li>
+              </>
+            )}
             <li>
               <Link href="/feedback/" className="hover:underline">
                 Feedback and feature requests
@@ -73,31 +77,29 @@ export function SiteFooter() {
             </li>
             <li>
               <a
-                href={`${REPO_URL}/blob/main/LICENSE`}
+                href={REPO_PUBLIC ? `${REPO_URL}/blob/main/LICENSE` : LICENSE_URL}
                 className="hover:underline"
                 rel="noreferrer"
               >
                 Apache-2.0 license
               </a>
             </li>
-            <li>
-              <a
-                href={`${REPO_URL}/blob/main/SECURITY.md`}
-                className="hover:underline"
-                rel="noreferrer"
-              >
-                Security policy
-              </a>
-            </li>
+            {REPO_PUBLIC && (
+              <li>
+                <a
+                  href={`${REPO_URL}/blob/main/SECURITY.md`}
+                  className="hover:underline"
+                  rel="noreferrer"
+                >
+                  Security policy
+                </a>
+              </li>
+            )}
           </ul>
         </div>
       </div>
       <div className="border-t border-[var(--line)] py-4 text-center text-xs muted">
-        Created by{' '}
-        <a href={LINKEDIN_URL} className="underline" rel="noreferrer">
-          Sireesh Yarlagadda
-        </a>{' '}
-        · © {new Date().getFullYear()} SDODS contributors
+        Apache-2.0 · © {new Date().getFullYear()} SDODS contributors
       </div>
     </footer>
   );
