@@ -362,7 +362,7 @@ Every command supports `--json`, `--quiet`, `--verbose`, `--cwd`, `--no-color`. 
 | `agent plan\|generate\|heal\|upgrade\|review`, `proposals list\|show\|accept\|reject` | agents |
 | `mcp`, `mcp install`, `serve`, `users`, `tokens`, `schedule`, `integrations sync\|notify\|test` | platform |
 
-Full reference with examples: the documentation site (`apps/docs`, published on GitHub Pages).
+Full reference with examples: the documentation site (`apps/docs`, published on Firebase Hosting at https://automax.sdods.com).
 
 ## Development process
 

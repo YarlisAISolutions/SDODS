@@ -93,7 +93,7 @@ Screenshot hooks are registered with `tags: '@ui or @hybrid'` so API scenarios n
 | 10 | Web UI | run viewer with before/after, editor |
 | 11 | GitHub, Jira, CI | check runs, issues, matrix workflow |
 | 12 | Analyze, matrix | `automax analyze --apply`, `--project-matrix` |
-| 13 | Docs site, packaging | GitHub Pages, `automax init`, Docker |
+| 13 | Docs site, packaging | Firebase Hosting, `automax init`, Docker |
 
 ## 10. Measured numbers (Phase 0, macOS, Apple Silicon)
 
