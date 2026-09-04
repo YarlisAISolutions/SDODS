@@ -30,7 +30,17 @@ flowchart LR
 
 ## Adapter
 
-`AUTOMAX_LLM_PROVIDER=claude` uses the Claude Agent SDK with the bundled Playwright MCP; `openai-compatible` talks to any chat-completions endpoint with tool calling; `fake` replays scripted responses for tests and `--dry-run`. LLM keys are yours and billed by the provider; AutoMax's own API tokens are free.
+Roles do not know which model runs them. `--adapter`, `AUTOMAX_LLM_PROVIDER` or `agents.provider` in the project YAML picks one; when none is set AutoMax auto-detects in this order: `ANTHROPIC_API_KEY` → `claude` CLI → `codex` CLI → `OPENAI_API_KEY` → `fake`.
+
+| Adapter             | Runs on                                         | Needs                                  | Notes                                                                            |
+| ------------------- | ----------------------------------------------- | -------------------------------------- | -------------------------------------------------------------------------------- |
+| `claude`            | Claude Agent SDK + bundled Playwright MCP       | `ANTHROPIC_API_KEY`                    | full tool loop, budgets enforced by the SDK                                      |
+| `claude-code`       | your logged-in Claude Code CLI (`claude -p`)    | `claude login`                         | no API key; uses your subscription; tools via the automax MCP server             |
+| `codex`             | your logged-in OpenAI Codex CLI (`codex exec`)  | `codex login`                          | no API key; ChatGPT account; tools via the automax MCP server, read-only sandbox |
+| `openai-compatible` | any chat-completions endpoint with tool calling | `OPENAI_API_KEY` (+ `OPENAI_BASE_URL`) | Azure, Ollama, vLLM …                                                            |
+| `fake`              | scripted responses                              | nothing                                | tests and `--dry-run`                                                            |
+
+LLM keys and logins are yours and billed by the provider; AutoMax's own API tokens are free. See [Claude Code and Codex CLI](/docs/guides/claude-code-and-codex) and [Tokens and keys](/docs/reference/tokens-and-keys).
 
 ## Commands
 

@@ -1,0 +1,74 @@
+name: www
+
+# Builds the landing site (apps/www) and deploys it to Firebase Hosting.
+# - push to main → live channel at https://sdods.com and https://www.sdods.com
+# - pull request  → temporary preview channel (URL posted on the PR)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/www/**'
+      - 'firebase.json'
+      - '.firebaserc'
+      - '.github/workflows/www.yml'
+  pull_request:
+    paths:
+      - 'apps/www/**'
+      - 'firebase.json'
+      - '.firebaserc'
+      - '.github/workflows/www.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+
+concurrency:
+  group: www-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: bun install --frozen-lockfile
+      - name: Typecheck
+        run: bun run --cwd apps/www typecheck
+      - name: Build (static export)
+        run: bun run www:build
+        env:
+          WWW_SITE_URL: https://sdods.com
+      - uses: actions/upload-artifact@v4
+        with:
+          name: www-site
+          path: apps/www/out
+          retention-days: 7
+
+  deploy:
+    needs: build
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: www-site
+          path: apps/www/out
+      - name: Deploy to Firebase Hosting
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_AUTOMAX_DOCS }}
+          projectId: automax-docs
+          target: www
+          channelId: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.number) || 'live' }}
+          expires: 7d

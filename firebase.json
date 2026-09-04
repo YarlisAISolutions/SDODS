@@ -9,24 +9,121 @@
       "headers": [
         {
           "source": "/_next/static/**",
-          "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }]
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "public, max-age=31536000, immutable"
+            }
+          ]
         },
         {
           "source": "**/*.@(png|jpg|jpeg|svg|webp|ico|woff2)",
-          "headers": [{ "key": "Cache-Control", "value": "public, max-age=604800" }]
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "public, max-age=604800"
+            }
+          ]
         },
         {
           "source": "**",
           "headers": [
-            { "key": "X-Content-Type-Options", "value": "nosniff" },
-            { "key": "X-Frame-Options", "value": "SAMEORIGIN" },
-            { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" }
+            {
+              "key": "X-Content-Type-Options",
+              "value": "nosniff"
+            },
+            {
+              "key": "X-Frame-Options",
+              "value": "SAMEORIGIN"
+            },
+            {
+              "key": "Referrer-Policy",
+              "value": "strict-origin-when-cross-origin"
+            }
           ]
         }
       ],
       "redirects": [
-        { "source": "/AutoMax", "destination": "/", "type": 301 },
-        { "source": "/AutoMax/**", "destination": "/", "type": 301 }
+        {
+          "source": "/AutoMax",
+          "destination": "/",
+          "type": 301
+        },
+        {
+          "source": "/AutoMax/**",
+          "destination": "/",
+          "type": 301
+        }
+      ]
+    },
+    {
+      "target": "www",
+      "public": "apps/www/out",
+      "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+      "cleanUrls": true,
+      "trailingSlash": true,
+      "headers": [
+        {
+          "source": "/_next/static/**",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "public, max-age=31536000, immutable"
+            }
+          ]
+        },
+        {
+          "source": "**/*.@(png|jpg|jpeg|svg|webp|ico|woff2)",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "public, max-age=604800"
+            }
+          ]
+        },
+        {
+          "source": "**",
+          "headers": [
+            {
+              "key": "X-Content-Type-Options",
+              "value": "nosniff"
+            },
+            {
+              "key": "X-Frame-Options",
+              "value": "SAMEORIGIN"
+            },
+            {
+              "key": "Referrer-Policy",
+              "value": "strict-origin-when-cross-origin"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "target": "api",
+      "public": "deploy/api-public",
+      "ignore": ["**/.*"],
+      "cleanUrls": false,
+      "rewrites": [
+        {
+          "source": "**",
+          "run": {
+            "serviceId": "automax-api",
+            "region": "us-central1"
+          }
+        }
+      ],
+      "headers": [
+        {
+          "source": "**",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-store"
+            }
+          ]
+        }
       ]
     }
   ]

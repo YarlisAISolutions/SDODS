@@ -1,8 +1,20 @@
 {
-  "projects": { "default": "automax-docs" },
+  "projects": {
+    "default": "automax-docs"
+  },
   "targets": {
     "automax-docs": {
-      "hosting": { "docs": ["automax-docs"] }
+      "hosting": {
+        "docs": [
+          "automax-docs"
+        ],
+        "www": [
+          "sdods-automax"
+        ],
+        "api": [
+          "sdods-automax-api"
+        ]
+      }
     }
   }
 }

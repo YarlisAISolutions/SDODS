@@ -5,42 +5,135 @@ import { CONVENTIONS, ROLE_PROMPTS, installClientConfig, type RoleName } from '@
 const TAGLINE =
   'AutoMax is an automation platform with a reusable architecture built on Playwright.';
 
-/** Write `.claude/agents/automax-*.md`, `.mcp.json`, AGENT.md and SKILL.md for Claude Code users. */
+export type CodingAgentTarget = 'claude' | 'codex' | 'all';
+
+export interface InstallCodingAgentsOptions {
+  for?: CodingAgentTarget;
+  project?: string;
+  env?: string;
+  force?: boolean;
+  /** also write `.mcp.json` for Claude Code (the CLI normally registers MCP via `automax mcp install`) */
+  mcp?: boolean;
+}
+
+function roleUse(role: RoleName): string {
+  return role === 'planner'
+    ? 'plan tests'
+    : role === 'generator'
+      ? 'write or generate features'
+      : role === 'healer'
+        ? 'fix a failing scenario'
+        : role === 'upgrader'
+          ? 'update tests after code changes'
+          : 'review feature files';
+}
+
+/**
+ * Set up coding-agent CLIs for an AutoMax repo:
+ * - Claude Code: `.claude/agents/automax-<role>.md` (one subagent per role) + `CLAUDE.md`
+ * - Codex: `AGENTS.md` (Codex reads it as project instructions; roles become sections)
+ * - both: `AGENT.md` and `SKILL.md` with the conventions
+ * Returns the paths written. Existing files are kept unless `force`.
+ */
+export function installCodingAgents(
+  rootDir: string,
+  opts: InstallCodingAgentsOptions = {},
+): string[] {
+  const target = opts.for ?? 'all';
+  const written: string[] = [];
+  const writeIfMissing = (file: string, content: string) => {
+    if (existsSync(file) && !opts.force) return;
+    mkdirSync(join(file, '..'), { recursive: true });
+    writeFileSync(file, content);
+    written.push(file);
+  };
+
+  if (target === 'claude' || target === 'all') {
+    const agentsDir = join(rootDir, '.claude', 'agents');
+    for (const role of Object.keys(ROLE_PROMPTS) as RoleName[]) {
+      const p = ROLE_PROMPTS[role];
+      writeIfMissing(
+        join(agentsDir, `automax-${role}.md`),
+        `---\nname: automax-${role}\ndescription: ${p.description} Use when the user asks AutoMax to ${roleUse(role)}.\ntools: Read, Glob, Grep, mcp__automax__*, mcp__playwright__*\n---\n\n${CONVENTIONS}\n\n${p.body}\n`,
+      );
+    }
+    writeIfMissing(join(rootDir, 'CLAUDE.md'), claudeMdContent(opts));
+    if (opts.mcp) {
+      const mcp = installClientConfig(rootDir, 'claude', {
+        project: opts.project,
+        env: opts.env,
+        args: ['automax', 'mcp'],
+      });
+      written.push(mcp.file);
+    }
+  }
+  if (target === 'codex' || target === 'all') {
+    writeIfMissing(join(rootDir, 'AGENTS.md'), agentsMdContent(opts));
+  }
+  writeIfMissing(join(rootDir, 'AGENT.md'), agentMdContent());
+  writeIfMissing(join(rootDir, 'SKILL.md'), skillMdContent());
+  return written;
+}
+
+/** Backwards-compatible alias: Claude Code files plus `.mcp.json`. */
 export function installClaudeCode(
   rootDir: string,
   opts: { project?: string; env?: string; force?: boolean } = {},
 ): string[] {
-  const written: string[] = [];
-  const agentsDir = join(rootDir, '.claude', 'agents');
-  mkdirSync(agentsDir, { recursive: true });
-  for (const role of Object.keys(ROLE_PROMPTS) as RoleName[]) {
-    const p = ROLE_PROMPTS[role];
-    const file = join(agentsDir, `automax-${role}.md`);
-    if (existsSync(file) && !opts.force) continue;
-    writeFileSync(
-      file,
-      `---\nname: automax-${role}\ndescription: ${p.description} Use when the user asks AutoMax to ${role === 'planner' ? 'plan tests' : role === 'generator' ? 'write or generate features' : role === 'healer' ? 'fix a failing scenario' : role === 'upgrader' ? 'update tests after code changes' : 'review feature files'}.\ntools: Read, Glob, Grep, mcp__automax__*, mcp__playwright__*\n---\n\n${CONVENTIONS}\n\n${p.body}\n`,
-    );
-    written.push(file);
-  }
-  const mcp = installClientConfig(rootDir, 'claude', {
-    project: opts.project,
-    env: opts.env,
-    args: ['automax', 'mcp'],
-  });
-  written.push(mcp.file);
+  return installCodingAgents(rootDir, { ...opts, for: 'claude', mcp: true });
+}
 
-  const agentMd = join(rootDir, 'AGENT.md');
-  if (!existsSync(agentMd) || opts.force) {
-    writeFileSync(agentMd, agentMdContent());
-    written.push(agentMd);
-  }
-  const skillMd = join(rootDir, 'SKILL.md');
-  if (!existsSync(skillMd) || opts.force) {
-    writeFileSync(skillMd, skillMdContent());
-    written.push(skillMd);
-  }
-  return written;
+function projectFlags(opts: { project?: string; env?: string }): string {
+  return `${opts.project ? ` -p ${opts.project}` : ''}${opts.env ? ` -e ${opts.env}` : ''}`;
+}
+
+/** CLAUDE.md: what Claude Code loads automatically. Short pointer plus the rules that matter. */
+export function claudeMdContent(opts: { project?: string; env?: string } = {}): string {
+  return `# CLAUDE.md — AutoMax
+
+${TAGLINE} Read \`AGENT.md\` for the mental model and \`SKILL.md\` for the command reference.
+
+## Working in this repo
+
+- Use the AutoMax MCP server (\`automax mcp\`) for anything about projects, features, steps, runs and results — it is registered in \`.mcp.json\` (\`automax mcp install claude\` re-registers it).
+- Subagents live in \`.claude/agents/automax-*.md\`: planner, generator, healer, upgrader, reviewer. Delegate matching requests to them.
+- Never edit features/steps/pages directly when acting as an AutoMax agent: write a proposal (\`write_proposal\` / \`feature_write\`) and let a person accept it with \`automax proposals accept <id>\`.
+- Verify with \`automax lint${projectFlags(opts)}\` and \`automax run${projectFlags(opts)} -l api\` / \`-l ui -b chromium -t @smoke\` before claiming done.
+
+## Rules
+
+${CONVENTIONS.split('\n').slice(3).join('\n')}
+`;
+}
+
+/** AGENTS.md: Codex reads this as project instructions; roles become sections. */
+export function agentsMdContent(opts: { project?: string; env?: string } = {}): string {
+  const roles = (Object.keys(ROLE_PROMPTS) as RoleName[])
+    .map(
+      (role) =>
+        `### automax-${role}\n\n${ROLE_PROMPTS[role].description}\n\n${ROLE_PROMPTS[role].body}`,
+    )
+    .join('\n\n');
+  return `# AGENTS.md — AutoMax instructions for Codex
+
+${TAGLINE} This file is read by the OpenAI Codex CLI. \`AGENT.md\` holds the mental model and \`SKILL.md\` the command reference.
+
+## Tools
+
+- The AutoMax MCP server is registered as \`automax\` (\`automax mcp install codex\` re-registers it in \`~/.codex/config.toml\`); use its tools for projects, features, steps, runs, results, proposals.
+- The bundled Playwright MCP server is registered as \`playwright\` for driving a browser.
+- Commands: \`automax lint${projectFlags(opts)}\`, \`automax run${projectFlags(opts)} -l api\`, \`automax run${projectFlags(opts)} -l ui -b chromium -t @smoke\`, \`automax steps list${projectFlags(opts)}\`, \`automax proposals list|show|accept\`.
+
+## Rules
+
+${CONVENTIONS.split('\n').slice(3).join('\n')}
+
+## Roles
+
+Pick the role that matches the request and follow its instructions. Every role only writes proposals; a person accepts them.
+
+${roles}
+`;
 }
 
 export function agentMdContent(): string {

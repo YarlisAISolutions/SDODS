@@ -1,7 +1,10 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { homedir } from 'node:os';
 import { dirname, join } from 'node:path';
+import { parse as parseToml, stringify as stringifyToml } from 'smol-toml';
 
-export type McpClient = 'claude' | 'cursor' | 'vscode' | 'windsurf';
+export type McpClient = 'claude' | 'codex' | 'cursor' | 'vscode' | 'windsurf';
+export const MCP_CLIENTS: McpClient[] = ['claude', 'codex', 'cursor', 'vscode', 'windsurf'];
 
 export interface SnippetOptions {
   project?: string;
@@ -28,9 +31,7 @@ export function serverEntry(o: SnippetOptions, client: McpClient): Record<string
   const token =
     o.tokenPlaceholder ?? (client === 'vscode' ? '${input:automax-token}' : '<YOUR_AUTOMAX_TOKEN>');
   if (o.httpUrl) {
-    return client === 'vscode'
-      ? { type: 'http', url: o.httpUrl, headers: { Authorization: `Bearer ${token}` } }
-      : { type: 'http', url: o.httpUrl, headers: { Authorization: `Bearer ${token}` } };
+    return { type: 'http', url: o.httpUrl, headers: { Authorization: `Bearer ${token}` } };
   }
   return { command: o.command ?? 'npx', args: stdioArgs(o) };
 }
@@ -39,18 +40,52 @@ export function playwrightEntry(): Record<string, unknown> {
   return { command: 'npx', args: ['playwright', 'mcp', '--headless'] };
 }
 
+/** `codex mcp add` / `claude mcp add` command lines for the same configuration. */
+export function cliCommands(o: SnippetOptions): { claude: string; codex: string } {
+  const stdio = `${o.command ?? 'npx'} ${stdioArgs(o).join(' ')}`;
+  const token = o.tokenPlaceholder ?? '$AUTOMAX_TOKEN';
+  return {
+    claude: o.httpUrl
+      ? `claude mcp add --transport http automax ${o.httpUrl} --header "Authorization: Bearer ${token}"`
+      : `claude mcp add automax -- ${stdio}`,
+    codex: o.httpUrl
+      ? `codex mcp add automax --url ${o.httpUrl} --bearer-token-env-var AUTOMAX_TOKEN`
+      : `codex mcp add automax -- ${stdio}`,
+  };
+}
+
+/** Codex keeps MCP servers in `~/.codex/config.toml` under `[mcp_servers.<name>]`. */
+export function codexTomlEntries(o: SnippetOptions): Record<string, Record<string, unknown>> {
+  const automax: Record<string, unknown> = o.httpUrl
+    ? { url: o.httpUrl, bearer_token_env_var: 'AUTOMAX_TOKEN' }
+    : { command: o.command ?? 'npx', args: stdioArgs(o) };
+  const out: Record<string, Record<string, unknown>> = { automax };
+  if (o.withPlaywright !== false) out.playwright = playwrightEntry();
+  return out;
+}
+
+export function codexConfigPath(): string {
+  return join(process.env.CODEX_HOME ?? join(homedir(), '.codex'), 'config.toml');
+}
+
 export function snippets(
   o: SnippetOptions,
-): Record<McpClient, { file: string; json: Record<string, unknown>; cli?: string }> {
+): Record<
+  McpClient,
+  { file: string; json?: Record<string, unknown>; toml?: string; cli?: string }
+> {
   const pw = o.withPlaywright === false ? {} : { playwright: playwrightEntry() };
-  const claudeCli = o.httpUrl
-    ? `claude mcp add --transport http automax ${o.httpUrl} --header "Authorization: Bearer ${o.tokenPlaceholder ?? '$AUTOMAX_TOKEN'}"`
-    : `claude mcp add automax -- npx ${stdioArgs(o).join(' ')}`;
+  const cli = cliCommands(o);
   return {
     claude: {
       file: '.mcp.json',
       json: { mcpServers: { automax: serverEntry(o, 'claude'), ...pw } },
-      cli: claudeCli,
+      cli: cli.claude,
+    },
+    codex: {
+      file: codexConfigPath(),
+      toml: stringifyToml({ mcp_servers: codexTomlEntries(o) }),
+      cli: cli.codex,
     },
     cursor: {
       file: '.cursor/mcp.json',
@@ -87,6 +122,7 @@ export function installClientConfig(
   client: McpClient,
   o: SnippetOptions,
 ): { file: string; merged: Record<string, unknown>; created: boolean } {
+  if (client === 'codex') return installCodexConfig(o);
   const s = snippets(o)[client];
   const file = join(rootDir, s.file);
   const existing = existsSync(file) ? safeParse(readFileSync(file, 'utf8')) : {};
@@ -94,9 +130,9 @@ export function installClientConfig(
   const key = client === 'vscode' ? 'servers' : 'mcpServers';
   merged[key] = {
     ...((existing[key] as Record<string, unknown>) ?? {}),
-    ...(s.json[key] as Record<string, unknown>),
+    ...((s.json?.[key] as Record<string, unknown>) ?? {}),
   };
-  if (client === 'vscode' && s.json.inputs) {
+  if (client === 'vscode' && s.json?.inputs) {
     const inputs = ((existing.inputs as Array<{ id: string }>) ?? []).filter(
       (i) => i.id !== 'automax-token',
     );
@@ -107,9 +143,36 @@ export function installClientConfig(
   return { file, merged, created: Object.keys(existing).length === 0 };
 }
 
+/**
+ * Merge `[mcp_servers.automax]` (and playwright) into the Codex config, keeping every other
+ * table and server intact. Used when the `codex` CLI is not available to do it itself.
+ */
+export function installCodexConfig(
+  o: SnippetOptions,
+  file = codexConfigPath(),
+): { file: string; merged: Record<string, unknown>; created: boolean } {
+  const existing = existsSync(file) ? safeParseToml(readFileSync(file, 'utf8')) : {};
+  const servers = {
+    ...((existing.mcp_servers as Record<string, unknown>) ?? {}),
+    ...codexTomlEntries(o),
+  };
+  const merged: Record<string, unknown> = { ...existing, mcp_servers: servers };
+  mkdirSync(dirname(file), { recursive: true });
+  writeFileSync(file, stringifyToml(merged) + '\n');
+  return { file, merged, created: Object.keys(existing).length === 0 };
+}
+
 function safeParse(text: string): Record<string, unknown> {
   try {
     return JSON.parse(text) as Record<string, unknown>;
+  } catch {
+    return {};
+  }
+}
+
+function safeParseToml(text: string): Record<string, unknown> {
+  try {
+    return parseToml(text) as Record<string, unknown>;
   } catch {
     return {};
   }

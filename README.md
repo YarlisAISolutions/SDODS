@@ -308,7 +308,7 @@ AutoMax is itself an MCP server, modeled on Playwright MCP:
 
 ```bash
 claude mcp add automax -- npx automax mcp --project demo-shop --env staging     # stdio
-automax mcp install cursor|vscode|claude                                        # writes client config
+automax mcp install claude|codex|cursor|vscode|windsurf                         # registers the server with the client
 automax mcp --http --port 4001                                                  # streamable HTTP with scoped tokens
 ```
 
@@ -324,7 +324,44 @@ automax agent upgrade  -p demo-shop --diff main..feature/x
 automax proposals list && automax proposals accept <id> --branch automax/<id>
 ```
 
-Agents run on a provider-agnostic adapter (Claude Agent SDK first; OpenAI-compatible; a fake adapter for CI and `--dry-run`). They can read the project, run scenarios and drive a browser through MCP, but they can only **write proposals** that you review in the UI or the CLI. Budgets per role are configured in the project yaml. LLM keys are yours and billed by the provider; AutoMax API tokens are free.
+Agents run on a provider-agnostic adapter: `claude` (Anthropic API key), `claude-code` (your logged-in Claude Code CLI, no key), `codex` (your logged-in Codex CLI, no key), `openai-compatible` (any chat-completions endpoint) or `fake` (CI and `--dry-run`). When nothing is configured the adapter is auto-detected in that order. Agents can read the project, run scenarios and drive a browser through MCP, but they can only **write proposals** that you review in the UI or the CLI. Budgets per role are configured in the project yaml.
+
+## Use with Claude Code and Codex CLI
+
+Both CLIs work in two directions: they can drive AutoMax through its MCP server, and AutoMax agents can run on their logins instead of an API key.
+
+```bash
+# Claude Code
+automax agent install --for claude -p demo-shop       # .claude/agents/automax-*.md, CLAUDE.md, MCP registration
+automax agent review -p demo-shop --adapter claude-code
+claude                                                # then: "use automax to run the demo-shop smoke suite"
+
+# Codex CLI
+automax agent install --for codex -p demo-shop        # AGENTS.md + [mcp_servers.automax] in ~/.codex/config.toml
+automax agent heal -p demo-shop --scenario <fingerprint> --adapter codex
+codex                                                 # then: "use the automax tools to list projects"
+```
+
+`automax agent install --for all` sets up both. `automax doctor` shows whether each CLI is installed and logged in.
+
+## Tokens and keys
+
+Nothing is mandatory for the platform itself; AutoMax API tokens are self-issued and free. `automax doctor` prints this matrix with live status.
+
+| Key | Needed for | Requirement |
+|---|---|---|
+| `ANTHROPIC_API_KEY` | agents via the Claude Agent SDK / Messages API | one of the four agent options |
+| Claude Code login (`claude login`) | agents via `--adapter claude-code` | one of the four agent options |
+| Codex login (`codex login`) | agents via `--adapter codex` | one of the four agent options |
+| `OPENAI_API_KEY` (+ `OPENAI_BASE_URL`) | agents via any OpenAI-compatible endpoint | one of the four agent options |
+| `SESSION_SECRET` | `automax serve` session signing | mandatory for the web server only |
+| `DATABASE_URL` | Postgres | mandatory only when `DB_DRIVER=postgres` |
+| `GITHUB_TOKEN` | check runs, PR comments, issues | optional |
+| `JIRA_EMAIL` + `JIRA_API_TOKEN` | Jira issues, links, transitions | optional |
+| `AUTOMAX_TOKEN` (+ `AUTOMAX_SERVER_URL`) | MCP over HTTP, CI ingest; created with `automax tokens create` | optional, free |
+| `FIREBASE_SERVICE_ACCOUNT_AUTOMAX_DOCS`, `NPM_TOKEN` | docs deploy and npm publish | CI-only GitHub secrets |
+
+Everything runs offline without any of them: HAR replay for the demo, SQLite for the database, `--dry-run` for agents.
 
 ## GitHub and Jira
 

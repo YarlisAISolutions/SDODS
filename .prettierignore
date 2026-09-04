@@ -14,3 +14,9 @@ packages/core/test/fixtures/apps
 packages/web/public/mockServiceWorker.js
 projects/*/har/**
 apps/docs/next-env.d.ts
+apps/www/next-env.d.ts
+apps/www/out
+apps/www/.next
+apps/www/screenshots
+.mcp.json
+proposals/

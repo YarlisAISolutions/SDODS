@@ -22,6 +22,7 @@
     "insights-and-flaky",
     "agents",
     "mcp",
+    "claude-code-and-codex",
     "scheduling",
     "security",
     "migrating"

@@ -33,6 +33,7 @@ import { register as registerSchedule } from './commands/schedule.js';
 import { register as registerIntegrations } from './commands/integrations.js';
 import { register as registerCompletion } from './commands/completion.js';
 import { register as registerUpgrade } from './commands/upgrade.js';
+import { register as registerFeedback } from './commands/feedback.js';
 
 /**
  * All commands are registered eagerly (cheap) but each module keeps heavy imports
@@ -87,5 +88,6 @@ export function buildProgram(): Command {
   registerIntegrations(program);
   registerCompletion(program);
   registerUpgrade(program);
+  registerFeedback(program);
   return program;
 }
