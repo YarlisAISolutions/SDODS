@@ -392,15 +392,15 @@ Implementation follows the phased plan in [docs/ARCHITECTURE.md](docs/ARCHITECTU
 | 2 | UI layer, page objects, self-healing, dashboard | done |
 | 3 | Data providers, user pool, auth capture, hybrid | done |
 | 4 | Screenshot narratives, NDJSON | done |
-| 5 | Database, ingest, switch | planned |
-| 6 | Recorder and HAR | planned |
-| 7 | MCP server | planned |
-| 8 | Agents and insights | planned |
-| 9 | Server | planned |
-| 10 | Web UI | planned |
-| 11 | GitHub, Jira, CI workflows | planned |
-| 12 | Onboarding analysis, cross-browser matrix | planned |
-| 13 | Docs site, packaging | planned |
+| 5 | Database, ingest, switch | done |
+| 6 | Recorder and HAR | done |
+| 7 | MCP server | done |
+| 8 | Agents and insights | done |
+| 9 | Server | done |
+| 10 | Web UI | done |
+| 11 | GitHub, Jira, CI workflows | done |
+| 12 | Onboarding analysis, cross-browser matrix | done |
+| 13 | Docs site, packaging | done |
 
 ## License
 
