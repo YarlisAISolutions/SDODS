@@ -20,7 +20,7 @@ image so UI runs triggered from the web UI work inside the container.
 | Billing + APIs | `gcloud billing projects link automax-docs --billing-account <id>` · `gcloud services enable run artifactregistry cloudbuild secretmanager sqladmin` |
 | Artifact Registry | `gcloud artifacts repositories create sdods --repository-format=docker --location=us-central1` |
 | Secrets | `automax-session-secret`, `automax-db-password`, `automax-admin-password` (random, Secret Manager) |
-| Cloud SQL | `gcloud sql instances create automax-pg --database-version=POSTGRES_16 --edition=ENTERPRISE --tier=db-f1-micro --region=us-central1 --storage-size=10 --storage-type=HDD --availability-type=zonal --no-backup` then `gcloud sql databases create sdods --instance automax-pg` and `gcloud sql users create sdods --instance automax-pg --password "$(gcloud secrets versions access latest --secret automax-db-password)"` |
+| Cloud SQL | `gcloud sql instances create automax-pg --database-version=POSTGRES_16 --edition=ENTERPRISE --tier=db-f1-micro --region=us-central1 --storage-size=10 --storage-type=HDD --availability-type=zonal --no-backup` then `gcloud sql databases create automax --instance automax-pg` and `gcloud sql users create automax --instance automax-pg --password "$(gcloud secrets versions access latest --secret automax-db-password)"` |
 | Service accounts | runtime `automax-api-runtime@` (secretAccessor, cloudsql.client); CI `github-deploy-api@` (run.admin, cloudbuild.builds.editor, artifactregistry.writer, iam.serviceAccountUser, storage.admin, serviceUsageConsumer) — its key is the GitHub secret `GCP_SA_KEY_AUTOMAX` |
 
 ## Deploy
@@ -62,7 +62,7 @@ fresh set of secrets for no user-visible gain. Treat them as opaque identifiers,
 | Logs | `gcloud run services logs read automax-api --region us-central1 --limit 100` |
 | Migrations | run automatically at container start (`sdods db migrate`); manual: `gcloud run jobs execute automax-bootstrap --region us-central1 --wait` |
 | Rotate a secret | `gcloud secrets versions add automax-session-secret --data-file=<(openssl rand -base64 36)` then `bun run api:deploy` (services read `:latest` on new revisions) |
-| Rotate the DB password | add a new secret version, then `gcloud sql users set-password sdods --instance automax-pg --password "$(gcloud secrets versions access latest --secret automax-db-password)"`, then redeploy |
+| Rotate the DB password | add a new secret version, then `gcloud sql users set-password automax --instance automax-pg --password "$(gcloud secrets versions access latest --secret automax-db-password)"`, then redeploy |
 | Scale | `MIN_INSTANCES=1 bun run api:deploy` for no cold starts (adds ~$8/month) |
 | Tear down | `gcloud run services delete automax-api --region us-central1` · `gcloud run jobs delete automax-bootstrap --region us-central1` · `gcloud sql instances delete automax-pg` · delete the three secrets · `firebase hosting:sites:delete sdods-automax-api` · restore the Route 53 A record |
 
