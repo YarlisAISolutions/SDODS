@@ -37,10 +37,17 @@ export default function RoadmapPage() {
         every level is described by what it changes for the people using it.
       </p>
 
-      <div className="mt-10 overflow-x-auto">
-        <div className="min-w-[720px]">
-          <RailHero years={HORIZON.map((h) => h.year)} current={CURRENT_YEAR} />
+      {/* The rail cannot fit five years on a phone, so it scrolls and says so with a fade. */}
+      <div className="relative mt-10">
+        <div className="overflow-x-auto">
+          <div className="min-w-[720px]">
+            <RailHero years={HORIZON.map((h) => h.year)} current={CURRENT_YEAR} />
+          </div>
         </div>
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-[var(--bg)] to-transparent md:hidden"
+        />
       </div>
 
       <section className="mt-14" aria-labelledby="ladder">
@@ -75,7 +82,7 @@ export default function RoadmapPage() {
         return (
           <section
             key={h.year}
-            className="mt-16 scroll-mt-24 border-t border-[var(--line)] pt-12 first-of-type:border-0"
+            className="mt-16 scroll-mt-24 border-t border-[var(--line)] pt-12"
             id={`y${h.year}`}
             aria-labelledby={`h${h.year}`}
           >
@@ -139,15 +146,15 @@ export default function RoadmapPage() {
                 </figure>
                 <figure className="card overflow-hidden">
                   <img
-                    src="/screenshots/ui/scenario-steps.png"
-                    alt="A scenario opened to its steps, each with the capture taken before and after it ran"
+                    src="/screenshots/ui/run-detail.png"
+                    alt="A run opened to its scenarios, grouped by module, with status, browser, tags and a linked issue"
                     loading="lazy"
                     width={1280}
                     height={800}
                     className="w-full"
                   />
                   <figcaption className="muted border-t border-[var(--line)] p-3 text-sm">
-                    Every step, with what the screen looked like either side of it.
+                    One run, every scenario, grouped by the capability it covers.
                   </figcaption>
                 </figure>
               </div>
