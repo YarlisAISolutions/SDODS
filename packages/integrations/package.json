@@ -1,7 +1,7 @@
 {
   "name": "@sdods/integrations",
   "version": "0.1.0",
-  "description": "SDODS integrations: GitHub (check runs, PR comments, issues) and Jira (issues, links, transitions) with fingerprint-based dedupe.",
+  "description": "SDODS integrations: GitHub checks and issues, Jira issues and links.",
   "license": "Apache-2.0",
   "author": "Sireesh Yarlagadda (https://www.linkedin.com/in/yarlagadda/)",
   "type": "module",
@@ -11,7 +11,8 @@
   "publishConfig": {
     "exports": {
       ".": "./dist/index.js"
-    }
+    },
+    "access": "public"
   },
   "files": [
     "dist"
@@ -26,5 +27,23 @@
   },
   "devDependencies": {
     "msw": "^2.15.0"
-  }
+  },
+  "homepage": "https://sdods.com",
+  "bugs": {
+    "url": "https://github.com/siri1410/SDODS/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/siri1410/SDODS.git",
+    "directory": "packages/integrations"
+  },
+  "keywords": [
+    "sdods",
+    "automation",
+    "orchestration",
+    "testing",
+    "bdd",
+    "ai-agents",
+    "mcp"
+  ]
 }

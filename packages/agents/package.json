@@ -1,7 +1,7 @@
 {
   "name": "@sdods/agents",
   "version": "0.1.0",
-  "description": "SDODS agents: provider-agnostic LLM adapter (Claude first), planner/generator/healer/upgrader/reviewer roles, proposals and jobs.",
+  "description": "SDODS AI agents: planner, generator, healer, upgrader and reviewer over a provider-agnostic adapter.",
   "license": "Apache-2.0",
   "author": "Sireesh Yarlagadda (https://www.linkedin.com/in/yarlagadda/)",
   "type": "module",
@@ -19,7 +19,8 @@
       "./roles": "./dist/roles/index.js",
       "./jobs": "./dist/jobs/runner.js",
       "./install-claude": "./dist/claude-code/install.js"
-    }
+    },
+    "access": "public"
   },
   "files": [
     "dist"
@@ -33,5 +34,23 @@
     "@sdods/contracts": "workspace:*",
     "@sdods/mcp": "workspace:*",
     "zod": "^4.5.4"
-  }
+  },
+  "homepage": "https://sdods.com",
+  "bugs": {
+    "url": "https://github.com/siri1410/SDODS/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/siri1410/SDODS.git",
+    "directory": "packages/agents"
+  },
+  "keywords": [
+    "sdods",
+    "automation",
+    "orchestration",
+    "testing",
+    "bdd",
+    "ai-agents",
+    "mcp"
+  ]
 }
