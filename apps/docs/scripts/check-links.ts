@@ -7,7 +7,7 @@ import { join, resolve } from 'node:path';
 import { load } from 'cheerio';
 
 const outDir = resolve(import.meta.dirname, '..', 'out');
-const basePath = '/AutoMax';
+const basePath = (process.env.DOCS_BASE_PATH ?? '').replace(/\/$/, '');
 
 function walk(dir: string, acc: string[] = []): string[] {
   for (const f of readdirSync(dir)) {

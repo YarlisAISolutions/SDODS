@@ -1,3 +1,4 @@
+import { withBase } from '@/lib/base-path';
 import type { BaseLayoutProps } from 'fumadocs-ui/layouts/shared';
 
 export function baseOptions(): BaseLayoutProps {
@@ -5,7 +6,7 @@ export function baseOptions(): BaseLayoutProps {
     nav: {
       title: (
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-          <img src="/AutoMax/img/favicon.svg" alt="" width={22} height={22} />
+          <img src={withBase('/img/favicon.svg')} alt="" width={22} height={22} />
           AutoMax
         </span>
       ),

@@ -3,17 +3,35 @@ title: automax agent, proposals
 description: Run agent roles and review their proposals.
 ---
 
+## `agent`
+
 ```text
-automax agent plan     -p <slug> [-e <env>] --goal <text> [--model <id>] [--max-turns <n>] [--budget-usd <n>] [--dry-run] [--adapter claude|openai|fake]
-automax agent generate -p <slug> (--plan <file> | --goal <text> | --spec <file>)
-automax agent heal     -p <slug> --scenario <fingerprint>
-automax agent upgrade  -p <slug> (--diff <a..b> | --openapi-old <f> --openapi-new <f>)
-automax agent review   -p <slug> [paths...]
-automax agent install-claude
-automax proposals list [--status pending|accepted|rejected]
-automax proposals show <id>
-automax proposals accept <id> [--branch <name>] [--yes]
-automax proposals reject <id>
+automax agent plan|generate|heal|upgrade|review [-p <slug>] [-e <env>] [--goal <text>] [--plan <file>] [--spec <file>]
+                [--scenario <fingerprint>] [--run-id <id>] [--diff <range>] [--files <list>]
+                [--adapter claude|openai|fake] [--model <id>] [--max-turns <n>] [--budget-usd <n>] [--dry-run] [--events]
+automax agent jobs [--limit <n>]
+automax agent install-claude [-p <slug>] [-e <env>] [--force]
 ```
 
-<Planned phase={8} />
+| Role       | Input                                          | Output (a proposal)                                      |
+| ---------- | ---------------------------------------------- | -------------------------------------------------------- |
+| `plan`     | `--goal`; the app via Playwright MCP or source | a tagged test plan under `docs/test-plans/`              |
+| `generate` | `--plan`, `--goal` or `--spec` (recorded)      | feature files, steps for unmatched phrases, page objects |
+| `heal`     | `--scenario` (+ `--run-id`, default last)      | the smallest page-object or step patch, re-run result    |
+| `upgrade`  | `--diff main..HEAD`                            | new or updated scenarios for the changed code            |
+| `review`   | `--files`                                      | a review with tagging, reuse and best-practice findings  |
+
+Every role shares the flags above; the ones it does not use are ignored. `--dry-run` selects the fake adapter and prints the prompt, tools and budget without calling a model. `--adapter` overrides `AUTOMAX_LLM_PROVIDER` or the project's `agents.provider`; budgets come from `agents.budgetUsd` and `agents.maxTurns` in the project YAML. `jobs` lists recent jobs from `.automax/agent-jobs/`. `install-claude` writes `.claude/agents/automax-*.md`, `.mcp.json`, `AGENT.md` and `SKILL.md` for Claude Code.
+
+Agents never write to the working tree: every output is a proposal.
+
+## `proposals`
+
+```text
+automax proposals list [--status pending|accepted|rejected] [-p <slug>]
+automax proposals show <id>
+automax proposals accept <id> [--branch <name>] [--reviewed-by <name>] [--no-lint]
+automax proposals reject <id> [--reason <text>]
+```
+
+`accept` applies the files to the working tree (optionally on a new git branch) and runs `automax lint` unless `--no-lint`. Proposals live under `proposals/<id>/` with a manifest, the files and a diff.

@@ -1,35 +1,32 @@
 ---
-title: automax report, show-report, trace, heal, insights
-description: Open reports, ingest results, inspect heals and compute insights.
+title: automax report, show-report, heal, insights
+description: Open reports, ingest results and inspect self-healing events.
 ---
 
 ## `report`
 
 ```text
-automax report [--last|--run <id>] [--open] [--html|--dashboard|--allure] [--json]
-automax report ingest --run-id <id> [-p <slug>] [--manifest <file>] [--format auto|cucumber|pw-json] <files...> [--replace]
-                      [--server <url> --token <token>]
-automax report html --run-id <id>
+automax report [--last | --run <id>] [--open] [--html] [--dashboard]
+automax report ingest [files...] --run-id <id> [-p <slug>] [-e <env>] [--manifest <file>] [--format auto|cucumber|pw-json] [--artifacts-dir <dir>] [--replace]
 automax show-report [--run <id>]
-automax trace <zip|runId>
 ```
 
-<Planned phase={2} />
+`report` prints the summary of a run (totals, failed and flaky scenarios, report paths); `--open` opens the Playwright HTML report and the AutoMax dashboard, `--html` / `--dashboard` open one of them. `report ingest` loads cucumber messages NDJSON and Playwright JSON results into the database (`automax run` does this automatically when a database is configured); `--replace` deletes previously ingested rows of the run first. `show-report` opens the Playwright HTML report of the latest or a given run.
 
 ## `heal report`
 
 ```text
-automax heal report [--last|--run <id>] [-p <slug>] [--json] [--write-history]
+automax heal report [--last | --run <id> | --all] [--write-history]
 ```
 
-<Planned phase={2} />
+Summarises heal events (original selector, chosen strategy, score, suggested locator) for one run or every run under the artifacts directory. `--write-history` persists `heal-history.json`, which biases future heals towards strategies that worked.
 
 ## `insights`
 
 ```text
-automax insights compute -p <slug> [--window <n>]
-automax insights show -p <slug> [--json]
-automax insights quarantine <fingerprint> [--off]
+automax insights
 ```
 
 <Planned phase={8} />
+
+The insight metrics (flakiness score, locator fragility, environment stability, suite health) are computed by `@automax/db` and exposed through the web UI dashboard and `GET /api/stats/insights`; the standalone CLI command is not wired yet.

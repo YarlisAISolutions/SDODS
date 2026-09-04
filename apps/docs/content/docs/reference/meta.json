@@ -10,6 +10,7 @@
     "rest-api",
     "environment-variables",
     "exit-codes",
-    "file-naming"
+    "file-naming",
+    "known-limitations"
   ]
 }

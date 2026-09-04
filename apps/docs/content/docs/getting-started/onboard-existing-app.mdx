@@ -10,8 +10,9 @@ description: Point AutoMax at an application repository and get a working projec
 
 ## Analyze
 
-<Planned phase={12} />
-```bash bun run automax analyze ../my-app ```
+```bash
+bun run automax analyze ../my-app
+```
 
 The analyzer is read-only. It scans the repository and reports, with evidence and a confidence score:
 
@@ -50,8 +51,9 @@ It scaffolds the YAML, an environment, fixtures, an authentication stub, a page 
 
 ## Coverage
 
-<Planned phase={12} />
-```bash bun run automax coverage -p my-app --routes --openapi ```
+```bash
+bun run automax coverage -p my-app --routes --openapi
+```
 
 `coverage` joins the route and endpoint inventory with your features to show what each suite tag exercises.
 

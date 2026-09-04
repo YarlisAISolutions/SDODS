@@ -17,6 +17,17 @@ bun run automax serve                 # http://127.0.0.1:4444
 
 The server is a Fastify application. It spawns the same `automax` commands you run by hand and streams their logs over Server-Sent Events, so a run started from a browser looks exactly like one started from a terminal.
 
+<Screenshot
+  src="/screenshots/ui/dashboard.png"
+  alt="Dashboard: pass-rate and duration trends, suite health per process, flaky scenarios, latest runs"
+  caption="Dashboard"
+/>
+<Screenshot
+  src="/screenshots/ui/workspaces.png"
+  alt="Workspaces of the organization with each member's effective role"
+  caption="Organization → workspaces with roles. Owners and admins create workspaces and manage members."
+/>
+
 ## Pages
 
 | Page            | What it does                                                                                           |
@@ -33,6 +44,22 @@ The server is a Fastify application. It spawns the same `automax` commands you r
 | Schedules       | cron builder with the next fire times, history, pause and resume                                       |
 | Users, Settings | roles, free scoped API tokens, MCP client install snippets                                             |
 
+<Screenshot
+  src="/screenshots/ui/run-detail.png"
+  alt="Run detail: scenario tree grouped by module with badges and live log"
+  caption="Run detail"
+/>
+<Screenshot
+  src="/screenshots/ui/feature-editor.png"
+  alt="Feature editor with Gherkin highlighting, step completions and diagnostics"
+  caption="Feature editor"
+/>
+<Screenshot
+  src="/screenshots/ui/schedules.png"
+  alt="Schedules page with cron builder and next fire times"
+  caption="Schedules"
+/>
+
 ## Roles
 
 | Role   | Can                                                                           |
@@ -40,6 +67,8 @@ The server is a Fastify application. It spawns the same `automax` commands you r
 | viewer | read everything, download artifacts                                           |
 | editor | start and stop runs, edit features and datasets, run agents, accept proposals |
 | admin  | manage users, integrations, projects, tokens                                  |
+
+Roles are per workspace: a user's effective role is the stronger of the explicit workspace membership and the one implied by the organization membership (`member` → viewer, `admin` and `owner` → admin). Platform admins are admin everywhere.
 
 ## Next steps
 

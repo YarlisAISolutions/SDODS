@@ -1,28 +1,46 @@
 ---
 title: automax data, db
-description: Import and preview datasets; migrate, inspect and switch the database.
+description: Import and preview datasets; migrate, inspect and switch the platform database.
 ---
 
 ## `data`
 
 ```text
-automax data import <dataset> <file> -p <slug> [-e <env>] [--to db|table]
-automax data preview <file>
-automax data seed -p <slug> -e <env> [--truncate --yes]
+automax data preview <file> [--limit <n>]
+automax data import <dataset> <file> -p <slug> [-e <env>] [--to db|table] [--truncate]
+automax data list -p <slug>
+automax data seed -p <slug> [-e <env>] [--to db|table]
 ```
 
-<Planned phase={5} />
+| Command   | Purpose                                                                                                                                                                                                           |
+| --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `preview` | first rows and inferred columns of a CSV, JSON or YAML file                                                                                                                                                       |
+| `import`  | load a file into `datasets`/`dataset_rows` (`--to db`) or into a `td_<project>_<dataset>` table (`--to table`); `-e` scopes rows to an environment (default `*`); `--truncate` replaces rows for that environment |
+| `list`    | datasets stored in the database for a project                                                                                                                                                                     |
+| `seed`    | import every file under `projects/<slug>/data/<env>/` and `data/common/`                                                                                                                                          |
 
 ## `db`
 
 ```text
 automax db migrate [--to <name>] [--down]
 automax db status
-automax db reset --yes                       # sqlite only
-automax db switch <sqlite|postgres> [--target-url <url>] [--target-path <file>] [--dry-run] [--yes]
+automax db sync
+automax db reset --yes                                                     # sqlite only
+automax db switch <sqlite|postgres> [--target-url <url>] [--target-path <file>] [--dry-run] [--truncate] [--env-file <file>] [--yes]
 automax db export <dir>
 automax db import <dir>
-automax db prune --keep-runs <n> --keep-days <n>
+automax db prune [--keep-runs <n>] [--keep-days <n>] [-p <slug>] [--dry-run]
 ```
 
-Environment: `DB_DRIVER`, `DATABASE_URL`, `SQLITE_PATH`. <Planned phase={5} />
+| Command   | Purpose                                                                                                                                                      |
+| --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `migrate` | apply pending migrations (creates the SQLite file on first use); `--to` targets one migration, `--down` rolls back one                                       |
+| `status`  | applied and pending migrations                                                                                                                               |
+| `sync`    | upsert organization, workspaces, projects, modules and processes from `automax.workspace.yaml` and the project YAML files                                    |
+| `reset`   | drop every AutoMax table (SQLite only)                                                                                                                       |
+| `switch`  | migrate the target, copy every table, verify row counts and rewrite `DB_DRIVER` / `DATABASE_URL` / `SQLITE_PATH` in the env file (`--dry-run` only verifies) |
+| `export`  | one JSONL file per table                                                                                                                                     |
+| `import`  | load JSONL files with `ON CONFLICT DO NOTHING`                                                                                                               |
+| `prune`   | delete old runs and their artifact directories                                                                                                               |
+
+Environment: `DB_DRIVER` (`sqlite` default, `postgres`), `DATABASE_URL`, `SQLITE_PATH` (default `.automax/automax.db`).

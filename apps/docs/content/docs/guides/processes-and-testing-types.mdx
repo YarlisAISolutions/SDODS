@@ -45,31 +45,31 @@ processes:
   - name: pr-check
     title: Pull request check
     trigger: pr
-    env: staging
     tags: '@smoke'
     browsers: [chromium]
     harMode: replay
     gates: { minPassRate: 100 }
-    notify: [github]
   - name: nightly-regression
+    title: Nightly regression
     trigger: nightly
     tags: '@regression'
     browsers: [chromium, firefox, webkit]
-    retries: 2
-    schedule: '0 2 * * *'
-    notify: [github, jira]
+    notify: [github]
   - name: release-gate
+    title: Release gate
     trigger: release
     tags: '@smoke or @regression'
+    browsers: [chromium, firefox, webkit]
     failOnFlaky: true
     gates: { minPassRate: 100, maxFlaky: 0, perfBudgets: true, a11y: true }
   - name: api-contract
+    title: API contract
     trigger: merge
     layers: [api]
-    modules: [posts-api]
-    tags: '@api'
-    gates: { minPassRate: 100 }
+    tags: '@contract or @smoke'
 ```
+
+The workspace file declares the same `pr-check`, `nightly-regression` (with `schedule: '0 2 * * *'`) and `release-gate` under `defaults.processes`; the project's entries override them by name, so `automax processes list -p demo-shop` shows four processes.
 
 | Field                                          | Purpose                                                                                                                                  |
 | ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
@@ -90,8 +90,6 @@ bun run automax run -p demo-shop --process pr-check
 bun run automax run -p demo-shop --process nightly-regression -b chromium    # flags override process fields
 bun run automax run -p demo-shop --module cart -t @regression
 ```
-
-<Planned phase={12} />
 
 CI workflows call processes by name, so a change of gate or browser list is a YAML edit, not a workflow edit.
 

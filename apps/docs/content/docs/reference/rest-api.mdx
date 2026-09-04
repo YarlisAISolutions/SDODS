@@ -1,12 +1,32 @@
 ---
 title: REST API
-description: The server's HTTP API, generated from the Fastify schemas.
+description: The server's HTTP API.
 ---
 
-<Planned phase={9} />
+All routes live under `/api` on the server started by `automax serve`. Request and response bodies are validated with Zod; the schemas are exported from `@automax/server/schemas` for typed clients.
 
-The server exposes REST routes under `/api` for auth, tokens, projects, environments, datasets, runs (start, list, detail, cancel, SSE events), artifacts (stream, compare), features (tree, read, write, validate), steps, record, agent jobs, integrations, schedules, stats, users and audit, plus `/mcp` (streamable HTTP MCP) and static `/reports/:runId/` and `/trace/`.
+## Authentication
 
-Authentication: a session cookie (browser) or `Authorization: Bearer amx_...` (CI, MCP clients). Non-GET session requests carry `x-csrf-token`.
+- Browser: session cookie `automax_sid` (HttpOnly, SameSite=Lax, sliding 7 days). Non-GET requests carry the `x-csrf-token` header returned by `GET /api/auth/me`.
+- Automation and MCP clients: `Authorization: Bearer amx_…` tokens created with `automax tokens create` or in Settings. Tokens carry scopes; a route requires a scope such as `runs:write`.
+- Workspace access: a project route is allowed when the user's effective role in the project's workspace permits it (`viewer` reads, `editor` runs and edits, `admin` manages).
 
-The OpenAPI document is served at `/api/openapi.json` and rendered at `/api/docs` once the server ships.
+## Routes
+
+| Area          | Routes                                                                                                                                                                                                                                                                                                                    |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Health        | `GET /api/health`, `GET /api/mcp/info`                                                                                                                                                                                                                                                                                    |
+| Auth          | `POST /api/auth/login`, `POST /api/auth/logout`, `GET /api/auth/me`, `GET /api/auth/setup-status`, `POST /api/auth/setup` (one-time admin bootstrap)                                                                                                                                                                      |
+| Hierarchy     | `GET /api/orgs`, `GET/POST/DELETE /api/orgs/:slug/members`, `GET /api/workspaces` (with effective role and project counts), `POST /api/workspaces`, `GET /api/workspaces/:slug`, members CRUD, `POST /api/hierarchy/sync`                                                                                                 |
+| Users, tokens | `GET/POST /api/users`, `PATCH /api/users/:id`, `GET/POST /api/tokens`, `DELETE /api/tokens/:id`, `GET /api/audit`                                                                                                                                                                                                         |
+| Projects      | `GET/POST /api/projects`, `GET/PUT /api/projects/:slug`, `…/envs`, `…/datasets` (multipart upload, preview), `…/users-pool`, `…/processes`, `…/processes/:name/run`, `…/integrations` (get, put, test, sync)                                                                                                              |
+| Features      | `GET /api/projects/:slug/features`, `GET/PUT /api/projects/:slug/features/*` (PUT validates and lints, `422` with diagnostics), `POST …/features/validate`, `GET …/steps`, `POST …/lint`, `POST …/record`                                                                                                                 |
+| Runs          | `GET /api/runs`, `POST /api/runs` (`202` with the run id), `GET /api/runs/:id` (scenario tree grouped by module), `GET /api/runs/:id/scenarios/:sid`, `GET /api/runs/:id/events` (SSE), `POST /api/runs/:id/cancel`, `GET /api/runs/:id/report`, `GET /api/runs/:id/files/*`, `POST /api/runs/:id/ingest` (`runs:ingest`) |
+| Artifacts     | `GET /api/artifacts/:id`, `GET /api/artifacts/compare?before&after` (server-side pixel diff)                                                                                                                                                                                                                              |
+| Stats         | `GET /api/stats/trends`, `GET /api/stats/flaky`, `GET /api/stats/heal`, `GET /api/stats/insights`                                                                                                                                                                                                                         |
+| Schedules     | `GET/POST /api/schedules`, `PUT/DELETE /api/schedules/:id`, `POST …/pause`, `…/resume`, `…/run-now`, `GET /api/schedules/next`                                                                                                                                                                                            |
+| Agents        | `GET/POST /api/agents/jobs`, `GET /api/agents/jobs/:id`, `GET /api/agents/jobs/:id/events` (SSE), `GET /api/proposals`, `POST /api/proposals/:id/accept`, `POST /api/proposals/:id/reject`                                                                                                                                |
+| MCP           | `POST/GET/DELETE /mcp` (streamable HTTP, bearer tokens only)                                                                                                                                                                                                                                                              |
+| Static        | `/` (web UI), `/reports/:runId/*` (Playwright HTML report), `/trace/*` (trace viewer)                                                                                                                                                                                                                                     |
+
+Errors use one shape: `{ "error": { "code", "message", "hint" } }`.
