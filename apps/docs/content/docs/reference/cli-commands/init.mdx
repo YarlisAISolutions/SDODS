@@ -1,24 +1,46 @@
 ---
 title: automax init
-description: Scaffold a new AutoMax workspace with a demo project.
+description: Scaffold a new AutoMax workspace with an organization, a workspace and the demo project.
 ---
 
-<Planned phase={13} />
-
 ```text
-automax init [dir] [--db sqlite|postgres] [--pm bun|pnpm] [--no-demo] [--claude]
+automax init [dir] [--db sqlite|postgres] [--pm bun|pnpm] [--no-demo] [--claude] [--from <app>]
+             [--git] [--link] [--no-install] [--no-browsers]
+             [--org <slug>] [--org-name <name>] [--workspace <slug>] [--workspace-name <name>] [--force]
 ```
 
-| Flag | Meaning |
-|---|---|
-| `dir` | target directory (default: current) |
-| `--db` | database driver written to `.env` |
-| `--pm` | package manager used for the install step |
-| `--no-demo` | skip `projects/demo-shop` |
-| `--claude` | also write `.claude/agents` and `.mcp.json` |
+| Flag                              | Meaning                                                                                      |
+| --------------------------------- | -------------------------------------------------------------------------------------------- |
+| `dir`                             | target directory (default: current directory; must be empty unless `--force`)                |
+| `--db`                            | database driver written to `.env.example` (`sqlite` needs no setup)                          |
+| `--pm`                            | package manager used for the install step and printed in next steps                          |
+| `--no-demo`                       | skip copying `projects/demo-shop`                                                            |
+| `--claude`                        | run `automax agent install-claude` afterwards (`.claude/agents`, `.mcp.json`)                |
+| `--from <app>`                    | analyze an application repository and create a project from it (`automax analyze --apply`)   |
+| `--git`                           | `git init` plus an initial commit                                                            |
+| `--link`                          | depend on the local AutoMax packages instead of the npm registry (developing AutoMax itself) |
+| `--no-install` / `--no-browsers`  | skip `bun install` / `playwright install chromium`                                           |
+| `--org`, `--org-name`             | organization written to `automax.workspace.yaml` (default `default`)                         |
+| `--workspace`, `--workspace-name` | first workspace (default `default`)                                                          |
 
-Creates `package.json`, `automax.workspace.yaml`, `playwright.config.ts`, `.env.example`, `docker-compose.yml`, the demo project, then runs the install and `playwright install --with-deps chromium`.
+What gets created:
+
+| File                         | Purpose                                                                                                                                            |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `package.json`               | depends on `@automax/cli`, `@automax/core`, `@playwright/test`, `playwright-bdd`; scripts `test`, `test:api`, `test:ui`, `lint`, `serve`, `doctor` |
+| `automax.workspace.yaml`     | organization, workspaces, `defaultWorkspace`, default processes (`pr-check`, `nightly-regression`, `release-gate`)                                 |
+| `playwright.config.ts`       | generated from the project registry (project × layer × browser)                                                                                    |
+| `tsconfig.json`              | strict NodeNext config covering `projects/**`                                                                                                      |
+| `.env.example`, `.gitignore` | secrets template and ignores (`.automax/`, `.auth/`, `.env.*`)                                                                                     |
+| `docker-compose.yml`         | Postgres 16 and the optional server                                                                                                                |
+| `projects/demo-shop/`        | the reference project (unless `--no-demo`)                                                                                                         |
+| `.claude/skills/`            | `automax-record` and `automax-run` skills                                                                                                          |
 
 ```bash
-npx automax init my-tests && cd my-tests && automax run -p demo-shop -e local -t @smoke
+npx automax init my-tests --org acme --workspace web && cd my-tests
+bun run automax doctor
+bun run automax workspace tree
+bun run automax run -p demo-shop -e staging -l api
 ```
+
+Exit code `2` when the directory is not empty (use `--force`) or a flag value is invalid.

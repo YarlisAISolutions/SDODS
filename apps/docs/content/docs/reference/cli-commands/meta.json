@@ -8,13 +8,17 @@
     "config",
     "doctor",
     "run",
+    "watch",
     "lint",
     "steps-features-coverage",
     "record-har-auth",
     "data-db",
     "report-heal-insights",
+    "trace",
     "agent-proposals",
     "mcp-serve",
-    "users-tokens-schedule-integrations"
+    "users-tokens-schedule-integrations",
+    "completion",
+    "upgrade"
   ]
 }

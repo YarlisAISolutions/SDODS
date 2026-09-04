@@ -1,0 +1,21 @@
+---
+title: automax upgrade
+description: Compare installed @automax/* packages with the npm registry and optionally install the latest.
+---
+
+```text
+automax upgrade [--apply] [--pm bun|pnpm|npm] [--json]
+```
+
+| Column    | Meaning                                                                                         |
+| --------- | ----------------------------------------------------------------------------------------------- |
+| installed | version found in `node_modules/<package>/package.json`                                          |
+| latest    | `dist-tag latest` from the registry (`NPM_CONFIG_REGISTRY` is honoured)                         |
+| status    | `up-to-date`, `outdated`, `not-installed`, or `unavailable` when the registry cannot be reached |
+
+`--apply` runs `bun add` / `pnpm add` / `npm install` for every outdated package; the manager is detected from the lockfile unless `--pm` is given. Nothing is written without `--apply`.
+
+```bash
+automax upgrade
+automax upgrade --apply
+```
