@@ -9,6 +9,7 @@ import { TypeTable } from 'fumadocs-ui/components/type-table';
 import { Mermaid } from '@/components/mermaid';
 import { Planned } from '@/components/planned';
 import { Learn } from '@/components/learn';
+import { Screenshot } from '@/components/screenshot';
 
 export function getMDXComponents(components?: MDXComponents): MDXComponents {
   return {
@@ -25,6 +26,7 @@ export function getMDXComponents(components?: MDXComponents): MDXComponents {
     Mermaid,
     Planned,
     Learn,
+    Screenshot,
     ...components,
   };
 }

@@ -6,28 +6,41 @@ description: Record sessions, manage HAR files and capture login state.
 ## `record` (alias `codegen`)
 
 ```text
-automax record -p <slug> -e <env> [--name <name>] [--url <path>] [--user <role>] [--device <name>]
-               [--browser <name>] [--save-har] [--viewport <WxH>] [--no-post-process]
-automax record convert <spec>... [--dry-run]
+automax record -p <slug> -e <env> [--name <name>] [--url <route|path|url>] [--device <name>] [--user <role>]
+               [-b <browser>] [--save-har] [--har-glob <glob>] [--viewport <WxH>] [--tag <tag>]... [--no-post-process]
+automax record convert <spec> [--dry-run] [--adapter claude|openai|fake]
 ```
 
-<Planned phase={6} />
+| Flag                       | Meaning                                                                                         |
+| -------------------------- | ----------------------------------------------------------------------------------------------- |
+| `--name <name>`            | recording name → `recorded/<name>.spec.ts` (default `rec-<timestamp>`)                          |
+| `--url <route\|path\|url>` | route name from the project YAML, a path, or an absolute URL (default `/`)                      |
+| `--device <name>`          | Playwright device, e.g. `"iPhone 15"`                                                           |
+| `--user <role>`            | lease a pool user of this role and start logged in (storage state)                              |
+| `-b, --browser <name>`     | `chromium` (default), `firefox`, `webkit`                                                       |
+| `--save-har`               | also capture network into `har/<env>/<name>.har`; `--har-glob` limits the URLs (default `**/*`) |
+| `--viewport <WxH>`         | viewport such as `1280x720` (ignored with `--device`)                                           |
+| `--tag <tag>`              | extra tag for the recorded spec; repeatable                                                     |
+| `--no-post-process`        | keep the raw codegen output                                                                     |
+
+Post-processing rewrites the import to the AutoMax fixtures, turns absolute URLs of the environment into routes, wraps the test in `test.describe` with `@recorded @ui @regression`, adds a header comment with the re-record command and marks CSS/XPath locators as fragile. `record convert` asks the generator agent for a feature + steps proposal that a person reviews.
 
 ## `har`
 
 ```text
-automax har record -p <slug> -e <env> [-t <expr>] [--interactive --name <name>]
-automax har replay -p <slug> -e <env> [-t <expr>] [--strict]
-automax har list -p <slug>
+automax har record -p <slug> -e <env> [-t <expr>] [-l <layer>]... [-b <browser>]...
+automax har record -p <slug> -e <env> --interactive --name <name> [--url <route|path|url>] [--har-glob <glob>]
+automax har replay -p <slug> -e <env> [-t <expr>] [-l <layer>]... [-b <browser>]... [--strict] [-w <n>]
+automax har list -p <slug> [-e <env>]
 ```
 
-<Planned phase={6} />
+`record` runs the `@har:<name>` scenarios in update mode (or opens codegen with `--save-har` in interactive mode). `replay` runs them from their HAR files; `--strict` aborts requests missing from the HAR and blocks every other network call, which is how CI runs offline. Files live under `projects/<slug>/har/<env>/<name>.har` with a `.har.json` sidecar.
 
 ## `auth`
 
 ```text
-automax auth capture -p <slug> -e <env> --user <role> [--index <n>|--all] [--interactive]
+automax auth capture -p <slug> -e <env> [-u <role>] [--index <n> | --all] [--interactive] [-b <browser>] [--headed] [--force]
 automax auth list -p <slug> -e <env>
 ```
 
-<Planned phase={3} />
+`capture` logs in as pool users with the project's auth strategy (`form`, `token`, `oauth-client-credentials`; `sso` needs `--interactive`) and stores storage state under `projects/<slug>/.auth/<env>/<role>-<n>.json` with a sidecar recording when it was captured. `list` shows cached states and their age. Cached states are refreshed automatically when their cookies expire or `auth.maxAgeMinutes` passes.

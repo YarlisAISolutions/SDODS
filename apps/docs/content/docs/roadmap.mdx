@@ -1,25 +1,40 @@
 ---
 title: Roadmap
-description: The phased plan and what is shipped.
+description: The phased plan, what is shipped, and how it was verified.
 ---
 
-Each phase ends runnable. Status is updated with every release; commands documented for an unshipped phase carry a badge.
+Every phase ends runnable. All thirteen phases are implemented; the numbers below come from the verification run on 2026-09-04 against the demo project.
 
-| Phase | Scope                                                          | Status      |
-| ----- | -------------------------------------------------------------- | ----------- |
-| 0     | Monorepo, config precedence, registry, CLI skeleton            | done        |
-| 1     | API layer end to end (no browser), `run`, `lint`, step library | in progress |
-| 2     | UI layer, page objects, self-healing, dashboard                | in progress |
-| 3     | Data providers, user pool, auth capture, hybrid                | in progress |
-| 4     | Screenshot narratives, NDJSON                                  | in progress |
-| 5     | Database, ingest, switch                                       | in progress |
-| 6     | Recorder and HAR                                               | planned     |
-| 7     | MCP server                                                     | planned     |
-| 8     | Agents and insights                                            | planned     |
-| 9     | Server, scheduler                                              | planned     |
-| 10    | Web UI                                                         | planned     |
-| 11    | GitHub, Jira, CI workflows                                     | in progress |
-| 12    | Onboarding analysis, processes, cross-browser matrix           | planned     |
-| 13    | Documentation site, packaging, `automax init`                  | in progress |
+| Phase | Scope                                                          | Status |
+| ----- | -------------------------------------------------------------- | ------ |
+| 0     | Monorepo, config precedence, registry, CLI skeleton            | done   |
+| 1     | API layer end to end (no browser), `run`, `lint`, step library | done   |
+| 2     | UI layer, page objects, self-healing, dashboard                | done   |
+| 3     | Data providers, user pool, auth capture, hybrid                | done   |
+| 4     | Screenshot narratives, NDJSON                                  | done   |
+| 5     | Database (SQLite ⇄ Postgres), ingest, switch                   | done   |
+| 6     | Recorder and HAR                                               | done   |
+| 7     | MCP server                                                     | done   |
+| 8     | Agents and insights                                            | done   |
+| 9     | Server, scheduler                                              | done   |
+| 10    | Web UI                                                         | done   |
+| 11    | GitHub, Jira, CI workflows                                     | done   |
+| 12    | Onboarding analysis, processes, cross-browser matrix           | done   |
+| 13    | Documentation site, packaging, `automax init`                  | done   |
 
-Details for every phase, including verification commands, live in `docs/ARCHITECTURE.md` in the repository.
+## Verification
+
+| Check                                                                                     | Result                                  |
+| ----------------------------------------------------------------------------------------- | --------------------------------------- |
+| Unit and CLI end-to-end tests (vitest)                                                    | 146 passed                              |
+| Web UI component tests                                                                    | 9 passed                                |
+| Demo `@smoke or @sanity` on chromium, firefox and webkit                                  | 23 passed, 0 failed                     |
+| Demo `@regression` on chromium (before/after screenshots)                                 | 27 passed, 0 failed                     |
+| Demo API layer (no browser)                                                               | 10 passed                               |
+| `tsc -b`, ESLint, Prettier                                                                | clean                                   |
+| Documentation build                                                                       | 75 pages, 2873 internal links, 0 broken |
+| Server smoke: migrate, sync hierarchy, login, workspaces with roles, `/mcp` without token | ok, 401 as expected                     |
+
+## What comes next
+
+Open items are tracked on the [Known limitations](/docs/reference/known-limitations) page and in the repository's issues. Details for every phase, including the verification commands, live in `docs/ARCHITECTURE.md`.

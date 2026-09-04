@@ -1,28 +1,40 @@
 ---
 title: automax lint
-description: Validate feature files against Gherkin syntax, the tag taxonomy and step definitions.
+description: Validate feature files against Gherkin syntax, the tag taxonomy, module rules and step definitions.
 ---
 
 ```text
-automax lint [paths...] -p <slug> [--fix-tags] [--json] [--no-undefined]
+automax lint [paths...] [-p <slug>] [--undefined-steps] [--fix-tags] [--strict] [--file <path>]...
 ```
+
+| Flag                   | Meaning                                               |
+| ---------------------- | ----------------------------------------------------- |
+| `-p, --project <slug>` | project slug (default: every project)                 |
+| `--undefined-steps`    | also detect undefined steps through `bddgen` (slower) |
+| `--fix-tags`           | insert the layer or module tag suggested by a finding |
+| `--strict`             | treat warnings as errors                              |
+| `--file <path>`        | lint only this feature file; repeatable               |
 
 Rules:
 
 | Rule                                                                        | Severity                             |
 | --------------------------------------------------------------------------- | ------------------------------------ |
 | Gherkin parse error                                                         | error                                |
-| not exactly one layer tag                                                   | error                                |
+| not exactly one layer tag (`@ui`, `@api`, `@hybrid`)                        | error                                |
 | not exactly one suite tag from `tags.suites`                                | error                                |
 | `@user:`, `@data:`, `@env:`, `@har:`, `@skip:` value unknown to the project | error                                |
 | `@jira:` / `@github:` pattern invalid                                       | error                                |
 | duplicate scenario titles in a feature                                      | error                                |
-| undefined step (via `bddgen` with `missingSteps: fail-on-gen`)              | error, skipped with `--no-undefined` |
+| undefined step                                                              | error, only with `--undefined-steps` |
 | Scenario Outline without a `# title-format:` comment                        | warning                              |
 | unknown tag                                                                 | warning                              |
-| module expects a tag the scenario lacks                                     | warning                              |
+| feature outside every declared module directory                             | warning                              |
+| scenario lacks a tag its module expects                                     | warning                              |
 | unused step definition                                                      | warning                              |
 
-`--fix-tags` inserts a missing layer tag when the folder name makes it unambiguous. Exit code `3` on errors.
+`automax run` lints first unless `--no-lint` is given. Exit code `3` on errors.
 
-<Planned phase={1} />
+```bash
+bun run automax lint -p demo-shop
+bun run automax lint -p demo-shop --undefined-steps --strict
+```

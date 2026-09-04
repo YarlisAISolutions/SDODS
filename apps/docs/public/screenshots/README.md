@@ -1,16 +1,17 @@
-# Screenshots used by the docs
+# Screenshots
 
-The images in this folder are **generated**, not hand-made. `scripts/collect-screenshots.ts` runs before
-every docs build and copies from the most recent demo run:
+Real product output, refreshed by `scripts/collect-screenshots.ts` before every docs build:
 
-- `.automax/runs/<runId>/demo-shop/<fingerprint>/r0/scenario-start.png` → `scenario-start.png`
-- `.automax/runs/<runId>/demo-shop/<fingerprint>/r0/NN-before.png` and `NN-after.png` → `step-before.png`, `step-after.png`
-- `.automax/runs/<runId>/dashboard/index.html` → `dashboard.html`
+- `scenario-start.png`, `scenario-end.png`, `step-NN-before.png`, `step-NN-after.png` — captures of one
+  scenario from the newest demo run that has per-step screenshots (a `@regression` run produces them;
+  `step-before.png` / `step-after.png` are aliases of the first pair). `manifest.json` records which run
+  and scenario they came from.
+- `dashboard.html` — the AutoMax dashboard of that run (regenerated, not committed).
+- `ui/*.png` — pages of the web UI rendered against the mock API by `packages/web/scripts/screenshot.ts`.
 
-`manifest.json` records which run they came from. If no run exists yet the script keeps whatever is
-here and the pages fall back to their descriptive text. To refresh the images:
+PNG files are committed on purpose; keep them under ~400 KB. Regenerate with:
 
 ```bash
-bun run automax run -p demo-shop -e staging -l ui -b chromium -t @regression
-bun run docs:build
+bun run automax run -p demo-shop -e staging -b chromium -t @regression
+node --import tsx apps/docs/scripts/collect-screenshots.ts
 ```

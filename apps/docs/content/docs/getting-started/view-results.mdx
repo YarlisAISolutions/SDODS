@@ -42,19 +42,27 @@ The suite tag chooses the policy:
 
 API steps attach `request.json` and `response.json` instead of images.
 
-The images below come from the latest demo run and are refreshed on every docs build (see `public/screenshots/README.md`); grey placeholders appear until a run has happened.
+The images below are the real output of the scenario "Add a product to the cart" from a `@regression` run on chromium (policy `step`); they are refreshed from the latest run on every docs build.
 
-<ImageZoom
-  src="/AutoMax/screenshots/scenario-start.png"
-  alt="Scenario start: the SauceDemo login page captured by the scenario policy"
-  width={960}
-  height={540}
+<Screenshot
+  src="/screenshots/step-02-before.png"
+  alt="Before the login step: the SauceDemo login form"
+  caption="02-before.png — before `When I login with 'standard_user'`"
 />
-<ImageZoom
-  src="/AutoMax/screenshots/step-after.png"
-  alt="After a step: the inventory page with one item in the cart"
-  width={960}
-  height={540}
+<Screenshot
+  src="/screenshots/step-02-after.png"
+  alt="After the login step: the inventory page"
+  caption="02-after.png — the same step, after"
+/>
+<Screenshot
+  src="/screenshots/step-03-before.png"
+  alt="Before adding the product: inventory with an empty cart"
+  caption="03-before.png — before `When I add 'Sauce Labs Backpack' to the cart`"
+/>
+<Screenshot
+  src="/screenshots/step-03-after.png"
+  alt="After adding the product: the cart badge shows 1"
+  caption="03-after.png — the cart badge now shows 1"
 />
 
 ## Reports
@@ -74,10 +82,15 @@ bun run automax trace <runId>              # trace viewer for the run's traces
 
 ## The run viewer
 
-<Planned phase={10} />
 The web UI pairs before and after images with a slider, an overlay, side-by-side panes or a
 server-side pixel diff, shows API request and response panels, heal call-outs and a link to the
 trace.
+
+<Screenshot
+  src="/screenshots/ui/scenario-steps.png"
+  alt="Step timeline in the web UI with the before/after slider, badges and the attempt switcher"
+  caption="The step timeline with the before/after slider."
+/>
 
 ## Next steps
 

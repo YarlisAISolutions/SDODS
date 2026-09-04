@@ -12,22 +12,23 @@ description: The four-level hierarchy AutoMax uses to organise automation across
 
 ```mermaid
 flowchart TB
-  O["Organization<br/>automax.workspace.yaml → organization"] --> W["Workspace<br/>automax.workspace.yaml → workspace<br/>one per repository"]
+  O["Organization<br/>automax.workspace.yaml → organization"] --> W["Workspace default<br/>automax.workspace.yaml → workspaces[]<br/>several per organization"]
   W --> P1["Project demo-shop<br/>projects/demo-shop/automax.project.yaml"]
-  W --> P2["Project billing"]
+  O --> W2["Workspace platform-qa"]
+  W2 --> P2["Project (opt in with workspace: platform-qa)"]
   P1 --> M1["Module auth<br/>features/auth/"]
   P1 --> M2["Module inventory<br/>features/inventory/"]
   P1 --> M3["Module cart<br/>features/cart/"]
-  P1 --> M4["Module posts-api<br/>features/posts-api/"]
+  P1 --> M4["Module posts-api<br/>features/api/"]
   P1 --> M5["Module hybrid<br/>features/hybrid/"]
 ```
 
-| Level        | Declared in                               | Holds                                                                                                                                           |
-| ------------ | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| Organization | `automax.workspace.yaml` → `organization` | a company or product line; membership roles `member`, `admin`, `owner`                                                                          |
-| Workspace    | `automax.workspace.yaml` → `workspace`    | one repository of projects; defaults for browsers, suites, test-id attribute and shared processes; membership roles `viewer`, `editor`, `admin` |
-| Project      | `projects/<slug>/automax.project.yaml`    | one application: layers, browsers, environments, data, auth, screenshots, modules, processes                                                    |
-| Module       | `modules:` inside the project YAML        | one functional area: a folder under `features/`, its testing types, expected tags, owner, Jira component, routes and endpoints                  |
+| Level        | Declared in                               | Holds                                                                                                                                                                                                                                                    |
+| ------------ | ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Organization | `automax.workspace.yaml` → `organization` | a company or product line; membership roles `member`, `admin`, `owner`                                                                                                                                                                                   |
+| Workspace    | `automax.workspace.yaml` → `workspaces[]` | a team or product area; an organization holds many, and `defaultWorkspace` names the one projects join unless they set `workspace:`; defaults for browsers, suites, test-id attribute and shared processes; membership roles `viewer`, `editor`, `admin` |
+| Project      | `projects/<slug>/automax.project.yaml`    | one application: layers, browsers, environments, data, auth, screenshots, modules, processes                                                                                                                                                             |
+| Module       | `modules:` inside the project YAML        | one functional area: a folder under `features/`, its testing types, expected tags, owner, Jira component, routes and endpoints                                                                                                                           |
 
 ## The workspace file
 
@@ -36,10 +37,14 @@ organization:
   slug: automax
   name: AutoMax
   url: https://github.com/siri1410/AutoMax
-workspace:
-  slug: default
-  name: Default workspace
-  organization: automax
+workspaces:
+  - slug: default
+    name: Default workspace
+    organization: automax
+  - slug: platform-qa
+    name: Platform QA
+    organization: automax
+defaultWorkspace: default
 defaults:
   browsers: [chromium, firefox, webkit]
   suites: [smoke, regression, sanity]
@@ -55,7 +60,7 @@ defaults:
       }
 ```
 
-Projects inherit `defaults` and may override any of them. A project names its workspace and organization with `organization:` and `workspace:` keys; when omitted, the repository's workspace file applies.
+Projects inherit `defaults` and may override any of them. A project joins a workspace with `workspace: <slug>` (one of `workspaces[]`); when omitted it joins `defaultWorkspace`. `organization:` must match the file's organization. `automax workspace tree` prints the result, and `automax db sync` mirrors it into the database so the web UI can show workspaces with each user's effective role.
 
 ## Modules
 
@@ -67,28 +72,36 @@ modules:
     title: Authentication
     path: auth # features/auth/ (default: the module name)
     layers: [ui]
-    testingTypes: [functional, smoke, regression, security]
-    tags: ['@ui']
-    owner: platform-team
-    jiraComponent: Auth
+    testingTypes: [functional, smoke, regression, data-driven]
+    tags: ['@auth']
     routes: [login]
   - name: inventory
-    testingTypes: [functional, regression, visual, accessibility, performance]
-    tags: ['@ui']
+    title: Inventory
+    path: inventory
+    layers: [ui]
+    testingTypes: [functional, regression, visual, accessibility]
+    tags: ['@inventory']
     routes: [inventory]
   - name: cart
-    testingTypes: [functional, regression, data-driven]
-    tags: ['@ui', '@pool']
+    title: Cart
+    path: cart
+    layers: [ui]
+    testingTypes: [functional, regression]
+    tags: ['@cart']
     routes: [cart, checkout]
   - name: posts-api
+    title: Posts API
+    path: api
     layers: [api]
-    testingTypes: [functional, contract, integration]
-    tags: ['@api']
-    endpoints: ['GET /posts', 'POST /posts', 'PUT /posts/{id}', 'DELETE /posts/{id}']
+    testingTypes: [functional, contract, smoke, regression]
+    tags: ['@posts']
+    endpoints: ['/posts', '/posts/{id}', '/posts/{id}/comments']
   - name: hybrid
+    title: Hybrid flows
+    path: hybrid
     layers: [hybrid]
     testingTypes: [integration]
-    tags: ['@hybrid']
+    tags: ['@hybrid-demo']
 ```
 
 What a module gives you:

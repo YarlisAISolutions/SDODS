@@ -2,6 +2,7 @@
 .next/
 out/
 next-env.d.ts
-public/screenshots/*.png
-public/screenshots/*.html
+# Screenshots are committed on purpose (they are the product's face); the manifest and
+# the copied dashboard HTML are regenerated on every build.
 public/screenshots/manifest.json
+public/screenshots/dashboard.html

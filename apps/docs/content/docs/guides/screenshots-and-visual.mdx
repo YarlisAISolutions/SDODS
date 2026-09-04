@@ -48,19 +48,22 @@ Each file is also attached to the Playwright test with a stable name (`automax/s
 
 ## Sample output
 
-The images below are copied from the latest demo run when the docs are built (see `public/screenshots/README.md`); they refresh on every build and are absent until a run has happened.
+The images below are copied from the latest demo run when the docs are built (scenario "Add a product to the cart", chromium, policy `step`).
 
-<ImageZoom
-  src="/AutoMax/screenshots/step-before.png"
+<Screenshot
+  src="/screenshots/step-03-before.png"
   alt="Before: the inventory page before adding a product to the cart"
-  width={960}
-  height={540}
+  caption="03-before.png"
 />
-<ImageZoom
-  src="/AutoMax/screenshots/step-after.png"
+<Screenshot
+  src="/screenshots/step-03-after.png"
   alt="After: the cart badge shows one item"
-  width={960}
-  height={540}
+  caption="03-after.png"
+/>
+<Screenshot
+  src="/screenshots/scenario-end.png"
+  alt="Scenario end capture"
+  caption="scenario-end.png — every policy except on-failure records the end state"
 />
 
 ## Visual baselines

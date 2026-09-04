@@ -1,45 +1,54 @@
 ---
-title: automax steps, features, coverage, browsers, processes
-description: Inventory commands for a project.
+title: automax steps, features, coverage, browsers, processes, workspace
+description: Inventory commands for a project and its hierarchy.
 ---
 
 ## `steps list`
 
 ```text
-automax steps list -p <slug> [--unused] [--json]
+automax steps list -p <slug> [--unused] [--grep <text>]
 ```
 
-Lists every step definition available to the project (shared library plus project steps) from `bddgen export`. <Planned phase={1} />
+Lists every step definition available to the project (shared library plus project steps) as seen by `bddgen export`. `--unused` keeps only steps no feature uses; `--grep` filters by substring.
 
 ## `features list`
 
 ```text
-automax features list -p <slug> [--tags <expr>] [--json]
+automax features list -p <slug> [--tags <expr>] [--scenarios]
 ```
 
-Lists feature files and scenarios with their tags and modules. <Planned phase={1} />
+One row per feature with module, layer, suite, scenario count and tags; `--scenarios` prints one row per scenario. `--tags` accepts a simple `@tag` filter.
 
 ## `coverage`
 
 ```text
-automax coverage -p <slug> [--routes] [--openapi] [--json]
+automax coverage -p <slug> [-e <env>] [--openapi [file]] [--routes] [--endpoints] [--roles] [--uncovered]
 ```
 
-Joins routes and endpoints (from modules and the analyzer) with scenarios per suite tag. <Planned phase={12} />
+Joins the routes declared in the project YAML and its modules, the module endpoints (and, with `--openapi`, the paths of the spec named by `env.api.openapi` or the given file) and the pool roles with the scenarios that reference them, split by suite tag. Exit code `1` when a module has no covered target.
 
 ## `browsers`
 
 ```text
-automax browsers install [--with-deps] [--browser <name>]...
-automax browsers list
+automax browsers install [-b <name>]... [--with-deps] [-p <slug>]
+automax browsers list [-p <slug>]
 ```
 
-Wraps `playwright install`. <Planned phase={12} />
+`install` wraps `playwright install` (default engines: chromium, firefox, webkit; `--with-deps` adds OS packages on Linux CI; `-p` installs what a project declares). `list` shows which engines are installed and where, including the mobile emulation mappings.
 
 ## `processes list`
 
 ```text
-automax processes list -p <slug> [--json]
+automax processes list -p <slug>
 ```
 
-Lists processes from the workspace defaults and the project, with trigger, tags, browsers and gates. <Planned phase={12} />
+Processes visible to a project: workspace defaults overridden by same-named project processes, with trigger, tags, layers, browsers, environment, gates and schedule.
+
+## `workspace`
+
+```text
+automax workspace tree
+automax workspace list
+```
+
+`tree` prints organization → workspaces → projects → modules → processes from `automax.workspace.yaml` and `projects/*`; `list` shows the workspaces with their project counts and marks the default one. Both accept `--json`.
