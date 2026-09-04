@@ -5,7 +5,7 @@ import {
   scenarioFiles,
   type ScenarioShotPhase,
   type StepShotPhase,
-} from '@automax/contracts';
+} from '@sdods/contracts';
 import { Logger } from '../logger.js';
 import type { ScenarioMeta } from '../fixtures/scenario.js';
 import type { ShotPolicyResolved } from './policy.js';

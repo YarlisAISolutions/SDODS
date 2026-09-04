@@ -10,12 +10,12 @@ import {
   type RunRecord,
   type RunTotals,
   type SuiteStatus,
-} from '@automax/contracts';
+} from '@sdods/contracts';
 import type { RunSummaryInput, ScenarioSummary, ScreenshotRef, StepSummary } from './types.js';
 
 /**
- * Build a RunSummaryInput from the files in a run directory (`.automax/runs/<runId>`), so
- * `automax integrations notify --from-files` works without a database.
+ * Build a RunSummaryInput from the files in a run directory (`.sdods/runs/<runId>`), so
+ * `sdods integrations notify --from-files` works without a database.
  * Reads run.json (manifest), summary.json (optional totals) and messages*.ndjson (cucumber messages).
  */
 export function buildRunSummaryFromFiles(

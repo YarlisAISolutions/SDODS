@@ -1,6 +1,6 @@
 import { relative } from 'node:path';
 import type { Command } from 'commander';
-import { listFeatureFiles, parseFeatureFile, scenariosOf } from '@automax/core';
+import { listFeatureFiles, parseFeatureFile, scenariosOf } from '@sdods/core';
 import { createContext } from '../context.js';
 import { json, table } from '../ui.js';
 

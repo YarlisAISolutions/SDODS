@@ -8,7 +8,7 @@ function Frame({ title, children }: { title: string; children: React.ReactNode }
   return (
     <div className="flex h-full items-center justify-center p-6">
       <div className="panel w-full max-w-sm p-6">
-        <img src="/automax-logo.svg" alt="AutoMax" className="mx-auto mb-4 h-12" />
+        <img src="/sdods-logo.svg" alt="SDODS" className="mx-auto mb-4 h-12" />
         <h1 className="mb-4 text-center text-base font-semibold">{title}</h1>
         {children}
       </div>
@@ -63,7 +63,7 @@ export function LoginPage() {
           {busy ? 'Signing in…' : 'Sign in'}
         </Button>
         <p className="muted text-center text-[11px]">
-          No account yet? Ask an admin, or run <code>automax users create</code>.
+          No account yet? Ask an admin, or run <code>sdods users create</code>.
         </p>
       </form>
     </Frame>

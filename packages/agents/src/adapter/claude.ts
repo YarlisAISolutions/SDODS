@@ -38,7 +38,7 @@ export class ClaudeAdapter implements LlmAdapter {
   readonly defaultModel: string;
 
   constructor(private readonly opts: ClaudeAdapterOptions = {}) {
-    this.defaultModel = opts.model ?? process.env.AUTOMAX_CLAUDE_MODEL ?? DEFAULT_MODELS.claude;
+    this.defaultModel = opts.model ?? process.env.SDODS_CLAUDE_MODEL ?? DEFAULT_MODELS.claude;
   }
 
   private ensureKey(): string {
@@ -118,7 +118,7 @@ export class ClaudeAdapter implements LlmAdapter {
       ),
     );
     const mcpServers: Record<string, unknown> = {
-      automax: sdk.createSdkMcpServer({ name: 'automax', version: '0.1.0', tools }),
+      sdods: sdk.createSdkMcpServer({ name: 'sdods', version: '0.1.0', tools }),
     };
     if (this.opts.withPlaywrightMcp !== false)
       mcpServers.playwright = {
@@ -153,7 +153,7 @@ export class ClaudeAdapter implements LlmAdapter {
           'Read',
           'Glob',
           'Grep',
-          'mcp__automax__*',
+          'mcp__sdods__*',
           'mcp__playwright__*',
           ...Object.keys(o.mcpServers ?? {}).map((n) => `mcp__${n}__*`),
         ],
@@ -169,7 +169,7 @@ export class ClaudeAdapter implements LlmAdapter {
         mcpServers,
         canUseTool: async () => ({
           behavior: 'deny',
-          message: 'AutoMax agents may only use MCP tools and read-only file tools.',
+          message: 'SDODS agents may only use MCP tools and read-only file tools.',
         }),
       },
     });
@@ -201,7 +201,7 @@ export class ClaudeAdapter implements LlmAdapter {
   }
 }
 
-/** Convert Claude Agent SDK messages into AutoMax agent events. */
+/** Convert Claude Agent SDK messages into SDODS agent events. */
 export function normalize(msg: Record<string, any>): AgentEvent[] {
   const out: AgentEvent[] = [];
   switch (msg?.type) {

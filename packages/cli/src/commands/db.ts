@@ -3,13 +3,13 @@ import { join, resolve } from 'node:path';
 import type { Command } from 'commander';
 import pc from 'picocolors';
 import { parse as parseYaml } from 'yaml';
-import { WorkspaceFileSchema } from '@automax/contracts';
-import { AutomaxError } from '@automax/core';
+import { WorkspaceFileSchema } from '@sdods/contracts';
+import { SdodsError } from '@sdods/core';
 import { createContext } from '../context.js';
 import { json, ok, out, table, warn } from '../ui.js';
 
 async function loadDb() {
-  return import('@automax/db');
+  return import('@sdods/db');
 }
 
 export function register(program: Command) {
@@ -83,12 +83,12 @@ export function register(program: Command) {
     });
 
   db.command('reset')
-    .description('Drop every AutoMax table (sqlite only)')
+    .description('Drop every SDODS table (sqlite only)')
     .option('--yes', 'confirm')
     .action(async (opts, cmd) => {
       const ctx = createContext(cmd);
       if (!opts.yes)
-        throw new AutomaxError('NOT_SUPPORTED', 'db reset is destructive; pass --yes to confirm.', {
+        throw new SdodsError('NOT_SUPPORTED', 'db reset is destructive; pass --yes to confirm.', {
           exitCode: 2,
         });
       const m = await loadDb();
@@ -116,14 +116,14 @@ export function register(program: Command) {
     .action(async (target: string, opts, cmd) => {
       const ctx = createContext(cmd);
       if (target !== 'sqlite' && target !== 'postgres') {
-        throw new AutomaxError(
+        throw new SdodsError(
           'NOT_SUPPORTED',
           `Unknown target "${target}"; use sqlite or postgres.`,
           { exitCode: 2 },
         );
       }
       if (!opts.dryRun && !opts.yes) {
-        throw new AutomaxError(
+        throw new SdodsError(
           'NOT_SUPPORTED',
           'db switch rewrites .env; pass --yes (or --dry-run to preview).',
           { exitCode: 2 },
@@ -204,7 +204,7 @@ export function register(program: Command) {
     .action(async (opts, cmd) => {
       const ctx = createContext(cmd);
       if (!opts.keepRuns && !opts.keepDays) {
-        throw new AutomaxError('NOT_SUPPORTED', 'Pass --keep-runs and/or --keep-days.', {
+        throw new SdodsError('NOT_SUPPORTED', 'Pass --keep-runs and/or --keep-days.', {
           exitCode: 2,
         });
       }
@@ -215,7 +215,7 @@ export function register(program: Command) {
           keepRuns: opts.keepRuns ? Number(opts.keepRuns) : undefined,
           keepDays: opts.keepDays ? Number(opts.keepDays) : undefined,
           projectSlug: opts.project,
-          artifactsRoot: join(ctx.rootDir, process.env.AUTOMAX_ARTIFACTS_DIR ?? '.automax/runs'),
+          artifactsRoot: join(ctx.rootDir, process.env.SDODS_ARTIFACTS_DIR ?? '.sdods/runs'),
           dryRun: Boolean(opts.dryRun),
         });
         if (ctx.opts.json) return json(res);
@@ -240,7 +240,7 @@ export function register(program: Command) {
       const adb = m.createDb();
       try {
         await m.migrateToLatest(adb);
-        const wsFile = join(ctx.rootDir, 'automax.workspace.yaml');
+        const wsFile = join(ctx.rootDir, 'sdods.workspace.yaml');
         const workspaceFile = existsSync(wsFile)
           ? WorkspaceFileSchema.parse(parseYaml(readFileSync(wsFile, 'utf8')))
           : null;

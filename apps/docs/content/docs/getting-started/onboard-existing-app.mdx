@@ -1,17 +1,17 @@
 ---
 title: Onboard an existing app
-description: Point AutoMax at an application repository and get a working project.
+description: Point SDODS at an application repository and get a working project.
 ---
 
 <Learn>
-  How `automax analyze` reads an application repository, what it detects, what it proposes, and how
-  to turn the proposal into a project you can run immediately.
+  How `sdods analyze` reads an application repository, what it detects, what it proposes, and how to
+  turn the proposal into a project you can run immediately.
 </Learn>
 
 ## Analyze
 
 ```bash
-bun run automax analyze ../my-app
+bun run sdods analyze ../my-app
 ```
 
 The analyzer is read-only. It scans the repository and reports, with evidence and a confidence score:
@@ -25,13 +25,13 @@ The analyzer is read-only. It scans the repository and reports, with evidence an
 - login pages and authentication libraries
 - environment files, base URLs, Docker Compose ports, CI provider, locales, accessibility tooling
 
-The output is `automax-analysis.json` plus a readable report containing a proposed `automax.project.yaml`, `envs/*.yaml`, a starter feature per route group and per OpenAPI tag, a coverage map and a best-practice checklist.
+The output is `sdods-analysis.json` plus a readable report containing a proposed `sdods.project.yaml`, `envs/*.yaml`, a starter feature per route group and per OpenAPI tag, a coverage map and a best-practice checklist.
 
 ## Apply
 
 ```bash
-bun run automax analyze ../my-app --apply
-bun run automax run -p my-app -e local -t @smoke
+bun run sdods analyze ../my-app --apply
+bun run sdods run -p my-app -e local -t @smoke
 ```
 
 `--apply` writes the project. The generated `@smoke` scenarios are health checks that pass on a reachable application, so the first run is green and you extend from there.
@@ -41,7 +41,7 @@ bun run automax run -p my-app -e local -t @smoke
 `project create` exists today:
 
 ```bash
-bun run automax project create my-app \
+bun run sdods project create my-app \
   --ui-url http://localhost:3000 \
   --api-url http://localhost:3000/api \
   --env local
@@ -52,7 +52,7 @@ It scaffolds the YAML, an environment, fixtures, an authentication stub, a page 
 ## Coverage
 
 ```bash
-bun run automax coverage -p my-app --routes --openapi
+bun run sdods coverage -p my-app --routes --openapi
 ```
 
 `coverage` joins the route and endpoint inventory with your features to show what each suite tag exercises.

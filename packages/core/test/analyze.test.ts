@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { parse } from 'yaml';
-import { ProjectConfigSchema } from '@automax/contracts';
+import { ProjectConfigSchema } from '@sdods/contracts';
 import { analyzeProject } from '../src/analyze/analyze.js';
 import { proposeProject, slugify } from '../src/analyze/propose.js';
 import { applyProposal, importPlaywrightSpecs } from '../src/analyze/apply.js';
@@ -167,7 +167,7 @@ describe('proposeProject', () => {
 
 describe('applyProposal + importPlaywrightSpecs', () => {
   it('writes a project the registry can load and imports specs into recorded/imported', () => {
-    const root = mkdtempSync(join(tmpdir(), 'automax-apply-'));
+    const root = mkdtempSync(join(tmpdir(), 'sdods-apply-'));
     writeFileSync(join(root, 'package.json'), '{}');
     const app = join(APPS, 'next-app');
     const r = analyzeProject(app);
@@ -178,14 +178,14 @@ describe('applyProposal + importPlaywrightSpecs', () => {
       appPath: app,
       importSpecs: true,
     });
-    expect(result.written).toContain('automax.project.yaml');
+    expect(result.written).toContain('sdods.project.yaml');
     expect(result.written).toContain('envs/local.yaml');
     expect(result.written).toContain('steps/fixtures.ts');
     expect(result.written).not.toContain('features/health.feature');
     expect(result.importedSpecs).toEqual(['recorded/imported/tests/smoke.spec.ts']);
     expect(
       readFileSync(join(result.root, 'recorded/imported/tests/smoke.spec.ts'), 'utf8'),
-    ).toMatch(/^\/\/ @automax-imported/);
+    ).toMatch(/^\/\/ @sdods-imported/);
     expect(existsSync(join(result.root, 'data/common'))).toBe(true);
     const reg = ProjectRegistry.discover(root);
     expect(reg.get('storefront').modules.length).toBeGreaterThan(0);

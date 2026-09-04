@@ -11,12 +11,12 @@ import { ProjectRegistry } from '../src/config/registry.js';
 function scaffold(
   opts: { projectYaml?: string; envYaml?: string; dotenv?: Record<string, string> } = {},
 ) {
-  const root = mkdtempSync(join(tmpdir(), 'automax-cfg-'));
+  const root = mkdtempSync(join(tmpdir(), 'sdods-cfg-'));
   const proj = join(root, 'projects', 'shop');
   mkdirSync(join(proj, 'envs'), { recursive: true });
   writeFileSync(join(root, 'package.json'), '{}');
   writeFileSync(
-    join(proj, 'automax.project.yaml'),
+    join(proj, 'sdods.project.yaml'),
     opts.projectYaml ??
       `slug: shop\nname: Shop\nlayers: [ui, api]\nbrowsers: [chromium, firefox]\nenvs: { default: staging, available: [staging, local] }\nscreenshots: { policy: { default: on-failure, '@smoke': scenario } }\n`,
   );
@@ -115,7 +115,7 @@ describe('resolveConfig precedence', () => {
       projectRoot: proj,
       processEnv: {
         API_TOKEN: 'from-process',
-        AUTOMAX_UI_BASE_URL: 'https://override.example.com',
+        SDODS_UI_BASE_URL: 'https://override.example.com',
         CI: '1',
       } as any,
     });
@@ -128,7 +128,7 @@ describe('resolveConfig precedence', () => {
     const viaCli = resolveConfig({
       rootDir: root,
       projectRoot: proj,
-      processEnv: { API_TOKEN: 't', AUTOMAX_UI_BASE_URL: 'https://override.example.com' } as any,
+      processEnv: { API_TOKEN: 't', SDODS_UI_BASE_URL: 'https://override.example.com' } as any,
       cliOverrides: {
         uiBaseUrl: 'https://cli.example.com',
         env: 'local',
@@ -145,14 +145,14 @@ describe('resolveConfig precedence', () => {
     expect(viaCli.runtime.retries).toBe(1);
   });
 
-  it('reads CLI overrides from AUTOMAX_CLI_OVERRIDES when none are passed', () => {
+  it('reads CLI overrides from SDODS_CLI_OVERRIDES when none are passed', () => {
     const { root, proj } = scaffold();
     const cfg = resolveConfig({
       rootDir: root,
       projectRoot: proj,
       processEnv: {
         API_TOKEN: 't',
-        AUTOMAX_CLI_OVERRIDES: serializeCliOverrides({ env: 'local' }),
+        SDODS_CLI_OVERRIDES: serializeCliOverrides({ env: 'local' }),
       } as any,
     });
     expect(cfg.env.name).toBe('local');

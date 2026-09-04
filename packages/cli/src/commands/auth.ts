@@ -1,12 +1,12 @@
 import type { Command } from 'commander';
 import { execa } from 'execa';
-import { AutomaxError } from '@automax/core';
+import { SdodsError } from '@sdods/core';
 import { createContext } from '../context.js';
 import { json, ok, table } from '../ui.js';
 
 /**
- * Login-state commands. Capture/list are thin wrappers over `@automax/core/auth/capture`
- * (the same library `automax record --user` uses) so there is a single implementation.
+ * Login-state commands. Capture/list are thin wrappers over `@sdods/core/auth/capture`
+ * (the same library `sdods record --user` uses) so there is a single implementation.
  */
 export function register(program: Command) {
   const auth = program
@@ -31,7 +31,7 @@ export function register(program: Command) {
     .action(async (opts, cmd) => {
       const ctx = createContext(cmd);
       const cfg = ctx.registry.resolve(opts.project, opts.env);
-      const { captureAuth, poolUsers } = await import('@automax/core/auth/capture');
+      const { captureAuth, poolUsers } = await import('@sdods/core/auth/capture');
       const roles: string[] = opts.user
         ? [opts.user]
         : [...new Set((await poolUsers(cfg)).map((u) => u.role))];
@@ -80,7 +80,7 @@ export function register(program: Command) {
     .action(async (opts, cmd) => {
       const ctx = createContext(cmd);
       const cfg = ctx.registry.resolve(opts.project, opts.env);
-      const { listAuthStates } = await import('@automax/core/auth/capture');
+      const { listAuthStates } = await import('@sdods/core/auth/capture');
       const rows = listAuthStates(cfg).map((s) => ({
         user: s.user,
         role: s.role,
@@ -95,18 +95,16 @@ export function register(program: Command) {
 
   auth
     .command('token')
-    .description('Manage API tokens (server feature; delegates to `automax tokens`)')
+    .description('Manage API tokens (server feature; delegates to `sdods tokens`)')
     .allowUnknownOption()
     .action(async () => {
-      const r = await execa('automax', ['tokens', ...process.argv.slice(4)], {
+      const r = await execa('sdods', ['tokens', ...process.argv.slice(4)], {
         stdio: 'inherit',
         reject: false,
       });
       if (r.exitCode)
-        throw new AutomaxError(
-          'NOT_SUPPORTED',
-          '`automax tokens` is provided by the server package.',
-          { exitCode: 2 },
-        );
+        throw new SdodsError('NOT_SUPPORTED', '`sdods tokens` is provided by the server package.', {
+          exitCode: 2,
+        });
     });
 }

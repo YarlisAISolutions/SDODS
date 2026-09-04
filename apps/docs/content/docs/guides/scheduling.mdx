@@ -8,7 +8,7 @@ description: Cron schedules for processes and runs, executed by the server or ex
   export them when you run without a server.
 </Learn>
 
-```yaml title="automax.project.yaml"
+```yaml title="sdods.project.yaml"
 schedules:
   - name: smoke-hourly
     cron: '0 * * * *'
@@ -25,22 +25,22 @@ schedules:
     notify: [github]
 ```
 
-A process with a `schedule:` field becomes a schedule too after `automax schedule sync`.
+A process with a `schedule:` field becomes a schedule too after `sdods schedule sync`.
 
 ```mermaid
 flowchart LR
   Y["schedules in YAML"] -->|schedule sync| DB[("schedules table")]
   DB --> SCH["server scheduler (croner)<br/>timezone · overlap · jitter · no catch-up storms"]
-  SCH --> RM["RunManager → automax run"]
+  SCH --> RM["RunManager → sdods run"]
   Y -->|schedule install| EXT["crontab · launchd · systemd · GitHub Actions"]
 ```
 
 ```bash
-bun run automax schedule add -p demo-shop --name nightly --cron "0 2 * * *" --tz America/New_York -t @regression -b chromium -b firefox --notify github
-bun run automax schedule list -p demo-shop
-bun run automax schedule next -p demo-shop --count 5
-bun run automax schedule run-now nightly
-bun run automax schedule install --target github
+bun run sdods schedule add -p demo-shop --name nightly --cron "0 2 * * *" --tz America/New_York -t @regression -b chromium -b firefox --notify github
+bun run sdods schedule list -p demo-shop
+bun run sdods schedule next -p demo-shop --count 5
+bun run sdods schedule run-now nightly
+bun run sdods schedule install --target github
 ```
 
 ## Next steps

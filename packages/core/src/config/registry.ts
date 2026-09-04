@@ -8,8 +8,8 @@ import {
   type ProjectConfig,
   type Workspace,
   type WorkspaceFile,
-} from '@automax/contracts';
-import { AutomaxError } from '../errors.js';
+} from '@sdods/contracts';
+import { SdodsError } from '../errors.js';
 import { DEFAULT_PROJECTS_DIR, PROJECT_FILE, WORKSPACE_FILE } from './defaults.js';
 import {
   loadProjectFile,
@@ -35,7 +35,7 @@ export interface ProjectEntry {
   organization: string;
 }
 
-/** Built-in fallback when a repo has no automax.workspace.yaml. */
+/** Built-in fallback when a repo has no sdods.workspace.yaml. */
 export const DEFAULT_WORKSPACE_FILE: WorkspaceFile = {
   organization: { slug: 'default', name: 'Default organization' },
   workspaces: [{ slug: 'default', name: 'Default workspace', organization: 'default' }],
@@ -50,7 +50,7 @@ export function loadWorkspaceFile(rootDir: string): { file: string | null; confi
   try {
     const config = WorkspaceFileSchema.parse(raw);
     if (!config.workspaces.some((w) => w.slug === config.defaultWorkspace)) {
-      throw new AutomaxError(
+      throw new SdodsError(
         'CONFIG_INVALID',
         `defaultWorkspace "${config.defaultWorkspace}" is not declared in workspaces[] of ${file}.`,
         { exitCode: 2 },
@@ -63,7 +63,7 @@ export function loadWorkspaceFile(rootDir: string): { file: string | null; confi
   }
 }
 
-/** Discovers `projects/<slug>/automax.project.yaml` files and resolves configs (memoised per slug+env+cli). */
+/** Discovers `projects/<slug>/sdods.project.yaml` files and resolves configs (memoised per slug+env+cli). */
 export class ProjectRegistry {
   private readonly entries = new Map<string, ProjectEntry>();
   private readonly resolved = new Map<string, ResolvedConfig>();
@@ -87,7 +87,7 @@ export class ProjectRegistry {
     const root = resolvePath(rootDir);
     const projectsDir = resolvePath(
       root,
-      opts.projectsDir ?? process.env.AUTOMAX_PROJECTS_DIR ?? DEFAULT_PROJECTS_DIR,
+      opts.projectsDir ?? process.env.SDODS_PROJECTS_DIR ?? DEFAULT_PROJECTS_DIR,
     );
     const reg = new ProjectRegistry(root, projectsDir, loadWorkspaceFile(root));
     if (existsSync(projectsDir)) {
@@ -107,7 +107,7 @@ export class ProjectRegistry {
         const ws = reg.workspaceFile;
         const workspace = config.workspace ?? ws.defaultWorkspace;
         if (!ws.workspaces.some((w) => w.slug === workspace)) {
-          throw new AutomaxError(
+          throw new SdodsError(
             'CONFIG_INVALID',
             `Project "${config.slug}" references workspace "${workspace}" which is not declared in ${WORKSPACE_FILE}.`,
             {
@@ -118,7 +118,7 @@ export class ProjectRegistry {
         }
         const organization = config.organization ?? ws.organization.slug;
         if (organization !== ws.organization.slug) {
-          throw new AutomaxError(
+          throw new SdodsError(
             'CONFIG_INVALID',
             `Project "${config.slug}" references organization "${organization}" but this repo belongs to "${ws.organization.slug}".`,
             { exitCode: 2 },
@@ -143,8 +143,8 @@ export class ProjectRegistry {
     let dir = resolvePath(start);
     for (let i = 0; i < 12; i++) {
       if (
-        existsSync(join(dir, 'automax.config.ts')) ||
-        existsSync(join(dir, 'automax.config.json')) ||
+        existsSync(join(dir, 'sdods.config.ts')) ||
+        existsSync(join(dir, 'sdods.config.json')) ||
         existsSync(join(dir, WORKSPACE_FILE))
       )
         return dir;
@@ -178,10 +178,10 @@ export class ProjectRegistry {
     const e = this.entries.get(slug);
     if (!e) {
       const known = [...this.entries.keys()];
-      throw new AutomaxError('PROJECT_NOT_FOUND', `Unknown project "${slug}".`, {
+      throw new SdodsError('PROJECT_NOT_FOUND', `Unknown project "${slug}".`, {
         hint: known.length
           ? `Known projects: ${known.join(', ')}.`
-          : `No projects found under ${this.projectsDir}. Run \`automax project create <slug>\`.`,
+          : `No projects found under ${this.projectsDir}. Run \`sdods project create <slug>\`.`,
         details: { known, projectsDir: this.projectsDir },
         exitCode: 2,
       });
@@ -251,7 +251,7 @@ export class ProjectRegistry {
   processOf(slug: string, name: string): ProcessConfig {
     const p = this.processesOf(slug).find((x) => x.name === name);
     if (!p) {
-      throw new AutomaxError(
+      throw new SdodsError(
         'CONFIG_NOT_FOUND',
         `Process "${name}" is not defined for project ${slug}.`,
         {
@@ -312,13 +312,13 @@ export class ProjectRegistry {
     if (slug) return this.entry(slug);
     const all = this.entriesList();
     if (all.length === 1) return all[0]!;
-    throw new AutomaxError(
+    throw new SdodsError(
       'PROJECT_NOT_FOUND',
       all.length ? 'Several projects found; pass --project <slug>.' : 'No projects found.',
       {
         hint: all.length
           ? `Known projects: ${all.map((p) => p.slug).join(', ')}.`
-          : 'Run `automax project create <slug>`.',
+          : 'Run `sdods project create <slug>`.',
         exitCode: 2,
       },
     );

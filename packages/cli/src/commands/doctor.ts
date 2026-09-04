@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import type { Command } from 'commander';
 import { execa } from 'execa';
 import pc from 'picocolors';
-import { collectVarRefs, loadDotEnvLayer, loadEnvFile } from '@automax/core';
+import { collectVarRefs, loadDotEnvLayer, loadEnvFile } from '@sdods/core';
 import { createContext } from '../context.js';
 import { json, out } from '../ui.js';
 
@@ -62,7 +62,7 @@ export function registerDoctorCommand(program: Command) {
         name: 'projects',
         ok: entries.length > 0,
         detail: entries.map((e) => e.slug).join(', ') || 'none',
-        fix: 'automax project create <slug>',
+        fix: 'sdods project create <slug>',
       });
       for (const e of entries) {
         for (const envName of e.config.envs.available) {
@@ -72,7 +72,7 @@ export function registerDoctorCommand(program: Command) {
               name: `${e.slug}/${envName}`,
               ok: false,
               detail: 'env yaml missing',
-              fix: `automax env add ${envName} -p ${e.slug} --ui-url ... --api-url ...`,
+              fix: `sdods env add ${envName} -p ${e.slug} --ui-url ... --api-url ...`,
             });
             continue;
           }
@@ -101,7 +101,7 @@ export function registerDoctorCommand(program: Command) {
         ok: driver === 'sqlite' || Boolean(process.env.DATABASE_URL),
         detail:
           driver === 'sqlite'
-            ? `sqlite (${process.env.SQLITE_PATH ?? '.automax/automax.db'})`
+            ? `sqlite (${process.env.SQLITE_PATH ?? '.sdods/sdods.db'})`
             : `postgres ${process.env.DATABASE_URL ? '(url set)' : '(DATABASE_URL missing)'}`,
         fix: 'Set DB_DRIVER=sqlite or provide DATABASE_URL.',
       });
@@ -133,7 +133,7 @@ export function registerDoctorCommand(program: Command) {
       }
       out(
         pc.dim(
-          '\nNothing is mandatory for the platform itself (AutoMax API tokens are self-issued and free). Agents need one of the "one-of" rows.',
+          '\nNothing is mandatory for the platform itself (SDODS API tokens are self-issued and free). Agents need one of the "one-of" rows.',
         ),
       );
       const blocking = checks.some((c) => !c.ok && !c.optional);
@@ -200,7 +200,7 @@ function tokenMatrix(cliStatus: Check[]): TokenRow[] {
       name: 'SESSION_SECRET',
       requirement: serve ? 'mandatory' : 'optional',
       present: has('SESSION_SECRET'),
-      detail: 'web server session signing (≥32 chars); needed only for `automax serve`',
+      detail: 'web server session signing (≥32 chars); needed only for `sdods serve`',
       hint: 'generate: `openssl rand -hex 32`',
     },
     {
@@ -222,10 +222,10 @@ function tokenMatrix(cliStatus: Check[]): TokenRow[] {
       detail: 'Jira issues, links, transitions (integrations.jira)',
     },
     {
-      name: 'AUTOMAX_TOKEN (+AUTOMAX_SERVER_URL)',
+      name: 'SDODS_TOKEN (+SDODS_SERVER_URL)',
       requirement: 'optional',
-      present: has('AUTOMAX_TOKEN'),
-      detail: 'self-issued, free: MCP over HTTP and CI result ingest (`automax tokens create`)',
+      present: has('SDODS_TOKEN'),
+      detail: 'self-issued, free: MCP over HTTP and CI result ingest (`sdods tokens create`)',
     },
     {
       name: 'FIREBASE_SERVICE_ACCOUNT_AUTOMAX_DOCS',
@@ -237,7 +237,7 @@ function tokenMatrix(cliStatus: Check[]): TokenRow[] {
       name: 'NPM_TOKEN',
       requirement: 'ci-only',
       present: has('NPM_TOKEN'),
-      detail: 'GitHub secret for publishing @automax/* packages',
+      detail: 'GitHub secret for publishing @sdods/* packages',
     },
   );
   return rows;
@@ -247,7 +247,7 @@ function tokenMatrix(cliStatus: Check[]): TokenRow[] {
 async function codingCliStatus(): Promise<Check[]> {
   const rows: Check[] = [];
   try {
-    const { ClaudeCodeCliAdapter, CodexCliAdapter } = await import('@automax/agents');
+    const { ClaudeCodeCliAdapter, CodexCliAdapter } = await import('@sdods/agents');
     const c = ClaudeCodeCliAdapter.loginStatus();
     rows.push({
       name: 'cli:claude',

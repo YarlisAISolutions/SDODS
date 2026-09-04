@@ -1,7 +1,7 @@
 {
-  "name": "@automax/db",
+  "name": "@sdods/db",
   "version": "0.1.0",
-  "description": "AutoMax platform database: Kysely schema for SQLite and Postgres, migrations, cucumber NDJSON ingest, driver switch, insights.",
+  "description": "SDODS platform database: Kysely schema for SQLite and Postgres, migrations, cucumber NDJSON ingest, driver switch, insights.",
   "license": "Apache-2.0",
   "author": "Sireesh Yarlagadda (https://www.linkedin.com/in/yarlagadda/)",
   "type": "module",
@@ -30,7 +30,7 @@
     "node": ">=22"
   },
   "dependencies": {
-    "@automax/contracts": "workspace:*",
+    "@sdods/contracts": "workspace:*",
     "better-sqlite3": "^13.0.3",
     "kysely": "^0.29.5",
     "pg": "^8.23.0",

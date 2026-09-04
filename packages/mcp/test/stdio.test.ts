@@ -4,10 +4,10 @@ import { Client } from '@modelcontextprotocol/client';
 import { StdioClientTransport } from '@modelcontextprotocol/client/stdio';
 import { findRepoRoot } from '../src/cli.js';
 
-/** End-to-end over stdio: spawns `automax mcp` exactly the way an MCP client would. */
-describe('automax mcp (stdio)', () => {
+/** End-to-end over stdio: spawns `sdods mcp` exactly the way an MCP client would. */
+describe('sdods mcp (stdio)', () => {
   const root = findRepoRoot(process.cwd());
-  const client = new Client({ name: 'automax-test-client', version: '0.0.0' });
+  const client = new Client({ name: 'sdods-test-client', version: '0.0.0' });
   let transport: StdioClientTransport;
 
   beforeAll(async () => {
@@ -24,7 +24,7 @@ describe('automax mcp (stdio)', () => {
         'all',
       ],
       cwd: root,
-      env: { ...process.env, AUTOMAX_MCP_QUIET: '1', NO_COLOR: '1' } as Record<string, string>,
+      env: { ...process.env, SDODS_MCP_QUIET: '1', NO_COLOR: '1' } as Record<string, string>,
       stderr: 'pipe',
     });
     await client.connect(transport);
@@ -55,16 +55,16 @@ describe('automax mcp (stdio)', () => {
     const prompts = await client.listPrompts();
     expect(prompts.prompts.map((p) => p.name)).toEqual(
       expect.arrayContaining([
-        'automax-plan',
-        'automax-generate',
-        'automax-heal',
-        'automax-upgrade',
-        'automax-review',
+        'sdods-plan',
+        'sdods-generate',
+        'sdods-heal',
+        'sdods-upgrade',
+        'sdods-review',
       ]),
     );
     const templates = await client.listResourceTemplates();
     expect(templates.resourceTemplates.map((t) => t.uriTemplate)).toEqual(
-      expect.arrayContaining(['automax://run/{runId}/summary', 'automax://proposal/{id}']),
+      expect.arrayContaining(['sdods://run/{runId}/summary', 'sdods://proposal/{id}']),
     );
   }, 60_000);
 
@@ -74,7 +74,7 @@ describe('automax mcp (stdio)', () => {
     expect(items.map((i) => i.slug)).toContain('demo-shop');
 
     const tree = await client.callTool({ name: 'workspace_tree', arguments: {} });
-    expect((tree.structuredContent as any).organization.slug).toBe('automax');
+    expect((tree.structuredContent as any).organization.slug).toBe('sdods');
     expect((tree.structuredContent as any).workspaces.map((w: any) => w.workspace.slug)).toEqual(
       expect.arrayContaining(['default', 'platform-qa']),
     );
@@ -93,11 +93,11 @@ describe('automax mcp (stdio)', () => {
 
   it('reads a prompt with project context and reports invalid args cleanly', async () => {
     const p = await client.getPrompt({
-      name: 'automax-review',
+      name: 'sdods-review',
       arguments: { project: 'demo-shop', goal: 'tags' },
     });
     const text = (p.messages[0]!.content as { text: string }).text;
-    expect(text).toContain('AutoMax REVIEWER');
+    expect(text).toContain('SDODS REVIEWER');
     expect(text).toContain('Project: demo-shop');
     const bad = await client.callTool({ name: 'project_get_config', arguments: {} });
     expect(bad.isError).toBe(true);

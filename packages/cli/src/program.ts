@@ -1,5 +1,5 @@
 import { Command } from 'commander';
-import { VERSION } from '@automax/core';
+import { VERSION } from '@sdods/core';
 import { registerProjectCommands } from './commands/project.js';
 import { registerEnvCommands } from './commands/env.js';
 import { registerConfigCommands } from './commands/config.js';
@@ -40,10 +40,10 @@ import { register as registerFeedback } from './commands/feedback.js';
  * (server, agents, DB, Playwright) inside its action via dynamic import.
  */
 export function buildProgram(): Command {
-  const program = new Command('automax');
+  const program = new Command('sdods');
   program
     .description(
-      'AutoMax — an automation platform with a reusable architecture built on Playwright for BDD UI, API and hybrid automation.',
+      'SDODS — an automation platform with a reusable architecture built on Playwright for BDD UI, API and hybrid automation.',
     )
     .version(VERSION, '-V, --version')
     .option('--json', 'machine-readable output')

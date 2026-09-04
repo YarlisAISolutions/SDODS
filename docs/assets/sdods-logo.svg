@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="180" viewBox="0 0 760 180" role="img" aria-labelledby="t d">
+  <title id="t">SDODS</title>
+  <desc id="d">SDODS logo: two endpoints, two gates and a central pivot on one rail — mirror-symmetric like the name — beside the SDODS wordmark.</desc>
+
+  <!-- mark: ●—( ◯ )—● reads identically left-to-right and right-to-left -->
+  <g transform="translate(24,26)">
+    <rect x="0" y="0" width="128" height="128" rx="30" fill="#0B1020"/>
+    <g transform="translate(64,64)" fill="none">
+      <line x1="-40" y1="0" x2="40" y2="0" stroke="#2F5BFF" stroke-width="6" stroke-linecap="round" opacity="0.5"/>
+      <circle cx="-40" cy="0" r="5.5" fill="#2F5BFF"/>
+      <circle cx="40" cy="0" r="5.5" fill="#2F5BFF"/>
+      <path d="M-20 -13 A 13 13 0 0 0 -20 13" stroke="#FFFFFF" stroke-width="7" stroke-linecap="round"/>
+      <path d="M20 -13 A 13 13 0 0 1 20 13" stroke="#FFFFFF" stroke-width="7" stroke-linecap="round"/>
+      <circle cx="0" cy="0" r="12" stroke="#FFFFFF" stroke-width="7"/>
+      <circle cx="0" cy="0" r="4" fill="#FFB020"/>
+    </g>
+  </g>
+
+  <!-- wordmark -->
+  <g transform="translate(186,0)">
+    <text x="0" y="96"
+      font-family="'Space Grotesk', 'Avenir Next', 'Futura', 'Helvetica Neue', Helvetica, Arial, sans-serif"
+      font-size="76" font-weight="700" fill="#0B1020" letter-spacing="14">SDODS</text>
+    <text x="4" y="132"
+      font-family="'Space Grotesk', 'Avenir Next', 'Helvetica Neue', Helvetica, Arial, sans-serif"
+      font-size="17" font-weight="500" fill="#5B6478" letter-spacing="3.2">Smart Digital Orchestration &amp; Deployment System</text>
+  </g>
+</svg>

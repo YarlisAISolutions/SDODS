@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/server';
 import type { ToolRegistry } from './registry.js';
-import { type AutomaxTool, type ToolContext } from './registry.js';
+import { type SdodsTool, type ToolContext } from './registry.js';
 
 /** Register every visible tool on an MCP v2 server. */
 export function toMcpServer(reg: ToolRegistry, server: McpServer, ctx: ToolContext): number {
@@ -88,7 +88,7 @@ export function toOpenAiFunctions(
   ctx?: Pick<ToolContext, 'principal' | 'caps'>,
 ): OpenAiFunctionDef[] {
   const tools = ctx ? reg.list(ctx) : reg.all();
-  return tools.map((tool: AutomaxTool<any>) => ({
+  return tools.map((tool: SdodsTool<any>) => ({
     type: 'function' as const,
     function: {
       name: tool.name,
@@ -99,6 +99,6 @@ export function toOpenAiFunctions(
 }
 
 /** JSON schema view of a tool (used by docs generation and tests). */
-export function toolJsonSchema(tool: AutomaxTool<any>): Record<string, unknown> {
+export function toolJsonSchema(tool: SdodsTool<any>): Record<string, unknown> {
   return z.toJSONSchema(z.object(tool.shape)) as Record<string, unknown>;
 }

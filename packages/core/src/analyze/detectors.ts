@@ -7,7 +7,7 @@ import type {
   DetectedRoute,
   DetectedTests,
   Evidence,
-} from '@automax/contracts';
+} from '@sdods/contracts';
 import type { Scan, ScannedFile } from './scan.js';
 
 const SOURCE_EXT = new Set(['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs', '.vue', '.svelte']);

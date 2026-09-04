@@ -6,7 +6,7 @@ export interface DriverConfig {
   databaseUrl?: string;
 }
 
-export const DEFAULT_SQLITE_PATH = '.automax/automax.db';
+export const DEFAULT_SQLITE_PATH = '.sdods/sdods.db';
 
 /** Resolve the platform database driver from the environment (`DB_DRIVER`, `SQLITE_PATH`, `DATABASE_URL`). */
 export function resolveDriverConfig(env: NodeJS.ProcessEnv = process.env): DriverConfig {
@@ -14,7 +14,7 @@ export function resolveDriverConfig(env: NodeJS.ProcessEnv = process.env): Drive
   if (driver === 'postgres' || driver === 'postgresql' || driver === 'pg') {
     if (!env.DATABASE_URL) {
       throw new Error(
-        'DB_DRIVER=postgres requires DATABASE_URL (e.g. postgres://automax:automax@localhost:5432/automax)',
+        'DB_DRIVER=postgres requires DATABASE_URL (e.g. postgres://sdods:sdods@localhost:5432/sdods)',
       );
     }
     return { driver: 'postgres', databaseUrl: env.DATABASE_URL };

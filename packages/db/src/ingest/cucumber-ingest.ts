@@ -1,13 +1,13 @@
 import { join } from 'node:path';
-import { fingerprint as makeFingerprint, newId, parsePwProjectName } from '@automax/contracts/ids';
-import type { ParsedAttachment } from '@automax/contracts/names';
+import { fingerprint as makeFingerprint, newId, parsePwProjectName } from '@sdods/contracts/ids';
+import type { ParsedAttachment } from '@sdods/contracts/names';
 import type {
   ApiSnapshot,
   HealEvent,
   PerformanceMetrics,
   ScenarioMeta,
   SuiteStatus,
-} from '@automax/contracts/types';
+} from '@sdods/contracts/types';
 import { enc, nowIso, readJson } from '../col.js';
 import { insertHealEvent } from '../repos/improvement.js';
 import {

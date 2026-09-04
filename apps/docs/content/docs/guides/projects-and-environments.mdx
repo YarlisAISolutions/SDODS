@@ -12,19 +12,19 @@ description: How a project directory is laid out and how environments describe w
 
 ```text
 projects/demo-shop/
-  automax.project.yaml     # identity, layers, browsers, tags, routes, data, auth, screenshots, heal, modules, processes
+  sdods.project.yaml     # identity, layers, browsers, tags, routes, data, auth, screenshots, heal, modules, processes
   envs/staging.yaml        # base URLs, API auth (${VAR}), pool size, locale, per-env overrides
   envs/local.yaml
   .env.staging             # secrets (gitignored); .env.example documents the names
   features/                # Gherkin, one folder per module (ui/, api/, hybrid/ or auth/, cart/ ...)
-  steps/fixtures.ts        # extends the AutoMax test with your auth strategy and page objects
+  steps/fixtures.ts        # extends the SDODS test with your auth strategy and page objects
   steps/*.steps.ts         # project-specific steps
   pages/*.ts               # page objects with decorators
   data/common/  data/staging/  data/factories.ts
   recorded/  har/  .auth/
 ```
 
-The `slug` inside the YAML must equal the directory name; `automax config validate` checks it.
+The `slug` inside the YAML must equal the directory name; `sdods config validate` checks it.
 
 ## Environments
 
@@ -61,7 +61,7 @@ envs:
 
 ```mermaid
 flowchart LR
-  P["automax.project.yaml<br/>layers: [ui, api, hybrid]<br/>browsers: [chromium, firefox]"] --> G["buildPlaywrightConfig"]
+  P["sdods.project.yaml<br/>layers: [ui, api, hybrid]<br/>browsers: [chromium, firefox]"] --> G["buildPlaywrightConfig"]
   E["envs/staging.yaml"] --> G
   G --> A["demo-shop--api"]
   G --> U1["demo-shop--ui--chromium"]
@@ -70,23 +70,23 @@ flowchart LR
   G --> H2["demo-shop--hybrid--firefox"]
 ```
 
-For each layer, features are generated once with `bddgen`; each browser is a Playwright project that reuses the generated files. The `api` project has no browser device. Run `automax run -p demo-shop --list` to print the names.
+For each layer, features are generated once with `bddgen`; each browser is a Playwright project that reuses the generated files. The `api` project has no browser device. Run `sdods run -p demo-shop --list` to print the names.
 
 ## Commands
 
-```bash automax-verify
-bun run automax project list
-bun run automax env list -p demo-shop
-bun run automax config show -p demo-shop -e staging --explain
+```bash sdods-verify
+bun run sdods project list
+bun run sdods env list -p demo-shop
+bun run sdods config show -p demo-shop -e staging --explain
 ```
 
 ```bash
-bun run automax project create billing --ui-url http://localhost:3000 --api-url http://localhost:3000/api --env local
-bun run automax env add staging -p billing --ui-url https://billing-staging.example.com --api-url https://api-staging.example.com
+bun run sdods project create billing --ui-url http://localhost:3000 --api-url http://localhost:3000/api --env local
+bun run sdods env add staging -p billing --ui-url https://billing-staging.example.com --api-url https://api-staging.example.com
 ```
 
 <Callout type="warn">
-  Every environment must be listed in `envs.available` **and** have a file under `envs/`. `automax
+  Every environment must be listed in `envs.available` **and** have a file under `envs/`. `sdods
   doctor` reports both kinds of mismatch.
 </Callout>
 

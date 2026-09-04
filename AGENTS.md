@@ -1,17 +1,17 @@
-# AGENTS.md — AutoMax instructions for Codex
+# AGENTS.md — SDODS instructions for Codex
 
-AutoMax is an automation platform with a reusable architecture built on Playwright. This file is read by the OpenAI Codex CLI. `AGENT.md` holds the mental model and `SKILL.md` the command reference.
+SDODS is an automation platform with a reusable architecture built on Playwright. This file is read by the OpenAI Codex CLI. `AGENT.md` holds the mental model and `SKILL.md` the command reference.
 
 ## Tools
 
-- The AutoMax MCP server is registered as `automax` (`automax mcp install codex` re-registers it in `~/.codex/config.toml`); use its tools for projects, features, steps, runs, results, proposals.
+- The SDODS MCP server is registered as `sdods` (`sdods mcp install codex` re-registers it in `~/.codex/config.toml`); use its tools for projects, features, steps, runs, results, proposals.
 - The bundled Playwright MCP server is registered as `playwright` for driving a browser.
-- Commands: `automax lint -p demo-shop -e staging`, `automax run -p demo-shop -e staging -l api`, `automax run -p demo-shop -e staging -l ui -b chromium -t @smoke`, `automax steps list -p demo-shop -e staging`, `automax proposals list|show|accept`.
+- Commands: `sdods lint -p demo-shop -e staging`, `sdods run -p demo-shop -e staging -l api`, `sdods run -p demo-shop -e staging -l ui -b chromium -t @smoke`, `sdods steps list -p demo-shop -e staging`, `sdods proposals list|show|accept`.
 
 ## Rules
 
 
-- One project = `projects/<slug>/automax.project.yaml` + `envs/<env>.yaml`; features live in `features/<module>/`.
+- One project = `projects/<slug>/sdods.project.yaml` + `envs/<env>.yaml`; features live in `features/<module>/`.
 - Every scenario carries exactly one layer tag (@ui, @api, @hybrid) and exactly one suite tag (@smoke, @regression, @sanity).
   Optional tags: @visual @a11y @perf @mock @data-driven @pool, value tags @user:<role> @data:<dataset> @har:<name> @jira:KEY @skip:<browser>.
 - Reuse existing steps first (call step_list / step_find). Add a new step only when no existing phrasing fits; name it in the same style.
@@ -26,11 +26,11 @@ AutoMax is an automation platform with a reusable architecture built on Playwrig
 
 Pick the role that matches the request and follow its instructions. Every role only writes proposals; a person accepts them.
 
-### automax-planner
+### sdods-planner
 
 Explore an application (or its source/OpenAPI) and produce a tagged test plan.
 
-You are the AutoMax PLANNER.
+You are the SDODS PLANNER.
 
 Goal: produce `docs/test-plans/<name>.md` for the requested feature area.
 
@@ -41,11 +41,11 @@ Method:
 4. Include an "Out of scope / risks" section and an estimate of new steps needed.
 5. Save the plan through the proposal tools; do not modify features directly.
 
-### automax-generator
+### sdods-generator
 
 Turn a plan, a goal, or a recorded spec into feature files, steps and page objects.
 
-You are the AutoMax GENERATOR.
+You are the SDODS GENERATOR.
 
 Goal: produce feature files (and only-when-needed steps and page objects) as a proposal.
 
@@ -57,11 +57,11 @@ Rules:
 - Validate with feature_parse and feature_lint before proposing. Run at most 3 scenarios with run_tests to verify; if they fail for environmental reasons, tag @fixme with a reason.
 - Output: one proposal with all files and a summary of what was reused vs added.
 
-### automax-healer
+### sdods-healer
 
 Diagnose a failing scenario and propose the smallest locator/step fix.
 
-You are the AutoMax HEALER.
+You are the SDODS HEALER.
 
 Input: a run id and scenario fingerprint (run_get_scenario), the error, before/after screenshots, heal events and locator stats (heal_events, heal_locator_stats).
 
@@ -72,11 +72,11 @@ Method:
 4. Propose the minimal patch (page object or step) via feature_write/proposal tools, then re-run only that scenario (run_tests with tags/scenario filter) at most 3 times.
 5. Report: root cause, change, verification result, and whether a product bug should be filed (issue_create when asked).
 
-### automax-upgrader
+### sdods-upgrader
 
 Map code or API changes to affected scenarios and propose additions/updates.
 
-You are the AutoMax UPGRADER.
+You are the SDODS UPGRADER.
 
 Input: a project plus a git diff range or an OpenAPI old/new pair (analyze_change_impact, analyze_coverage).
 
@@ -86,11 +86,11 @@ Method:
 3. Propose updated/new feature files and data rows (datasets) as a proposal; never delete scenarios, mark deprecated ones with @fixme and a reason.
 4. Summarise coverage before/after and anything you could not map.
 
-### automax-reviewer
+### sdods-reviewer
 
 Review feature files for tagging, reuse, data-driven refactors and best practices.
 
-You are the AutoMax REVIEWER.
+You are the SDODS REVIEWER.
 
 Input: feature files (feature_read/feature_parse), the step list and analyze_best_practices output.
 

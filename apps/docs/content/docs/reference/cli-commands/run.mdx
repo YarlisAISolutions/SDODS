@@ -1,12 +1,12 @@
 ---
-title: automax run, test
+title: sdods run, test
 description: Generate BDD specs and execute Playwright for a project.
 ---
 
 ## `run` (alias `test`)
 
 ```text
-automax run [-p <slug>] [-e <env>] [-t <expr>] [-l <layer>]... [-b <browser>]... [-m <module>]... [--process <name>]
+sdods run [-p <slug>] [-e <env>] [-t <expr>] [-l <layer>]... [-b <browser>]... [-m <module>]... [--process <name>]
             [--project-matrix] [--device <name>] [--headed] [-w <n>] [--shard <i/n>] [--retries <n>]
             [--grep <pattern>] [--feature <path>] [--scenario <name>] [--run-id <id>] [--artifacts-dir <dir>]
             [--no-lint] [--ingest | --no-ingest] [--allure] [--har-update | --har-replay] [--strict]
@@ -33,7 +33,7 @@ automax run [-p <slug>] [-e <env>] [-t <expr>] [-l <layer>]... [-b <browser>]...
 | `--feature <path>`         | only this feature file (relative to `features/`)                                             |
 | `--scenario <name>`        | only scenarios whose title contains this text                                                |
 | `--run-id <id>`            | run id (default: UUID v7)                                                                    |
-| `--artifacts-dir <dir>`    | artifacts root (default: `.automax/runs`)                                                    |
+| `--artifacts-dir <dir>`    | artifacts root (default: `.sdods/runs`)                                                      |
 | `--no-lint`                | skip feature lint before running                                                             |
 | `--ingest` / `--no-ingest` | force or skip database ingest (default: ingest when a database is configured)                |
 | `--allure`                 | also produce `allure-results`                                                                |
@@ -63,11 +63,11 @@ Generated specs go to `.features-gen/<runId>/<slug>/<layer>/` and are removed af
 Exit codes: `0` pass, `1` failures, `2` configuration error, `3` lint errors, `130` cancelled.
 
 ```bash
-bun run automax run -p demo-shop -e staging -l api
-bun run automax run -p demo-shop -e staging -l ui -b chromium -t @smoke
-bun run automax run -p demo-shop -e staging --project-matrix -t "@smoke or @sanity"
-bun run automax run -p demo-shop --process api-contract
-bun run automax run -p demo-shop --module cart -t @regression --list
+bun run sdods run -p demo-shop -e staging -l api
+bun run sdods run -p demo-shop -e staging -l ui -b chromium -t @smoke
+bun run sdods run -p demo-shop -e staging --project-matrix -t "@smoke or @sanity"
+bun run sdods run -p demo-shop --process api-contract
+bun run sdods run -p demo-shop --module cart -t @regression --list
 ```
 
-See also [`automax watch`](/docs/reference/cli-commands/watch) for the hot-reload variant.
+See also [`sdods watch`](/docs/reference/cli-commands/watch) for the hot-reload variant.

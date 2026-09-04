@@ -1,5 +1,5 @@
 name: local
-description: Same public sandboxes, smaller pool, headed-friendly timeouts. Override URLs via AUTOMAX_UI_BASE_URL / AUTOMAX_API_BASE_URL.
+description: Same public sandboxes, smaller pool, headed-friendly timeouts. Override URLs via SDODS_UI_BASE_URL / SDODS_API_BASE_URL.
 ui:
   baseUrl: https://www.saucedemo.com
 api:

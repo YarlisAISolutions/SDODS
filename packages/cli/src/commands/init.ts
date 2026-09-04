@@ -12,12 +12,12 @@ import { fileURLToPath } from 'node:url';
 import type { Command } from 'commander';
 import { execa } from 'execa';
 import pc from 'picocolors';
-import { OrganizationSchema, SlugSchema, WorkspaceSchema } from '@automax/contracts';
-import { AutomaxError, VERSION, WORKSPACE_FILE } from '@automax/core';
+import { OrganizationSchema, SlugSchema, WorkspaceSchema } from '@sdods/contracts';
+import { SdodsError, VERSION, WORKSPACE_FILE } from '@sdods/core';
 import { globalOptions } from '../context.js';
 import { json, ok, out, warn } from '../ui.js';
 
-/** Root of the AutoMax monorepo this CLI runs from (used by --link and to copy the demo). */
+/** Root of the SDODS monorepo this CLI runs from (used by --link and to copy the demo). */
 export function sourceRepoRoot(): string {
   // packages/cli/src/commands/init.ts → repo root
   return resolvePath(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '..');
@@ -44,20 +44,17 @@ export function register(program: Command) {
   program
     .command('init [dir]')
     .description(
-      'Scaffold a new AutoMax workspace: workspace yaml, Playwright config, demo project, skills',
+      'Scaffold a new SDODS workspace: workspace yaml, Playwright config, demo project, skills',
     )
     .option('--db <driver>', 'sqlite | postgres (written to .env.example)', 'sqlite')
     .option('--pm <manager>', 'bun | pnpm', 'bun')
     .option('--no-demo', 'skip projects/demo-shop')
-    .option(
-      '--claude',
-      'also write .claude/agents and .mcp.json via `automax agent install-claude`',
-    )
+    .option('--claude', 'also write .claude/agents and .mcp.json via `sdods agent install-claude`')
     .option('--from <app>', 'analyze an application repo and create a project from it')
     .option('--git', 'git init and make an initial commit')
     .option(
       '--link',
-      'depend on the local AutoMax packages (development) instead of the npm registry',
+      'depend on the local SDODS packages (development) instead of the npm registry',
     )
     .option('--no-install', 'skip the package manager install step')
     .option('--no-browsers', 'skip `playwright install chromium`')
@@ -72,19 +69,19 @@ export function register(program: Command) {
       const result = await initWorkspace(target, flags);
       if (opts.json) return json(result);
       const run = flags.pm === 'bun' ? 'bun run' : 'pnpm';
-      ok(`AutoMax workspace ready at ${target}`);
+      ok(`SDODS workspace ready at ${target}`);
       for (const f of result.files) out(`  ${f}`);
       out('');
       out(pc.bold('Next steps'));
       if (dir) out(`  cd ${dir}`);
       if (!flags.install)
         out(`  ${flags.pm} install && npx playwright install --with-deps chromium`);
-      out(`  ${run} automax doctor`);
-      out(`  ${run} automax workspace tree`);
-      if (result.demo) out(`  ${run} automax run -p demo-shop -e staging -l api`);
+      out(`  ${run} sdods doctor`);
+      out(`  ${run} sdods workspace tree`);
+      if (result.demo) out(`  ${run} sdods run -p demo-shop -e staging -l api`);
       else
         out(
-          `  ${run} automax project create my-app --ui-url http://localhost:3000 --api-url http://localhost:3000/api`,
+          `  ${run} sdods project create my-app --ui-url http://localhost:3000 --api-url http://localhost:3000/api`,
         );
     });
 }
@@ -99,16 +96,12 @@ export interface InitResult {
 
 export async function initWorkspace(target: string, flags: InitFlags): Promise<InitResult> {
   if (!['sqlite', 'postgres'].includes(flags.db)) {
-    throw new AutomaxError(
-      'CONFIG_INVALID',
-      `--db must be sqlite or postgres, got "${flags.db}".`,
-      {
-        exitCode: 2,
-      },
-    );
+    throw new SdodsError('CONFIG_INVALID', `--db must be sqlite or postgres, got "${flags.db}".`, {
+      exitCode: 2,
+    });
   }
   if (!['bun', 'pnpm'].includes(flags.pm)) {
-    throw new AutomaxError('CONFIG_INVALID', `--pm must be bun or pnpm, got "${flags.pm}".`, {
+    throw new SdodsError('CONFIG_INVALID', `--pm must be bun or pnpm, got "${flags.pm}".`, {
       exitCode: 2,
     });
   }
@@ -125,7 +118,7 @@ export async function initWorkspace(target: string, flags: InitFlags): Promise<I
   mkdirSync(target, { recursive: true });
   const existing = readdirSync(target).filter((f) => f !== '.git' && f !== '.DS_Store');
   if (existing.length && !flags.force) {
-    throw new AutomaxError('CONFIG_INVALID', `Directory ${target} is not empty.`, {
+    throw new SdodsError('CONFIG_INVALID', `Directory ${target} is not empty.`, {
       hint: 'Pass --force to write into it anyway.',
       exitCode: 2,
     });
@@ -143,14 +136,14 @@ export async function initWorkspace(target: string, flags: InitFlags): Promise<I
   const name =
     basename(target)
       .replace(/[^a-zA-Z0-9-_]/g, '-')
-      .toLowerCase() || 'automax-tests';
+      .toLowerCase() || 'sdods-tests';
   // --link: bun's `link:` protocol expects a package registered with `bun link` (done below);
   // pnpm accepts a path. Transitive workspace deps resolve from the symlink's real location.
   const dep = (pkg: string) =>
     flags.link
       ? flags.pm === 'bun'
         ? `link:${pkg}`
-        : `link:${join(src, 'packages', pkg.replace('@automax/', ''))}`
+        : `link:${join(src, 'packages', pkg.replace('@sdods/', ''))}`
       : `^${VERSION}`;
   const run = flags.pm === 'bun' ? 'bun run' : 'pnpm';
 
@@ -162,21 +155,21 @@ export async function initWorkspace(target: string, flags: InitFlags): Promise<I
         private: true,
         type: 'module',
         version: '0.1.0',
-        description: `${name} — AutoMax automation workspace`,
+        description: `${name} — SDODS automation workspace`,
         engines: { node: '>=22' },
         scripts: {
-          automax: 'automax',
-          test: 'automax run',
-          'test:api': 'automax run -l api',
-          'test:ui': 'automax run -l ui -b chromium -t @smoke',
-          lint: 'automax lint',
-          serve: 'automax serve',
-          doctor: 'automax doctor',
+          sdods: 'sdods',
+          test: 'sdods run',
+          'test:api': 'sdods run -l api',
+          'test:ui': 'sdods run -l ui -b chromium -t @smoke',
+          lint: 'sdods lint',
+          serve: 'sdods serve',
+          doctor: 'sdods doctor',
         },
         dependencies: {
-          '@automax/cli': dep('@automax/cli'),
-          '@automax/core': dep('@automax/core'),
-          '@automax/contracts': dep('@automax/contracts'),
+          '@sdods/cli': dep('@sdods/cli'),
+          '@sdods/core': dep('@sdods/core'),
+          '@sdods/contracts': dep('@sdods/contracts'),
           '@playwright/test':
             flags.link && flags.pm === 'bun' ? 'link:@playwright/test' : '^1.62.1',
           'playwright-bdd': flags.link && flags.pm === 'bun' ? 'link:playwright-bdd' : '^9.2.0',
@@ -224,13 +217,13 @@ defaults:
   write(
     'playwright.config.ts',
     `/**
- * AutoMax Playwright config. Generated from the project registry:
- * one Playwright project per (project × layer × browser), driven by AUTOMAX_* env vars set by \`automax run\`.
+ * SDODS Playwright config. Generated from the project registry:
+ * one Playwright project per (project × layer × browser), driven by SDODS_* env vars set by \`sdods run\`.
  */
 import { defineConfig } from '@playwright/test';
-import { ProjectRegistry, buildPlaywrightConfig, selectionFromEnv } from '@automax/core/config';
+import { ProjectRegistry, buildPlaywrightConfig, selectionFromEnv } from '@sdods/core/config';
 
-const rootDir = process.env.AUTOMAX_ROOT ?? ProjectRegistry.findRepoRoot(import.meta.dirname);
+const rootDir = process.env.SDODS_ROOT ?? ProjectRegistry.findRepoRoot(import.meta.dirname);
 const registry = ProjectRegistry.discover(rootDir);
 
 export default defineConfig(buildPlaywrightConfig(registry, selectionFromEnv()));
@@ -254,7 +247,7 @@ export default defineConfig(buildPlaywrightConfig(registry, selectionFromEnv()))
           types: ['node'],
         },
         include: ['playwright.config.ts', 'projects/**/*.ts'],
-        exclude: ['node_modules', '.features-gen', '.automax'],
+        exclude: ['node_modules', '.features-gen', '.sdods'],
       },
       null,
       2,
@@ -266,13 +259,13 @@ export default defineConfig(buildPlaywrightConfig(registry, selectionFromEnv()))
     : '';
   write(
     '.env.example',
-    (envExample || '# AutoMax platform\nDB_DRIVER=sqlite\nSQLITE_PATH=.automax/automax.db\n')
+    (envExample || '# SDODS platform\nDB_DRIVER=sqlite\nSQLITE_PATH=.sdods/sdods.db\n')
       .replace(/^DB_DRIVER=.*$/m, `DB_DRIVER=${flags.db}`)
       .replace(
         /^# DATABASE_URL=.*$/m,
         flags.db === 'postgres'
-          ? 'DATABASE_URL=postgres://automax:automax@localhost:5432/automax'
-          : '# DATABASE_URL=postgres://automax:automax@localhost:5432/automax',
+          ? 'DATABASE_URL=postgres://sdods:sdods@localhost:5432/sdods'
+          : '# DATABASE_URL=postgres://sdods:sdods@localhost:5432/sdods',
       ),
   );
 
@@ -280,7 +273,7 @@ export default defineConfig(buildPlaywrightConfig(registry, selectionFromEnv()))
     '.gitignore',
     `node_modules/
 dist/
-.automax/
+.sdods/
 .features-gen/
 test-results/
 playwright-report/
@@ -305,7 +298,7 @@ proposals/*/files/
       : `services:
   postgres:
     image: postgres:16
-    environment: { POSTGRES_USER: automax, POSTGRES_PASSWORD: automax, POSTGRES_DB: automax }
+    environment: { POSTGRES_USER: sdods, POSTGRES_PASSWORD: sdods, POSTGRES_DB: sdods }
     ports: ['5432:5432']
     volumes: [automax-pgdata:/var/lib/postgresql/data]
 volumes:
@@ -319,16 +312,16 @@ volumes:
     'README.md',
     `# ${name}
 
-AutoMax automation workspace (organization **${org.name}**, workspace **${workspace.name}**).
+SDODS automation workspace (organization **${org.name}**, workspace **${workspace.name}**).
 
 \`\`\`bash
 ${flags.pm} install && npx playwright install --with-deps chromium
-${run} automax doctor
-${run} automax workspace tree
-${withDemo ? `${run} automax run -p demo-shop -e staging -l api` : `${run} automax project create my-app --ui-url http://localhost:3000 --api-url http://localhost:3000/api`}
+${run} sdods doctor
+${run} sdods workspace tree
+${withDemo ? `${run} sdods run -p demo-shop -e staging -l api` : `${run} sdods project create my-app --ui-url http://localhost:3000 --api-url http://localhost:3000/api`}
 \`\`\`
 
-Docs: https://automax.sdods.com
+Docs: https://docs.sdods.com
 `,
   );
 
@@ -339,8 +332,8 @@ Docs: https://automax.sdods.com
         !/\/(\.auth|node_modules|\.features-gen)(\/|$)/.test(p) &&
         !/\/\.env\.(?!example)[^/]*$/.test(p),
     });
-    // the demo declares the AutoMax org/workspace; re-home it into the new workspace file
-    const demoYaml = join(target, 'projects', 'demo-shop', 'automax.project.yaml');
+    // the demo declares the SDODS org/workspace; re-home it into the new workspace file
+    const demoYaml = join(target, 'projects', 'demo-shop', 'sdods.project.yaml');
     if (existsSync(demoYaml)) {
       const rehomed = readFileSync(demoYaml, 'utf8')
         .replace(/^organization:.*$/m, `organization: ${org.slug}`)
@@ -360,7 +353,7 @@ Docs: https://automax.sdods.com
 
   if (flags.from) {
     try {
-      const analyze = (await import('@automax/core/analyze')) as {
+      const analyze = (await import('@sdods/core/analyze')) as {
         initFromApp?: (opts: { appPath: string; rootDir: string }) => Promise<{ slug: string }>;
       };
       if (analyze.initFromApp) {
@@ -370,7 +363,7 @@ Docs: https://automax.sdods.com
         });
         files.push(`projects/${created.slug}/`);
       } else {
-        warn('`automax analyze` is not available in this build; skipping --from.');
+        warn('`sdods analyze` is not available in this build; skipping --from.');
       }
     } catch (e) {
       warn(`--from skipped: ${(e as Error).message}`);
@@ -383,7 +376,7 @@ Docs: https://automax.sdods.com
 
   let installed = false;
   if (flags.install && flags.link && flags.pm === 'bun') {
-    // Register the local packages so `link:@automax/*` resolves. Playwright and playwright-bdd are
+    // Register the local packages so `link:@sdods/*` resolves. Playwright and playwright-bdd are
     // linked from the monorepo too: a second @playwright/test copy in the consumer would make
     // Playwright throw "Requiring @playwright/test second time".
     const linkDirs = [
@@ -415,20 +408,20 @@ Docs: https://automax.sdods.com
   }
 
   if (flags.claude) {
-    const res = await execa('npx', ['automax', 'agent', 'install-claude'], {
+    const res = await execa('npx', ['sdods', 'agent', 'install-claude'], {
       cwd: target,
       reject: false,
       stdio: 'pipe',
     });
     if (res.exitCode === 0) files.push('.claude/agents/', '.mcp.json');
-    else warn('`automax agent install-claude` is not available yet; run it later.');
+    else warn('`sdods agent install-claude` is not available yet; run it later.');
   }
 
   if (flags.git) {
     await execa('git', ['add', '-A'], { cwd: target, reject: false });
     await execa(
       'git',
-      ['-c', 'commit.gpgsign=false', 'commit', '-q', '-m', 'Initialize AutoMax workspace'],
+      ['-c', 'commit.gpgsign=false', 'commit', '-q', '-m', 'Initialize SDODS workspace'],
       { cwd: target, reject: false },
     );
   }

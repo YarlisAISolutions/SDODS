@@ -1,6 +1,6 @@
 dist
 node_modules
-.automax
+.sdods
 .features-gen
 *.md
 bun.lock

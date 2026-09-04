@@ -11,16 +11,16 @@ description: Check runs, PR comments and deduplicated issues on GitHub; issues, 
 
 ## Configure
 
-```yaml title="automax.project.yaml"
+```yaml title="sdods.project.yaml"
 integrations:
   github:
     enabled: true
     owner: siri1410
-    repo: AutoMax
+    repo: SDODS
     checkRun: true
     prComment: true
     createIssueOnFailure: smoke # never | smoke | always
-    labels: [automax, test-failure]
+    labels: [sdods, test-failure]
     tokenEnv: GITHUB_TOKEN
   jira:
     enabled: true
@@ -34,7 +34,7 @@ integrations:
     linkTaggedScenarios: true
 ```
 
-Only variable **names** are stored; values come from the environment where `automax` runs.
+Only variable **names** are stored; values come from the environment where `sdods` runs.
 
 ## What happens after a run
 
@@ -59,15 +59,15 @@ flowchart LR
 Scenario: Discount code applies
 ```
 
-`automax integrations sync -p demo-shop` scans features for these tags, creates links, and refreshes their status. The run viewer shows the status next to the scenario.
+`sdods integrations sync -p demo-shop` scans features for these tags, creates links, and refreshes their status. The run viewer shows the status next to the scenario.
 
 ## Commands
 
 ```bash
-bun run automax integrations test -p demo-shop --provider github
-bun run automax integrations notify --run-id <id> --from-files --dry-run
-bun run automax integrations sync -p demo-shop
-bun run automax integrations links -p demo-shop
+bun run sdods integrations test -p demo-shop --provider github
+bun run sdods integrations notify --run-id <id> --from-files --dry-run
+bun run sdods integrations sync -p demo-shop
+bun run sdods integrations links -p demo-shop
 ```
 
 `--from-files` builds the summary from the run directory, so notifications work without a database.

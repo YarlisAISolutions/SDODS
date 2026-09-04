@@ -1,17 +1,17 @@
 ---
 title: Glossary
-description: Terms used throughout the AutoMax documentation, defined once.
+description: Terms used throughout the SDODS documentation, defined once.
 ---
 
 | Term                   | Definition                                                                                                                                                                                             |
 | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **Project**            | A directory under `projects/` with an `automax.project.yaml`. It owns features, steps, page objects, data and environments for one application.                                                        |
+| **Project**            | A directory under `projects/` with an `sdods.project.yaml`. It owns features, steps, page objects, data and environments for one application.                                                          |
 | **Environment**        | A named target (`local`, `staging`, ...) described by `envs/<env>.yaml`: base URLs, API authentication, pool size, locale, overrides.                                                                  |
 | **Layer**              | The kind of scenario: `ui` (browser), `api` (HTTP only, no browser), `hybrid` (both), `recorded` (Playwright specs produced by the recorder). Selected by tag and run as separate Playwright projects. |
 | **Suite tag**          | `@smoke`, `@regression`, `@sanity` (configurable). Exactly one per scenario. Drives the screenshot policy and the CI gate.                                                                             |
-| **Playwright project** | The unit Playwright runs. AutoMax generates one per project × layer × browser, named `<slug>--<layer>--<browser>` (or `<slug>--api`).                                                                  |
+| **Playwright project** | The unit Playwright runs. SDODS generates one per project × layer × browser, named `<slug>--<layer>--<browser>` (or `<slug>--api`).                                                                    |
 | **Fingerprint**        | A 16-character hash of project, feature path, scenario name, example index and layer. Stable across runs and browsers; names result directories and deduplicates issues.                               |
-| **Run**                | One invocation of `automax run`, identified by a UUID v7 `runId`, with a directory under `.automax/runs/<runId>/`.                                                                                     |
+| **Run**                | One invocation of `sdods run`, identified by a UUID v7 `runId`, with a directory under `.sdods/runs/<runId>/`.                                                                                         |
 | **Run directory**      | Where a run's manifest, NDJSON messages, HTML report, dashboard and per-scenario artifacts live.                                                                                                       |
 | **Attempt**            | One execution of a scenario; retries create additional attempts. Scenarios are counted, attempts are kept.                                                                                             |
 | **Dataset**            | A named data source declared under `data.sources` in the project YAML: CSV, JSON, YAML, a database table, faker factories or OpenAPI examples.                                                         |
@@ -21,6 +21,6 @@ description: Terms used throughout the AutoMax documentation, defined once.
 | **Screenshot policy**  | The rule, chosen by suite tag, for how many screenshots a scenario takes: `off`, `on-failure`, `scenario`, `step`, `visual`.                                                                           |
 | **NDJSON**             | Newline-delimited JSON. Cucumber's message format, written by the run and ingested into the database.                                                                                                  |
 | **Proposal**           | A set of file changes produced by an agent, stored under `proposals/<id>/` and applied only after review.                                                                                              |
-| **MCP**                | Model Context Protocol. AutoMax exposes an MCP server and can consume other MCP servers (for example Playwright MCP).                                                                                  |
+| **MCP**                | Model Context Protocol. SDODS exposes an MCP server and can consume other MCP servers (for example Playwright MCP).                                                                                    |
 | **Scope**              | A permission string such as `runs:write` attached to API tokens and roles.                                                                                                                             |
 | **API token**          | A free, scoped, revocable bearer token (`amx_...`) for the HTTP API and the MCP HTTP transport.                                                                                                        |

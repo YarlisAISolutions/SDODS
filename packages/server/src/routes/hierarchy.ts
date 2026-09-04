@@ -12,8 +12,8 @@ import {
   updateUser,
   scopesForRole,
   hasScope,
-} from '@automax/db';
-import type { OrgRole, WorkspaceRole } from '@automax/contracts';
+} from '@sdods/db';
+import type { OrgRole, WorkspaceRole } from '@sdods/contracts';
 import {
   CreateTokenBody,
   CreateUserBody,

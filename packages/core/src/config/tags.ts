@@ -1,4 +1,4 @@
-import type { ProjectConfig } from '@automax/contracts';
+import type { ProjectConfig } from '@sdods/contracts';
 
 export const LAYER_TAGS = ['@ui', '@api', '@hybrid'] as const;
 export const PLAYWRIGHT_BDD_SPECIAL =

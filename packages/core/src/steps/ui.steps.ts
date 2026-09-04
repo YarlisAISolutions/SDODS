@@ -3,7 +3,7 @@ import './params.js';
 import { Given, Then, When } from '../fixtures/test.js';
 import { render, renderJson } from '../api/template.js';
 import type { AriaRole } from '../heal/types.js';
-import { AutomaxError } from '../errors.js';
+import { SdodsError } from '../errors.js';
 
 const scopesOf = (
   apiContext: { vars: { toObject(): Record<string, unknown> } },
@@ -17,7 +17,7 @@ function routePath(
   const routes = config.project.routes;
   if (nameOrPath in routes) return routes[nameOrPath]!;
   if (nameOrPath.startsWith('/') || /^https?:\/\//.test(nameOrPath)) return nameOrPath;
-  throw new AutomaxError(
+  throw new SdodsError(
     'CONFIG_INVALID',
     `Unknown route "${nameOrPath}" for project ${config.project.slug}.`,
     {

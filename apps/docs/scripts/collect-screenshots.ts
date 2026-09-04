@@ -17,9 +17,9 @@ import {
 import { join, resolve } from 'node:path';
 
 const repoRoot = resolve(import.meta.dirname, '..', '..', '..');
-const runsDir = process.env.AUTOMAX_ARTIFACTS_DIR
-  ? resolve(repoRoot, process.env.AUTOMAX_ARTIFACTS_DIR)
-  : join(repoRoot, '.automax', 'runs');
+const runsDir = process.env.SDODS_ARTIFACTS_DIR
+  ? resolve(repoRoot, process.env.SDODS_ARTIFACTS_DIR)
+  : join(repoRoot, '.sdods', 'runs');
 const target = resolve(import.meta.dirname, '..', 'public', 'screenshots');
 const uiTarget = join(target, 'ui');
 mkdirSync(uiTarget, { recursive: true });

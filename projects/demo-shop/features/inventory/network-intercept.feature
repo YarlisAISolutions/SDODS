@@ -6,10 +6,10 @@ Feature: Network interception
   Scenario: A mocked page is rendered instead of the real one
     Given I mock "**/mocked/**" with HTML:
       """
-      <h1 data-test="banner">Mocked by AutoMax</h1>
+      <h1 data-test="banner">Mocked by SDODS</h1>
       """
     When I navigate to the "/mocked/banner.html" page
-    Then I should see the text "Mocked by AutoMax"
+    Then I should see the text "Mocked by SDODS"
     And the element with test id "banner" should be visible
 
   @regression

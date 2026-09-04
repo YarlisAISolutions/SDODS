@@ -1,4 +1,4 @@
-import { AutomaxConfigError } from '../errors.js';
+import { SdodsConfigError } from '../errors.js';
 
 const VAR_RE = /\$\{([A-Za-z_][A-Za-z0-9_]*)(?::-([^}]*))?\}/g;
 const SECRET_KEY_RE = /(password|secret|token|apikey|api_key|clientsecret|client_secret)/i;
@@ -30,7 +30,7 @@ export function assertNoSecretLiterals(obj: unknown, path = ''): void {
         !k.toLowerCase().endsWith('placement') &&
         !k.toLowerCase().endsWith('url')
       ) {
-        throw new AutomaxConfigError(
+        throw new SdodsConfigError(
           `Secret literal at "${p}". Use \${VAR} and put the value in .env.<env>.`,
           {
             code: 'CONFIG_SECRET_LITERAL',
@@ -52,7 +52,7 @@ export function interpolateString(value: string, opts: InterpolateOptions, path 
     const mode = opts.onUnresolved ?? 'throw';
     if (mode === 'keep') return `\${${name}}`;
     if (mode === 'empty') return '';
-    throw new AutomaxConfigError(`Unresolved variable \${${name}} at "${path || '<root>'}".`, {
+    throw new SdodsConfigError(`Unresolved variable \${${name}} at "${path || '<root>'}".`, {
       code: 'CONFIG_UNRESOLVED_VAR',
       hint: `Add ${name}=... to .env or .env.<env> (repo root or project folder), or export it in the shell.`,
       details: { variable: name, path },

@@ -1,5 +1,5 @@
 import pc from 'picocolors';
-import { errorToJson, isAutomaxError } from '@automax/core';
+import { errorToJson, isSdodsError } from '@sdods/core';
 
 export interface OutputOptions {
   json?: boolean;
@@ -47,10 +47,10 @@ export function renderError(e: unknown, asJson: boolean): number {
     process.stderr.write(`${pc.red('✖')} ${pc.bold(body.code)}: ${body.message}\n`);
     if (body.hint) process.stderr.write(`  ${pc.dim('hint:')} ${body.hint}\n`);
     if (body.docsUrl) process.stderr.write(`  ${pc.dim('docs:')} ${body.docsUrl}\n`);
-    if (process.env.AUTOMAX_DEBUG && e instanceof Error && e.stack)
+    if (process.env.SDODS_DEBUG && e instanceof Error && e.stack)
       process.stderr.write(pc.dim(e.stack) + '\n');
   }
-  if (isAutomaxError(e)) return e.exitCode;
+  if (isSdodsError(e)) return e.exitCode;
   return 1;
 }
 

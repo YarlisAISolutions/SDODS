@@ -1,7 +1,7 @@
 import { execFileSync } from 'node:child_process';
 import type { Command } from 'commander';
 import pc from 'picocolors';
-import { AutomaxError } from '@automax/core';
+import { SdodsError } from '@sdods/core';
 import { createContext } from '../context.js';
 import { json, ok, out, table } from '../ui.js';
 
@@ -17,7 +17,7 @@ export function register(program: Command) {
     .option('-p, --project <slug>')
     .action(async (opts, cmd) => {
       const ctx = createContext(cmd);
-      const { ProposalStore } = await import('@automax/mcp');
+      const { ProposalStore } = await import('@sdods/mcp');
       const rows = new ProposalStore(ctx.rootDir)
         .list({ status: opts.status, project: opts.project })
         .map((m) => ({
@@ -38,12 +38,12 @@ export function register(program: Command) {
     .description('Show a proposal: manifest and diff against the working tree')
     .action(async (id: string, _opts, cmd) => {
       const ctx = createContext(cmd);
-      const { ProposalStore } = await import('@automax/mcp');
+      const { ProposalStore } = await import('@sdods/mcp');
       const store = new ProposalStore(ctx.rootDir);
       const m = store.get(id);
       if (!m)
-        throw new AutomaxError('CONFIG_NOT_FOUND', `Unknown proposal ${id}`, {
-          hint: 'Run `automax proposals list`.',
+        throw new SdodsError('CONFIG_NOT_FOUND', `Unknown proposal ${id}`, {
+          hint: 'Run `sdods proposals list`.',
           exitCode: 2,
         });
       const diff = store.diff(id);
@@ -69,13 +69,13 @@ export function register(program: Command) {
     .description('Apply a proposal to the working tree (optionally on a new git branch)')
     .option('--branch <name>', 'create/switch to this branch first')
     .option('--reviewed-by <name>')
-    .option('--no-lint', 'skip automax lint after applying')
+    .option('--no-lint', 'skip sdods lint after applying')
     .action(async (id: string, opts, cmd) => {
       const ctx = createContext(cmd);
-      const { ProposalStore } = await import('@automax/mcp');
+      const { ProposalStore } = await import('@sdods/mcp');
       const store = new ProposalStore(ctx.rootDir);
       const m = store.get(id);
-      if (!m) throw new AutomaxError('CONFIG_NOT_FOUND', `Unknown proposal ${id}`, { exitCode: 2 });
+      if (!m) throw new SdodsError('CONFIG_NOT_FOUND', `Unknown proposal ${id}`, { exitCode: 2 });
       if (opts.branch) {
         try {
           execFileSync('git', ['checkout', '-B', opts.branch], {
@@ -83,7 +83,7 @@ export function register(program: Command) {
             stdio: 'ignore',
           });
         } catch (e) {
-          throw new AutomaxError(
+          throw new SdodsError(
             'RUN_FAILED',
             `Could not switch to branch ${opts.branch}: ${(e as Error).message}`,
           );
@@ -93,7 +93,7 @@ export function register(program: Command) {
       if (ctx.opts.json) return json({ id, written, branch: opts.branch });
       for (const w of written) ok(w);
       if (opts.lint !== false && m.project) {
-        out(pc.dim(`Next: automax lint -p ${m.project}`));
+        out(pc.dim(`Next: sdods lint -p ${m.project}`));
       }
     });
 
@@ -103,7 +103,7 @@ export function register(program: Command) {
     .option('--reason <text>')
     .action(async (id: string, opts, cmd) => {
       const ctx = createContext(cmd);
-      const { ProposalStore } = await import('@automax/mcp');
+      const { ProposalStore } = await import('@sdods/mcp');
       const m = new ProposalStore(ctx.rootDir).reject(id, opts.reason, process.env.USER);
       if (ctx.opts.json) return json(m);
       ok(`Rejected ${m.id}`);

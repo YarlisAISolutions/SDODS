@@ -1,9 +1,9 @@
 import fp from 'fastify-plugin';
 import type { FastifyInstance } from 'fastify';
-import { createDb, migrateToLatest, resolveDriverConfig, type AutomaxDb } from '@automax/db';
+import { createDb, migrateToLatest, resolveDriverConfig, type SdodsDb } from '@sdods/db';
 
 export interface DbPluginOptions {
-  adb?: AutomaxDb;
+  adb?: SdodsDb;
 }
 
 /** Decorates `fastify.adb` (opened + migrated). Closes it on shutdown unless it was injected. */

@@ -61,7 +61,7 @@ export function errorHandler(error: unknown, _req: FastifyRequest, reply: Fastif
   }
   const anyErr = error as { code?: string; message?: string; hint?: string; exitCode?: number };
   if (anyErr && typeof anyErr.code === 'string' && anyErr.code !== 'ERR_INTERNAL') {
-    // AutomaxError from core/cli: config/usage errors are 4xx
+    // SdodsError from core/cli: config/usage errors are 4xx
     const status =
       anyErr.exitCode === 2 || anyErr.code.endsWith('NOT_FOUND') || anyErr.code.startsWith('CONFIG')
         ? 400

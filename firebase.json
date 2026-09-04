@@ -8,6 +8,36 @@
       "trailingSlash": true,
       "headers": [
         {
+          "source": "/install.@(sh|ps1)",
+          "headers": [
+            {
+              "key": "Content-Type",
+              "value": "text/plain; charset=utf-8"
+            },
+            {
+              "key": "Cache-Control",
+              "value": "no-store"
+            },
+            {
+              "key": "X-Content-Type-Options",
+              "value": "nosniff"
+            }
+          ]
+        },
+        {
+          "source": "/install.@(sh|ps1).sha256",
+          "headers": [
+            {
+              "key": "Content-Type",
+              "value": "text/plain; charset=utf-8"
+            },
+            {
+              "key": "Cache-Control",
+              "value": "no-store"
+            }
+          ]
+        },
+        {
           "source": "/_next/static/**",
           "headers": [
             {
@@ -45,12 +75,12 @@
       ],
       "redirects": [
         {
-          "source": "/AutoMax",
+          "source": "/SDODS",
           "destination": "/",
           "type": 301
         },
         {
-          "source": "/AutoMax/**",
+          "source": "/SDODS/**",
           "destination": "/",
           "type": 301
         }
@@ -63,6 +93,36 @@
       "cleanUrls": true,
       "trailingSlash": true,
       "headers": [
+        {
+          "source": "/install.@(sh|ps1)",
+          "headers": [
+            {
+              "key": "Content-Type",
+              "value": "text/plain; charset=utf-8"
+            },
+            {
+              "key": "Cache-Control",
+              "value": "no-store"
+            },
+            {
+              "key": "X-Content-Type-Options",
+              "value": "nosniff"
+            }
+          ]
+        },
+        {
+          "source": "/install.@(sh|ps1).sha256",
+          "headers": [
+            {
+              "key": "Content-Type",
+              "value": "text/plain; charset=utf-8"
+            },
+            {
+              "key": "Cache-Control",
+              "value": "no-store"
+            }
+          ]
+        },
         {
           "source": "/_next/static/**",
           "headers": [

@@ -8,7 +8,7 @@ PROJECT="${GCP_PROJECT:-automax-docs}"
 REGION="${GCP_REGION:-us-central1}"
 INSTANCE="${CLOUDSQL_INSTANCE:-automax-pg}"
 TAG="${1:-latest}"
-IMAGE="${REGION}-docker.pkg.dev/${PROJECT}/automax/automax-api:${TAG}"
+IMAGE="${REGION}-docker.pkg.dev/${PROJECT}/sdods/automax-api:${TAG}"
 RUNTIME_SA="automax-api-runtime@${PROJECT}.iam.gserviceaccount.com"
 CONN="${PROJECT}:${REGION}:${INSTANCE}"
 JOB="automax-bootstrap"
@@ -25,7 +25,7 @@ gcloud run jobs "$ACTION" "$JOB" \
   --service-account "$RUNTIME_SA" \
   --set-cloudsql-instances "$CONN" \
   --set-secrets "SESSION_SECRET=automax-session-secret:latest,DB_PASSWORD=automax-db-password:latest,ADMIN_PASSWORD=automax-admin-password:latest" \
-  --set-env-vars "DB_DRIVER=postgres,DB_USER=automax,DB_NAME=automax,CLOUDSQL_CONNECTION=${CONN},AUTOMAX_ROOT=/app,ADMIN_USERNAME=${ADMIN_USERNAME:-admin}" \
+  --set-env-vars "DB_DRIVER=postgres,DB_USER=sdods,DB_NAME=sdods,CLOUDSQL_CONNECTION=${CONN},SDODS_ROOT=/app,ADMIN_USERNAME=${ADMIN_USERNAME:-admin}" \
   --args bootstrap \
   --max-retries 0 --task-timeout 600 \
   --quiet

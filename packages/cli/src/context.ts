@@ -1,5 +1,5 @@
 import type { Command } from 'commander';
-import { ProjectRegistry, setLogJson, setLogLevel } from '@automax/core';
+import { ProjectRegistry, setLogJson, setLogLevel } from '@sdods/core';
 
 export interface GlobalOptions {
   json?: boolean;

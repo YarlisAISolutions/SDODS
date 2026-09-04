@@ -9,7 +9,7 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { dirname, join, relative, resolve } from 'node:path';
-import { newId } from '@automax/contracts';
+import { newId } from '@sdods/contracts';
 import { PROPOSALS_DIR, safeJoin } from './fs.js';
 
 /**

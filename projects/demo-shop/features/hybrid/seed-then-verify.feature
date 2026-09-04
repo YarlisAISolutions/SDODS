@@ -7,7 +7,7 @@ Feature: Seed through the API, verify in the browser
     Given I use a leased user with role "standard"
     When I seed via POST "/posts" with body:
       """json
-      { "title": "AutoMax hybrid {{username}}", "body": "seeded", "userId": 1 }
+      { "title": "SDODS hybrid {{username}}", "body": "seeded", "userId": 1 }
       """
     Then the response status should be 201
     When I save the response JSON path "title" as "title"

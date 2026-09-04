@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs';
 import { join, resolve as resolvePath } from 'node:path';
 import { devices, type PlaywrightTestConfig, type ReporterDescription } from '@playwright/test';
 import { cucumberReporter, defineBddConfig } from 'playwright-bdd';
-import { pwProjectName, runFiles, type BrowserName, type Layer } from '@automax/contracts';
+import { pwProjectName, runFiles, type BrowserName, type Layer } from '@sdods/contracts';
 import { coreStepsGlob } from '../steps/glob.js';
 import type { ProjectRegistry } from './registry.js';
 import type { ResolvedConfig } from './resolve.js';
@@ -21,7 +21,7 @@ export interface PlaywrightSelection {
   reporterMode?: 'default' | 'server' | 'quiet';
 }
 
-export interface AutomaxUseOption {
+export interface SdodsUseOption {
   project: string;
   layer: Layer;
   browser?: BrowserName;
@@ -35,9 +35,9 @@ const DEVICE_FOR_BROWSER: Record<BrowserName, string> = {
   'mobile-safari': 'iPhone 15',
 };
 
-export const DASHBOARD_REPORTER = '@automax/core/reporters/dashboard';
+export const DASHBOARD_REPORTER = '@sdods/core/reporters/dashboard';
 
-/** Convenience for `playwright.config.ts`: read the selection from AUTOMAX_* env vars. */
+/** Convenience for `playwright.config.ts`: read the selection from SDODS_* env vars. */
 export function selectionFromEnv(env: NodeJS.ProcessEnv = process.env): PlaywrightSelection {
   const list = (v?: string) =>
     v
@@ -47,16 +47,16 @@ export function selectionFromEnv(env: NodeJS.ProcessEnv = process.env): Playwrig
           .filter(Boolean)
       : undefined;
   return {
-    project: env.AUTOMAX_PROJECT || undefined,
-    env: env.AUTOMAX_ENV || undefined,
-    layers: list(env.AUTOMAX_LAYERS),
-    browsers: list(env.AUTOMAX_BROWSERS),
-    tags: normalizeTagExpr(env.AUTOMAX_TAGS),
-    runId: env.AUTOMAX_RUN_ID || undefined,
-    lint: env.AUTOMAX_LINT === '1',
-    allure: env.AUTOMAX_ALLURE === '1',
-    reporters: list(env.AUTOMAX_REPORTERS),
-    reporterMode: (env.AUTOMAX_REPORTER_MODE as PlaywrightSelection['reporterMode']) || 'default',
+    project: env.SDODS_PROJECT || undefined,
+    env: env.SDODS_ENV || undefined,
+    layers: list(env.SDODS_LAYERS),
+    browsers: list(env.SDODS_BROWSERS),
+    tags: normalizeTagExpr(env.SDODS_TAGS),
+    runId: env.SDODS_RUN_ID || undefined,
+    lint: env.SDODS_LINT === '1',
+    allure: env.SDODS_ALLURE === '1',
+    reporters: list(env.SDODS_REPORTERS),
+    reporterMode: (env.SDODS_REPORTER_MODE as PlaywrightSelection['reporterMode']) || 'default',
   };
 }
 
@@ -170,7 +170,7 @@ export function buildPlaywrightConfig(
               baseURL: cfg.env.ui.baseUrl,
               testIdAttribute: p.testIdAttribute,
               ...envUse,
-              automax: { project: p.slug, layer, browser } satisfies AutomaxUseOption,
+              sdods: { project: p.slug, layer, browser } satisfies SdodsUseOption,
             } as Record<string, unknown>,
           });
         }
@@ -184,7 +184,7 @@ export function buildPlaywrightConfig(
           `${toPosix(p.root)}/steps/**/*.ts`,
           `${toPosix(p.root)}/pages/**/*.ts`,
         ],
-        // Each run generates into its own dir (cleaned by `automax run`), lint/export into `.lint`,
+        // Each run generates into its own dir (cleaned by `sdods run`), lint/export into `.lint`,
         // so concurrent runs and tooling never race on generated specs.
         outputDir: `${toPosix(join(cfg.runtime.repoRoot, '.features-gen', sel.lint ? '.lint' : (sel.runId ?? 'adhoc'), p.slug, layer))}`,
         featuresRoot: `${toPosix(p.root)}/features`,
@@ -203,7 +203,7 @@ export function buildPlaywrightConfig(
         projects.push({
           name: pwProjectName({ project: p.slug, layer }),
           testDir,
-          use: { automax: { project: p.slug, layer } satisfies AutomaxUseOption } as Record<
+          use: { sdods: { project: p.slug, layer } satisfies SdodsUseOption } as Record<
             string,
             unknown
           >,
@@ -234,14 +234,14 @@ export function buildPlaywrightConfig(
             testIdAttribute: p.testIdAttribute,
             viewport: browser.startsWith('mobile') ? undefined : p.screenshots.viewport,
             ...envUse,
-            automax: { project: p.slug, layer, browser } satisfies AutomaxUseOption,
+            sdods: { project: p.slug, layer, browser } satisfies SdodsUseOption,
           } as Record<string, unknown>,
         });
       }
     }
   }
 
-  const runDir = first?.runtime.runDir ?? resolvePath('.automax/runs/adhoc');
+  const runDir = first?.runtime.runDir ?? resolvePath('.sdods/runs/adhoc');
   const timeouts = first?.project.timeouts ?? {
     test: 60_000,
     expect: 10_000,
@@ -254,7 +254,7 @@ export function buildPlaywrightConfig(
   const reporterMode = sel.reporterMode ?? 'default';
 
   const reporter: ReporterDescription[] = [];
-  // `--reporter <name[=outputFile]>` ADDS reporters (e.g. `blob` for sharded CI) to the AutoMax
+  // `--reporter <name[=outputFile]>` ADDS reporters (e.g. `blob` for sharded CI) to the SDODS
   // defaults, so the NDJSON, dashboard and HTML report always exist. Path-less `blob`/`json`/`junit`
   // land inside the run directory.
   const extra: ReporterDescription[] = (sel.reporters ?? []).map((r) => {
@@ -314,15 +314,15 @@ export function buildPlaywrightConfig(
     },
     projects,
     metadata: {
-      automaxRunId: first?.runtime.runId,
-      automaxEnv: first?.env.name,
-      automaxRunDir: runDir,
+      sdodsRunId: first?.runtime.runId,
+      sdodsEnv: first?.env.name,
+      sdodsRunDir: runDir,
     },
   };
 }
 
 function parseEnvOverrides() {
-  const raw = process.env.AUTOMAX_CLI_OVERRIDES;
+  const raw = process.env.SDODS_CLI_OVERRIDES;
   if (!raw) return {};
   try {
     return JSON.parse(raw) as Record<string, unknown>;

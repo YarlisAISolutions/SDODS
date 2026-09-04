@@ -1,5 +1,5 @@
 import type { Kysely } from 'kysely';
-import type { RunRecord, RunTotals } from '@automax/contracts/types';
+import type { RunRecord, RunTotals } from '@sdods/contracts/types';
 import { enc, nowIso, readBool, readJson, readTs } from '../col.js';
 import type { Driver } from '../driver.js';
 import { newId } from '../ids.js';

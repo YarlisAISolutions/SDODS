@@ -1,6 +1,6 @@
 /**
  * Renders every page of the web UI (with mocks) in headless chromium and saves PNGs to
- * packages/web/screenshots/. Usage: `bun run --filter @automax/web screenshots` while
+ * packages/web/screenshots/. Usage: `bun run --filter @sdods/web screenshots` while
  * `VITE_USE_MOCKS=1 vite --port 5199` is running, or let this script start it.
  */
 import { mkdirSync } from 'node:fs';

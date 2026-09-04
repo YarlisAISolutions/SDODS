@@ -20,7 +20,7 @@ export interface SnippetOptions {
 }
 
 function stdioArgs(o: SnippetOptions): string[] {
-  const args = [...(o.args ?? ['automax', 'mcp'])];
+  const args = [...(o.args ?? ['sdods', 'mcp'])];
   if (o.project) args.push('--project', o.project);
   if (o.env) args.push('--env', o.env);
   if (o.caps) args.push('--caps', o.caps);
@@ -29,7 +29,7 @@ function stdioArgs(o: SnippetOptions): string[] {
 
 export function serverEntry(o: SnippetOptions, client: McpClient): Record<string, unknown> {
   const token =
-    o.tokenPlaceholder ?? (client === 'vscode' ? '${input:automax-token}' : '<YOUR_AUTOMAX_TOKEN>');
+    o.tokenPlaceholder ?? (client === 'vscode' ? '${input:sdods-token}' : '<YOUR_SDODS_TOKEN>');
   if (o.httpUrl) {
     return { type: 'http', url: o.httpUrl, headers: { Authorization: `Bearer ${token}` } };
   }
@@ -43,23 +43,23 @@ export function playwrightEntry(): Record<string, unknown> {
 /** `codex mcp add` / `claude mcp add` command lines for the same configuration. */
 export function cliCommands(o: SnippetOptions): { claude: string; codex: string } {
   const stdio = `${o.command ?? 'npx'} ${stdioArgs(o).join(' ')}`;
-  const token = o.tokenPlaceholder ?? '$AUTOMAX_TOKEN';
+  const token = o.tokenPlaceholder ?? '$SDODS_TOKEN';
   return {
     claude: o.httpUrl
-      ? `claude mcp add --transport http automax ${o.httpUrl} --header "Authorization: Bearer ${token}"`
-      : `claude mcp add automax -- ${stdio}`,
+      ? `claude mcp add --transport http sdods ${o.httpUrl} --header "Authorization: Bearer ${token}"`
+      : `claude mcp add sdods -- ${stdio}`,
     codex: o.httpUrl
-      ? `codex mcp add automax --url ${o.httpUrl} --bearer-token-env-var AUTOMAX_TOKEN`
-      : `codex mcp add automax -- ${stdio}`,
+      ? `codex mcp add sdods --url ${o.httpUrl} --bearer-token-env-var SDODS_TOKEN`
+      : `codex mcp add sdods -- ${stdio}`,
   };
 }
 
 /** Codex keeps MCP servers in `~/.codex/config.toml` under `[mcp_servers.<name>]`. */
 export function codexTomlEntries(o: SnippetOptions): Record<string, Record<string, unknown>> {
-  const automax: Record<string, unknown> = o.httpUrl
-    ? { url: o.httpUrl, bearer_token_env_var: 'AUTOMAX_TOKEN' }
+  const sdods: Record<string, unknown> = o.httpUrl
+    ? { url: o.httpUrl, bearer_token_env_var: 'SDODS_TOKEN' }
     : { command: o.command ?? 'npx', args: stdioArgs(o) };
-  const out: Record<string, Record<string, unknown>> = { automax };
+  const out: Record<string, Record<string, unknown>> = { sdods };
   if (o.withPlaywright !== false) out.playwright = playwrightEntry();
   return out;
 }
@@ -79,7 +79,7 @@ export function snippets(
   return {
     claude: {
       file: '.mcp.json',
-      json: { mcpServers: { automax: serverEntry(o, 'claude'), ...pw } },
+      json: { mcpServers: { sdods: serverEntry(o, 'claude'), ...pw } },
       cli: cli.claude,
     },
     codex: {
@@ -89,23 +89,23 @@ export function snippets(
     },
     cursor: {
       file: '.cursor/mcp.json',
-      json: { mcpServers: { automax: serverEntry(o, 'cursor'), ...pw } },
+      json: { mcpServers: { sdods: serverEntry(o, 'cursor'), ...pw } },
     },
     windsurf: {
       file: '.windsurf/mcp.json',
-      json: { mcpServers: { automax: serverEntry(o, 'windsurf'), ...pw } },
+      json: { mcpServers: { sdods: serverEntry(o, 'windsurf'), ...pw } },
     },
     vscode: {
       file: '.vscode/mcp.json',
       json: {
-        servers: { automax: serverEntry(o, 'vscode'), ...pw },
+        servers: { sdods: serverEntry(o, 'vscode'), ...pw },
         ...(o.httpUrl
           ? {
               inputs: [
                 {
-                  id: 'automax-token',
+                  id: 'sdods-token',
                   type: 'promptString',
-                  description: 'AutoMax API token',
+                  description: 'SDODS API token',
                   password: true,
                 },
               ],
@@ -134,7 +134,7 @@ export function installClientConfig(
   };
   if (client === 'vscode' && s.json?.inputs) {
     const inputs = ((existing.inputs as Array<{ id: string }>) ?? []).filter(
-      (i) => i.id !== 'automax-token',
+      (i) => i.id !== 'sdods-token',
     );
     merged.inputs = [...inputs, ...(s.json.inputs as unknown[])];
   }
@@ -144,7 +144,7 @@ export function installClientConfig(
 }
 
 /**
- * Merge `[mcp_servers.automax]` (and playwright) into the Codex config, keeping every other
+ * Merge `[mcp_servers.sdods]` (and playwright) into the Codex config, keeping every other
  * table and server intact. Used when the `codex` CLI is not available to do it itself.
  */
 export function installCodexConfig(

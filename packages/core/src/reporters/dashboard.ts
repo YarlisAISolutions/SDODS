@@ -9,7 +9,7 @@ import type {
   TestCase,
   TestResult,
 } from '@playwright/test/reporter';
-import { parsePwProjectName } from '@automax/contracts';
+import { parsePwProjectName } from '@sdods/contracts';
 
 interface Entry {
   id: string;
@@ -35,7 +35,7 @@ export interface DashboardOptions {
 }
 
 /**
- * AutoMax dashboard reporter (ported from the reference custom-reporter, fixed):
+ * SDODS dashboard reporter (ported from the reference custom-reporter, fixed):
  * one row per test (keyed by test.id, retries do not inflate counts), escaped HTML,
  * Chart.js inlined so the file works offline, metrics.json for the CLI summary.
  */
@@ -47,8 +47,8 @@ export default class DashboardReporter implements Reporter {
   private workers = 0;
 
   constructor(options: DashboardOptions = {}) {
-    this.outputDir = options.outputDir ?? 'test-results/automax-dashboard';
-    this.title = options.title ?? 'AutoMax run';
+    this.outputDir = options.outputDir ?? 'test-results/sdods-dashboard';
+    this.title = options.title ?? 'SDODS run';
   }
 
   onBegin(config: FullConfig, _suite: Suite) {
@@ -58,8 +58,8 @@ export default class DashboardReporter implements Reporter {
 
   onTestEnd(test: TestCase, result: TestResult) {
     const parts = parsePwProjectName(test.parent.project()?.name ?? '');
-    const fingerprint = test.annotations.find((a) => a.type === 'automax:fingerprint')?.description;
-    const heals = test.annotations.filter((a) => a.type === 'automax:heal').length;
+    const fingerprint = test.annotations.find((a) => a.type === 'sdods:fingerprint')?.description;
+    const heals = test.annotations.filter((a) => a.type === 'sdods:heal').length;
     const outcome = test.outcome();
     this.entries.set(test.id, {
       id: test.id,
@@ -198,7 +198,7 @@ function renderHtml(m: Metrics): string {
     )
     .join('');
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${esc(m.title)} · AutoMax dashboard</title>
+<title>${esc(m.title)} · SDODS dashboard</title>
 <style>
 :root{--bg:#0f172a;--panel:#1e293b;--text:#e2e8f0;--dim:#94a3b8;--ok:#22c55e;--bad:#ef4444;--warn:#f59e0b;--skip:#64748b;--accent:#6366f1}
 *{box-sizing:border-box}body{margin:0;font:14px/1.5 -apple-system,Segoe UI,Inter,Roboto,sans-serif;background:var(--bg);color:var(--text)}
@@ -217,7 +217,7 @@ code{background:#0f172a;padding:1px 6px;border-radius:4px;font-size:11px;color:#
 .fail{background:#1f1523;border:1px solid #7f1d1d;border-radius:8px;padding:12px;margin-bottom:10px}.fail .t{font-weight:600}.fail small{color:var(--dim);margin-left:6px}.fail pre{white-space:pre-wrap;color:#fecaca;font-size:12px;margin:8px 0 0}
 canvas{max-height:260px}
 </style></head><body>
-<header><h1><span>AutoMax</span> · ${esc(m.title)}</h1><small>${esc(m.generatedAt)} · ${s.workers} workers · ${fmt(s.durationMs)}</small></header>
+<header><h1><span>SDODS</span> · ${esc(m.title)}</h1><small>${esc(m.generatedAt)} · ${s.workers} workers · ${fmt(s.durationMs)}</small></header>
 <main>
 <div class="cards">${card('Total', s.total)}${card('Passed', s.passed, 'ok')}${card('Failed', s.failed, 'bad')}${card('Flaky', s.flaky, 'warn')}${card('Skipped', s.skipped)}${card('Healed', s.healed, 'warn')}${card('Pass rate', passRate + '%', passRate === 100 ? 'ok' : passRate < 80 ? 'bad' : 'warn')}</div>
 <div class="bar"><i style="width:${passRate}%"></i></div>

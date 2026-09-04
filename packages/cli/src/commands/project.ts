@@ -2,14 +2,14 @@ import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Command } from 'commander';
 import { stringify as toYaml } from 'yaml';
-import { BrowserSchema, LayerSchema, ProjectConfigSchema, SlugSchema } from '@automax/contracts';
-import { AutomaxError, PROJECT_FILE } from '@automax/core';
+import { BrowserSchema, LayerSchema, ProjectConfigSchema, SlugSchema } from '@sdods/contracts';
+import { SdodsError, PROJECT_FILE } from '@sdods/core';
 import { createContext } from '../context.js';
 import { collect, json, ok, table } from '../ui.js';
 import { projectTemplateFiles } from '../templates/project.js';
 
 export function registerProjectCommands(program: Command) {
-  const project = program.command('project').description('Create and list AutoMax projects');
+  const project = program.command('project').description('Create and list SDODS projects');
 
   project
     .command('list')
@@ -76,7 +76,7 @@ export function registerProjectCommands(program: Command) {
       SlugSchema.parse(slug);
       const root = join(ctx.registry.projectsDir, slug);
       if (existsSync(join(root, PROJECT_FILE)) && !opts.force) {
-        throw new AutomaxError('CONFIG_INVALID', `Project "${slug}" already exists at ${root}.`, {
+        throw new SdodsError('CONFIG_INVALID', `Project "${slug}" already exists at ${root}.`, {
           hint: 'Pass --force to overwrite.',
           exitCode: 2,
         });
@@ -115,12 +115,12 @@ export function registerProjectCommands(program: Command) {
       const yamlText = toYaml(minimalYaml(config), { lineWidth: 100 });
       writeFileSync(
         join(root, PROJECT_FILE),
-        `# AutoMax project. Reference: ${'https://automax.sdods.com/docs/reference/project-yaml'}\n${yamlText}`,
+        `# SDODS project. Reference: ${'https://docs.sdods.com/docs/reference/project-yaml'}\n${yamlText}`,
       );
       if (ctx.opts.json) return json({ slug, root, files: [PROJECT_FILE, ...Object.keys(files)] });
       ok(`Created project ${slug} at ${root}`);
       for (const f of [PROJECT_FILE, ...Object.keys(files)]) console.log(`  ${f}`);
-      console.log(`\nNext: automax run -p ${slug} -e ${opts.env} -l api`);
+      console.log(`\nNext: sdods run -p ${slug} -e ${opts.env} -l api`);
     });
 }
 

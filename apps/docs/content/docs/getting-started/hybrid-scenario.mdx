@@ -4,13 +4,13 @@ description: Seed state through the API and verify it in the browser within one 
 ---
 
 <Learn>
-  Why AutoMax uses one merged fixture set, how a scenario chains API responses into UI steps, and
-  how a leased user starts the browser already logged in.
+  Why SDODS uses one merged fixture set, how a scenario chains API responses into UI steps, and how
+  a leased user starts the browser already logged in.
 </Learn>
 
 ## Why one fixture set matters
 
-Frameworks that keep separate `test` objects for UI and API cannot mix them in one scenario. AutoMax has a single `test` with API, page, data, user, screenshot and heal fixtures, so a scenario can prepare state over HTTP and assert in the browser without glue code.
+Frameworks that keep separate `test` objects for UI and API cannot mix them in one scenario. SDODS has a single `test` with API, page, data, user, screenshot and heal fixtures, so a scenario can prepare state over HTTP and assert in the browser without glue code.
 
 ## The feature
 
@@ -23,7 +23,7 @@ Feature: Seed a post and see it in the UI
     Given I use a leased user with role "standard"
     When I seed via POST "/posts" with body:
       """json
-      { "title": "AutoMax {{username}}", "userId": 1 }
+      { "title": "SDODS {{username}}", "userId": 1 }
       """
     And I save the response JSON path "title" as "title"
     And I mock "**/inventory.html" with JSON:
@@ -44,7 +44,7 @@ What happens:
 ## Run it
 
 ```bash
-bun run automax run -p demo-shop -e staging -l hybrid -b chromium
+bun run sdods run -p demo-shop -e staging -l hybrid -b chromium
 ```
 
 Hybrid scenarios take screenshots for UI steps and attach request and response JSON for API steps, so the run viewer shows the whole story.

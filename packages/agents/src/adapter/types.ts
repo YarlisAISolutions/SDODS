@@ -1,4 +1,4 @@
-import type { AgentSdkToolDef } from '@automax/mcp';
+import type { AgentSdkToolDef } from '@sdods/mcp';
 
 /**
  * claude / openai-compatible: API keys. claude-code / codex: shell out to the user's logged-in

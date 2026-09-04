@@ -37,6 +37,6 @@ export const VERIFICATION = [
   ['Demo smoke + sanity matrix', '23/23 on chromium, firefox, webkit'],
   ['Demo regression (chromium)', '27/27'],
   ['API layer', '10/10'],
-  ['AutoMax testing its own UI', '41/41 across three browsers'],
+  ['SDODS testing its own UI', '41/41 across three browsers'],
   ['Docs', '76 pages, 0 broken links'],
 ] as const;

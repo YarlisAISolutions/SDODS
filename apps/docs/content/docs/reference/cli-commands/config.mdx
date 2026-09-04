@@ -1,29 +1,29 @@
 ---
-title: automax config
+title: sdods config
 description: Show and validate resolved configuration.
 ---
 
 ## `config show`
 
 ```text
-automax config show -p <slug> [-e <env>] [--explain] [--show-secrets] [--json]
+sdods config show -p <slug> [-e <env>] [--explain] [--show-secrets] [--json]
 ```
 
 Without `--explain` prints the merged `project`, `env` and `runtime` trees with secret-looking values redacted. With `--explain` prints one row per leaf with the layer that produced it (`defaults`, `project`, `envYaml`, `dotenv`, `processEnv`, `cli`).
 
-```bash automax-verify
-bun run automax config show -p demo-shop -e staging --explain
-bun run automax --json config show -p demo-shop -e local
+```bash sdods-verify
+bun run sdods config show -p demo-shop -e staging --explain
+bun run sdods --json config show -p demo-shop -e local
 ```
 
 ## `config validate`
 
 ```text
-automax config validate
+sdods config validate
 ```
 
 Resolves every project × environment and reports `ok` or the first error. Exit code `2` when anything fails.
 
-```bash automax-verify
-bun run automax config validate
+```bash sdods-verify
+bun run sdods config validate
 ```

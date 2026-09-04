@@ -1,8 +1,8 @@
 import { readdirSync, statSync, existsSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { execa } from 'execa';
-import type { LintFinding, LintResult } from '@automax/contracts';
-import type { ProjectConfig } from '@automax/contracts';
+import type { LintFinding, LintResult } from '@sdods/contracts';
+import type { ProjectConfig } from '@sdods/contracts';
 import {
   BROWSERS_FOR_SKIP,
   KNOWN_VALUE_TAGS,
@@ -195,7 +195,7 @@ export async function lintProject(opts: LintOptions): Promise<LintResult> {
         warnings.push({
           severity: 'warning',
           rule: 'tags/unknown',
-          message: `Unknown tag ${tag}. Declare it under tags.extra or a module's tags in automax.project.yaml.`,
+          message: `Unknown tag ${tag}. Declare it under tags.extra or a module's tags in sdods.project.yaml.`,
           ...loc,
         });
       }
@@ -246,16 +246,16 @@ export async function lintProject(opts: LintOptions): Promise<LintResult> {
   return { errors, warnings, filesChecked: files.length };
 }
 
-/** Run bddgen with AUTOMAX_LINT=1 (missingSteps: fail-on-gen) and parse the missing-step block. */
+/** Run bddgen with SDODS_LINT=1 (missingSteps: fail-on-gen) and parse the missing-step block. */
 export async function detectUndefinedSteps(
   project: ProjectConfig & { root: string },
   repoRoot: string,
 ): Promise<Array<{ message: string; file?: string; line?: number }>> {
   const env = {
     ...process.env,
-    AUTOMAX_PROJECT: project.slug,
-    AUTOMAX_LINT: '1',
-    AUTOMAX_ARTIFACTS_DIR: join(repoRoot, '.automax', 'lint'),
+    SDODS_PROJECT: project.slug,
+    SDODS_LINT: '1',
+    SDODS_ARTIFACTS_DIR: join(repoRoot, '.sdods', 'lint'),
   };
   const result = await execa('npx', ['bddgen', '-c', join(repoRoot, 'playwright.config.ts')], {
     cwd: repoRoot,

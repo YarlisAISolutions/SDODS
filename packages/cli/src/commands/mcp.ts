@@ -1,6 +1,6 @@
 import type { Command } from 'commander';
 import pc from 'picocolors';
-import { AutomaxError } from '@automax/core';
+import { SdodsError } from '@sdods/core';
 import { createContext } from '../context.js';
 import { json, ok, out } from '../ui.js';
 
@@ -19,7 +19,7 @@ function capsOf(raw: string | undefined): string[] | 'all' {
 export function register(program: Command) {
   const mcp = program
     .command('mcp')
-    .description('Start the AutoMax MCP server (stdio by default) or install client configuration')
+    .description('Start the SDODS MCP server (stdio by default) or install client configuration')
     .option('-p, --project <slug>', 'default project for tools and prompts')
     .option('-e, --env <name>', 'default environment')
     .option(
@@ -32,18 +32,18 @@ export function register(program: Command) {
     .option('--host <host>', 'HTTP host', '127.0.0.1')
     .option(
       '--token <token>',
-      'HTTP: accept this single bearer token (dev only; production uses `automax tokens`)',
+      'HTTP: accept this single bearer token (dev only; production uses `sdods tokens`)',
     )
     .option('--list-tools', 'print the tool catalogue and exit')
     .action(async (opts, cmd) => {
       const ctx = createContext(cmd);
       const {
-        serveAutomaxStdio,
-        serveAutomaxHttp,
+        serveSdodsStdio,
+        serveSdodsHttp,
         createRegistry,
         buildToolContext,
         ALL_CAPABILITIES,
-      } = await import('@automax/mcp');
+      } = await import('@sdods/mcp');
       const caps = capsOf(opts.caps);
       if (opts.listTools) {
         const registry = createRegistry();
@@ -63,14 +63,14 @@ export function register(program: Command) {
         return;
       }
       if (opts.http) {
-        const token = opts.token ?? process.env.AUTOMAX_MCP_TOKEN;
+        const token = opts.token ?? process.env.SDODS_MCP_TOKEN;
         if (!token) {
-          throw new AutomaxError('AUTH_FAILED', 'HTTP mode needs a bearer token.', {
-            hint: 'Pass --token <secret> (dev) or set AUTOMAX_MCP_TOKEN. Production deployments use scoped tokens from `automax tokens create` via the web server.',
+          throw new SdodsError('AUTH_FAILED', 'HTTP mode needs a bearer token.', {
+            hint: 'Pass --token <secret> (dev) or set SDODS_MCP_TOKEN. Production deployments use scoped tokens from `sdods tokens create` via the web server.',
             exitCode: 2,
           });
         }
-        const srv = await serveAutomaxHttp({
+        const srv = await serveSdodsHttp({
           rootDir: ctx.rootDir,
           project: opts.project,
           env: opts.env,
@@ -79,7 +79,7 @@ export function register(program: Command) {
           host: opts.host,
           authenticate: (t) => (t === token ? { name: 'token', scopes: ['*'], via: 'http' } : null),
         });
-        ok(`AutoMax MCP over HTTP at http://${opts.host}:${srv.port}/mcp (Ctrl+C to stop)`);
+        ok(`SDODS MCP over HTTP at http://${opts.host}:${srv.port}/mcp (Ctrl+C to stop)`);
         await new Promise<void>((resolve) => {
           process.once('SIGINT', () => srv.close().then(resolve));
           process.once('SIGTERM', () => srv.close().then(resolve));
@@ -87,14 +87,14 @@ export function register(program: Command) {
         return;
       }
       // stdio: stdout carries protocol messages only; logs go to stderr
-      serveAutomaxStdio({ rootDir: ctx.rootDir, project: opts.project, env: opts.env, caps });
+      serveSdodsStdio({ rootDir: ctx.rootDir, project: opts.project, env: opts.env, caps });
       await new Promise<void>(() => undefined);
     });
 
   mcp
     .command('install <client>')
     .description(
-      'Register the AutoMax MCP server with a client: claude | codex | cursor | vscode | windsurf (merges, never clobbers)',
+      'Register the SDODS MCP server with a client: claude | codex | cursor | vscode | windsurf (merges, never clobbers)',
     )
     .option('-p, --project <slug>')
     .option('-e, --env <name>')
@@ -109,9 +109,9 @@ export function register(program: Command) {
     .option('--print', 'print the snippet instead of writing files')
     .action(async (client: string, opts, cmd) => {
       const ctx = createContext(cmd);
-      const { installClientConfig, snippets, cliCommands } = await import('@automax/mcp');
+      const { installClientConfig, snippets, cliCommands } = await import('@sdods/mcp');
       if (!CLIENTS.includes(client as Client)) {
-        throw new AutomaxError('NOT_SUPPORTED', `Unknown client "${client}".`, {
+        throw new SdodsError('NOT_SUPPORTED', `Unknown client "${client}".`, {
           hint: `Use one of ${CLIENTS.join(', ')}.`,
           exitCode: 2,
         });
@@ -140,7 +140,7 @@ export function register(program: Command) {
       if (!opts.file && (client === 'claude' || client === 'codex')) {
         const done = await registerViaClientCli(client, o, ctx.rootDir);
         if (done) {
-          ok(`Registered the automax MCP server with ${client} (${cliCommands(o)[client]})`);
+          ok(`Registered the sdods MCP server with ${client} (${cliCommands(o)[client]})`);
           if (o.withPlaywright && client === 'codex')
             out(pc.dim('Also registered the bundled Playwright MCP server as "playwright".'));
           return;
@@ -165,7 +165,7 @@ async function registerViaClientCli(
   cwd: string,
 ): Promise<boolean> {
   const { execa } = await import('execa');
-  const stdio = ['npx', 'automax', 'mcp'];
+  const stdio = ['npx', 'sdods', 'mcp'];
   if (o.project) stdio.push('--project', o.project);
   if (o.env) stdio.push('--env', o.env);
   if (o.caps) stdio.push('--caps', o.caps);
@@ -180,11 +180,11 @@ async function registerViaClientCli(
       if (/ENOENT|not found/i.test(msg)) return false;
       // already registered → remove and re-add so the args are current
       if (/already exists/i.test(msg)) {
-        await execa(client, ['mcp', 'remove', args[2] ?? 'automax'], { cwd, reject: false });
+        await execa(client, ['mcp', 'remove', args[2] ?? 'sdods'], { cwd, reject: false });
         await execa(client, args, { cwd, timeout: 30_000 });
         return true;
       }
-      throw new AutomaxError('NOT_SUPPORTED', `${client} mcp add failed: ${msg.trim()}`, {
+      throw new SdodsError('NOT_SUPPORTED', `${client} mcp add failed: ${msg.trim()}`, {
         hint: 'Re-run with --file to write the config file directly.',
       });
     }
@@ -192,11 +192,11 @@ async function registerViaClientCli(
   const addArgs =
     client === 'claude'
       ? o.httpUrl
-        ? ['mcp', 'add', '-s', 'project', '--transport', 'http', 'automax', o.httpUrl]
-        : ['mcp', 'add', '-s', 'project', 'automax', '--', ...stdio]
+        ? ['mcp', 'add', '-s', 'project', '--transport', 'http', 'sdods', o.httpUrl]
+        : ['mcp', 'add', '-s', 'project', 'sdods', '--', ...stdio]
       : o.httpUrl
-        ? ['mcp', 'add', 'automax', '--url', o.httpUrl]
-        : ['mcp', 'add', 'automax', '--', ...stdio];
+        ? ['mcp', 'add', 'sdods', '--url', o.httpUrl]
+        : ['mcp', 'add', 'sdods', '--', ...stdio];
   const ok1 = await run(addArgs);
   if (!ok1) return false;
   if (o.withPlaywright !== false) {

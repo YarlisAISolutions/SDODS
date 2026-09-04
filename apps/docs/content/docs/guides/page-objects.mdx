@@ -13,7 +13,7 @@ description: Bind Gherkin steps to page-object methods with playwright-bdd decor
 ```ts title="projects/demo-shop/pages/InventoryPage.ts"
 import { expect } from '@playwright/test';
 import { Fixture, Given, Then, When } from 'playwright-bdd/decorators';
-import { BasePage } from '@automax/core/pages';
+import { BasePage } from '@sdods/core/pages';
 import type { test } from '../steps/fixtures.js';
 
 @Fixture<typeof test>('inventoryPage')
@@ -49,7 +49,7 @@ export class InventoryPage extends BasePage {
 ## Expose it as a fixture
 
 ```ts title="projects/demo-shop/steps/fixtures.ts"
-import { test as base, createBdd } from '@automax/core/fixtures';
+import { test as base, createBdd } from '@sdods/core/fixtures';
 import { InventoryPage } from '../pages/InventoryPage.js';
 import { auth } from './auth.js';
 
@@ -73,7 +73,7 @@ export const { Given, When, Then } = createBdd(test);
 | `shots`                                                                 | the screenshot narrator, for explicit captures                                               |
 
 <Callout type="info">
-  Keep the primary locator you believe in and describe the element in the heal context. AutoMax only
+  Keep the primary locator you believe in and describe the element in the heal context. SDODS only
   probes alternatives when the primary fails, and it tells you which alternative won.
 </Callout>
 

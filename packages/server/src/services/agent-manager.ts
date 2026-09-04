@@ -1,7 +1,7 @@
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import type { ChildProcess } from 'node:child_process';
-import { newId } from '@automax/contracts';
+import { newId } from '@sdods/contracts';
 import type { ServerConfig } from '../config.js';
 import { spawnCli } from './cli.js';
 import { LogBuffer } from './log-buffer.js';
@@ -38,7 +38,7 @@ export interface AgentJob {
   result?: unknown;
 }
 
-/** Spawns `automax agent <kind> …` and streams its output; proposals are reviewed through `automax proposals`. */
+/** Spawns `sdods agent <kind> …` and streams its output; proposals are reviewed through `sdods proposals`. */
 export class AgentManager {
   private readonly jobs = new Map<string, AgentJob>();
 
@@ -54,7 +54,7 @@ export class AgentManager {
 
   start(input: AgentJobInput, startedBy: string | null): AgentJob {
     const id = newId();
-    const dir = join(this.config.rootDir, '.automax', 'agent-jobs');
+    const dir = join(this.config.rootDir, '.sdods', 'agent-jobs');
     mkdirSync(dir, { recursive: true });
     const job: AgentJob = {
       id,
@@ -78,7 +78,7 @@ export class AgentManager {
     if (input.dryRun) args.push('--dry-run');
     if (input.budgetUsd !== undefined) args.push('--budget-usd', String(input.budgetUsd));
     if (input.maxTurns !== undefined) args.push('--max-turns', String(input.maxTurns));
-    job.log.push('sys', `automax ${args.join(' ')}`);
+    job.log.push('sys', `sdods ${args.join(' ')}`);
     const child = spawnCli(this.config, args);
     job.child = child;
     let stdout = '';
@@ -131,7 +131,7 @@ export class AgentManager {
       log: new LogBuffer(2000),
     };
     this.jobs.set(id, job);
-    job.log.push('sys', `automax ${args.join(' ')}`);
+    job.log.push('sys', `sdods ${args.join(' ')}`);
     const child = spawnCli(this.config, args);
     job.child = child;
     child.stdout?.on('data', (c: Buffer) =>

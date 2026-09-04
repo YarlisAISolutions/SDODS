@@ -1,5 +1,5 @@
 /** Structured errors: every CLI/MCP/server surface renders `{ code, message, hint, docsUrl }`. */
-export type AutomaxErrorCode =
+export type SdodsErrorCode =
   | 'CONFIG_INVALID'
   | 'CONFIG_NOT_FOUND'
   | 'CONFIG_SECRET_LITERAL'
@@ -18,9 +18,9 @@ export type AutomaxErrorCode =
   | 'NOT_SUPPORTED'
   | 'INTERNAL';
 
-export const DOCS_BASE_URL = 'https://automax.sdods.com';
+export const DOCS_BASE_URL = 'https://docs.sdods.com';
 
-export interface AutomaxErrorOptions {
+export interface SdodsErrorOptions {
   hint?: string;
   docsPath?: string;
   cause?: unknown;
@@ -28,16 +28,16 @@ export interface AutomaxErrorOptions {
   exitCode?: number;
 }
 
-export class AutomaxError extends Error {
-  readonly code: AutomaxErrorCode;
+export class SdodsError extends Error {
+  readonly code: SdodsErrorCode;
   readonly hint?: string;
   readonly docsUrl?: string;
   readonly details?: Record<string, unknown>;
   readonly exitCode: number;
 
-  constructor(code: AutomaxErrorCode, message: string, opts: AutomaxErrorOptions = {}) {
+  constructor(code: SdodsErrorCode, message: string, opts: SdodsErrorOptions = {}) {
     super(message, opts.cause ? { cause: opts.cause } : undefined);
-    this.name = 'AutomaxError';
+    this.name = 'SdodsError';
     this.code = code;
     this.hint = opts.hint;
     this.docsUrl = opts.docsPath ? `${DOCS_BASE_URL}${opts.docsPath}` : undefined;
@@ -57,20 +57,20 @@ export class AutomaxError extends Error {
   }
 }
 
-export class AutomaxConfigError extends AutomaxError {
-  constructor(message: string, opts: AutomaxErrorOptions & { code?: AutomaxErrorCode } = {}) {
+export class SdodsConfigError extends SdodsError {
+  constructor(message: string, opts: SdodsErrorOptions & { code?: SdodsErrorCode } = {}) {
     super(opts.code ?? 'CONFIG_INVALID', message, {
       docsPath: '/docs/guides/configuration',
       ...opts,
     });
-    this.name = 'AutomaxConfigError';
+    this.name = 'SdodsConfigError';
   }
 }
 
-export function isAutomaxError(e: unknown): e is AutomaxError {
+export function isSdodsError(e: unknown): e is SdodsError {
   return (
-    e instanceof AutomaxError ||
-    (typeof e === 'object' && e !== null && (e as any).name === 'AutomaxError')
+    e instanceof SdodsError ||
+    (typeof e === 'object' && e !== null && (e as any).name === 'SdodsError')
   );
 }
 
@@ -80,7 +80,7 @@ export function errorToJson(e: unknown): {
   hint?: string;
   docsUrl?: string;
 } {
-  if (isAutomaxError(e)) return e.toJSON();
+  if (isSdodsError(e)) return e.toJSON();
   if (e instanceof Error) return { code: 'INTERNAL', message: e.message };
   return { code: 'INTERNAL', message: String(e) };
 }

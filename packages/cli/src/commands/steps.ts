@@ -1,8 +1,8 @@
 import { join } from 'node:path';
 import type { Command } from 'commander';
 import { execa } from 'execa';
-import type { StepDef } from '@automax/contracts';
-import { AutomaxError, coreStepsDir } from '@automax/core';
+import type { StepDef } from '@sdods/contracts';
+import { SdodsError, coreStepsDir } from '@sdods/core';
 import { createContext } from '../context.js';
 import { json, table } from '../ui.js';
 
@@ -14,15 +14,15 @@ export async function listSteps(
 ): Promise<StepDef[]> {
   const env = {
     ...process.env,
-    AUTOMAX_PROJECT: slug,
-    AUTOMAX_ARTIFACTS_DIR: join(rootDir, '.automax', 'lint'),
-    AUTOMAX_LAYERS: '',
+    SDODS_PROJECT: slug,
+    SDODS_ARTIFACTS_DIR: join(rootDir, '.sdods', 'lint'),
+    SDODS_LAYERS: '',
   };
   const args = ['bddgen', 'export', '-c', join(rootDir, 'playwright.config.ts')];
   if (opts.unused) args.push('--unused-steps');
   const result = await execa('npx', args, { cwd: rootDir, env, reject: false, all: true });
   if (result.exitCode !== 0) {
-    throw new AutomaxError('RUN_FAILED', `bddgen export failed for ${slug}.`, {
+    throw new SdodsError('RUN_FAILED', `bddgen export failed for ${slug}.`, {
       details: { output: result.all?.slice(-2000) },
     });
   }

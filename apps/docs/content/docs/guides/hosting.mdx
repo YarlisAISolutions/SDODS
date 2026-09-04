@@ -1,10 +1,10 @@
 ---
 title: Hosting
-description: How the AutoMax web presence is deployed — landing site, docs, and the API on Cloud Run — and how to reproduce it for your own domain.
+description: How the SDODS web presence is deployed — landing site, docs, and the API on Cloud Run — and how to reproduce it for your own domain.
 ---
 
 <Learn>
-  Where each part of AutoMax runs in production, what it costs, which secrets exist, and the exact
+  Where each part of SDODS runs in production, what it costs, which secrets exist, and the exact
   commands to deploy, rotate and tear down. Everything here is reproducible for another domain.
 </Learn>
 
@@ -15,7 +15,7 @@ flowchart LR
   R53["Route 53<br/>sdods.com zone"]
   subgraph FB["Firebase Hosting (project automax-docs)"]
     WWW["site sdods-automax<br/>sdods.com · www.sdods.com<br/>apps/www"]
-    DOCS["site automax-docs<br/>automax.sdods.com · docs.sdods.com<br/>apps/docs"]
+    DOCS["site automax-docs<br/>docs.sdods.com · docs.sdods.com<br/>apps/docs"]
     API["site sdods-automax-api<br/>api.sdods.com<br/>rewrite ** → Cloud Run"]
   end
   RUN["Cloud Run<br/>automax-api (scale to zero)"]
@@ -26,11 +26,11 @@ flowchart LR
   RUN --> SM
 ```
 
-| Host                                  | Serves                                             | Deployed by                  |
-| ------------------------------------- | -------------------------------------------------- | ---------------------------- |
-| `sdods.com`, `www.sdods.com`          | landing site (`apps/www`)                          | `.github/workflows/www.yml`  |
-| `automax.sdods.com`, `docs.sdods.com` | this documentation (`apps/docs`)                   | `.github/workflows/docs.yml` |
-| `api.sdods.com`                       | Fastify API, web UI and `/mcp` (`packages/server`) | `.github/workflows/api.yml`  |
+| Host                               | Serves                                             | Deployed by                  |
+| ---------------------------------- | -------------------------------------------------- | ---------------------------- |
+| `sdods.com`, `www.sdods.com`       | landing site (`apps/www`)                          | `.github/workflows/www.yml`  |
+| `docs.sdods.com`, `docs.sdods.com` | this documentation (`apps/docs`)                   | `.github/workflows/docs.yml` |
+| `api.sdods.com`                    | Fastify API, web UI and `/mcp` (`packages/server`) | `.github/workflows/api.yml`  |
 
 Static sites deploy on every push to `main` and get a preview channel per pull request. The API image is built with Cloud Build and deployed to Cloud Run when the `GCP_SA_KEY_AUTOMAX` secret is present.
 
@@ -38,13 +38,13 @@ Static sites deploy on every push to `main` and get a preview channel per pull r
 
 Firebase Hosting needs a CNAME for subdomains and an A record plus an ownership TXT for the apex. In Route 53 the zone ends up as:
 
-| Record                                | Type  | Value                                                                    |
-| ------------------------------------- | ----- | ------------------------------------------------------------------------ |
-| `sdods.com`                           | A     | `199.36.158.100` (Firebase)                                              |
-| `sdods.com`                           | TXT   | `hosting-site=sdods-automax` (plus existing verification and SPF values) |
-| `www.sdods.com`                       | CNAME | `sdods-automax.web.app`                                                  |
-| `docs.sdods.com`, `automax.sdods.com` | CNAME | `automax-docs.web.app`                                                   |
-| `api.sdods.com`                       | CNAME | `sdods-automax-api.web.app`                                              |
+| Record                             | Type  | Value                                                                    |
+| ---------------------------------- | ----- | ------------------------------------------------------------------------ |
+| `sdods.com`                        | A     | `199.36.158.100` (Firebase)                                              |
+| `sdods.com`                        | TXT   | `hosting-site=sdods-automax` (plus existing verification and SPF values) |
+| `www.sdods.com`                    | CNAME | `sdods-automax.web.app`                                                  |
+| `docs.sdods.com`, `docs.sdods.com` | CNAME | `automax-docs.web.app`                                                   |
+| `api.sdods.com`                    | CNAME | `sdods-automax-api.web.app`                                              |
 
 Certificates are issued by Firebase automatically once ownership is verified; nothing is minted by hand. Domains are registered on a site with the Hosting REST API (`customDomains.create`, header `x-goog-user-project`) or the Firebase console.
 
@@ -56,7 +56,7 @@ Certificates are issued by Firebase automatically once ownership is verified; no
 
 ## The API on Cloud Run
 
-One container image serves everything: `deploy/entrypoint.sh serve` runs migrations and starts the server; `bootstrap` creates the admin user and makes it organization owner; any other argument is passed to the `automax` CLI. The image is built on the official Playwright image so UI runs triggered from the web UI work inside the container.
+One container image serves everything: `deploy/entrypoint.sh serve` runs migrations and starts the server; `bootstrap` creates the admin user and makes it organization owner; any other argument is passed to the `sdods` CLI. The image is built on the official Playwright image so UI runs triggered from the web UI work inside the container.
 
 <Steps>
   <Step>
@@ -83,19 +83,19 @@ One container image serves everything: `deploy/entrypoint.sh serve` runs migrati
   <Step>
     **Point CI ingest at it**
 
-    Set `AUTOMAX_SERVER_URL=https://api.sdods.com` and `AUTOMAX_TOKEN=<token with runs:ingest>` as repository secrets; the ci workflow then uploads run results and artifacts after every matrix run.
+    Set `SDODS_SERVER_URL=https://api.sdods.com` and `SDODS_TOKEN=<token with runs:ingest>` as repository secrets; the ci workflow then uploads run results and artifacts after every matrix run.
 
   </Step>
 </Steps>
 
-Behind the Firebase rewrite only a cookie named `__session` reaches Cloud Run, so the deployment sets `AUTOMAX_SESSION_COOKIE=__session`. Run artifacts produced by UI-triggered runs live in `/tmp` of the instance; durable results come from CI ingest or a mounted bucket.
+Behind the Firebase rewrite only a cookie named `__session` reaches Cloud Run, so the deployment sets `SDODS_SESSION_COOKIE=__session`. Run artifacts produced by UI-triggered runs live in `/tmp` of the instance; durable results come from CI ingest or a mounted bucket.
 
 ## Secrets and identities
 
 | Name                                    | Where           | Used for                                                                                                     |
 | --------------------------------------- | --------------- | ------------------------------------------------------------------------------------------------------------ |
 | `automax-session-secret`                | Secret Manager  | signs session cookies                                                                                        |
-| `automax-db-password`                   | Secret Manager  | Cloud SQL user `automax`                                                                                     |
+| `automax-db-password`                   | Secret Manager  | Cloud SQL user `sdods`                                                                                       |
 | `automax-admin-password`                | Secret Manager  | bootstrap admin (read once, then change it in the UI)                                                        |
 | `automax-api-runtime@…`                 | service account | Cloud Run runtime: Secret Manager accessor, Cloud SQL client                                                 |
 | `github-deploy-api@…`                   | service account | CI: Cloud Build, Cloud Run admin, Artifact Registry writer; key stored as GitHub secret `GCP_SA_KEY_AUTOMAX` |
@@ -119,7 +119,7 @@ Rotate a secret with `gcloud secrets versions add <name> --data-file=…` and re
 | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
 | Logs             | `gcloud run services logs read automax-api --region us-central1 --limit 100`                                                                |
 | Manual migration | `gcloud run jobs execute automax-bootstrap --region us-central1 --wait`                                                                     |
-| Backup           | `automax db export <dir>` against `DATABASE_URL`                                                                                            |
+| Backup           | `sdods db export <dir>` against `DATABASE_URL`                                                                                              |
 | Tear down        | delete the Cloud Run service and job, the Cloud SQL instance, the three secrets and the Firebase site; restore the previous Route 53 record |
 
 The full command reference lives in `deploy/README.md` in the repository.

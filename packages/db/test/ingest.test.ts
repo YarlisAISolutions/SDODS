@@ -2,8 +2,8 @@ import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { sql } from 'kysely';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { attachmentNames } from '@automax/contracts/names';
-import type { AutomaxDb } from '../src/create-db.js';
+import { attachmentNames } from '@sdods/contracts/names';
+import type { SdodsDb } from '../src/create-db.js';
 import { ingestRun, moduleFromUri, selectorFromError, splitUri } from '../src/ingest/index.js';
 import { getRun, getRunScenarios, getScenarioDetail } from '../src/repos/runs.js';
 import { listFlakyStats, listHealEvents, listLocatorStats } from '../src/repos/improvement.js';
@@ -34,7 +34,7 @@ describe('ingest helpers', () => {
 });
 
 describe('cucumber NDJSON ingest', () => {
-  let adb: AutomaxDb;
+  let adb: SdodsDb;
   beforeAll(async () => {
     adb = await testDb();
     await ensureProject(adb.db, adb.driver, 'demo-shop', 'Demo Shop');

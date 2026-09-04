@@ -1,6 +1,6 @@
 ---
 title: Organizations, workspaces, projects and modules
-description: The four-level hierarchy AutoMax uses to organise automation across teams and applications.
+description: The four-level hierarchy SDODS uses to organise automation across teams and applications.
 ---
 
 <Learn>
@@ -12,8 +12,8 @@ description: The four-level hierarchy AutoMax uses to organise automation across
 
 ```mermaid
 flowchart TB
-  O["Organization<br/>automax.workspace.yaml → organization"] --> W["Workspace default<br/>automax.workspace.yaml → workspaces[]<br/>several per organization"]
-  W --> P1["Project demo-shop<br/>projects/demo-shop/automax.project.yaml"]
+  O["Organization<br/>sdods.workspace.yaml → organization"] --> W["Workspace default<br/>sdods.workspace.yaml → workspaces[]<br/>several per organization"]
+  W --> P1["Project demo-shop<br/>projects/demo-shop/sdods.project.yaml"]
   O --> W2["Workspace platform-qa"]
   W2 --> P2["Project (opt in with workspace: platform-qa)"]
   P1 --> M1["Module auth<br/>features/auth/"]
@@ -23,27 +23,27 @@ flowchart TB
   P1 --> M5["Module hybrid<br/>features/hybrid/"]
 ```
 
-| Level        | Declared in                               | Holds                                                                                                                                                                                                                                                    |
-| ------------ | ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Organization | `automax.workspace.yaml` → `organization` | a company or product line; membership roles `member`, `admin`, `owner`                                                                                                                                                                                   |
-| Workspace    | `automax.workspace.yaml` → `workspaces[]` | a team or product area; an organization holds many, and `defaultWorkspace` names the one projects join unless they set `workspace:`; defaults for browsers, suites, test-id attribute and shared processes; membership roles `viewer`, `editor`, `admin` |
-| Project      | `projects/<slug>/automax.project.yaml`    | one application: layers, browsers, environments, data, auth, screenshots, modules, processes                                                                                                                                                             |
-| Module       | `modules:` inside the project YAML        | one functional area: a folder under `features/`, its testing types, expected tags, owner, Jira component, routes and endpoints                                                                                                                           |
+| Level        | Declared in                             | Holds                                                                                                                                                                                                                                                    |
+| ------------ | --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Organization | `sdods.workspace.yaml` → `organization` | a company or product line; membership roles `member`, `admin`, `owner`                                                                                                                                                                                   |
+| Workspace    | `sdods.workspace.yaml` → `workspaces[]` | a team or product area; an organization holds many, and `defaultWorkspace` names the one projects join unless they set `workspace:`; defaults for browsers, suites, test-id attribute and shared processes; membership roles `viewer`, `editor`, `admin` |
+| Project      | `projects/<slug>/sdods.project.yaml`    | one application: layers, browsers, environments, data, auth, screenshots, modules, processes                                                                                                                                                             |
+| Module       | `modules:` inside the project YAML      | one functional area: a folder under `features/`, its testing types, expected tags, owner, Jira component, routes and endpoints                                                                                                                           |
 
 ## The workspace file
 
-```yaml title="automax.workspace.yaml"
+```yaml title="sdods.workspace.yaml"
 organization:
-  slug: automax
-  name: AutoMax
-  url: https://github.com/siri1410/AutoMax
+  slug: sdods
+  name: SDODS
+  url: https://github.com/siri1410/SDODS
 workspaces:
   - slug: default
     name: Default workspace
-    organization: automax
+    organization: sdods
   - slug: platform-qa
     name: Platform QA
-    organization: automax
+    organization: sdods
 defaultWorkspace: default
 defaults:
   browsers: [chromium, firefox, webkit]
@@ -60,12 +60,12 @@ defaults:
       }
 ```
 
-Projects inherit `defaults` and may override any of them. A project joins a workspace with `workspace: <slug>` (one of `workspaces[]`); when omitted it joins `defaultWorkspace`. `organization:` must match the file's organization. `automax workspace tree` prints the result, and `automax db sync` mirrors it into the database so the web UI can show workspaces with each user's effective role.
+Projects inherit `defaults` and may override any of them. A project joins a workspace with `workspace: <slug>` (one of `workspaces[]`); when omitted it joins `defaultWorkspace`. `organization:` must match the file's organization. `sdods workspace tree` prints the result, and `sdods db sync` mirrors it into the database so the web UI can show workspaces with each user's effective role.
 
 ## Modules
 
-```yaml title="projects/demo-shop/automax.project.yaml"
-organization: automax
+```yaml title="projects/demo-shop/sdods.project.yaml"
+organization: sdods
 workspace: default
 modules:
   - name: auth
@@ -108,7 +108,7 @@ What a module gives you:
 
 - **Lint** warns when a scenario under `features/<module>/` lacks one of the module's expected `tags`.
 - **Coverage** joins `routes` and `endpoints` with scenarios per suite tag.
-- **Run selection**: `automax run -p demo-shop --module cart` runs one module; processes may list `modules:`.
+- **Run selection**: `sdods run -p demo-shop --module cart` runs one module; processes may list `modules:`.
 - **Reporting**: the dashboard, insights and issues group by module; `jiraComponent` and `owner` flow into created issues.
 
 <Callout type="info">
@@ -119,4 +119,4 @@ What a module gives you:
 ## Next steps
 
 - [Processes and testing types](/docs/guides/processes-and-testing-types)
-- [Workspace file reference](/docs/reference/project-yaml#automaxworkspaceyaml)
+- [Workspace file reference](/docs/reference/project-yaml#sdodsworkspaceyaml)

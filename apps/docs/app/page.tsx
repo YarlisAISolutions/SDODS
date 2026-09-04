@@ -31,7 +31,7 @@ const features: Array<{ title: string; body: string; href: string }> = [
   },
   {
     title: 'MCP and agents',
-    body: 'AutoMax is an MCP server; agents plan, generate, heal and upgrade tests but only write proposals.',
+    body: 'SDODS is an MCP server; agents plan, generate, heal and upgrade tests but only write proposals.',
     href: '/docs/guides/mcp',
   },
 ];
@@ -40,7 +40,7 @@ export default function HomePage() {
   return (
     <HomeLayout {...baseOptions()}>
       <main className="mx-auto flex max-w-5xl flex-col items-center px-4 py-16 text-center">
-        <img src={withBase('/img/automax-logo.svg')} alt="AutoMax" className="w-full max-w-lg" />
+        <img src={withBase('/img/sdods-logo.svg')} alt="SDODS" className="w-full max-w-lg" />
         <p className="mt-6 max-w-2xl text-lg text-fd-muted-foreground">
           An automation platform with a reusable architecture. BDD for UI, API and hybrid flows,
           multi-project and multi-environment, data-driven, self-healing, with a web UI, an MCP
@@ -61,9 +61,9 @@ export default function HomePage() {
           </Link>
         </div>
         <pre className="mt-8 w-full max-w-2xl overflow-x-auto rounded-lg border border-fd-border bg-fd-card p-4 text-left text-sm">
-          {`git clone https://github.com/siri1410/AutoMax.git && cd AutoMax
+          {`git clone https://github.com/siri1410/SDODS.git && cd SDODS
 bun install && npx playwright install --with-deps
-bun run automax run -p demo-shop -e staging -l api`}
+bun run sdods run -p demo-shop -e staging -l api`}
         </pre>
         <section className="mt-12 grid w-full grid-cols-1 gap-4 text-left md:grid-cols-2 lg:grid-cols-3">
           {features.map((f) => (

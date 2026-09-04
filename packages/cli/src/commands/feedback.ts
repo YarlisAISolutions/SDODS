@@ -1,14 +1,14 @@
 import { execa } from 'execa';
 import type { Command } from 'commander';
 import pc from 'picocolors';
-import { VERSION } from '@automax/core';
+import { VERSION } from '@sdods/core';
 import { json, out } from '../ui.js';
 
-const REPO = 'https://github.com/siri1410/AutoMax';
+const REPO = 'https://github.com/siri1410/SDODS';
 const DISCUSSIONS = `${REPO}/discussions/categories/ideas`;
 
 /**
- * `automax feedback` — open a prefilled GitHub issue (feature request or bug report).
+ * `sdods feedback` — open a prefilled GitHub issue (feature request or bug report).
  * No backend: the URL carries the fields; bug reports embed the doctor summary.
  */
 export function register(program: Command) {
@@ -18,7 +18,7 @@ export function register(program: Command) {
       'Request a feature or report a bug (prefilled GitHub issue; opens in your browser)',
     )
     .option('--feature', 'feature request (default)')
-    .option('--bug', 'bug report with environment details from `automax doctor`')
+    .option('--bug', 'bug report with environment details from `sdods doctor`')
     .option('--discuss', 'print the Discussions (ideas) URL instead')
     .option('-t, --title <text>', 'issue title')
     .option('-m, --message <text>', 'problem statement or observed behaviour')
@@ -34,7 +34,7 @@ export function register(program: Command) {
           template: 'bug_report.yml',
           title: opts.title ? `[Bug] ${opts.title}` : '[Bug] ',
           labels: 'bug,triage',
-          'automax-version': VERSION,
+          'sdods-version': VERSION,
           os: osLabel(),
         });
         const doctor = await doctorSummary();
@@ -46,7 +46,7 @@ export function register(program: Command) {
           template: 'feature_request.yml',
           title: opts.title ? `[Feature] ${opts.title}` : '[Feature] ',
           labels: 'enhancement,triage',
-          'automax-version': VERSION,
+          'sdods-version': VERSION,
         });
         if (opts.message) params.set('problem', opts.message);
         url = `${REPO}/issues/new?${params.toString()}`;

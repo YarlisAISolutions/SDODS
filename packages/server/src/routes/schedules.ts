@@ -6,7 +6,7 @@ import {
   listScheduleRuns,
   updateScheduleState,
   upsertSchedule,
-} from '@automax/db';
+} from '@sdods/db';
 import { ScheduleBody } from '../schemas/index.js';
 import { badRequest, forbidden, notFound, parse } from '../errors.js';
 import { nextTimes } from '../services/scheduler.js';

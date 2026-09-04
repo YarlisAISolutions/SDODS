@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
-import type { HealEvent } from '@automax/contracts';
-import { scenarioFiles } from '@automax/contracts';
+import type { HealEvent } from '@sdods/contracts';
+import { scenarioFiles } from '@sdods/contracts';
 
 export interface HealReportRow {
   description: string;

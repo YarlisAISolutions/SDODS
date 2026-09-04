@@ -311,7 +311,7 @@ export const handlers = [
         {
           event: 'done',
           data: {
-            spec: "import { test, expect } from '@automax/core/test';\n\n// @automax-recording {\"project\":\"demo-shop\",\"env\":\"staging\",\"user\":\"standard\"}\ntest.describe('checkout', { tag: ['@recorded', '@ui', '@regression'] }, () => {\n  test('checkout', async ({ page }) => {\n    await page.goto('/');\n    await page.getByTestId('username').fill('standard_user');\n    await page.getByTestId('password').fill('secret_sauce');\n    await page.getByRole('button', { name: 'Login' }).click();\n    await expect(page).toHaveURL(/inventory/);\n  });\n});\n",
+            spec: "import { test, expect } from '@sdods/core/test';\n\n// @sdods-recording {\"project\":\"demo-shop\",\"env\":\"staging\",\"user\":\"standard\"}\ntest.describe('checkout', { tag: ['@recorded', '@ui', '@regression'] }, () => {\n  test('checkout', async ({ page }) => {\n    await page.goto('/');\n    await page.getByTestId('username').fill('standard_user');\n    await page.getByTestId('password').fill('secret_sauce');\n    await page.getByRole('button', { name: 'Login' }).click();\n    await expect(page).toHaveURL(/inventory/);\n  });\n});\n",
             path: 'projects/demo-shop/recorded/checkout.spec.ts',
           },
         },
@@ -369,7 +369,7 @@ export const handlers = [
   http.post('/api/proposals/:id/accept', ({ params }) => {
     const p = state.proposals.find((x) => x.id === params.id);
     if (p) p.status = 'accepted';
-    return json({ ok: true, branch: `automax/${params.id}` });
+    return json({ ok: true, branch: `sdods/${params.id}` });
   }),
   http.post('/api/proposals/:id/reject', ({ params }) => {
     const p = state.proposals.find((x) => x.id === params.id);

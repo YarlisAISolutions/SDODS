@@ -1,6 +1,6 @@
 ---
 title: Self-healing locators
-description: How AutoMax recovers from a broken locator, scores alternatives, records every heal and proposes fixes.
+description: How SDODS recovers from a broken locator, scores alternatives, records every heal and proposes fixes.
 ---
 
 <Learn>
@@ -25,12 +25,12 @@ flowchart LR
   C --> PR["probe all in parallel ≤ 1.5 s<br/>count · visible · enabled"]
   PR --> S["score = base × uniqueness × visibility × enabled + history"]
   S -->|best ≥ minScore| H["act on it · record HealEvent"]
-  S -->|none| E["AutomaxHealError listing probes"]
+  S -->|none| E["SdodsHealError listing probes"]
 ```
 
 Worst case adds about 4.5 seconds, not the 30-plus seconds of naive fallback chains. Negative assertions are never healed.
 
-```yaml title="automax.project.yaml"
+```yaml title="sdods.project.yaml"
 heal:
   enabled: true
   primaryTimeoutMs: 3000
@@ -41,11 +41,11 @@ heal:
 
 ## What is recorded
 
-Every heal is attached to the scenario (`automax/heal/<step>/<n>`), appended to `heal.jsonl` in the run directory, annotated on the Playwright test, and logged with the suggested rewrite. With a database, heals feed `heal_events` and `locator_stats`.
+Every heal is attached to the scenario (`sdods/heal/<step>/<n>`), appended to `heal.jsonl` in the run directory, annotated on the Playwright test, and logged with the suggested rewrite. With a database, heals feed `heal_events` and `locator_stats`.
 
 ```bash
-bun run automax heal report --last
-bun run automax heal report -p demo-shop --write-history
+bun run sdods heal report --last
+bun run sdods heal report -p demo-shop --write-history
 ```
 
 ## From heal to fix

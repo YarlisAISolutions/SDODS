@@ -1,7 +1,7 @@
-import type { BrowserName, Layer } from '@automax/contracts';
+import type { BrowserName, Layer } from '@sdods/contracts';
 import type { ProjectRegistry } from '../config/registry.js';
 import type { HarMode, ResolvedConfig } from '../config/resolve.js';
-import type { EnvConfig } from '@automax/contracts';
+import type { EnvConfig } from '@sdods/contracts';
 import type { AuthStrategy } from '../auth/index.js';
 import type { ApiClient } from '../api/client.js';
 import type { DataProvider, LeasedUser, UserPool } from '../data/types.js';
@@ -13,17 +13,17 @@ import type { AuthStateCache } from './auth.js';
 import type { PageRegistry } from './pages.js';
 import type { ScenarioMeta } from './scenario.js';
 
-/** Opaque database handle (a Kysely instance when @automax/db is installed). */
+/** Opaque database handle (a Kysely instance when @sdods/db is installed). */
 export type DbHandle = { destroy?: () => Promise<void> } & Record<string, unknown>;
 
-export interface AutomaxOption {
+export interface SdodsOption {
   project: string;
   layer: Layer;
   browser?: BrowserName;
 }
 
 export interface WorkerFixtures {
-  automax: AutomaxOption;
+  sdods: SdodsOption;
   registry: ProjectRegistry;
   config: ResolvedConfig;
   env: EnvConfig;
@@ -31,7 +31,7 @@ export interface WorkerFixtures {
   auth: AuthStrategy;
   userPool: UserPool;
   authCache: AuthStateCache;
-  /** Kysely instance from @automax/db when env.db is configured; otherwise undefined. */
+  /** Kysely instance from @sdods/db when env.db is configured; otherwise undefined. */
   db: DbHandle | undefined;
   healHistory: HealHistory;
   harMode: HarMode;
@@ -47,5 +47,5 @@ export interface TestFixtures {
   shots: ScreenshotNarrator;
   heal: Healer;
   /** auto fixture: pushes identity annotations */
-  $automaxAnnotations: void;
+  $sdodsAnnotations: void;
 }

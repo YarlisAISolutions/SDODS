@@ -10,9 +10,9 @@ import {
   type Layer,
   type RunManifest,
   type RunSummary,
-} from '@automax/contracts';
+} from '@sdods/contracts';
 import {
-  AutomaxError,
+  SdodsError,
   CLI_OVERRIDES_ENV,
   VERSION,
   formatFindings,
@@ -24,7 +24,7 @@ import {
   serializeCliOverrides,
   type CliOverrides,
   type PlaywrightSelection,
-} from '@automax/core';
+} from '@sdods/core';
 import { createContext } from '../context.js';
 import { collect, json, out, parseIntFlag, warn } from '../ui.js';
 
@@ -93,7 +93,7 @@ function addRunOptions(cmd: Command): Command {
     .option('--feature <path>', 'only this feature file (relative to features/)')
     .option('--scenario <name>', 'only scenarios whose title contains this text')
     .option('--run-id <id>', 'run id (default: uuid v7)')
-    .option('--artifacts-dir <dir>', 'artifacts root (default: .automax/runs)')
+    .option('--artifacts-dir <dir>', 'artifacts root (default: .sdods/runs)')
     .option('--no-lint', 'skip feature lint before running')
     .option('--ingest', 'ingest results into the database after the run')
     .option('--no-ingest', 'do not ingest even when a database is configured')
@@ -152,14 +152,20 @@ export async function runCommand(flags: RunFlags, cmd: Command): Promise<number>
         : (proc?.browsers ?? [])
   ) as BrowserName[];
   const modules = flags.module.length ? flags.module : (proc?.modules ?? []);
-  const workers = flags.workers ?? proc?.workers;
   const retries = flags.retries ?? proc?.retries;
   const harMode = flags.harUpdate ? 'update' : flags.harReplay ? 'replay' : proc?.harMode;
+  // Recording writes each HAR file when its context closes, so parallel workers sharing a
+  // `@har:<name>` fixture overwrite one another and the file ends up missing entries.
+  // Recording is a one-off authoring step, so serialise it instead of losing requests.
+  const workers = harMode === 'update' ? 1 : (flags.workers ?? proc?.workers);
+  if (harMode === 'update' && (flags.workers ?? proc?.workers ?? 0) > 1) {
+    warn('Recording HAR fixtures runs with a single worker so shared files keep every request.');
+  }
   const failOnFlaky = flags.failOnFlaky ?? proc?.failOnFlaky ?? false;
 
   for (const l of layers) {
     if (!projectCfg.layers.includes(l)) {
-      throw new AutomaxError(
+      throw new SdodsError(
         'CONFIG_INVALID',
         `Layer "${l}" is not enabled for project ${entry.slug} (layers: ${projectCfg.layers.join(', ')}).`,
         { exitCode: 2 },
@@ -168,7 +174,7 @@ export async function runCommand(flags: RunFlags, cmd: Command): Promise<number>
   }
   for (const b of browsers) {
     if (!projectCfg.browsers.includes(b)) {
-      throw new AutomaxError(
+      throw new SdodsError(
         'CONFIG_INVALID',
         `Browser "${b}" is not enabled for project ${entry.slug} (browsers: ${projectCfg.browsers.join(', ')}).`,
         { exitCode: 2 },
@@ -217,7 +223,7 @@ export async function runCommand(flags: RunFlags, cmd: Command): Promise<number>
     shardTotal: cfg.runtime.shard?.total,
     process: proc?.name,
     modules: modules.length ? modules : undefined,
-    automaxVersion: VERSION,
+    sdodsVersion: VERSION,
   };
   const writeManifest = () =>
     writeFileSync(join(runDir, runFiles.manifest), JSON.stringify(manifest, null, 2));
@@ -227,7 +233,7 @@ export async function runCommand(flags: RunFlags, cmd: Command): Promise<number>
     const result = await lintProject({ project: cfg.project });
     if (result.errors.length) {
       process.stderr.write(formatFindings(result) + '\n');
-      throw new AutomaxError(
+      throw new SdodsError(
         'LINT_FAILED',
         `${result.errors.length} lint error(s) in project ${entry.slug}. Fix them or pass --no-lint.`,
         { exitCode: 3 },
@@ -252,35 +258,35 @@ export async function runCommand(flags: RunFlags, cmd: Command): Promise<number>
   };
   const childEnv: NodeJS.ProcessEnv = {
     ...process.env,
-    AUTOMAX_ROOT: ctx.rootDir,
-    AUTOMAX_PROJECT: entry.slug,
-    AUTOMAX_ENV: cfg.env.name,
-    AUTOMAX_TAGS: tags ?? '',
-    AUTOMAX_LAYERS: selection.layers?.join(',') ?? '',
-    AUTOMAX_BROWSERS: selection.browsers?.join(',') ?? '',
-    AUTOMAX_RUN_ID: runId,
-    AUTOMAX_ALLURE: flags.allure ? '1' : '',
-    AUTOMAX_REPORTERS: selection.reporters?.join(',') ?? '',
-    AUTOMAX_REPORTER_MODE: selection.reporterMode ?? 'default',
-    AUTOMAX_PROCESS: proc?.name ?? '',
-    AUTOMAX_MODULES: modules.join(','),
+    SDODS_ROOT: ctx.rootDir,
+    SDODS_PROJECT: entry.slug,
+    SDODS_ENV: cfg.env.name,
+    SDODS_TAGS: tags ?? '',
+    SDODS_LAYERS: selection.layers?.join(',') ?? '',
+    SDODS_BROWSERS: selection.browsers?.join(',') ?? '',
+    SDODS_RUN_ID: runId,
+    SDODS_ALLURE: flags.allure ? '1' : '',
+    SDODS_REPORTERS: selection.reporters?.join(',') ?? '',
+    SDODS_REPORTER_MODE: selection.reporterMode ?? 'default',
+    SDODS_PROCESS: proc?.name ?? '',
+    SDODS_MODULES: modules.join(','),
     [CLI_OVERRIDES_ENV]: serializeCliOverrides(cli),
     FORCE_COLOR: ctx.opts.color === false ? '0' : (process.env.FORCE_COLOR ?? '1'),
   };
-  if (flags.updateSnapshots) childEnv.AUTOMAX_UPDATE_SNAPSHOTS = '1';
-  if (harMode) childEnv.AUTOMAX_HAR_MODE = harMode;
-  if (flags.strict && harMode === 'replay') childEnv.AUTOMAX_OFFLINE = '1';
+  if (flags.updateSnapshots) childEnv.SDODS_UPDATE_SNAPSHOTS = '1';
+  if (harMode) childEnv.SDODS_HAR_MODE = harMode;
+  if (flags.strict && harMode === 'replay') childEnv.SDODS_OFFLINE = '1';
 
   const configPath = join(ctx.rootDir, 'playwright.config.ts');
   if (!existsSync(configPath)) {
-    throw new AutomaxError('CONFIG_NOT_FOUND', `No playwright.config.ts at ${ctx.rootDir}.`, {
-      hint: 'Run `automax init` or copy the template from the AutoMax repo.',
+    throw new SdodsError('CONFIG_NOT_FOUND', `No playwright.config.ts at ${ctx.rootDir}.`, {
+      hint: 'Run `sdods init` or copy the template from the SDODS repo.',
     });
   }
 
   const pwProjects = listGeneratedProjects(ctx.registry, selection);
   if (!pwProjects.length) {
-    throw new AutomaxError('CONFIG_INVALID', 'The selection produced no Playwright projects.', {
+    throw new SdodsError('CONFIG_INVALID', 'The selection produced no Playwright projects.', {
       hint: 'Check --layer / --browser against the project yaml.',
       exitCode: 2,
     });
@@ -297,8 +303,8 @@ export async function runCommand(flags: RunFlags, cmd: Command): Promise<number>
     });
     if (gen.exitCode !== 0) {
       if (ctx.opts.quiet && gen.stderr) process.stderr.write(gen.stderr + '\n');
-      throw new AutomaxError('RUN_FAILED', 'bddgen failed to generate specs.', {
-        hint: 'Run `automax lint -p <slug> --undefined-steps` to find undefined steps.',
+      throw new SdodsError('RUN_FAILED', 'bddgen failed to generate specs.', {
+        hint: 'Run `sdods lint -p <slug> --undefined-steps` to find undefined steps.',
         exitCode: 2,
       });
     }
@@ -387,10 +393,10 @@ export async function runCommand(flags: RunFlags, cmd: Command): Promise<number>
   const dbConfigured =
     process.env.DB_DRIVER === 'postgres'
       ? Boolean(process.env.DATABASE_URL)
-      : existsSync(resolvePath(ctx.rootDir, process.env.SQLITE_PATH ?? '.automax/automax.db'));
+      : existsSync(resolvePath(ctx.rootDir, process.env.SQLITE_PATH ?? '.sdods/sdods.db'));
   if (flags.ingest === true || (flags.ingest !== false && dbConfigured)) {
     try {
-      const dbModule = '@automax/db';
+      const dbModule = '@sdods/db';
       const mod = (await import(dbModule)) as {
         openDb: () => Promise<{ close(): Promise<void> } & Record<string, unknown>>;
         ingestRun: (

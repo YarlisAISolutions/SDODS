@@ -5,7 +5,7 @@ import AjvModule, { type ErrorObject } from 'ajv';
 import addFormatsModule from 'ajv-formats';
 import type { ZodType } from 'zod';
 import type { ResolvedConfig } from '../config/resolve.js';
-import { AutomaxError } from '../errors.js';
+import { SdodsError } from '../errors.js';
 
 // ajv and ajv-formats are CJS with `exports.default`; normalise for NodeNext ESM interop.
 const AjvCtor = ((AjvModule as any).default ?? AjvModule) as new (
@@ -40,7 +40,7 @@ export function loadJsonSchema(config: ResolvedConfig, file: string): object {
   ].map((f) => (isAbsolute(f) ? f : resolvePath(config.project.root, f)));
   const found = candidates.find((f) => existsSync(f));
   if (!found) {
-    throw new AutomaxError(
+    throw new SdodsError(
       'DATASET_NOT_FOUND',
       `JSON schema "${file}" not found. Tried: ${candidates.join(', ')}`,
       {
@@ -69,7 +69,7 @@ export async function loadZodSchema(config: ResolvedConfig, spec: string): Promi
   );
   const found = candidates.find((f) => existsSync(f));
   if (!found)
-    throw new AutomaxError(
+    throw new SdodsError(
       'DATASET_NOT_FOUND',
       `Zod schema module "${spec}" not found under ${config.project.root}/schemas.`,
     );
@@ -77,7 +77,7 @@ export async function loadZodSchema(config: ResolvedConfig, spec: string): Promi
   const schema = (exportName ? mod[exportName] : (mod.default ?? mod.schema)) as
     ZodType | undefined;
   if (!schema || typeof (schema as any).safeParse !== 'function') {
-    throw new AutomaxError(
+    throw new SdodsError(
       'CONFIG_INVALID',
       `Module ${found} does not export a zod schema${exportName ? ` named "${exportName}"` : ' as default'}.`,
     );
@@ -101,7 +101,7 @@ const openApiCache = new Map<string, Promise<OpenApiDoc>>();
 export async function loadOpenApi(config: ResolvedConfig, specPath?: string): Promise<OpenApiDoc> {
   const spec = specPath ?? config.env.api.openapi;
   if (!spec) {
-    throw new AutomaxError(
+    throw new SdodsError(
       'CONFIG_INVALID',
       'No OpenAPI spec configured. Set env.api.openapi (path or URL) in envs/<env>.yaml.',
     );

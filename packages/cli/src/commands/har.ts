@@ -1,7 +1,7 @@
 import { relative } from 'node:path';
 import type { Command } from 'commander';
 import pc from 'picocolors';
-import { AutomaxError } from '@automax/core';
+import { SdodsError } from '@sdods/core';
 import { createContext } from '../context.js';
 import { collect, json, ok, out, table } from '../ui.js';
 import { runCommand, type RunFlags } from './run.js';
@@ -36,13 +36,13 @@ export function register(program: Command) {
       const ctx = createContext(cmd);
       if (opts.interactive) {
         if (!opts.name)
-          throw new AutomaxError('CONFIG_INVALID', '--interactive needs --name <har-name>.', {
+          throw new SdodsError('CONFIG_INVALID', '--interactive needs --name <har-name>.', {
             exitCode: 2,
           });
         const entry = ctx.registry.pick(opts.project);
         const config = ctx.registry.resolve(entry.slug, opts.env);
-        const { runCodegen } = await import('@automax/core/recorder');
-        const { writeSidecar } = await import('@automax/core/har');
+        const { runCodegen } = await import('@sdods/core/recorder');
+        const { writeSidecar } = await import('@sdods/core/har');
         const res = await runCodegen({
           config,
           name: opts.name,
@@ -52,7 +52,7 @@ export function register(program: Command) {
           outputFile: `${config.runtime.artifactsDir}/../codegen-scratch/${opts.name}.spec.ts`,
         });
         if (!res.harFile)
-          throw new AutomaxError('RUN_FAILED', 'Codegen closed without writing a HAR.', {
+          throw new SdodsError('RUN_FAILED', 'Codegen closed without writing a HAR.', {
             exitCode: 1,
           });
         writeSidecar(config, {
@@ -128,7 +128,7 @@ export function register(program: Command) {
     .action(async (opts, cmd: Command) => {
       const ctx = createContext(cmd);
       const entry = ctx.registry.pick(opts.project);
-      const { listHars } = await import('@automax/core/har');
+      const { listHars } = await import('@sdods/core/har');
       const rows = listHars(entry.root, opts.env).map((h) => ({
         env: h.env,
         name: h.name,

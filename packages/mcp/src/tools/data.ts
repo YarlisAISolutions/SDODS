@@ -35,7 +35,7 @@ export function loadRows(file: string): Array<Record<string, unknown>> {
     : ((y as { rows?: Array<Record<string, unknown>> })?.rows ?? []);
 }
 
-/** Resolve a dataset file for an env with the AutoMax fallback chain. */
+/** Resolve a dataset file for an env with the SDODS fallback chain. */
 export function resolveDatasetFile(
   root: string,
   spec: { path?: string; fallback?: string },
@@ -78,7 +78,7 @@ export const dataTools = [
           >;
           userPool?: unknown;
         };
-      }>(join(root, 'automax.project.yaml'));
+      }>(join(root, 'sdods.project.yaml'));
       const sources = yaml?.data?.sources ?? {};
       const rows = Object.entries(sources).map(([name, spec]) => ({
         name,
@@ -115,7 +115,7 @@ export const dataTools = [
       const root = projectRoot(ctx.rootDir, args.project);
       const yaml = readYaml<{
         data?: { sources?: Record<string, { type: string; path?: string; fallback?: string }> };
-      }>(join(root, 'automax.project.yaml'));
+      }>(join(root, 'sdods.project.yaml'));
       const spec = yaml?.data?.sources?.[args.dataset];
       if (!spec)
         throw Object.assign(new Error(`Unknown dataset ${args.dataset}`), {
@@ -159,7 +159,7 @@ export const dataTools = [
           sources?: Record<string, { type: string; path?: string; fallback?: string }>;
           userPool?: { dataset: string; roleColumn?: string };
         };
-      }>(join(root, 'automax.project.yaml'));
+      }>(join(root, 'sdods.project.yaml'));
       const pool = yaml?.data?.userPool;
       if (!pool) return { text: 'No user pool configured.', data: { roles: {} } };
       const spec = yaml?.data?.sources?.[pool.dataset];
@@ -169,7 +169,7 @@ export const dataTools = [
       const roles: Record<string, number> = {};
       for (const r of rows)
         roles[String(r[roleCol] ?? 'unknown')] = (roles[String(r[roleCol] ?? 'unknown')] ?? 0) + 1;
-      const leaseDir = join(ctx.rootDir, '.automax', 'leases', args.project, args.env ?? '');
+      const leaseDir = join(ctx.rootDir, '.sdods', 'leases', args.project, args.env ?? '');
       const leases = existsSync(leaseDir) ? (await import('node:fs')).readdirSync(leaseDir) : [];
       return {
         text: summarize(`Pool for ${args.project}`, { roles, leases }),

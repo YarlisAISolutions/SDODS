@@ -1,8 +1,8 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { basename, join, resolve } from 'node:path';
-import { runFiles } from '@automax/contracts/names';
-import type { RunManifest } from '@automax/contracts/types';
-import type { AutomaxDb } from '../create-db.js';
+import { runFiles } from '@sdods/contracts/names';
+import type { RunManifest } from '@sdods/contracts/types';
+import type { SdodsDb } from '../create-db.js';
 import { readJson } from '../col.js';
 import { ensureProject, getProjectBySlug } from '../repos/projects.js';
 import { deleteRunChildren, upsertRun } from '../repos/runs.js';
@@ -47,7 +47,7 @@ export function discoverRunFiles(runDir: string): { ndjson: string[]; pwJson: st
  * Ingest one run (all its NDJSON shards and Playwright JSON files) into the database.
  * Idempotent: natural keys converge on re-run; `replace` wipes the run's children first.
  */
-export async function ingestRun(adb: AutomaxDb, opts: IngestRunOptions): Promise<IngestResult> {
+export async function ingestRun(adb: SdodsDb, opts: IngestRunOptions): Promise<IngestResult> {
   const artifactsRoot = resolve(opts.artifactsRoot);
   const runDir = join(artifactsRoot, opts.runId);
   const manifest = opts.manifest === undefined ? readManifest(runDir) : opts.manifest;

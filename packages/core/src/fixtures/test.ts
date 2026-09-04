@@ -1,6 +1,6 @@
 import { join } from 'node:path';
 import { test as base, createBdd } from 'playwright-bdd';
-import type { EnvConfig } from '@automax/contracts';
+import type { EnvConfig } from '@sdods/contracts';
 import { ProjectRegistry } from '../config/registry.js';
 import type { HarMode } from '../config/resolve.js';
 import { parseTagValue } from '../config/tags.js';
@@ -20,7 +20,7 @@ import { PageRegistry } from './pages.js';
 import { ScenarioMeta } from './scenario.js';
 import type { DbHandle, TestFixtures, WorkerFixtures } from './types.js';
 
-export type { TestFixtures, WorkerFixtures, AutomaxOption } from './types.js';
+export type { TestFixtures, WorkerFixtures, SdodsOption } from './types.js';
 
 const log = new Logger('fixtures');
 
@@ -30,8 +30,8 @@ const log = new Logger('fixtures');
  */
 export const test = base.extend<TestFixtures, WorkerFixtures>({
   // ── worker scope ────────────────────────────────────────────────────────
-  automax: [
-    { project: process.env.AUTOMAX_PROJECT ?? '', layer: 'ui' },
+  sdods: [
+    { project: process.env.SDODS_PROJECT ?? '', layer: 'ui' },
     { option: true, scope: 'worker' },
   ],
 
@@ -40,7 +40,7 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
     async ({}, use) => {
       await use(
         ProjectRegistry.discover(
-          ProjectRegistry.findRepoRoot(process.env.AUTOMAX_ROOT ?? process.cwd()),
+          ProjectRegistry.findRepoRoot(process.env.SDODS_ROOT ?? process.cwd()),
         ),
       );
     },
@@ -48,10 +48,10 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
   ],
 
   config: [
-    async ({ registry, automax }, use) => {
+    async ({ registry, sdods }, use) => {
       const slug =
-        automax.project || process.env.AUTOMAX_PROJECT || registry.entriesList()[0]?.slug || '';
-      await use(registry.resolve(slug, process.env.AUTOMAX_ENV || undefined));
+        sdods.project || process.env.SDODS_PROJECT || registry.entriesList()[0]?.slug || '';
+      await use(registry.resolve(slug, process.env.SDODS_ENV || undefined));
     },
     { scope: 'worker' },
   ],
@@ -68,7 +68,7 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
       let close: (() => Promise<void>) | undefined;
       if (config.env.db) {
         try {
-          const mod = await import('@automax/db');
+          const mod = await import('@sdods/db');
           const adb = mod.createDb(
             config.env.db.driver === 'postgres'
               ? { driver: 'postgres', databaseUrl: config.env.db.url }
@@ -78,7 +78,7 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
           close = () => adb.close();
         } catch (e) {
           log.warn(
-            `env.db is configured but @automax/db could not be loaded: ${(e as Error).message}`,
+            `env.db is configured but @sdods/db could not be loaded: ${(e as Error).message}`,
           );
         }
       }
@@ -112,14 +112,14 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
   ],
 
   // ── test scope ──────────────────────────────────────────────────────────
-  scenario: async ({ config, automax, $bddContext, $tags }, use, testInfo) => {
+  scenario: async ({ config, sdods, $bddContext, $tags }, use, testInfo) => {
     const meta = new ScenarioMeta({
       config,
       testInfo,
       featureUri: $bddContext.featureUri,
       tags: $tags,
       pickleLine: $bddContext.bddTestData?.pickleLine,
-      automax,
+      sdods,
     });
     await use(meta);
   },
@@ -155,7 +155,7 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
       const file = scenario.file('cleanup-errors.json');
       const { writeFileSync } = await import('node:fs');
       writeFileSync(file, JSON.stringify(errors, null, 2));
-      await testInfo.attach('automax/cleanup-errors', {
+      await testInfo.attach('sdods/cleanup-errors', {
         path: file,
         contentType: 'application/json',
       });
@@ -168,9 +168,8 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
     await use(role ? await userPool.lease(role, testInfo.parallelIndex) : undefined);
   },
 
-  storageState: async ({ user, authCache, auth, automax, browser, config }, use) => {
-    if (!user || automax.layer === 'api' || !config.project.auth.storageState)
-      return use(undefined);
+  storageState: async ({ user, authCache, auth, sdods, browser, config }, use) => {
+    if (!user || sdods.layer === 'api' || !config.project.auth.storageState) return use(undefined);
     await use(await authCache.ensure(user, auth, browser));
   },
 
@@ -203,14 +202,14 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
     );
   },
 
-  $automaxAnnotations: [
-    async ({ config, automax, scenario }, use, testInfo) => {
+  $sdodsAnnotations: [
+    async ({ config, sdods, scenario }, use, testInfo) => {
       testInfo.annotations.push(
-        { type: 'automax:project', description: config.project.slug },
-        { type: 'automax:layer', description: automax.layer },
-        { type: 'automax:env', description: config.env.name },
-        { type: 'automax:fingerprint', description: scenario.fingerprint },
-        { type: 'automax:runId', description: config.runtime.runId },
+        { type: 'sdods:project', description: config.project.slug },
+        { type: 'sdods:layer', description: sdods.layer },
+        { type: 'sdods:env', description: config.env.name },
+        { type: 'sdods:fingerprint', description: scenario.fingerprint },
+        { type: 'sdods:runId', description: config.runtime.runId },
       );
       await use();
     },
@@ -236,4 +235,4 @@ export const {
 } = createBdd(test);
 
 export { createBdd };
-export type AutomaxTest = typeof test;
+export type SdodsTest = typeof test;

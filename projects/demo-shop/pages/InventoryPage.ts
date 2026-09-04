@@ -1,6 +1,6 @@
 import { expect } from '@playwright/test';
 import { Fixture, Then, When } from 'playwright-bdd/decorators';
-import { BasePage } from '@automax/core/pages';
+import { BasePage } from '@sdods/core/pages';
 import type { test } from '../steps/fixtures.js';
 
 @Fixture<typeof test>('inventoryPage')

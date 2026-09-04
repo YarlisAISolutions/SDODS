@@ -1,7 +1,7 @@
 import { existsSync, statSync } from 'node:fs';
 import { resolve as resolvePath } from 'node:path';
-import type { AnalysisReport, ChecklistItem } from '@automax/contracts';
-import { AutomaxError } from '../errors.js';
+import type { AnalysisReport, ChecklistItem } from '@sdods/contracts';
+import { SdodsError } from '../errors.js';
 import {
   detectA11y,
   detectAuth,
@@ -26,8 +26,8 @@ export interface AnalyzeOptions extends ScanOptions {
 export function analyzeProject(appPath: string, opts: AnalyzeOptions = {}): AnalysisReport {
   const root = resolvePath(appPath);
   if (!existsSync(root) || !statSync(root).isDirectory()) {
-    throw new AutomaxError('CONFIG_NOT_FOUND', `Application path not found: ${root}`, {
-      hint: 'Pass the root of the application repository, e.g. `automax analyze ../my-app`.',
+    throw new SdodsError('CONFIG_NOT_FOUND', `Application path not found: ${root}`, {
+      hint: 'Pass the root of the application repository, e.g. `sdods analyze ../my-app`.',
       exitCode: 2,
     });
   }
@@ -80,7 +80,7 @@ export function buildChecklist(r: AnalysisReport, truncated = false): ChecklistI
       severity: 'info',
       title: 'Scan was truncated',
       detail: 'The repository exceeded the file budget; results may be partial.',
-      fix: 'Point `automax analyze` at the application package instead of the monorepo root.',
+      fix: 'Point `sdods analyze` at the application package instead of the monorepo root.',
     });
   }
   if (!r.frameworks.length) {
@@ -89,7 +89,7 @@ export function buildChecklist(r: AnalysisReport, truncated = false): ChecklistI
       severity: 'warning',
       title: 'No known framework detected',
       detail: 'Routes and base URLs could not be inferred from a framework convention.',
-      fix: 'Pass `--openapi <spec>` for the API layer and add routes to automax.project.yaml by hand.',
+      fix: 'Pass `--openapi <spec>` for the API layer and add routes to sdods.project.yaml by hand.',
     });
   }
   if (hasUi && !r.testIds.attribute) {
@@ -106,7 +106,7 @@ export function buildChecklist(r: AnalysisReport, truncated = false): ChecklistI
       id: 'custom-test-id',
       severity: 'info',
       title: `Test-id attribute is ${r.testIds.attribute}`,
-      detail: `Detected ${r.testIds.counts[r.testIds.attribute]} occurrences; AutoMax will configure testIdAttribute accordingly.`,
+      detail: `Detected ${r.testIds.counts[r.testIds.attribute]} occurrences; SDODS will configure testIdAttribute accordingly.`,
     });
   }
   if (hasUi && r.routes.filter((x) => x.kind === 'page').length === 0) {
@@ -115,7 +115,7 @@ export function buildChecklist(r: AnalysisReport, truncated = false): ChecklistI
       severity: 'warning',
       title: 'No page routes detected',
       detail: 'Starter UI features need at least one route.',
-      fix: 'Add `routes:` to automax.project.yaml (name → path).',
+      fix: 'Add `routes:` to sdods.project.yaml (name → path).',
     });
   }
   if (hasApi && !r.openapi.length) {
@@ -136,7 +136,7 @@ export function buildChecklist(r: AnalysisReport, truncated = false): ChecklistI
         severity: 'warning',
         title: `Existing ${t.framework} tests lean on CSS/XPath locators`,
         detail: `${fragile} of ${total} locators are CSS or XPath. Role, label and test-id locators survive UI refactors better.`,
-        fix: 'Import the specs into the recorded layer, then convert them with `automax record convert` which proposes role/test-id locators.',
+        fix: 'Import the specs into the recorded layer, then convert them with `sdods record convert` which proposes role/test-id locators.',
       });
     }
     if (t.framework === 'cypress') {
@@ -144,7 +144,7 @@ export function buildChecklist(r: AnalysisReport, truncated = false): ChecklistI
         id: 'cypress-present',
         severity: 'info',
         title: 'Cypress tests found',
-        detail: `${t.files} Cypress files. Their cy.get selectors and data-cy attributes map onto the AutoMax test-id locator strategy.`,
+        detail: `${t.files} Cypress files. Their cy.get selectors and data-cy attributes map onto the SDODS test-id locator strategy.`,
       });
     }
     if (t.framework === 'playwright') {
@@ -162,7 +162,7 @@ export function buildChecklist(r: AnalysisReport, truncated = false): ChecklistI
       severity: 'warning',
       title: 'No CI configuration detected',
       detail: 'Nothing runs the suite automatically.',
-      fix: 'Copy the AutoMax GitHub Actions workflow or run `automax schedule install --target github`.',
+      fix: 'Copy the SDODS GitHub Actions workflow or run `sdods schedule install --target github`.',
     });
   }
   if (hasUi && !r.a11y.tooling.length) {
@@ -170,7 +170,7 @@ export function buildChecklist(r: AnalysisReport, truncated = false): ChecklistI
       id: 'no-a11y',
       severity: 'info',
       title: 'No accessibility tooling',
-      detail: 'Add @a11y scenarios; AutoMax runs axe-core for them.',
+      detail: 'Add @a11y scenarios; SDODS runs axe-core for them.',
     });
   }
   if (!r.envs.length) {
@@ -190,7 +190,7 @@ export function buildChecklist(r: AnalysisReport, truncated = false): ChecklistI
       detail: `Based on ${r.auth.libraries.join(', ') || 'login-looking pages'}. Configure selectors or token placement under auth: in the project yaml.`,
       fix:
         r.auth.strategyGuess === 'sso'
-          ? 'Use `automax auth capture --interactive` once per role to store SSO sessions.'
+          ? 'Use `sdods auth capture --interactive` once per role to store SSO sessions.'
           : undefined,
     });
   }

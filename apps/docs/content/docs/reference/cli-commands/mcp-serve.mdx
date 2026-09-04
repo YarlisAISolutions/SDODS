@@ -1,32 +1,32 @@
 ---
-title: automax mcp, serve
+title: sdods mcp, serve
 description: Start the MCP server or the web server.
 ---
 
 ## `mcp`
 
 ```text
-automax mcp [-p <slug>] [-e <env>] [--caps <list>] [--list-tools]
-automax mcp --http [--port <n>] [--host <host>] [--token <token>]
-automax mcp install claude|codex|cursor|vscode|windsurf [-p <slug>] [-e <env>] [--caps <list>] [--http-url <url>] [--token-placeholder <text>] [--no-playwright] [--file] [--print]
+sdods mcp [-p <slug>] [-e <env>] [--caps <list>] [--list-tools]
+sdods mcp --http [--port <n>] [--host <host>] [--token <token>]
+sdods mcp install claude|codex|cursor|vscode|windsurf [-p <slug>] [-e <env>] [--caps <list>] [--http-url <url>] [--token-placeholder <text>] [--no-playwright] [--file] [--print]
 ```
 
-| Flag            | Meaning                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--caps <list>` | capabilities: `core,analyze,run,data,agents,issues,schedules` or `all` (default `core,analyze,run,data,schedules`)                                                                                                                                                                                                                                                                                                                                                                     |
-| `--list-tools`  | print the tool catalogue and exit                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
-| `--http`        | streamable HTTP instead of stdio; `--port` (default 4001), `--host` (default 127.0.0.1)                                                                                                                                                                                                                                                                                                                                                                                                |
-| `--token`       | accept this single bearer token (development only; the server uses `automax tokens`)                                                                                                                                                                                                                                                                                                                                                                                                   |
-| `install`       | register the server with a client: `claude` and `codex` go through the client's own CLI (`claude mcp add -s project …`, `codex mcp add …`) when it is installed, otherwise the config file is merged (`.mcp.json`, `~/.codex/config.toml` `[mcp_servers.automax]`, `.cursor/mcp.json`, `.vscode/mcp.json`, Windsurf); `--file` forces the file path, `--http-url` configures the HTTP transport, `--no-playwright` skips the bundled Playwright MCP entry, `--print` shows the snippet |
+| Flag            | Meaning                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `--caps <list>` | capabilities: `core,analyze,run,data,agents,issues,schedules` or `all` (default `core,analyze,run,data,schedules`)                                                                                                                                                                                                                                                                                                                                                                   |
+| `--list-tools`  | print the tool catalogue and exit                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| `--http`        | streamable HTTP instead of stdio; `--port` (default 4001), `--host` (default 127.0.0.1)                                                                                                                                                                                                                                                                                                                                                                                              |
+| `--token`       | accept this single bearer token (development only; the server uses `sdods tokens`)                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `install`       | register the server with a client: `claude` and `codex` go through the client's own CLI (`claude mcp add -s project …`, `codex mcp add …`) when it is installed, otherwise the config file is merged (`.mcp.json`, `~/.codex/config.toml` `[mcp_servers.sdods]`, `.cursor/mcp.json`, `.vscode/mcp.json`, Windsurf); `--file` forces the file path, `--http-url` configures the HTTP transport, `--no-playwright` skips the bundled Playwright MCP entry, `--print` shows the snippet |
 
 The stdio server exposes 37 tools, five prompts and resources for features, run summaries, NDJSON and screenshots; see [MCP tools](/docs/reference/mcp-tools).
 
 ## `serve`
 
 ```text
-automax serve [--port <n>] [--host <host>] [--open] [--no-scheduler] [--auth-disabled]
+sdods serve [--port <n>] [--host <host>] [--open] [--no-scheduler] [--auth-disabled]
 ```
 
-Starts the Fastify server: REST API, Server-Sent Events, the web UI, MCP over HTTP at `/mcp` and the cron scheduler. `--auth-disabled` makes every request a local admin (development only). When no user exists the server prints a one-time setup URL; `automax users create --admin` is the CLI alternative.
+Starts the Fastify server: REST API, Server-Sent Events, the web UI, MCP over HTTP at `/mcp` and the cron scheduler. `--auth-disabled` makes every request a local admin (development only). When no user exists the server prints a one-time setup URL; `sdods users create --admin` is the CLI alternative.
 
-Environment: `PORT`, `HOST`, `SESSION_SECRET`, `AUTOMAX_PUBLIC_URL`, `AUTH_DISABLED`, `AUTOMAX_PROJECTS_DIR`, `AUTOMAX_ARTIFACTS_DIR`, `AUTOMAX_MAX_CONCURRENT_RUNS`, `DB_DRIVER`, `DATABASE_URL`, `SQLITE_PATH`.
+Environment: `PORT`, `HOST`, `SESSION_SECRET`, `SDODS_PUBLIC_URL`, `AUTH_DISABLED`, `SDODS_PROJECTS_DIR`, `SDODS_ARTIFACTS_DIR`, `SDODS_MAX_CONCURRENT_RUNS`, `DB_DRIVER`, `DATABASE_URL`, `SQLITE_PATH`.

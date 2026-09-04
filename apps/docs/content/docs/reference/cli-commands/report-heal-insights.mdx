@@ -1,22 +1,22 @@
 ---
-title: automax report, show-report, heal, insights
+title: sdods report, show-report, heal, insights
 description: Open reports, ingest results and inspect self-healing events.
 ---
 
 ## `report`
 
 ```text
-automax report [--last | --run <id>] [--open] [--html] [--dashboard]
-automax report ingest [files...] --run-id <id> [-p <slug>] [-e <env>] [--manifest <file>] [--format auto|cucumber|pw-json] [--artifacts-dir <dir>] [--replace]
-automax show-report [--run <id>]
+sdods report [--last | --run <id>] [--open] [--html] [--dashboard]
+sdods report ingest [files...] --run-id <id> [-p <slug>] [-e <env>] [--manifest <file>] [--format auto|cucumber|pw-json] [--artifacts-dir <dir>] [--replace]
+sdods show-report [--run <id>]
 ```
 
-`report` prints the summary of a run (totals, failed and flaky scenarios, report paths); `--open` opens the Playwright HTML report and the AutoMax dashboard, `--html` / `--dashboard` open one of them. `report ingest` loads cucumber messages NDJSON and Playwright JSON results into the database (`automax run` does this automatically when a database is configured); `--replace` deletes previously ingested rows of the run first. `show-report` opens the Playwright HTML report of the latest or a given run.
+`report` prints the summary of a run (totals, failed and flaky scenarios, report paths); `--open` opens the Playwright HTML report and the SDODS dashboard, `--html` / `--dashboard` open one of them. `report ingest` loads cucumber messages NDJSON and Playwright JSON results into the database (`sdods run` does this automatically when a database is configured); `--replace` deletes previously ingested rows of the run first. `show-report` opens the Playwright HTML report of the latest or a given run.
 
 ## `heal report`
 
 ```text
-automax heal report [--last | --run <id> | --all] [--write-history]
+sdods heal report [--last | --run <id> | --all] [--write-history]
 ```
 
 Summarises heal events (original selector, chosen strategy, score, suggested locator) for one run or every run under the artifacts directory. `--write-history` persists `heal-history.json`, which biases future heals towards strategies that worked.
@@ -24,11 +24,11 @@ Summarises heal events (original selector, chosen strategy, score, suggested loc
 ## `insights`
 
 ```text
-automax insights compute -p <slug> [--window <n>] [--flaky-threshold <r>] [--fragility-threshold <r>] [--min-runs <n>]
-automax insights show -p <slug> [--top <n>]
+sdods insights compute -p <slug> [--window <n>] [--flaky-threshold <r>] [--fragility-threshold <r>] [--min-runs <n>]
+sdods insights show -p <slug> [--top <n>]
 ```
 
-Computes the improvement-loop metrics over the last `--window` ingested runs of a project (default 30) and stores the result under `.automax/insights/<slug>.json`; `show` prints the last result. Needs a database with ingested runs (`automax run --ingest`, or `automax report ingest`).
+Computes the improvement-loop metrics over the last `--window` ingested runs of a project (default 30) and stores the result under `.sdods/insights/<slug>.json`; `show` prints the last result. Needs a database with ingested runs (`sdods run --ingest`, or `sdods report ingest`).
 
 | Flag                        | Default | Meaning                                                           |
 | --------------------------- | ------- | ----------------------------------------------------------------- |
@@ -41,6 +41,6 @@ Computes the improvement-loop metrics over the last `--window` ingested runs of 
 Output: suite health and its trend, scenarios ranked by flakiness (with p95 duration and quarantine candidates), locators ranked by fragility (with the suggested selector from heal history) and environment stability. The same numbers power the web dashboard and `GET /api/stats/insights`.
 
 ```bash
-automax insights compute -p demo-shop --window 20
-automax insights show -p demo-shop --top 5 --json
+sdods insights compute -p demo-shop --window 20
+sdods insights show -p demo-shop --top 5 --json
 ```

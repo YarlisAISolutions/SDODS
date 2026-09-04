@@ -111,7 +111,7 @@ export class AuthStateCache {
     if (this.isFresh(user)) return this.fileFor(user);
     if (auth.strategy === 'sso') {
       this.log.warn(
-        `No fresh SSO storage state for ${user.username}. Run: automax auth capture --user ${user.role} --interactive`,
+        `No fresh SSO storage state for ${user.username}. Run: sdods auth capture --user ${user.role} --interactive`,
       );
       return existsSync(this.fileFor(user)) ? this.fileFor(user) : undefined;
     }

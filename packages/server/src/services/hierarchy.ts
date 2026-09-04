@@ -1,4 +1,4 @@
-import type { AutomaxDb } from '@automax/db';
+import type { SdodsDb } from '@sdods/db';
 import {
   addOrgMember,
   addWorkspaceMember,
@@ -15,13 +15,13 @@ import {
   syncHierarchy,
   upsertWorkspace,
   type SyncHierarchyResult,
-} from '@automax/db';
-import type { OrgRole, Role, WorkspaceRole } from '@automax/contracts';
-import type { ProjectRegistry } from '@automax/core/config';
+} from '@sdods/db';
+import type { OrgRole, Role, WorkspaceRole } from '@sdods/contracts';
+import type { ProjectRegistry } from '@sdods/core/config';
 
 /** Keeps the org/workspace/project/module/process tables in sync with the yaml files and exposes membership ops. */
 export class HierarchyService {
-  constructor(private readonly adb: AutomaxDb) {}
+  constructor(private readonly adb: SdodsDb) {}
 
   async sync(registry: ProjectRegistry): Promise<SyncHierarchyResult> {
     return syncHierarchy(this.adb.db, this.adb.driver, {

@@ -42,17 +42,17 @@ export const me: Me = {
   user: { id: 'u1', username: 'admin', email: 'admin@example.com', role: 'admin', active: true },
   csrfToken: 'csrf-mock',
   scopes: [],
-  orgRoles: { automax: 'owner' },
+  orgRoles: { sdods: 'owner' },
   workspaceRoles: { default: 'admin', 'platform-qa': 'editor' },
 };
 
 export const orgs: Organization[] = [
   {
     id: 'o1',
-    slug: 'automax',
-    name: 'AutoMax',
+    slug: 'sdods',
+    name: 'SDODS',
     description: 'Default organization',
-    url: 'https://github.com/siri1410/AutoMax',
+    url: 'https://github.com/siri1410/SDODS',
     myRole: 'owner',
   },
 ];
@@ -93,7 +93,7 @@ export const projects: Project[] = [
     name: 'Demo Shop',
     description: 'SauceDemo UI + JSONPlaceholder API + hybrid',
     workspace: 'default',
-    organization: 'automax',
+    organization: 'sdods',
     layers: ['ui', 'api', 'hybrid', 'recorded'],
     browsers: ['chromium', 'firefox', 'webkit'],
     testIdAttribute: 'data-test',
@@ -213,7 +213,7 @@ export const projects: Project[] = [
       onlyOnFailure: false,
     },
     integrations: {
-      github: { enabled: false, owner: 'siri1410', repo: 'AutoMax' },
+      github: { enabled: false, owner: 'siri1410', repo: 'SDODS' },
       jira: { enabled: false, projectKey: 'DEMO' },
     },
     mcp: {
@@ -230,7 +230,7 @@ export const projects: Project[] = [
     slug: 'billing-portal',
     name: 'Billing Portal',
     workspace: 'platform-qa',
-    organization: 'automax',
+    organization: 'sdods',
     layers: ['ui', 'api'],
     browsers: ['chromium'],
     testIdAttribute: 'data-testid',
@@ -600,8 +600,8 @@ export function runDetail(id: string): RunDetail {
   const base = runs.find((r) => r.id === id) ?? runs[1]!;
   return {
     ...base,
-    command: `automax run -p ${base.projectSlug} -e ${base.env} -t "${base.tagsExpr ?? '@smoke'}"`,
-    artifactsDir: `.automax/runs/${base.id}`,
+    command: `sdods run -p ${base.projectSlug} -e ${base.env} -t "${base.tagsExpr ?? '@smoke'}"`,
+    artifactsDir: `.sdods/runs/${base.id}`,
     exitCode: base.status === 'failed' ? 1 : 0,
     reportPaths: {
       html: `/reports/${base.id}/index.html`,
@@ -871,7 +871,7 @@ Feature: Posts API
   Scenario: Create a post and read it back
     When I send a POST request to "/posts" with body:
       """json
-      { "title": "AutoMax", "body": "hello", "userId": 1 }
+      { "title": "SDODS", "body": "hello", "userId": 1 }
       """
     Then the response status should be 201
     And I save the response JSON path "id" as "postId"
@@ -1068,11 +1068,11 @@ export const integrations: Record<string, IntegrationView[]> = {
       enabled: true,
       config: {
         owner: 'siri1410',
-        repo: 'AutoMax',
+        repo: 'SDODS',
         checkRun: true,
         prComment: true,
         createIssueOnFailure: 'smoke',
-        labels: ['automax'],
+        labels: ['sdods'],
       },
       secretEnv: { token: 'GITHUB_TOKEN' },
       secretsPresent: { GITHUB_TOKEN: true },

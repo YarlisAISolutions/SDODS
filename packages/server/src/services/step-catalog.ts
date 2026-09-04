@@ -1,6 +1,6 @@
 import { existsSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
-import type { StepDef } from '@automax/contracts';
+import type { StepDef } from '@sdods/contracts';
 import type { ServerConfig } from '../config.js';
 import { runCliJson } from './cli.js';
 
@@ -10,7 +10,7 @@ interface CacheEntry {
   at: number;
 }
 
-/** Step definitions per project from `automax steps list --json`, cached by the newest mtime under steps/. */
+/** Step definitions per project from `sdods steps list --json`, cached by the newest mtime under steps/. */
 export class StepCatalog {
   private readonly cache = new Map<string, CacheEntry>();
 

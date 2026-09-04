@@ -5,7 +5,7 @@ import { DOCS_URL, REPO_URL } from '@/lib/links';
 
 export const metadata: Metadata = {
   title: 'Roadmap',
-  description: 'AutoMax delivery phases, verification numbers and what comes next.',
+  description: 'SDODS delivery phases, verification numbers and what comes next.',
 };
 
 export default function RoadmapPage() {
@@ -13,7 +13,7 @@ export default function RoadmapPage() {
     <div className="mx-auto max-w-5xl px-4 py-14">
       <h1 className="text-3xl font-extrabold tracking-tight md:text-4xl">Roadmap</h1>
       <p className="muted mt-3 max-w-2xl">
-        AutoMax was delivered in fourteen phases, each ending runnable and verified. The table below
+        SDODS was delivered in fourteen phases, each ending runnable and verified. The table below
         mirrors the README and the docs; the “next up” list is shaped by your feedback.
       </p>
       <div className="card mt-8 overflow-x-auto">

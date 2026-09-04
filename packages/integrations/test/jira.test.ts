@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
-import { JiraIntegrationSchema, type RunRecord } from '@automax/contracts';
+import { JiraIntegrationSchema, type RunRecord } from '@sdods/contracts';
 import { JiraProvider } from '../src/jira.js';
 import { createIntegrationContext } from '../src/context.js';
 import { createMemoryStore } from '../src/store.js';
@@ -24,7 +24,7 @@ const server = setupServer(
       body: null,
       headers: Object.fromEntries(request.headers),
     });
-    return HttpResponse.json({ displayName: 'AutoMax Bot' });
+    return HttpResponse.json({ displayName: 'SDODS Bot' });
   }),
   http.get(`${BASE}/rest/api/3/project/SHOP`, () =>
     HttpResponse.json({ key: 'SHOP', name: 'Shop' }),
@@ -167,14 +167,14 @@ describe('JiraProvider', () => {
     const p = await provider();
     const res = await p.test();
     expect(res.ok).toBe(true);
-    expect(res.detail).toContain('AutoMax Bot');
+    expect(res.detail).toContain('SDODS Bot');
     expect(calls[0]!.headers.authorization).toBe(
       `Basic ${Buffer.from('bot@acme.test:tok').toString('base64')}`,
     );
   });
 
   it('creates an issue with ADF description, attachments (size-capped) and links tagged scenarios', async () => {
-    const dir = mkdtempSync(join(tmpdir(), 'automax-jira-'));
+    const dir = mkdtempSync(join(tmpdir(), 'sdods-jira-'));
     const runDir = join(dir, 'run-7');
     for (const rel of ['shop/fp-cart/r0/scenario-failure.png', 'shop/fp-cart/r0/00-after.png']) {
       const file = join(runDir, rel);
@@ -187,11 +187,9 @@ describe('JiraProvider', () => {
     const res = await p.onRunFinished(summary([scenario()]), ctx);
     const created = calls.find((c) => c.path === 'issue')!;
     expect(created.body.fields.project.key).toBe('SHOP');
-    expect(created.body.fields.summary).toBe('[AutoMax] Cart › Add product failing (chromium)');
+    expect(created.body.fields.summary).toBe('[SDODS] Cart › Add product failing (chromium)');
     expect(created.body.fields.description.type).toBe('doc');
-    expect(JSON.stringify(created.body.fields.description)).toContain(
-      'automax-fingerprint:fp-cart',
-    );
+    expect(JSON.stringify(created.body.fields.description)).toContain('sdods-fingerprint:fp-cart');
     const attach = calls.find((c) => c.path === 'issue/SHOP-1/attachments')!;
     expect(attach.headers['x-atlassian-token']).toBe('no-check');
     expect(attach.body).toEqual(['failure-scenario-failure.png']); // 2 MB file exceeds the 1 MB cap
@@ -211,7 +209,7 @@ describe('JiraProvider', () => {
     const ctx = createIntegrationContext({ store: createMemoryStore(), env: {} as any });
     const res = await p.onRunFinished(summary([scenario()]), ctx);
     expect(calls.find((c) => c.path === 'search/jql')!.body.jql).toContain(
-      'automax-fingerprint:fp-cart',
+      'sdods-fingerprint:fp-cart',
     );
     expect(calls.filter((c) => c.path === 'issue')).toHaveLength(0);
     expect(calls.find((c) => c.path === 'issue/SHOP-9/comment')).toBeTruthy();

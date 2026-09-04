@@ -6,7 +6,7 @@ import { computeCoverage, parseFeatures, pomRouteSteps } from '../src/analyze/co
 import { ProjectRegistry } from '../src/config/registry.js';
 
 function fixtureRepo() {
-  const root = mkdtempSync(join(tmpdir(), 'automax-cov-'));
+  const root = mkdtempSync(join(tmpdir(), 'sdods-cov-'));
   writeFileSync(join(root, 'package.json'), '{}');
   const proj = join(root, 'projects', 'shop');
   mkdirSync(join(proj, 'envs'), { recursive: true });
@@ -14,7 +14,7 @@ function fixtureRepo() {
   mkdirSync(join(proj, 'features', 'api'), { recursive: true });
   mkdirSync(join(proj, 'pages'), { recursive: true });
   writeFileSync(
-    join(proj, 'automax.project.yaml'),
+    join(proj, 'sdods.project.yaml'),
     `slug: shop
 name: Shop
 layers: [ui, api]
@@ -119,7 +119,7 @@ describe('coverage', () => {
   it('computes route/endpoint/role coverage by suite, including OpenAPI endpoints', () => {
     const root = fixtureRepo();
     const reg = ProjectRegistry.discover(root);
-    const report = computeCoverage(reg, 'shop', { openapi: true, env: 'local' }); // explicit: CI may export AUTOMAX_ENV
+    const report = computeCoverage(reg, 'shop', { openapi: true, env: 'local' }); // explicit: CI may export SDODS_ENV
 
     const route = (n: string) => report.routes.find((r) => r.name === n)!;
     expect(route('login').covered).toBe(true);

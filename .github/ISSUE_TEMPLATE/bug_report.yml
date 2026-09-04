@@ -1,29 +1,29 @@
 name: Bug report
-description: Something in AutoMax does not behave as documented.
+description: Something in SDODS does not behave as documented.
 title: '[Bug] '
 labels: ['bug', 'triage']
 body:
   - type: markdown
     attributes:
       value: |
-        Please include the output of `automax doctor --json` (secrets are never printed) and the run id when a run is involved.
+        Please include the output of `sdods doctor --json` (secrets are never printed) and the run id when a run is involved.
   - type: input
-    id: automax-version
+    id: sdods-version
     attributes:
-      label: AutoMax version
-      description: '`automax --version`'
+      label: SDODS version
+      description: '`sdods --version`'
     validations:
       required: true
   - type: textarea
     id: doctor
     attributes:
-      label: automax doctor --json
+      label: sdods doctor --json
       render: json
   - type: input
     id: command
     attributes:
       label: Command you ran
-      placeholder: 'automax run -p demo-shop -e staging -l ui -b chromium -t @smoke'
+      placeholder: 'sdods run -p demo-shop -e staging -l ui -b chromium -t @smoke'
     validations:
       required: true
   - type: textarea
@@ -43,7 +43,7 @@ body:
     id: run-id
     attributes:
       label: Run id
-      description: Printed by `automax run`; artifacts live under `.automax/runs/<runId>/`.
+      description: Printed by `sdods run`; artifacts live under `.sdods/runs/<runId>/`.
   - type: textarea
     id: logs
     attributes:

@@ -1,14 +1,14 @@
 ---
 title: Tokens and keys
-description: Every credential AutoMax can use, what it unlocks, and whether it is mandatory.
+description: Every credential SDODS can use, what it unlocks, and whether it is mandatory.
 ---
 
 <Learn>
-  Which environment variables and CLI logins AutoMax reads, what each one enables, and the exact
-  requirement level. Run `automax doctor` for the same table with live status.
+  Which environment variables and CLI logins SDODS reads, what each one enables, and the exact
+  requirement level. Run `sdods doctor` for the same table with live status.
 </Learn>
 
-Nothing is mandatory for the platform itself: running suites, screenshots, HAR replay, SQLite, the MCP server over stdio, `automax analyze`, lint, reports and the dashboard all work with no credential at all. AutoMax's own API tokens are self-issued and free.
+Nothing is mandatory for the platform itself: running suites, screenshots, HAR replay, SQLite, the MCP server over stdio, `sdods analyze`, lint, reports and the dashboard all work with no credential at all. SDODS's own API tokens are self-issued and free.
 
 ## Requirement levels
 
@@ -32,13 +32,13 @@ Auto-detection order when nothing is set: `ANTHROPIC_API_KEY` → `claude` CLI o
 
 ## Platform
 
-| Variable                                 | Requirement                         | Used by                                                                                                                 |
-| ---------------------------------------- | ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `SESSION_SECRET`                         | mandatory for `automax serve`       | session cookie signing (≥ 32 characters; `openssl rand -hex 32`)                                                        |
-| `DATABASE_URL`                           | mandatory when `DB_DRIVER=postgres` | Kysely Postgres dialect; SQLite needs nothing                                                                           |
-| `SQLITE_PATH`                            | optional                            | SQLite file (default `.automax/automax.db`)                                                                             |
-| `AUTOMAX_TOKEN` (+ `AUTOMAX_SERVER_URL`) | optional, free                      | MCP over HTTP (`/mcp`), `automax report ingest --server`; created with `automax tokens create --user <name> --scopes …` |
-| `AUTH_DISABLED=1`                        | optional, development only          | makes every request a local admin                                                                                       |
+| Variable                             | Requirement                         | Used by                                                                                                             |
+| ------------------------------------ | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `SESSION_SECRET`                     | mandatory for `sdods serve`         | session cookie signing (≥ 32 characters; `openssl rand -hex 32`)                                                    |
+| `DATABASE_URL`                       | mandatory when `DB_DRIVER=postgres` | Kysely Postgres dialect; SQLite needs nothing                                                                       |
+| `SQLITE_PATH`                        | optional                            | SQLite file (default `.sdods/sdods.db`)                                                                             |
+| `SDODS_TOKEN` (+ `SDODS_SERVER_URL`) | optional, free                      | MCP over HTTP (`/mcp`), `sdods report ingest --server`; created with `sdods tokens create --user <name> --scopes …` |
+| `AUTH_DISABLED=1`                    | optional, development only          | makes every request a local admin                                                                                   |
 
 ## Integrations (optional)
 
@@ -51,18 +51,18 @@ Project YAML stores only the variable **names**; values stay in `.env.<env>` or 
 
 ## CI-only GitHub secrets
 
-| Secret                                  | Workflow                                                                   |
-| --------------------------------------- | -------------------------------------------------------------------------- |
-| `FIREBASE_SERVICE_ACCOUNT_AUTOMAX_DOCS` | `docs.yml`, deploys the documentation site                                 |
-| `NPM_TOKEN`                             | `release.yml`, publishes `@automax/*` (skipped when absent)                |
-| `AUTOMAX_SERVER_URL` + `AUTOMAX_TOKEN`  | `ci.yml`, uploads results to a hosted AutoMax server (skipped when absent) |
-| `DATABASE_URL`                          | `ci.yml` fallback ingest straight into Postgres (skipped when absent)      |
+| Secret                                  | Workflow                                                                 |
+| --------------------------------------- | ------------------------------------------------------------------------ |
+| `FIREBASE_SERVICE_ACCOUNT_AUTOMAX_DOCS` | `docs.yml`, deploys the documentation site                               |
+| `NPM_TOKEN`                             | `release.yml`, publishes `@sdods/*` (skipped when absent)                |
+| `SDODS_SERVER_URL` + `SDODS_TOKEN`      | `ci.yml`, uploads results to a hosted SDODS server (skipped when absent) |
+| `DATABASE_URL`                          | `ci.yml` fallback ingest straight into Postgres (skipped when absent)    |
 
 ## Checking status
 
 ```bash
-bun run automax doctor            # rows cli:claude, cli:codex and a "Tokens and keys" section
-bun run automax doctor --json     # { checks: [...], tokens: [{ name, requirement, present, ... }] }
+bun run sdods doctor            # rows cli:claude, cli:codex and a "Tokens and keys" section
+bun run sdods doctor --json     # { checks: [...], tokens: [{ name, requirement, present, ... }] }
 ```
 
 ## Next steps

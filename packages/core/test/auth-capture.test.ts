@@ -8,7 +8,7 @@ import { captureAuth, listAuthStates, poolUsers, tokenFileFor } from '../src/aut
 import { defineAuth } from '../src/auth/index.js';
 
 function scaffold(poolSize?: number): ResolvedConfig {
-  const root = mkdtempSync(join(tmpdir(), 'automax-auth-'));
+  const root = mkdtempSync(join(tmpdir(), 'sdods-auth-'));
   mkdirSync(join(root, 'data', 'common'), { recursive: true });
   writeFileSync(
     join(root, 'data', 'common', 'users.csv'),
@@ -40,7 +40,7 @@ function scaffold(poolSize?: number): ResolvedConfig {
       users: { poolSize },
       vars: {},
     },
-    runtime: { repoRoot: root, artifactsDir: join(root, '.automax', 'runs') },
+    runtime: { repoRoot: root, artifactsDir: join(root, '.sdods', 'runs') },
   } as unknown as ResolvedConfig;
 }
 

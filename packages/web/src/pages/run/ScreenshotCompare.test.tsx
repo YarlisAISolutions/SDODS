@@ -38,11 +38,11 @@ describe('ScreenshotCompare', () => {
     expect(screen.getByLabelText('zoom')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('tab', { name: 'diff' }));
     expect(screen.getByText(/Computing diff|mismatch/)).toBeInTheDocument();
-    expect(JSON.parse(localStorage.getItem('automax:t-mode')!)).toBe('diff');
+    expect(JSON.parse(localStorage.getItem('sdods:t-mode')!)).toBe('diff');
   });
 
   it('restores the remembered mode', () => {
-    localStorage.setItem('automax:t-mode', JSON.stringify('overlay'));
+    localStorage.setItem('sdods:t-mode', JSON.stringify('overlay'));
     wrap(<ScreenshotCompare before={before} after={after} storageKey="t-mode" />);
     expect(screen.getByRole('tab', { name: 'overlay' })).toHaveAttribute('aria-selected', 'true');
   });

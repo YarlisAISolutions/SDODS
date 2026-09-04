@@ -1,34 +1,34 @@
 ---
 title: Introduction
-description: What AutoMax is, what it wraps, and how its pieces fit together.
+description: What SDODS is, what it wraps, and how its pieces fit together.
 ---
 
 <Learn>
-  What AutoMax is, which problems it takes off your plate, the CLI-first principle that shapes every
+  What SDODS is, which problems it takes off your plate, the CLI-first principle that shapes every
   feature, and how the packages fit together.
 </Learn>
 
-AutoMax is an automation platform with a reusable architecture. It runs on [Playwright](https://playwright.dev). You write scenarios in Gherkin, keep one YAML file per project and one per environment, and drive everything from the `automax` command line. The same commands power the web UI, the MCP server and the scheduler.
+SDODS is an automation platform with a reusable architecture. It runs on [Playwright](https://playwright.dev). You write scenarios in Gherkin, keep one YAML file per project and one per environment, and drive everything from the `sdods` command line. The same commands power the web UI, the MCP server and the scheduler.
 
 ## What it adds on top of Playwright
 
-| Concern                            | Playwright alone                       | With AutoMax                                                                                                              |
-| ---------------------------------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
-| UI, API and hybrid scenarios       | separate test files, separate fixtures | one merged fixture set; one scenario can seed through the API and assert in the browser                                   |
-| Many applications and environments | hand-written `playwright.config.ts`    | `projects/<slug>/automax.project.yaml` and `envs/<env>.yaml`, generated Playwright projects per project × layer × browser |
-| Configuration                      | environment variables and code         | six layers with fixed precedence, validated, explainable with `automax config show --explain`                             |
-| Test data                          | ad hoc                                 | CSV, JSON, YAML, database tables and factories per environment; user pools leased per worker                              |
-| Results                            | HTML report                            | before/after screenshots per step, API snapshots, run history in SQLite or Postgres, insights                             |
-| Resilience                         | none                                   | scored self-healing locators with persisted history                                                                       |
-| Tooling around tests               | none                                   | MCP server, AI agents that write reviewable proposals, GitHub and Jira, cron schedules, web UI                            |
+| Concern                            | Playwright alone                       | With SDODS                                                                                                              |
+| ---------------------------------- | -------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| UI, API and hybrid scenarios       | separate test files, separate fixtures | one merged fixture set; one scenario can seed through the API and assert in the browser                                 |
+| Many applications and environments | hand-written `playwright.config.ts`    | `projects/<slug>/sdods.project.yaml` and `envs/<env>.yaml`, generated Playwright projects per project × layer × browser |
+| Configuration                      | environment variables and code         | six layers with fixed precedence, validated, explainable with `sdods config show --explain`                             |
+| Test data                          | ad hoc                                 | CSV, JSON, YAML, database tables and factories per environment; user pools leased per worker                            |
+| Results                            | HTML report                            | before/after screenshots per step, API snapshots, run history in SQLite or Postgres, insights                           |
+| Resilience                         | none                                   | scored self-healing locators with persisted history                                                                     |
+| Tooling around tests               | none                                   | MCP server, AI agents that write reviewable proposals, GitHub and Jira, cron schedules, web UI                          |
 
 ## The CLI-first principle
 
-Every capability is an `automax` command that works with no server and no database. The web UI, the MCP server and the scheduler spawn those commands and stream their output. CI needs nothing but Node and the repository.
+Every capability is an `sdods` command that works with no server and no database. The web UI, the MCP server and the scheduler spawn those commands and stream their output. CI needs nothing but Node and the repository.
 
 ```bash
-bun run automax run -p demo-shop -e staging -l api
-bun run automax run -p demo-shop -e staging -l ui -b chromium -t @smoke
+bun run sdods run -p demo-shop -e staging -l api
+bun run sdods run -p demo-shop -e staging -l ui -b chromium -t @smoke
 ```
 
 ## How it works
@@ -36,7 +36,7 @@ bun run automax run -p demo-shop -e staging -l ui -b chromium -t @smoke
 ```mermaid
 flowchart LR
   subgraph you["You"]
-    CLI["automax CLI"]
+    CLI["sdods CLI"]
     UI["Web UI"]
     MCPc["MCP clients"]
   end
@@ -70,32 +70,32 @@ flowchart LR
 
 ## Packages
 
-| Package                 | Owns                                                                                                                          |
-| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| `@automax/contracts`    | Zod schemas for the YAML files, identifiers, attachment names, scopes, shared types                                           |
-| `@automax/core`         | configuration, project registry, fixtures, step library, data providers, screenshots, self-healing, recorder, lint, reporters |
-| `@automax/db`           | Kysely schema, migrations, ingest, insights                                                                                   |
-| `@automax/mcp`          | tool registry and MCP transports                                                                                              |
-| `@automax/integrations` | GitHub and Jira providers                                                                                                     |
-| `@automax/agents`       | LLM adapters, agent roles, proposals                                                                                          |
-| `@automax/server`       | REST, SSE, `/mcp`, authentication, scheduler                                                                                  |
-| `@automax/web`          | the React application                                                                                                         |
-| `@automax/cli`          | the `automax` command                                                                                                         |
+| Package               | Owns                                                                                                                          |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `@sdods/contracts`    | Zod schemas for the YAML files, identifiers, attachment names, scopes, shared types                                           |
+| `@sdods/core`         | configuration, project registry, fixtures, step library, data providers, screenshots, self-healing, recorder, lint, reporters |
+| `@sdods/db`           | Kysely schema, migrations, ingest, insights                                                                                   |
+| `@sdods/mcp`          | tool registry and MCP transports                                                                                              |
+| `@sdods/integrations` | GitHub and Jira providers                                                                                                     |
+| `@sdods/agents`       | LLM adapters, agent roles, proposals                                                                                          |
+| `@sdods/server`       | REST, SSE, `/mcp`, authentication, scheduler                                                                                  |
+| `@sdods/web`          | the React application                                                                                                         |
+| `@sdods/cli`          | the `sdods` command                                                                                                           |
 
 Playwright's test workers, vitest and the native database drivers run on Node 22. Bun is the package manager, script runner and bundler; pnpm works too. Nothing executes tests under Bun.
 
 ## Status
 
-All thirteen phases are implemented and verified; the [roadmap](/docs/roadmap) lists the numbers and the [known limitations](/docs/reference/known-limitations) page lists what is still open. The only command that remains a placeholder is `automax insights`.
+All thirteen phases are implemented and verified; the [roadmap](/docs/roadmap) lists the numbers and the [known limitations](/docs/reference/known-limitations) page lists what is still open. The only command that remains a placeholder is `sdods insights`.
 
 <Screenshot
   src="/screenshots/ui/run-detail.png"
   alt="The web UI run view: scenario tree grouped by module with flaky, healed and browser badges"
-  caption="A run in the web UI. Every action it offers is an automax command."
+  caption="A run in the web UI. Every action it offers is an sdods command."
 />
 
 ## Next steps
 
-- [Install AutoMax](/docs/getting-started/installation)
+- [Install SDODS](/docs/getting-started/installation)
 - [Your first API test](/docs/getting-started/first-api-test)
 - [Glossary](/docs/glossary)

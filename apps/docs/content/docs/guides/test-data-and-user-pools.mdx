@@ -11,7 +11,7 @@ description: Declare datasets once, resolve them per environment, and lease acco
 
 ## Declare sources
 
-```yaml title="automax.project.yaml"
+```yaml title="sdods.project.yaml"
 data:
   sources:
     users: { type: csv, path: 'data/{env}/users.csv', fallback: data/common/users.csv }
@@ -54,7 +54,7 @@ Columns become `{{variables}}` for the rest of the scenario, alongside `vars` fr
 ## Factories
 
 ```ts title="projects/demo-shop/data/factories.ts"
-import { defineFactories } from '@automax/core/data';
+import { defineFactories } from '@sdods/core/data';
 
 export default defineFactories({
   user: (f) => ({ email: f.internet.email(), firstName: f.person.firstName() }),
@@ -83,7 +83,7 @@ sequenceDiagram
 
 - `users.poolSize` in the environment file caps how many accounts a run may use.
 - A lease belongs to `runId:shardOffset+parallelIndex`, so shards never collide.
-- The file store uses exclusive lock files under `.automax/leases/` with a TTL that recovers from crashed workers; the database store uses one conditional insert.
+- The file store uses exclusive lock files under `.sdods/leases/` with a TTL that recovers from crashed workers; the database store uses one conditional insert.
 - `@user:standard` on a scenario leases before the browser context is created so the scenario starts logged in; `Given I use a leased user with role "standard"` does it mid-scenario.
 
 ## Cleanup

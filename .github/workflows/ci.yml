@@ -20,7 +20,7 @@ concurrency:
 
 env:
   CI: true
-  # NOTE: do not export AUTOMAX_ENV globally — unit tests build fixture projects with their own envs.
+  # NOTE: do not export SDODS_ENV globally — unit tests build fixture projects with their own envs.
   BUN_VERSION: '1.4.0'
   DEMO_ENV: staging
   RUN_ID: gh-${{ github.run_id }}
@@ -58,7 +58,7 @@ jobs:
         with:
           node-version: 22
       - run: bun install --frozen-lockfile
-      - run: bun run --filter @automax/web build
+      - run: bun run --filter @sdods/web build
       - run: cd packages/web && npx vitest run
 
   matrix:
@@ -82,10 +82,10 @@ jobs:
           # PRs and pushes: chromium only, 1 shard, offline (HAR replay).
           # Nightly / manual: every browser declared in each project yaml, 2 shards, live sandboxes.
           if [[ "${{ github.event_name }}" == "schedule" || "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            MATRIX=$(bun run --silent automax project list --json --matrix --shards 2)
+            MATRIX=$(bun run --silent sdods project list --json --matrix --shards 2)
             echo "live=true" >> "$GITHUB_OUTPUT"
           else
-            FULL=$(bun run --silent automax project list --json --matrix --shards 1)
+            FULL=$(bun run --silent sdods project list --json --matrix --shards 1)
             MATRIX=$(echo "$FULL" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const m=JSON.parse(s).filter(x=>x.browser==="chromium");console.log(JSON.stringify(m))})')
             echo "live=false" >> "$GITHUB_OUTPUT"
           fi
@@ -117,17 +117,17 @@ jobs:
       - name: API layer (no browser)
         if: matrix.browser == 'chromium' && matrix.shard == 1
         run: >
-          bun run automax run -p ${{ matrix.project }} -e ${{ matrix.env }} -l api
+          bun run sdods run -p ${{ matrix.project }} -e ${{ matrix.env }} -l api
           --run-id ${{ env.RUN_ID }}-${{ matrix.project }}-api --no-ingest $HAR_FLAGS
       - name: UI layer · @smoke
         run: >
-          bun run automax run -p ${{ matrix.project }} -e ${{ matrix.env }} -l ui -b ${{ matrix.browser }}
+          bun run sdods run -p ${{ matrix.project }} -e ${{ matrix.env }} -l ui -b ${{ matrix.browser }}
           -t @smoke --shard ${{ matrix.shard }}/${{ matrix.total }} --reporter blob
           --run-id ${{ env.RUN_ID }}-${{ matrix.project }}-${{ matrix.browser }} --no-ingest $HAR_FLAGS
       - name: UI layer · @regression (nightly, live)
         if: needs.matrix.outputs.live == 'true'
         run: >
-          bun run automax run -p ${{ matrix.project }} -e ${{ matrix.env }} -l ui -b ${{ matrix.browser }}
+          bun run sdods run -p ${{ matrix.project }} -e ${{ matrix.env }} -l ui -b ${{ matrix.browser }}
           -t @regression --shard ${{ matrix.shard }}/${{ matrix.total }} --reporter blob
           --run-id ${{ env.RUN_ID }}-${{ matrix.project }}-${{ matrix.browser }}-regression --no-ingest
       - name: Pack run artifacts (screenshots, api snapshots, meta) for ingest
@@ -135,21 +135,21 @@ jobs:
         shell: bash
         run: |
           shopt -s nullglob
-          for dir in .automax/runs/${RUN_ID}-*; do
+          for dir in .sdods/runs/${RUN_ID}-*; do
             tar -czf "$dir/artifacts.tgz" -C "$dir" --exclude=artifacts.tgz --exclude=playwright-report --exclude=pw-output . || true
           done
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: automax-${{ matrix.project }}-${{ matrix.browser }}-${{ matrix.shard }}
-          path: .automax/runs
+          name: sdods-${{ matrix.project }}-${{ matrix.browser }}-${{ matrix.shard }}
+          path: .sdods/runs
           retention-days: 14
           if-no-files-found: ignore
 
   dogfood:
-    # AutoMax tests its own web UI: builds the app, starts a scratch server, runs projects/automax-web.
+    # SDODS tests its own web UI: builds the app, starts a scratch server, runs projects/sdods-web.
     # Excluded from the generic matrix via `ci.enabled: false` in its project yaml.
-    name: dogfood · automax-web · chromium
+    name: dogfood · sdods-web · chromium
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -166,10 +166,70 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: automax-dogfood
-          path: .automax/runs
+          name: sdods-dogfood
+          path: .sdods/runs
           retention-days: 7
           if-no-files-found: ignore
+
+  installer:
+    # The one-line installers are the front door: they must keep working on every supported OS.
+    # Linux and macOS run install.sh for real (clone + deps + shim + uninstall); Windows checks
+    # that install.ps1 parses and that its dry run is honest.
+    name: installer · ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Lint the shell script
+        run: |
+          if ! command -v shellcheck >/dev/null 2>&1; then
+            case "${{ runner.os }}" in
+              Linux) sudo apt-get update -qq && sudo apt-get install -y shellcheck ;;
+              macOS) brew install shellcheck ;;
+            esac
+          fi
+          shellcheck --shell=sh --severity=warning installer/install.sh
+      - name: Contract checks (help, version-check, dry run, uninstall guard)
+        run: sh installer/install.sh --help && sh installer/install.sh --version-check
+      - name: Install for real into a sandbox, then remove it
+        run: |
+          set -eu
+          HOME_DIR="${RUNNER_TEMP}/sdods-home"
+          BIN_DIR="${RUNNER_TEMP}/sdods-bin"
+          sh installer/install.sh --dir "$HOME_DIR" --bin-dir "$BIN_DIR" \
+            --browsers none --pm bun --source git --version main --yes
+          "$BIN_DIR/sdods" --version
+          (cd "$HOME_DIR/app" && "$BIN_DIR/sdods" project list)
+          sh installer/install.sh --uninstall --dir "$HOME_DIR" --bin-dir "$BIN_DIR" --yes
+          test ! -e "$HOME_DIR" && test ! -e "$BIN_DIR/sdods"
+
+  installer-windows:
+    name: installer · windows
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Parse install.ps1
+        shell: pwsh
+        run: |
+          $null = [scriptblock]::Create((Get-Content -Raw installer/install.ps1))
+          Write-Host 'install.ps1 parses'
+      - name: Help and dry run
+        shell: pwsh
+        run: |
+          ./installer/install.ps1 -Help
+          ./installer/install.ps1 -DryRun -Dir "$env:RUNNER_TEMP\amx" -BinDir "$env:RUNNER_TEMP\amx-bin" -Browsers none -Yes
+          if (Test-Path "$env:RUNNER_TEMP\amx") { throw 'dry run wrote files' }
 
   report:
     name: report · ingest · notify
@@ -187,33 +247,33 @@ jobs:
       - run: bun install --frozen-lockfile
       - uses: actions/download-artifact@v4
         with:
-          pattern: automax-*
-          path: .automax/runs
+          pattern: sdods-*
+          path: .sdods/runs
           merge-multiple: true
       - name: Merge blob reports (sharded UI runs)
         shell: bash
         run: |
           shopt -s nullglob
-          blobs=(.automax/runs/*/blob-report)
+          blobs=(.sdods/runs/*/blob-report)
           if [ ${#blobs[@]} -gt 0 ]; then
             npx playwright merge-reports --reporter html,junit "${blobs[@]}" || echo "merge-reports failed"
           else
             echo "no blob reports"
           fi
-      - name: Ingest into an AutoMax server (when AUTOMAX_SERVER_URL + AUTOMAX_TOKEN secrets exist)
+      - name: Ingest into an SDODS server (when SDODS_SERVER_URL + SDODS_TOKEN secrets exist)
         if: always()
         shell: bash
         env:
-          AUTOMAX_SERVER_URL: ${{ secrets.AUTOMAX_SERVER_URL }}
-          AUTOMAX_TOKEN: ${{ secrets.AUTOMAX_TOKEN }}
+          SDODS_SERVER_URL: ${{ secrets.SDODS_SERVER_URL }}
+          SDODS_TOKEN: ${{ secrets.SDODS_TOKEN }}
         run: |
-          if [ -z "$AUTOMAX_SERVER_URL" ] || [ -z "$AUTOMAX_TOKEN" ]; then
+          if [ -z "$SDODS_SERVER_URL" ] || [ -z "$SDODS_TOKEN" ]; then
             echo "no server secrets; skipping ingest"; exit 0
           fi
           shopt -s nullglob
-          for dir in .automax/runs/${RUN_ID}-*; do
+          for dir in .sdods/runs/${RUN_ID}-*; do
             id=$(basename "$dir")
-            bun run automax report ingest --run-id "$id" --server "$AUTOMAX_SERVER_URL" --token "$AUTOMAX_TOKEN" \
+            bun run sdods report ingest --run-id "$id" --server "$SDODS_SERVER_URL" --token "$SDODS_TOKEN" \
               "$dir"/run.json "$dir"/messages*.ndjson "$dir"/pw-results*.json "$dir"/artifacts.tgz || echo "ingest failed for $id"
           done
       - name: Notify GitHub (check runs, PR comment, issues) and Jira
@@ -225,16 +285,16 @@ jobs:
           JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
         run: |
           shopt -s nullglob
-          for dir in .automax/runs/${RUN_ID}-*; do
+          for dir in .sdods/runs/${RUN_ID}-*; do
             id=$(basename "$dir")
-            bun run automax integrations notify --run-id "$id" --from-files || echo "notify failed for $id"
+            bun run sdods integrations notify --run-id "$id" --from-files || echo "notify failed for $id"
           done
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: automax-report
+          name: sdods-report
           path: |
             playwright-report
-            .automax/runs/**/dashboard
+            .sdods/runs/**/dashboard
           if-no-files-found: ignore
           retention-days: 30

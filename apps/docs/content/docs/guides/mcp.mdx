@@ -1,10 +1,10 @@
 ---
 title: MCP
-description: AutoMax as an MCP server for Claude Code, Cursor and VS Code, and the MCP servers it consumes.
+description: SDODS as an MCP server for Claude Code, Cursor and VS Code, and the MCP servers it consumes.
 ---
 
 <Learn>
-  How to connect an MCP client to AutoMax over stdio or HTTP, which tool families exist, how scopes
+  How to connect an MCP client to SDODS over stdio or HTTP, which tool families exist, how scopes
   gate them, and how a project declares external MCP servers for its agents.
 </Learn>
 
@@ -17,44 +17,44 @@ flowchart LR
     CU["Cursor"]
     VS["VS Code"]
   end
-  CC & CU & VS -->|stdio| S1["automax mcp"]
-  CC & CU & VS -->|HTTP + bearer token| S2["automax serve → /mcp"]
+  CC & CU & VS -->|stdio| S1["sdods mcp"]
+  CC & CU & VS -->|HTTP + bearer token| S2["sdods serve → /mcp"]
   S1 & S2 --> REG["ToolRegistry<br/>project_ · analyze_ · feature_ · run_ · data_ · heal_ · agent_ · issue_ · schedule_"]
-  REG --> CLI["automax commands"]
-  AG["AutoMax agents"] --> REG
+  REG --> CLI["sdods commands"]
+  AG["SDODS agents"] --> REG
   AG -->|browser| PW["npx playwright mcp"]
   AG -->|optional| EXT["GitHub MCP · Jira MCP"]
 ```
 
-Browser driving stays with Playwright MCP; AutoMax MCP drives the automation project. Install both side by side.
+Browser driving stays with Playwright MCP; SDODS MCP drives the automation project. Install both side by side.
 
 ## Connect
 
 <Tabs items={['Claude Code', 'Cursor', 'VS Code', 'HTTP']}>
 <Tab value="Claude Code">
 ```bash
-claude mcp add automax -- npx automax mcp --project demo-shop --env staging
+claude mcp add sdods -- npx sdods mcp --project demo-shop --env staging
 claude mcp add playwright -- npx playwright mcp --headless
 ```
 </Tab>
 <Tab value="Cursor">
 ```json title=".cursor/mcp.json"
-{ "mcpServers": { "automax": { "command": "npx", "args": ["automax", "mcp", "--project", "demo-shop"] } } }
+{ "mcpServers": { "sdods": { "command": "npx", "args": ["sdods", "mcp", "--project", "demo-shop"] } } }
 ```
 </Tab>
 <Tab value="VS Code">
 ```json title=".vscode/mcp.json"
-{ "servers": { "automax": { "type": "stdio", "command": "npx", "args": ["automax", "mcp", "--project", "demo-shop"] } } }
+{ "servers": { "sdods": { "type": "stdio", "command": "npx", "args": ["sdods", "mcp", "--project", "demo-shop"] } } }
 ```
 </Tab>
 <Tab value="HTTP">
 ```bash
-claude mcp add --transport http automax https://automax.example.com/mcp --header "Authorization: Bearer $AUTOMAX_TOKEN"
+claude mcp add --transport http sdods https://sdods.example.com/mcp --header "Authorization: Bearer $SDODS_TOKEN"
 ```
 </Tab>
 </Tabs>
 
-`automax mcp install claude|cursor|vscode` writes these files for you.
+`sdods mcp install claude|cursor|vscode` writes these files for you.
 
 <Screenshot
   src="/screenshots/ui/settings-mcp.png"
@@ -84,7 +84,7 @@ Over HTTP the bearer token's scopes decide which tools appear: `viewer` tokens s
 
 ## Servers a project consumes
 
-```yaml title="automax.project.yaml"
+```yaml title="sdods.project.yaml"
 mcp:
   servers:
     playwright: { transport: stdio, command: npx, args: [playwright, mcp, --headless] }

@@ -1,5 +1,5 @@
-import type { RunManifest, RunTotals, SuiteStatus } from '@automax/contracts/types';
-import type { AutomaxDb } from '../create-db.js';
+import type { RunManifest, RunTotals, SuiteStatus } from '@sdods/contracts/types';
+import type { SdodsDb } from '../create-db.js';
 
 export type { RunManifest, RunTotals, SuiteStatus };
 
@@ -10,7 +10,7 @@ export interface IngestRunOptions {
   manifest?: RunManifest | null;
   ndjsonPaths?: string[];
   pwJsonPaths?: string[];
-  /** root that contains `<runId>/…` (default `.automax/runs`) */
+  /** root that contains `<runId>/…` (default `.sdods/runs`) */
   artifactsRoot: string;
   replace?: boolean;
   /** git/ci/trigger overrides when there is no manifest */
@@ -34,7 +34,7 @@ export interface IngestResult {
 }
 
 export interface IngestContext {
-  adb: AutomaxDb;
+  adb: SdodsDb;
   runId: string;
   projectId: string;
   projectSlug: string;

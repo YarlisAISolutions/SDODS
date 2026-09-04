@@ -1,4 +1,4 @@
-import type { ShotPolicy } from '@automax/contracts';
+import type { ShotPolicy } from '@sdods/contracts';
 import type { ResolvedConfig } from '../config/resolve.js';
 
 export interface ShotPolicyResolved {
@@ -16,7 +16,7 @@ export interface ShotPolicyResolved {
 
 /**
  * Specificity: `@visual` > suite tag > any other tag key present > default.
- * `onlyOnFailure` (project/env) or AUTOMAX_SHOTS_ONLY_ON_FAILURE downgrades to on-failure
+ * `onlyOnFailure` (project/env) or SDODS_SHOTS_ONLY_ON_FAILURE downgrades to on-failure
  * but keeps visual baseline checks.
  */
 export function resolvePolicy(tags: readonly string[], config: ResolvedConfig): ShotPolicyResolved {
@@ -28,7 +28,7 @@ export function resolvePolicy(tags: readonly string[], config: ResolvedConfig): 
   if (suiteTag && policy[suiteTag]) mode = policy[suiteTag]!;
   for (const t of tags) if (t !== suiteTag && t !== '@visual' && policy[t]) mode = policy[t]!;
   if (tags.includes('@visual')) mode = policy['@visual'] ?? 'visual';
-  const onlyOnFailure = s.onlyOnFailure || process.env.AUTOMAX_SHOTS_ONLY_ON_FAILURE === '1';
+  const onlyOnFailure = s.onlyOnFailure || process.env.SDODS_SHOTS_ONLY_ON_FAILURE === '1';
   const visual = mode === 'visual';
   if (onlyOnFailure && mode !== 'off') mode = 'on-failure';
   return {

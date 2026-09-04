@@ -1,7 +1,7 @@
 import { randomBytes } from 'node:crypto';
 import Fastify, { type FastifyInstance } from 'fastify';
-import { countUsers, type AutomaxDb } from '@automax/db';
-import { ProjectRegistry } from '@automax/core/config';
+import { countUsers, type SdodsDb } from '@sdods/db';
+import { ProjectRegistry } from '@sdods/core/config';
 import { loadServerConfig, type ServerConfig } from './config.js';
 import { errorHandler } from './errors.js';
 import dbPlugin from './plugins/db.js';
@@ -24,7 +24,7 @@ import './types.js';
 
 export interface BuildServerOptions {
   config?: Partial<ServerConfig>;
-  adb?: AutomaxDb;
+  adb?: SdodsDb;
   runner?: RunnerHooks;
   logger?: boolean | object;
   /** skip scheduler start (tests) */
@@ -36,7 +36,7 @@ export interface BuildServerOptions {
 export async function buildServer(opts: BuildServerOptions = {}): Promise<FastifyInstance> {
   const config = loadServerConfig(opts.config ?? {});
   const app = Fastify({
-    logger: opts.logger ?? { level: process.env.AUTOMAX_LOG_LEVEL === 'debug' ? 'debug' : 'info' },
+    logger: opts.logger ?? { level: process.env.SDODS_LOG_LEVEL === 'debug' ? 'debug' : 'info' },
     trustProxy: true,
     bodyLimit: config.ingestMaxMb * 1024 * 1024,
   });
@@ -102,11 +102,11 @@ export async function startServer(
   const { host, port } = app.config;
   await app.listen({ host, port });
   const url = `http://${host === '0.0.0.0' ? 'localhost' : host}:${port}`;
-  const lines = [`AutoMax server listening on ${url}`];
+  const lines = [`SDODS server listening on ${url}`];
   if (app.setupState.token)
     lines.push(
       `No users yet. Create the first admin at ${url}/setup?token=${app.setupState.token}`,
-      `  or: automax users create --admin --username <name> --password <pw>`,
+      `  or: sdods users create --admin --username <name> --password <pw>`,
     );
   if (app.config.authDisabled)
     lines.push('AUTH_DISABLED=1: every request is a local admin (development only).');

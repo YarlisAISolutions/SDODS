@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/assets/automax-logo.svg" alt="AutoMax" width="520">
+  <img src="docs/assets/sdods-logo.svg" alt="SDODS" width="520">
 </p>
 
 <p align="center">
@@ -17,13 +17,13 @@
 
 ---
 
-AutoMax turns Playwright into a complete test platform you can drive from one CLI, one YAML file per project, and one web UI. It is open source (Apache-2.0) and free to use, including its API keys.
+SDODS turns Playwright into a complete test platform you can drive from one CLI, one YAML file per project, and one web UI. It is open source (Apache-2.0) and free to use, including its API keys.
 
 Created by **Sireesh Yarlagadda** · [LinkedIn](https://www.linkedin.com/in/yarlagadda/)
 
 ## Table of contents
 
-1. [Why AutoMax](#why-automax)
+1. [Why SDODS](#why-sdods)
 2. [Five-minute quickstart](#five-minute-quickstart)
 3. [How it works](#how-it-works)
 4. [Architecture](#architecture)
@@ -43,14 +43,14 @@ Created by **Sireesh Yarlagadda** · [LinkedIn](https://www.linkedin.com/in/yarl
 18. [Development process](#development-process)
 19. [Roadmap and status](#roadmap-and-status)
 
-## Why AutoMax
+## Why SDODS
 
-Playwright is an excellent engine. Teams still rebuild the same things around it: environment switching, tagging policy, test data, login reuse, reporting, flaky triage, CI wiring, and now AI helpers. AutoMax ships those once, with opinions:
+Playwright is an excellent engine. Teams still rebuild the same things around it: environment switching, tagging policy, test data, login reuse, reporting, flaky triage, CI wiring, and now AI helpers. SDODS ships those once, with opinions:
 
-| Need | What AutoMax gives you |
+| Need | What SDODS gives you |
 |---|---|
 | UI, API and mixed scenarios in one language | Gherkin features on top of playwright-bdd with **one merged fixture set**, so a scenario can seed through the API and assert in the browser |
-| Many apps, many environments | `projects/<slug>/automax.project.yaml` + `envs/<env>.yaml`; strict, explainable config precedence; secrets only through `${VAR}` |
+| Many apps, many environments | `projects/<slug>/sdods.project.yaml` + `envs/<env>.yaml`; strict, explainable config precedence; secrets only through `${VAR}` |
 | Reusable data | CSV / JSON / YAML / DB tables / faker factories per environment, plus **user pools** leased per worker with login state reuse |
 | Confidence across browsers | chromium, firefox, webkit, mobile emulation, `--project-matrix`, `@skip:<browser>` tags validated by lint |
 | Readable results | before/after screenshots per step (policy by suite tag), API request/response snapshots, a run viewer with slider/overlay/diff |
@@ -59,42 +59,65 @@ Playwright is an excellent engine. Teams still rebuild the same things around it
 | Automation for the automation | MCP server (project analysis, run, results, proposals), provider-agnostic agents (plan, generate, heal, upgrade, review) that only write reviewable proposals |
 | Enterprise plumbing | roles, free scoped API tokens, audit log, GitHub check runs and issues, Jira issues and links, cron schedules |
 
-## Five-minute quickstart
+## Install in one line
+
+```bash
+# macOS / Linux
+curl -fsSL https://sdods.com/install.sh | sh
+
+# Windows (PowerShell)
+irm https://sdods.com/install.ps1 | iex
+```
+
+Node 22+ is the only prerequisite. The installer checks it, installs Bun if you lack it, fetches
+SDODS into `~/.sdods`, installs Chromium, writes an `sdods` command and runs `sdods doctor`.
+Options (`--workspace`, `--browsers all`, `--mcp claude`, `--version`, `--uninstall`, …) are on the
+[install page](https://sdods.com/install/) and in the
+[installer reference](https://docs.sdods.com/docs/reference/installer/).
+
+```bash
+cd ~/.sdods/app
+sdods run -p demo-shop -e staging -l api                        # API layer, no browser
+sdods run -p demo-shop -e staging -l ui -b chromium -t @smoke   # UI smoke
+sdods report --last --open                                      # HTML report + dashboard
+```
+
+## Five-minute quickstart (from a clone)
 
 Prerequisites: Node 22+, and either Bun 1.4+ (fastest) or pnpm 9+.
 
 ```bash
 # 1. Get the code
-git clone https://github.com/siri1410/AutoMax.git && cd AutoMax
+git clone https://github.com/siri1410/SDODS.git && cd SDODS
 bun install                      # or: pnpm install
 npx playwright install --with-deps
 
 # 2. Look around
-bun run automax project list
-bun run automax config show -p demo-shop -e staging --explain
-bun run automax doctor
+bun run sdods project list
+bun run sdods config show -p demo-shop -e staging --explain
+bun run sdods doctor
 
 # 3. Run the demo project
-bun run automax run -p demo-shop -e staging -l api                    # API layer, no browser
-bun run automax run -p demo-shop -e staging -l ui -b chromium -t @smoke
-bun run automax run -p demo-shop --project-matrix -t @smoke           # every browser in the project yaml
+bun run sdods run -p demo-shop -e staging -l api                    # API layer, no browser
+bun run sdods run -p demo-shop -e staging -l ui -b chromium -t @smoke
+bun run sdods run -p demo-shop --project-matrix -t @smoke           # every browser in the project yaml
 
 # 4. Look at results
-bun run automax report --last --open                                   # Playwright HTML report + AutoMax dashboard
-bun run automax serve                                                  # web UI at http://127.0.0.1:4444
+bun run sdods report --last --open                                   # Playwright HTML report + SDODS dashboard
+bun run sdods serve                                                  # web UI at http://127.0.0.1:4444
 ```
 
 Start your own project from an existing application:
 
 ```bash
-bun run automax analyze ../my-app --apply       # detects framework, routes, OpenAPI, test-id attribute, auth
-bun run automax run -p my-app -e local -t @smoke
+bun run sdods analyze ../my-app --apply       # detects framework, routes, OpenAPI, test-id attribute, auth
+bun run sdods run -p my-app -e local -t @smoke
 ```
 
 Or from scratch:
 
 ```bash
-bun run automax project create my-app --ui-url http://localhost:3000 --api-url http://localhost:3000/api --env local
+bun run sdods project create my-app --ui-url http://localhost:3000 --api-url http://localhost:3000/api --env local
 ```
 
 ## How it works
@@ -102,7 +125,7 @@ bun run automax project create my-app --ui-url http://localhost:3000 --api-url h
 ```mermaid
 flowchart LR
   subgraph you["You"]
-    CLI["automax CLI"]
+    CLI["sdods CLI"]
     UI["Web UI"]
     MCPc["MCP clients<br/>(Claude Code, Cursor, VS Code)"]
   end
@@ -138,21 +161,21 @@ flowchart LR
   DB --> INT
 ```
 
-Everything is **CLI-first**. The web UI, the MCP server and the scheduler spawn the same `automax` commands and stream their output. That keeps CI simple and means nothing needs a database until you want history.
+Everything is **CLI-first**. The web UI, the MCP server and the scheduler spawn the same `sdods` commands and stream their output. That keeps CI simple and means nothing needs a database until you want history.
 
 ## Architecture
 
 ```mermaid
 flowchart TB
-  contracts["@automax/contracts<br/>schemas · ids · names · scopes · DTOs"]
-  core["@automax/core<br/>config · fixtures · steps · data · shots · heal<br/>recorder · har · lint · analyze · reporters"]
-  db["@automax/db<br/>Kysely · migrations · ingest · insights"]
-  mcp["@automax/mcp<br/>ToolRegistry · stdio · HTTP"]
-  integrations["@automax/integrations<br/>GitHub · Jira"]
-  agents["@automax/agents<br/>LlmAdapter · roles · proposals"]
-  server["@automax/server<br/>Fastify · SSE · auth · scheduler"]
-  web["@automax/web<br/>React · run viewer · editor"]
-  cli["@automax/cli<br/>automax"]
+  contracts["@sdods/contracts<br/>schemas · ids · names · scopes · DTOs"]
+  core["@sdods/core<br/>config · fixtures · steps · data · shots · heal<br/>recorder · har · lint · analyze · reporters"]
+  db["@sdods/db<br/>Kysely · migrations · ingest · insights"]
+  mcp["@sdods/mcp<br/>ToolRegistry · stdio · HTTP"]
+  integrations["@sdods/integrations<br/>GitHub · Jira"]
+  agents["@sdods/agents<br/>LlmAdapter · roles · proposals"]
+  server["@sdods/server<br/>Fastify · SSE · auth · scheduler"]
+  web["@sdods/web<br/>React · run viewer · editor"]
+  cli["@sdods/cli<br/>sdods"]
   contracts --> core --> db --> mcp --> integrations --> agents --> server --> web
   cli -.-> core & db & mcp & agents & integrations & server
 ```
@@ -167,29 +190,29 @@ A project is a directory:
 
 ```
 projects/demo-shop/
-  automax.project.yaml     # layers, browsers, tags, routes, data sources, auth, screenshots, heal, integrations, schedules
+  sdods.project.yaml     # layers, browsers, tags, routes, data sources, auth, screenshots, heal, integrations, schedules
   envs/staging.yaml        # base URLs, API auth (${VAR}), pool size, locale/timezone, per-env overrides
   envs/local.yaml
   .env.staging             # secrets (gitignored); .env.example documents them
   features/                # Gherkin (ui/, api/, hybrid/)
-  steps/fixtures.ts        # extends the AutoMax test with your auth strategy and page objects
-  steps/*.steps.ts         # project-specific steps (generic ones come from @automax/core/steps)
+  steps/fixtures.ts        # extends the SDODS test with your auth strategy and page objects
+  steps/*.steps.ts         # project-specific steps (generic ones come from @sdods/core/steps)
   pages/*.ts               # page objects with playwright-bdd decorators and heal-aware locators
   data/common/  data/staging/  data/factories.ts
   recorded/  har/  .auth/
 ```
 
-Configuration precedence (later wins), each layer validated with Zod and visible in `automax config show --explain`:
+Configuration precedence (later wins), each layer validated with Zod and visible in `sdods config show --explain`:
 
 ```
-framework defaults → automax.project.yaml → envs/<env>.yaml → .env + .env.<env> → process.env (AUTOMAX_*) → CLI flags
+framework defaults → sdods.project.yaml → envs/<env>.yaml → .env + .env.<env> → process.env (SDODS_*) → CLI flags
 ```
 
 Rules that keep it honest:
 
 - Any key that looks like a secret must be `${VAR}` (optionally `${VAR:-default}`); a literal fails validation.
 - `.env` files are parsed, never injected into `process.env`, so the process layer always outranks them.
-- `AUTOMAX_UI_BASE_URL`, `AUTOMAX_API_BASE_URL`, `AUTOMAX_ENV`, `AUTOMAX_HEADED`, `AUTOMAX_WORKERS`, `AUTOMAX_SHARD`, `AUTOMAX_RETRIES`, `AUTOMAX_SHOT_POLICY`, `AUTOMAX_HAR_MODE`, `AUTOMAX_OFFLINE` map onto config paths.
+- `SDODS_UI_BASE_URL`, `SDODS_API_BASE_URL`, `SDODS_ENV`, `SDODS_HEADED`, `SDODS_WORKERS`, `SDODS_SHARD`, `SDODS_RETRIES`, `SDODS_SHOT_POLICY`, `SDODS_HAR_MODE`, `SDODS_OFFLINE` map onto config paths.
 
 ## Writing tests
 
@@ -202,7 +225,7 @@ Feature: Seed a post and see it in the UI
     Given I use a leased user with role "standard"
     When I seed via POST "/posts" with body:
       """json
-      { "title": "AutoMax {{username}}", "userId": 1 }
+      { "title": "SDODS {{username}}", "userId": 1 }
       """
     And I save the response JSON path "title" as "title"
     And I mock "**/inventory.html" with JSON:
@@ -227,11 +250,11 @@ export class LoginPage extends BasePage {
 }
 ```
 
-The shared step library covers HTTP verbs with doc-string bodies, headers, query params, JSON-path and schema assertions (JSON Schema, Zod, OpenAPI), response variable capture and polling, navigation by route name, role/label/test-id interactions, data-table forms, visual baselines, network mocks, dataset loading and user leasing. Run `automax steps list -p <slug>` to see everything available to a project.
+The shared step library covers HTTP verbs with doc-string bodies, headers, query params, JSON-path and schema assertions (JSON Schema, Zod, OpenAPI), response variable capture and polling, navigation by route name, role/label/test-id interactions, data-table forms, visual baselines, network mocks, dataset loading and user leasing. Run `sdods steps list -p <slug>` to see everything available to a project.
 
 ## Test data and user pools
 
-Declare sources once per project; AutoMax resolves them per environment (`data/<env>/users.csv` → `fallback` → `data/common/users.csv`):
+Declare sources once per project; SDODS resolves them per environment (`data/<env>/users.csv` → `fallback` → `data/common/users.csv`):
 
 ```yaml
 data:
@@ -250,7 +273,7 @@ data:
 
 ## Tags and suites
 
-`automax lint` runs before every `automax run` and enforces the taxonomy:
+`sdods lint` runs before every `sdods run` and enforces the taxonomy:
 
 | Tag | Meaning |
 |---|---|
@@ -262,7 +285,7 @@ data:
 | `@skip:webkit` | per-browser exclusion, never a silent branch in code |
 | `@retries:2` `@timeout:60000` `@slow` `@mode:serial` `@skip` `@fixme` | playwright-bdd special tags, passed through |
 
-Filter with Cucumber expressions: `automax run -t "@smoke and not @mock"`.
+Filter with Cucumber expressions: `sdods run -t "@smoke and not @mock"`.
 
 ## Screenshot narratives
 
@@ -280,36 +303,36 @@ API steps attach request and response JSON instead. The web run viewer pairs bef
 ## Record, playback and HAR
 
 ```bash
-automax record -p demo-shop -e staging --name checkout --user standard   # Playwright codegen, logged in as a pool user
-automax run -p demo-shop -l recorded                                     # recorded specs run as a normal layer
-automax record convert projects/demo-shop/recorded/checkout.spec.ts      # agent proposal: feature + steps + page object
-automax har record -p demo-shop -t @har:products                          # capture network into projects/demo-shop/har/<env>/
-automax har replay -p demo-shop --strict                                  # offline run; CI uses this
+sdods record -p demo-shop -e staging --name checkout --user standard   # Playwright codegen, logged in as a pool user
+sdods run -p demo-shop -l recorded                                     # recorded specs run as a normal layer
+sdods record convert projects/demo-shop/recorded/checkout.spec.ts      # agent proposal: feature + steps + page object
+sdods har record -p demo-shop -t @har:products                          # capture network into projects/demo-shop/har/<env>/
+sdods har replay -p demo-shop --strict                                  # offline run; CI uses this
 ```
 
 ## Database: SQLite or Postgres
 
 ```bash
-DB_DRIVER=sqlite  automax db migrate                     # zero-setup default (.automax/automax.db)
+DB_DRIVER=sqlite  sdods db migrate                     # zero-setup default (.sdods/sdods.db)
 docker compose up -d postgres
-automax db switch postgres --target-url postgres://automax:automax@localhost:5432/automax
-automax db switch sqlite                                 # and back; data is copied and verified both ways
+sdods db switch postgres --target-url postgres://sdods:sdods@localhost:5432/sdods
+sdods db switch sqlite                                 # and back; data is copied and verified both ways
 ```
 
-One Kysely schema serves both drivers. Runs ingest automatically when a database is configured (`automax report ingest` for CI artifacts).
+One Kysely schema serves both drivers. Runs ingest automatically when a database is configured (`sdods report ingest` for CI artifacts).
 
 ## Web UI
 
-`automax serve` starts the Fastify server and the React app: dashboard trends, projects and environments as forms, dataset upload with preview, run list and live logs, the step timeline with before/after comparison and API panels, a Gherkin editor with step completion and lint diagnostics, recorder, agent proposals with diff review, integrations, schedules, users, roles and API tokens. Roles: admin, editor, viewer.
+`sdods serve` starts the Fastify server and the React app: dashboard trends, projects and environments as forms, dataset upload with preview, run list and live logs, the step timeline with before/after comparison and API panels, a Gherkin editor with step completion and lint diagnostics, recorder, agent proposals with diff review, integrations, schedules, users, roles and API tokens. Roles: admin, editor, viewer.
 
 ## MCP server
 
-AutoMax is itself an MCP server, modeled on Playwright MCP:
+SDODS is itself an MCP server, modeled on Playwright MCP:
 
 ```bash
-claude mcp add automax -- npx automax mcp --project demo-shop --env staging     # stdio
-automax mcp install claude|codex|cursor|vscode|windsurf                         # registers the server with the client
-automax mcp --http --port 4001                                                  # streamable HTTP with scoped tokens
+claude mcp add sdods -- npx sdods mcp --project demo-shop --env staging     # stdio
+sdods mcp install claude|codex|cursor|vscode|windsurf                         # registers the server with the client
+sdods mcp --http --port 4001                                                  # streamable HTTP with scoped tokens
 ```
 
 Tool families: `project_*`, `analyze_*` (framework, routes, OpenAPI, locators audit, coverage, best practices, change impact, failure analysis), `feature_*`/`step_*`, `run_*`, `data_*`, `heal_*`/`insights_*`, `record_*`, `agent_*`/`proposal_*`, `issue_*`, `schedule_*`. Browser driving stays with the bundled `npx playwright mcp`, configured alongside.
@@ -317,36 +340,36 @@ Tool families: `project_*`, `analyze_*` (framework, routes, OpenAPI, locators au
 ## AI agents
 
 ```bash
-automax agent plan     -p demo-shop --goal "checkout with a discount code"
-automax agent generate -p demo-shop --plan docs/test-plans/checkout.md
-automax agent heal     -p demo-shop --scenario <fingerprint>
-automax agent upgrade  -p demo-shop --diff main..feature/x
-automax proposals list && automax proposals accept <id> --branch automax/<id>
+sdods agent plan     -p demo-shop --goal "checkout with a discount code"
+sdods agent generate -p demo-shop --plan docs/test-plans/checkout.md
+sdods agent heal     -p demo-shop --scenario <fingerprint>
+sdods agent upgrade  -p demo-shop --diff main..feature/x
+sdods proposals list && sdods proposals accept <id> --branch sdods/<id>
 ```
 
 Agents run on a provider-agnostic adapter: `claude` (Anthropic API key), `claude-code` (your logged-in Claude Code CLI, no key), `codex` (your logged-in Codex CLI, no key), `openai-compatible` (any chat-completions endpoint) or `fake` (CI and `--dry-run`). When nothing is configured the adapter is auto-detected in that order. Agents can read the project, run scenarios and drive a browser through MCP, but they can only **write proposals** that you review in the UI or the CLI. Budgets per role are configured in the project yaml.
 
 ## Use with Claude Code and Codex CLI
 
-Both CLIs work in two directions: they can drive AutoMax through its MCP server, and AutoMax agents can run on their logins instead of an API key.
+Both CLIs work in two directions: they can drive SDODS through its MCP server, and SDODS agents can run on their logins instead of an API key.
 
 ```bash
 # Claude Code
-automax agent install --for claude -p demo-shop       # .claude/agents/automax-*.md, CLAUDE.md, MCP registration
-automax agent review -p demo-shop --adapter claude-code
-claude                                                # then: "use automax to run the demo-shop smoke suite"
+sdods agent install --for claude -p demo-shop       # .claude/agents/sdods-*.md, CLAUDE.md, MCP registration
+sdods agent review -p demo-shop --adapter claude-code
+claude                                                # then: "use sdods to run the demo-shop smoke suite"
 
 # Codex CLI
-automax agent install --for codex -p demo-shop        # AGENTS.md + [mcp_servers.automax] in ~/.codex/config.toml
-automax agent heal -p demo-shop --scenario <fingerprint> --adapter codex
-codex                                                 # then: "use the automax tools to list projects"
+sdods agent install --for codex -p demo-shop        # AGENTS.md + [mcp_servers.sdods] in ~/.codex/config.toml
+sdods agent heal -p demo-shop --scenario <fingerprint> --adapter codex
+codex                                                 # then: "use the sdods tools to list projects"
 ```
 
-`automax agent install --for all` sets up both. `automax doctor` shows whether each CLI is installed and logged in.
+`sdods agent install --for all` sets up both. `sdods doctor` shows whether each CLI is installed and logged in.
 
 ## Tokens and keys
 
-Nothing is mandatory for the platform itself; AutoMax API tokens are self-issued and free. `automax doctor` prints this matrix with live status.
+Nothing is mandatory for the platform itself; SDODS API tokens are self-issued and free. `sdods doctor` prints this matrix with live status.
 
 | Key | Needed for | Requirement |
 |---|---|---|
@@ -354,11 +377,11 @@ Nothing is mandatory for the platform itself; AutoMax API tokens are self-issued
 | Claude Code login (`claude login`) | agents via `--adapter claude-code` | one of the four agent options |
 | Codex login (`codex login`) | agents via `--adapter codex` | one of the four agent options |
 | `OPENAI_API_KEY` (+ `OPENAI_BASE_URL`) | agents via any OpenAI-compatible endpoint | one of the four agent options |
-| `SESSION_SECRET` | `automax serve` session signing | mandatory for the web server only |
+| `SESSION_SECRET` | `sdods serve` session signing | mandatory for the web server only |
 | `DATABASE_URL` | Postgres | mandatory only when `DB_DRIVER=postgres` |
 | `GITHUB_TOKEN` | check runs, PR comments, issues | optional |
 | `JIRA_EMAIL` + `JIRA_API_TOKEN` | Jira issues, links, transitions | optional |
-| `AUTOMAX_TOKEN` (+ `AUTOMAX_SERVER_URL`) | MCP over HTTP, CI ingest; created with `automax tokens create` | optional, free |
+| `SDODS_TOKEN` (+ `SDODS_SERVER_URL`) | MCP over HTTP, CI ingest; created with `sdods tokens create` | optional, free |
 | `FIREBASE_SERVICE_ACCOUNT_AUTOMAX_DOCS`, `NPM_TOKEN` | docs deploy and npm publish | CI-only GitHub secrets |
 
 Everything runs offline without any of them: HAR replay for the demo, SQLite for the database, `--dry-run` for agents.
@@ -378,9 +401,9 @@ CI gets check runs with failure annotations and one PR comment per run. Failures
 ## Scheduling
 
 ```bash
-automax schedule add -p demo-shop --name nightly --cron "0 2 * * *" --tz America/New_York -t @regression -b chromium -b firefox --notify github
-automax schedule next --count 5
-automax schedule install --target github     # or crontab | launchd | systemd
+sdods schedule add -p demo-shop --name nightly --cron "0 2 * * *" --tz America/New_York -t @regression -b chromium -b firefox --notify github
+sdods schedule next --count 5
+sdods schedule install --target github     # or crontab | launchd | systemd
 ```
 
 Schedules live in the project yaml (version-controlled) or the database; the server runs them, or the generated workflow does when you have no server.
@@ -399,7 +422,7 @@ Every command supports `--json`, `--quiet`, `--verbose`, `--cwd`, `--no-color`. 
 | `agent plan\|generate\|heal\|upgrade\|review`, `proposals list\|show\|accept\|reject` | agents |
 | `mcp`, `mcp install`, `serve`, `users`, `tokens`, `schedule`, `integrations sync\|notify\|test` | platform |
 
-Full reference with examples: the documentation site (`apps/docs`, published on Firebase Hosting at https://automax.sdods.com).
+Full reference with examples: the documentation site (`apps/docs`, published on Firebase Hosting at https://docs.sdods.com).
 
 ## Development process
 
@@ -408,14 +431,14 @@ bun install && npx playwright install --with-deps
 bun run typecheck        # tsc -b across packages
 bun run lint             # eslint + prettier
 bun run test             # vitest unit tests
-bun run automax lint -p demo-shop
-bun run automax run -p demo-shop -e staging -l api
+bun run sdods lint -p demo-shop
+bun run sdods run -p demo-shop -e staging -l api
 bun run release:check    # demo suite on every browser, offline via HAR
 ```
 
 - Branch from `main`, keep commits focused, and add or update tests with every change.
 - CI runs lint, typecheck, unit tests, the demo suite on chromium (PRs) and the full browser matrix nightly.
-- Versioning uses changesets; releases publish `@automax/*` to npm and a server image to GHCR.
+- Versioning uses changesets; releases publish `@sdods/*` to npm and a server image to GHCR.
 - Security issues: see [SECURITY.md](SECURITY.md).
 
 ## Roadmap and status
@@ -441,4 +464,4 @@ Implementation follows the phased plan in [docs/ARCHITECTURE.md](docs/ARCHITECTU
 
 ## License
 
-Apache-2.0. Copyright © 2026 Sireesh Yarlagadda and AutoMax contributors.
+Apache-2.0. Copyright © 2026 Sireesh Yarlagadda and SDODS contributors.

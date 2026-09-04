@@ -4,4 +4,4 @@ export {
   fingerprint,
   parsePwProjectName,
   pwProjectName,
-} from '@automax/contracts/ids';
+} from '@sdods/contracts/ids';

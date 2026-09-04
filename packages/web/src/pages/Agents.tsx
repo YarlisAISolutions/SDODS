@@ -110,7 +110,7 @@ export function AgentsPage() {
     mutationFn: ({ id, action }: { id: string; action: 'accept' | 'reject' }) =>
       api(`/api/proposals/${id}/${action}`, {
         method: 'POST',
-        json: action === 'accept' ? { branch: `automax/${id}` } : {},
+        json: action === 'accept' ? { branch: `sdods/${id}` } : {},
       }),
     onSuccess: (_r, v) => {
       inv(['proposals'], ['agentJobs']);
@@ -127,7 +127,7 @@ export function AgentsPage() {
     <div className="space-y-4">
       <PageHeader
         title="Agents"
-        subtitle="Provider-agnostic roles that read, run and drive a browser through MCP, but only write proposals you review. LLM keys are yours; AutoMax tokens are free."
+        subtitle="Provider-agnostic roles that read, run and drive a browser through MCP, but only write proposals you review. LLM keys are yours; SDODS tokens are free."
       />
       <div className="grid gap-4 lg:grid-cols-[380px_minmax(0,1fr)]">
         <Card title="New job">

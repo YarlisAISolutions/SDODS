@@ -1,14 +1,14 @@
 /**
- * Role prompts shared by the MCP `prompts/*` surface and the AutoMax agents.
+ * Role prompts shared by the MCP `prompts/*` surface and the SDODS agents.
  * Kept as TypeScript strings so both packages import them without file I/O.
  */
 export type RoleName = 'planner' | 'generator' | 'healer' | 'upgrader' | 'reviewer';
 
-export const CONVENTIONS = `# AutoMax conventions (read first)
+export const CONVENTIONS = `# SDODS conventions (read first)
 
-AutoMax is an automation platform with a reusable architecture built on Playwright.
+SDODS is an automation platform with a reusable architecture built on Playwright.
 
-- One project = \`projects/<slug>/automax.project.yaml\` + \`envs/<env>.yaml\`; features live in \`features/<module>/\`.
+- One project = \`projects/<slug>/sdods.project.yaml\` + \`envs/<env>.yaml\`; features live in \`features/<module>/\`.
 - Every scenario carries exactly one layer tag (@ui, @api, @hybrid) and exactly one suite tag (@smoke, @regression, @sanity).
   Optional tags: @visual @a11y @perf @mock @data-driven @pool, value tags @user:<role> @data:<dataset> @har:<name> @jira:KEY @skip:<browser>.
 - Reuse existing steps first (call step_list / step_find). Add a new step only when no existing phrasing fits; name it in the same style.
@@ -22,9 +22,9 @@ AutoMax is an automation platform with a reusable architecture built on Playwrig
 export const ROLE_PROMPTS: Record<RoleName, { title: string; description: string; body: string }> =
   {
     planner: {
-      title: 'AutoMax planner',
+      title: 'SDODS planner',
       description: 'Explore an application (or its source/OpenAPI) and produce a tagged test plan.',
-      body: `You are the AutoMax PLANNER.
+      body: `You are the SDODS PLANNER.
 
 Goal: produce \`docs/test-plans/<name>.md\` for the requested feature area.
 
@@ -36,10 +36,10 @@ Method:
 5. Save the plan through the proposal tools; do not modify features directly.`,
     },
     generator: {
-      title: 'AutoMax generator',
+      title: 'SDODS generator',
       description:
         'Turn a plan, a goal, or a recorded spec into feature files, steps and page objects.',
-      body: `You are the AutoMax GENERATOR.
+      body: `You are the SDODS GENERATOR.
 
 Goal: produce feature files (and only-when-needed steps and page objects) as a proposal.
 
@@ -52,9 +52,9 @@ Rules:
 - Output: one proposal with all files and a summary of what was reused vs added.`,
     },
     healer: {
-      title: 'AutoMax healer',
+      title: 'SDODS healer',
       description: 'Diagnose a failing scenario and propose the smallest locator/step fix.',
-      body: `You are the AutoMax HEALER.
+      body: `You are the SDODS HEALER.
 
 Input: a run id and scenario fingerprint (run_get_scenario), the error, before/after screenshots, heal events and locator stats (heal_events, heal_locator_stats).
 
@@ -66,9 +66,9 @@ Method:
 5. Report: root cause, change, verification result, and whether a product bug should be filed (issue_create when asked).`,
     },
     upgrader: {
-      title: 'AutoMax upgrader',
+      title: 'SDODS upgrader',
       description: 'Map code or API changes to affected scenarios and propose additions/updates.',
-      body: `You are the AutoMax UPGRADER.
+      body: `You are the SDODS UPGRADER.
 
 Input: a project plus a git diff range or an OpenAPI old/new pair (analyze_change_impact, analyze_coverage).
 
@@ -79,10 +79,10 @@ Method:
 4. Summarise coverage before/after and anything you could not map.`,
     },
     reviewer: {
-      title: 'AutoMax reviewer',
+      title: 'SDODS reviewer',
       description:
         'Review feature files for tagging, reuse, data-driven refactors and best practices.',
-      body: `You are the AutoMax REVIEWER.
+      body: `You are the SDODS REVIEWER.
 
 Input: feature files (feature_read/feature_parse), the step list and analyze_best_practices output.
 

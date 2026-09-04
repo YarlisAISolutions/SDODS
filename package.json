@@ -1,9 +1,9 @@
 {
-  "name": "automax-monorepo",
+  "name": "sdods-monorepo",
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "AutoMax — an automation platform: BDD UI + API + hybrid testing, multi-project, data-driven, self-healing, MCP, agents.",
+  "description": "SDODS — an automation platform: BDD UI + API + hybrid testing, multi-project, data-driven, self-healing, MCP, agents.",
   "license": "Apache-2.0",
   "engines": {
     "node": ">=22"
@@ -14,8 +14,8 @@
     "apps/*"
   ],
   "scripts": {
-    "automax": "node --import tsx ./packages/cli/src/bin.ts",
-    "typecheck": "tsc -b && bun run --filter @automax/web typecheck",
+    "sdods": "node --import tsx ./packages/cli/src/bin.ts",
+    "typecheck": "tsc -b && bun run --filter @sdods/web typecheck",
     "lint": "eslint . && prettier --check .",
     "format": "prettier --write .",
     "test": "vitest run",
@@ -27,17 +27,18 @@
     "docs:dev": "bun run --cwd apps/docs dev",
     "docs:build": "bun run --cwd apps/docs build",
     "docs:verify": "bun run --cwd apps/docs verify",
-    "web:dev": "bun run --filter @automax/web dev:mocks",
-    "web:build": "bun run --filter @automax/web build",
+    "web:dev": "bun run --filter @sdods/web dev:mocks",
+    "web:build": "bun run --filter @sdods/web build",
     "release:check:live": "node --import tsx ./packages/cli/src/bin.ts run -p demo-shop -e staging --project-matrix -t \"@smoke or @sanity or @regression\"",
     "dogfood": "bash scripts/dogfood.sh",
     "www:dev": "bun run --cwd apps/www dev",
     "www:build": "bun run --cwd apps/www build",
     "www:screenshots": "bun run --cwd apps/www screenshots",
-    "api:build": "gcloud builds submit --project automax-docs --region us-central1 --tag us-central1-docker.pkg.dev/automax-docs/automax/automax-api:latest .",
+    "api:build": "gcloud builds submit --project automax-docs --region us-central1 --tag us-central1-docker.pkg.dev/automax-docs/sdods/automax-api:latest .",
     "api:deploy": "bash deploy/deploy-cloud-run.sh",
     "api:deploy-hosting": "firebase deploy --only hosting:api --project automax-docs",
-    "api:bootstrap": "bash deploy/bootstrap-admin.sh"
+    "api:bootstrap": "bash deploy/bootstrap-admin.sh",
+    "installer:sync": "node --import tsx ./scripts/sync-installer.ts"
   },
   "devDependencies": {
     "@types/node": "^22.15.0",
@@ -52,9 +53,9 @@
     "@eslint/js": "^9.39.0",
     "@playwright/test": "^1.62.1",
     "playwright-bdd": "^9.2.0",
-    "@automax/contracts": "workspace:*",
-    "@automax/core": "workspace:*",
-    "@automax/cli": "workspace:*",
+    "@sdods/contracts": "workspace:*",
+    "@sdods/core": "workspace:*",
+    "@sdods/cli": "workspace:*",
     "@changesets/cli": "^3.0.1",
     "execa": "^10.0.1"
   },

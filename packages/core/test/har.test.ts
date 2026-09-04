@@ -2,7 +2,7 @@ import { existsSync, mkdtempSync, readFileSync, writeFileSync, mkdirSync } from 
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import type { ApiSnapshot } from '@automax/contracts';
+import type { ApiSnapshot } from '@sdods/contracts';
 import type { ResolvedConfig } from '../src/config/resolve.js';
 import {
   HarRecorder,
@@ -31,7 +31,7 @@ import {
 function cfg(
   over: Partial<{ harMode: 'off' | 'update' | 'replay'; offline: boolean }> = {},
 ): ResolvedConfig {
-  const root = mkdtempSync(join(tmpdir(), 'automax-har-'));
+  const root = mkdtempSync(join(tmpdir(), 'sdods-har-'));
   return {
     project: { root, slug: 'shop' },
     env: { name: 'staging' },
@@ -242,6 +242,6 @@ describe('browser HAR hook', () => {
   it('registers a tag-filtered Before hook', () => {
     const registered: Array<{ tags?: string; name?: string }> = [];
     registerHarHooks({ Before: (options) => void registered.push(options) });
-    expect(registered).toEqual([{ tags: '@ui or @hybrid', name: 'automax:har' }]);
+    expect(registered).toEqual([{ tags: '@ui or @hybrid', name: 'sdods:har' }]);
   });
 });

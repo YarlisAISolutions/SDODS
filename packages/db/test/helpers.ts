@@ -1,11 +1,11 @@
 import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { createDb, createMemoryDb, type AutomaxDb } from '../src/create-db.js';
+import { createDb, createMemoryDb, type SdodsDb } from '../src/create-db.js';
 import { migrateToLatest } from '../src/migrate.js';
 
 /** Open + migrate an in-memory sqlite DB, or Postgres when DATABASE_URL is set (DB_DRIVER=postgres). */
-export async function testDb(): Promise<AutomaxDb> {
+export async function testDb(): Promise<SdodsDb> {
   const adb =
     process.env.DB_DRIVER === 'postgres' && process.env.DATABASE_URL
       ? createDb({ driver: 'postgres', databaseUrl: process.env.DATABASE_URL })
@@ -20,7 +20,7 @@ export async function testDb(): Promise<AutomaxDb> {
   return adb;
 }
 
-export function tmpDir(prefix = 'automax-db-'): string {
+export function tmpDir(prefix = 'sdods-db-'): string {
   return mkdtempSync(join(tmpdir(), prefix));
 }
 
@@ -284,7 +284,7 @@ export function writeRun(
   files: Record<string, string>,
   manifest?: Record<string, unknown>,
 ): { root: string; runDir: string } {
-  const root = tmpDir('automax-runs-');
+  const root = tmpDir('sdods-runs-');
   const runDir = join(root, runId);
   mkdirSync(runDir, { recursive: true });
   if (manifest !== null) {
@@ -298,8 +298,8 @@ export function writeRun(
         browsers: ['chromium'],
         trigger: 'cli',
         startedAt: '2026-09-03T10:00:00.000Z',
-        command: 'automax run',
-        automaxVersion: '0.1.0',
+        command: 'sdods run',
+        sdodsVersion: '0.1.0',
         ...(manifest ?? {}),
       }),
     );

@@ -4,22 +4,22 @@ description: Log in once per user, reuse the browser state across scenarios, and
 ---
 
 <Learn>
-  Which authentication strategies AutoMax supports, where storage state is cached, how a leased
-  user's state is applied to a browser context, and how to capture state for the recorder.
+  Which authentication strategies SDODS supports, where storage state is cached, how a leased user's
+  state is applied to a browser context, and how to capture state for the recorder.
 </Learn>
 
 ## Strategies
 
-| Strategy                   | How state is produced                                                                     |
-| -------------------------- | ----------------------------------------------------------------------------------------- |
-| `none`                     | no login                                                                                  |
-| `form`                     | a headless login with the selectors in `auth.form`, then `context.storageState()`         |
-| `token`                    | fetch a token, place it as a header, cookie or local-storage entry                        |
-| `oauth-client-credentials` | client-credentials grant against `tokenUrl`                                               |
-| `sso`                      | interactive: `automax auth capture --interactive` opens codegen so a person completes SSO |
-| `custom`                   | your `defineAuth` implementation in `steps/auth.ts`                                       |
+| Strategy                   | How state is produced                                                                   |
+| -------------------------- | --------------------------------------------------------------------------------------- |
+| `none`                     | no login                                                                                |
+| `form`                     | a headless login with the selectors in `auth.form`, then `context.storageState()`       |
+| `token`                    | fetch a token, place it as a header, cookie or local-storage entry                      |
+| `oauth-client-credentials` | client-credentials grant against `tokenUrl`                                             |
+| `sso`                      | interactive: `sdods auth capture --interactive` opens codegen so a person completes SSO |
+| `custom`                   | your `defineAuth` implementation in `steps/auth.ts`                                     |
 
-```yaml title="automax.project.yaml"
+```yaml title="sdods.project.yaml"
 auth:
   strategy: form
   storageState: true
@@ -52,10 +52,10 @@ flowchart LR
 ## Capture state on demand
 
 ```bash
-bun run automax auth capture -p demo-shop -e staging --user standard
-bun run automax auth capture -p demo-shop -e staging --user standard --all
-bun run automax auth capture -p demo-shop -e staging --user admin --interactive
-bun run automax auth list -p demo-shop -e staging
+bun run sdods auth capture -p demo-shop -e staging --user standard
+bun run sdods auth capture -p demo-shop -e staging --user standard --all
+bun run sdods auth capture -p demo-shop -e staging --user admin --interactive
+bun run sdods auth list -p demo-shop -e staging
 ```
 
 The recorder uses the same files through `--load-storage`, so you can record flows as any pool user.
@@ -63,7 +63,7 @@ The recorder uses the same files through `--load-storage`, so you can record flo
 ## Custom strategy
 
 ```ts title="projects/demo-shop/steps/auth.ts"
-import { defineAuth } from '@automax/core/auth';
+import { defineAuth } from '@sdods/core/auth';
 
 export const auth = defineAuth({
   strategy: 'custom',
@@ -75,7 +75,7 @@ export const auth = defineAuth({
     await page.getByLabel('Password').fill(user.password);
     await page.getByRole('button', { name: 'Login' }).click();
     await page.waitForURL('**/inventory.html');
-    return context; // AutoMax saves and closes it
+    return context; // SDODS saves and closes it
   },
 });
 ```

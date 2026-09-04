@@ -8,11 +8,7 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { basename, dirname, join, relative } from 'node:path';
-import {
-  parseAttachmentName,
-  scenarioFiles,
-  type ParsedAttachment,
-} from '@automax/contracts/names';
+import { parseAttachmentName, scenarioFiles, type ParsedAttachment } from '@sdods/contracts/names';
 
 export interface StoredFile {
   relPath: string;
@@ -51,7 +47,7 @@ export function safeName(name: string): string {
   return name.replace(/[^A-Za-z0-9._-]+/g, '_').replace(/^_+/, '') || 'attachment';
 }
 
-/** Target file name inside the scenario attempt dir for a parsed AutoMax attachment. */
+/** Target file name inside the scenario attempt dir for a parsed SDODS attachment. */
 export function targetFileFor(
   parsed: ParsedAttachment,
   original: string,

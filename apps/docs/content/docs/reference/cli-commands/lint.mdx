@@ -1,10 +1,10 @@
 ---
-title: automax lint
+title: sdods lint
 description: Validate feature files against Gherkin syntax, the tag taxonomy, module rules and step definitions.
 ---
 
 ```text
-automax lint [paths...] [-p <slug>] [--undefined-steps] [--fix-tags] [--strict] [--file <path>]...
+sdods lint [paths...] [-p <slug>] [--undefined-steps] [--fix-tags] [--strict] [--file <path>]...
 ```
 
 | Flag                   | Meaning                                               |
@@ -32,9 +32,9 @@ Rules:
 | scenario lacks a tag its module expects                                     | warning                              |
 | unused step definition                                                      | warning                              |
 
-`automax run` lints first unless `--no-lint` is given. Exit code `3` on errors.
+`sdods run` lints first unless `--no-lint` is given. Exit code `3` on errors.
 
 ```bash
-bun run automax lint -p demo-shop
-bun run automax lint -p demo-shop --undefined-steps --strict
+bun run sdods lint -p demo-shop
+bun run sdods lint -p demo-shop --undefined-steps --strict
 ```

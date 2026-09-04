@@ -1,6 +1,6 @@
 ---
 title: Migrating from Playwright, Cypress and Cucumber
-description: Bring existing suites into AutoMax without rewriting everything on day one.
+description: Bring existing suites into SDODS without rewriting everything on day one.
 ---
 
 <Learn>
@@ -10,24 +10,24 @@ description: Bring existing suites into AutoMax without rewriting everything on 
 
 ## From Playwright
 
-1. Copy specs into `projects/<slug>/recorded/` (`automax import playwright <dir>`); they run as the `recorded` layer immediately.
+1. Copy specs into `projects/<slug>/recorded/` (`sdods import playwright <dir>`); they run as the `recorded` layer immediately.
 2. Move base URLs and credentials into `envs/<env>.yaml` and `.env.<env>`.
-3. Convert high-value flows with `automax record convert` so they become tagged features with shared steps.
+3. Convert high-value flows with `sdods record convert` so they become tagged features with shared steps.
 4. Turn `page.locator('css')` calls into `heal.locator(primary, context)` in page objects as you touch them.
 
 ## From Cypress
 
-1. Run `automax analyze` to detect routes, the test-id attribute (`data-cy` is recognised) and existing specs.
+1. Run `sdods analyze` to detect routes, the test-id attribute (`data-cy` is recognised) and existing specs.
 2. Port custom commands to steps in the shared vocabulary or to page-object methods.
 3. Replace `cy.intercept` fixtures with the mock step or HAR files.
 4. Keep `data-cy` as `testIdAttribute` so locators keep working.
 
 ## From Cucumber frameworks
 
-1. Copy `.feature` files into `features/<module>/`; add the layer and suite tags; `automax lint --fix-tags` handles obvious folders.
+1. Copy `.feature` files into `features/<module>/`; add the layer and suite tags; `sdods lint --fix-tags` handles obvious folders.
 2. Map step definitions: most HTTP and navigation steps already exist in the shared library; keep the rest in `steps/*.steps.ts` using the project `test` from `steps/fixtures.ts`.
 3. Replace world state with the `apiContext` variables and dataset rows.
-4. Replace separate UI and API runners with one `automax run`.
+4. Replace separate UI and API runners with one `sdods run`.
 
 <Callout type="info">
   Do the migration per module and let the coverage report show what is still uncovered.

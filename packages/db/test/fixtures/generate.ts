@@ -1,6 +1,6 @@
 // Regenerates the static fixture files from the builders in ../helpers.ts:  node --import tsx packages/db/test/fixtures/generate.ts
 import { writeFileSync } from 'node:fs';
-import { attachmentNames } from '@automax/contracts/names';
+import { attachmentNames } from '@sdods/contracts/names';
 import { buildMessages, buildPwJson, TINY_PNG_BASE64 } from '../helpers.js';
 const PW = 'demo-shop--ui--chromium';
 const dir = new URL('.', import.meta.url).pathname;

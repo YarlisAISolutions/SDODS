@@ -1,11 +1,11 @@
-import { test as base, createBdd } from '@automax/core/fixtures';
+import { test as base, createBdd } from '@sdods/core/fixtures';
 import { LoginPage } from '../pages/LoginPage.js';
 import { InventoryPage } from '../pages/InventoryPage.js';
 import { CartPage } from '../pages/CartPage.js';
 import { auth } from './auth.js';
 
 /**
- * Project test object: the AutoMax merged fixtures plus this project's auth strategy and
+ * Project test object: the SDODS merged fixtures plus this project's auth strategy and
  * page objects. playwright-bdd imports this file (importTestFrom) for generated specs.
  */
 export const test = base.extend<{

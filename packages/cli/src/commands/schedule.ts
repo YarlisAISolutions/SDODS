@@ -1,13 +1,13 @@
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Command } from 'commander';
-import { AutomaxError } from '@automax/core';
+import { SdodsError } from '@sdods/core';
 import { createContext } from '../context.js';
 import { collect, info, json, ok, out, table } from '../ui.js';
 
 async function withServices(rootDir: string) {
-  const db = await import('@automax/db');
-  const srv = await import('@automax/server');
+  const db = await import('@sdods/db');
+  const srv = await import('@sdods/server');
   const adb = await db.openDb();
   const config = srv.loadServerConfig({ rootDir });
   const runManager = new srv.RunManager(config, adb);
@@ -48,12 +48,12 @@ export function register(program: Command) {
         await new HierarchyService(s.adb).sync(ctx.registry);
         const row = await s.db.getProjectBySlug(s.adb.db, project.slug);
         if (!row)
-          throw new AutomaxError('CONFIG_NOT_FOUND', `Project row for ${project.slug} missing.`, {
+          throw new SdodsError('CONFIG_NOT_FOUND', `Project row for ${project.slug} missing.`, {
             exitCode: 2,
           });
         const next = s.srv.nextTimes(opts.cron, opts.tz, 5);
         if (!next.length)
-          throw new AutomaxError('CONFIG_INVALID', `Invalid cron "${opts.cron}".`, { exitCode: 2 });
+          throw new SdodsError('CONFIG_INVALID', `Invalid cron "${opts.cron}".`, { exitCode: 2 });
         const id = await s.db.upsertSchedule(s.adb.db, s.adb.driver, {
           projectId: row.id,
           name: opts.name,
@@ -76,7 +76,7 @@ export function register(program: Command) {
         ok(`Schedule ${opts.name} (${opts.cron} ${opts.tz}) saved`);
         info(`Next: ${next.slice(0, 3).join(', ')}`);
         info(
-          'The server runs schedules (`automax serve`); for server-less setups use `automax schedule install`.',
+          'The server runs schedules (`sdods serve`); for server-less setups use `sdods schedule install`.',
         );
       } finally {
         await s.adb.close();
@@ -122,7 +122,7 @@ export function register(program: Command) {
           const row = await s.db.getProjectBySlug(s.adb.db, opts.project);
           const target = (await s.scheduler.list(row?.id)).find((x) => x.name === name);
           if (!target)
-            throw new AutomaxError('CONFIG_NOT_FOUND', `Schedule ${name} not found.`, {
+            throw new SdodsError('CONFIG_NOT_FOUND', `Schedule ${name} not found.`, {
               exitCode: 2,
             });
           if (action === 'remove') await s.db.deleteSchedule(s.adb.db, target.id);
@@ -152,11 +152,11 @@ export function register(program: Command) {
         const row = await s.db.getProjectBySlug(s.adb.db, opts.project);
         const target = (await s.scheduler.list(row?.id)).find((x) => x.name === name);
         if (!target)
-          throw new AutomaxError('CONFIG_NOT_FOUND', `Schedule ${name} not found.`, {
+          throw new SdodsError('CONFIG_NOT_FOUND', `Schedule ${name} not found.`, {
             exitCode: 2,
           });
         const r = await s.scheduler.fire(target.id, { force: true });
-        if (!r.runId) throw new AutomaxError('RUN_FAILED', `Schedule did not start: ${r.skipped}`);
+        if (!r.runId) throw new SdodsError('RUN_FAILED', `Schedule did not start: ${r.skipped}`);
         info(`Started run ${r.runId}; streaming log…`);
         const job = s.runManager.get(r.runId)!;
         for await (const line of job.log.stream(0)) if (!ctx.opts.quiet) out(line.line);
@@ -176,10 +176,10 @@ export function register(program: Command) {
     .option('--count <n>', 'how many', '5')
     .action(async (opts, cmd) => {
       const ctx = createContext(cmd);
-      const srv = await import('@automax/server');
+      const srv = await import('@sdods/server');
       const times = srv.nextTimes(opts.cron, opts.tz, Number(opts.count));
       if (!times.length)
-        throw new AutomaxError('CONFIG_INVALID', `Invalid cron "${opts.cron}".`, { exitCode: 2 });
+        throw new SdodsError('CONFIG_INVALID', `Invalid cron "${opts.cron}".`, { exitCode: 2 });
       if (ctx.opts.json) return json({ cron: opts.cron, timezone: opts.tz, times });
       for (const t of times) out(t);
     });
@@ -195,7 +195,7 @@ export function register(program: Command) {
         const row = await s.db.getProjectBySlug(s.adb.db, opts.project);
         const target = (await s.scheduler.list(row?.id)).find((x) => x.name === name);
         if (!target)
-          throw new AutomaxError('CONFIG_NOT_FOUND', `Schedule ${name} not found.`, {
+          throw new SdodsError('CONFIG_NOT_FOUND', `Schedule ${name} not found.`, {
             exitCode: 2,
           });
         const rows = await s.db.listScheduleRuns(s.adb.db, target.id);
@@ -271,20 +271,20 @@ export function register(program: Command) {
             });
       }
       if (!entries.length)
-        throw new AutomaxError('CONFIG_NOT_FOUND', 'No schedules found in project yaml files.', {
+        throw new SdodsError('CONFIG_NOT_FOUND', 'No schedules found in project yaml files.', {
           exitCode: 2,
         });
-      const bin = 'bun run automax';
+      const bin = 'bun run sdods';
       const cwd = ctx.rootDir;
-      const outDir = opts.out ?? join(ctx.rootDir, '.automax', 'schedules');
+      const outDir = opts.out ?? join(ctx.rootDir, '.sdods', 'schedules');
       const written: string[] = [];
       if (opts.target === 'crontab') {
         const lines = entries.map(
           (e) =>
-            `# automax ${e.project}/${e.name} (${e.tz})\n${e.cron} cd ${cwd} && ${bin} run ${e.args.join(' ')} --trigger schedule >> .automax/cron-${e.project}-${e.name}.log 2>&1`,
+            `# sdods ${e.project}/${e.name} (${e.tz})\n${e.cron} cd ${cwd} && ${bin} run ${e.args.join(' ')} --trigger schedule >> .sdods/cron-${e.project}-${e.name}.log 2>&1`,
         );
         out(lines.join('\n'));
-        info('\nAppend with: (crontab -l; automax schedule install --target crontab) | crontab -');
+        info('\nAppend with: (crontab -l; sdods schedule install --target crontab) | crontab -');
         return;
       }
       mkdirSync(outDir, { recursive: true });
@@ -299,30 +299,30 @@ export function register(program: Command) {
           mkdirSync(join(ctx.rootDir, '.github', 'workflows'), { recursive: true });
           writeFileSync(
             file,
-            `name: scheduled ${e.project} ${e.name}\non:\n  schedule:\n    - cron: '${e.cron}'\n  workflow_dispatch: {}\njobs:\n  run:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - uses: oven-sh/setup-bun@v2\n      - uses: actions/setup-node@v4\n        with: { node-version: 22 }\n      - run: bun install\n      - run: npx playwright install --with-deps\n      - run: bun run automax run ${e.args.join(' ')} --trigger schedule --run-id sched-${e.name}-\${{ github.run_id }}\n        env:\n          AUTOMAX_SERVER_URL: \${{ secrets.AUTOMAX_SERVER_URL }}\n          AUTOMAX_TOKEN: \${{ secrets.AUTOMAX_TOKEN }}\n      - uses: actions/upload-artifact@v4\n        if: always()\n        with: { name: automax-${e.project}-${e.name}, path: .automax/runs }\n`,
+            `name: scheduled ${e.project} ${e.name}\non:\n  schedule:\n    - cron: '${e.cron}'\n  workflow_dispatch: {}\njobs:\n  run:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/checkout@v4\n      - uses: oven-sh/setup-bun@v2\n      - uses: actions/setup-node@v4\n        with: { node-version: 22 }\n      - run: bun install\n      - run: npx playwright install --with-deps\n      - run: bun run sdods run ${e.args.join(' ')} --trigger schedule --run-id sched-${e.name}-\${{ github.run_id }}\n        env:\n          SDODS_SERVER_URL: \${{ secrets.SDODS_SERVER_URL }}\n          SDODS_TOKEN: \${{ secrets.SDODS_TOKEN }}\n      - uses: actions/upload-artifact@v4\n        if: always()\n        with: { name: sdods-${e.project}-${e.name}, path: .sdods/runs }\n`,
           );
           written.push(file);
         } else if (opts.target === 'launchd') {
-          const file = join(outDir, `com.automax.${e.project}.${e.name}.plist`);
+          const file = join(outDir, `com.sdods.${e.project}.${e.name}.plist`);
           const [min, hour] = e.cron.split(' ');
           writeFileSync(
             file,
-            `<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n<plist version="1.0"><dict>\n  <key>Label</key><string>com.automax.${e.project}.${e.name}</string>\n  <key>ProgramArguments</key><array><string>/bin/sh</string><string>-c</string><string>cd ${cwd} && ${bin} run ${e.args.join(' ')} --trigger schedule</string></array>\n  <key>StartCalendarInterval</key><dict>${/^\d+$/.test(min ?? '') ? `<key>Minute</key><integer>${min}</integer>` : ''}${/^\d+$/.test(hour ?? '') ? `<key>Hour</key><integer>${hour}</integer>` : ''}</dict>\n  <key>StandardOutPath</key><string>${cwd}/.automax/launchd-${e.name}.log</string>\n  <key>StandardErrorPath</key><string>${cwd}/.automax/launchd-${e.name}.log</string>\n</dict></plist>\n`,
+            `<?xml version="1.0" encoding="UTF-8"?>\n<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">\n<plist version="1.0"><dict>\n  <key>Label</key><string>com.sdods.${e.project}.${e.name}</string>\n  <key>ProgramArguments</key><array><string>/bin/sh</string><string>-c</string><string>cd ${cwd} && ${bin} run ${e.args.join(' ')} --trigger schedule</string></array>\n  <key>StartCalendarInterval</key><dict>${/^\d+$/.test(min ?? '') ? `<key>Minute</key><integer>${min}</integer>` : ''}${/^\d+$/.test(hour ?? '') ? `<key>Hour</key><integer>${hour}</integer>` : ''}</dict>\n  <key>StandardOutPath</key><string>${cwd}/.sdods/launchd-${e.name}.log</string>\n  <key>StandardErrorPath</key><string>${cwd}/.sdods/launchd-${e.name}.log</string>\n</dict></plist>\n`,
           );
           written.push(file);
         } else if (opts.target === 'systemd') {
-          const base = join(outDir, `automax-${e.project}-${e.name}`);
+          const base = join(outDir, `sdods-${e.project}-${e.name}`);
           writeFileSync(
             `${base}.service`,
-            `[Unit]\nDescription=AutoMax ${e.project} ${e.name}\n\n[Service]\nType=oneshot\nWorkingDirectory=${cwd}\nExecStart=/bin/sh -c '${bin} run ${e.args.join(' ')} --trigger schedule'\n`,
+            `[Unit]\nDescription=SDODS ${e.project} ${e.name}\n\n[Service]\nType=oneshot\nWorkingDirectory=${cwd}\nExecStart=/bin/sh -c '${bin} run ${e.args.join(' ')} --trigger schedule'\n`,
           );
           writeFileSync(
             `${base}.timer`,
-            `[Unit]\nDescription=AutoMax ${e.project} ${e.name} timer\n\n[Timer]\nOnCalendar=${cronToOnCalendar(e.cron)}\nPersistent=false\n\n[Install]\nWantedBy=timers.target\n`,
+            `[Unit]\nDescription=SDODS ${e.project} ${e.name} timer\n\n[Timer]\nOnCalendar=${cronToOnCalendar(e.cron)}\nPersistent=false\n\n[Install]\nWantedBy=timers.target\n`,
           );
           written.push(`${base}.service`, `${base}.timer`);
         } else
-          throw new AutomaxError('CONFIG_INVALID', `Unknown target ${opts.target}.`, {
+          throw new SdodsError('CONFIG_INVALID', `Unknown target ${opts.target}.`, {
             exitCode: 2,
           });
       }
@@ -333,8 +333,8 @@ export function register(program: Command) {
         info(
           `Install with: sudo cp ${outDir}/* /etc/systemd/system/ && sudo systemctl daemon-reload && sudo systemctl enable --now <timer>`,
         );
-      if (!existsSync(join(ctx.rootDir, '.automax')))
-        mkdirSync(join(ctx.rootDir, '.automax'), { recursive: true });
+      if (!existsSync(join(ctx.rootDir, '.sdods')))
+        mkdirSync(join(ctx.rootDir, '.sdods'), { recursive: true });
     });
 
   schedule

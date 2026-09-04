@@ -3,7 +3,7 @@ import { relative } from 'node:path';
 import type { Command } from 'commander';
 import { execa } from 'execa';
 import pc from 'picocolors';
-import { AutomaxError, VERSION } from '@automax/core';
+import { SdodsError, VERSION } from '@sdods/core';
 import { createContext } from '../context.js';
 import { json, ok, out, warn } from '../ui.js';
 
@@ -51,10 +51,10 @@ async function recordAction(flags: RecordFlags, cmd: Command) {
   const ctx = createContext(cmd);
   const entry = ctx.registry.pick(flags.project);
   const config = ctx.registry.resolve(entry.slug, flags.env);
-  const { runCodegen, postProcessRecording } = await import('@automax/core/recorder');
-  const { writeSidecar } = await import('@automax/core/har');
-  const { captureAuth, poolUsers } = await import('@automax/core/auth/capture');
-  const { AuthStateCache } = await import('@automax/core');
+  const { runCodegen, postProcessRecording } = await import('@sdods/core/recorder');
+  const { writeSidecar } = await import('@sdods/core/har');
+  const { captureAuth, poolUsers } = await import('@sdods/core/auth/capture');
+  const { AuthStateCache } = await import('@sdods/core');
 
   const name = flags.name ?? `rec-${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)}`;
   const browser = (flags.browser ?? 'chromium') as 'chromium' | 'firefox' | 'webkit';
@@ -95,7 +95,7 @@ async function recordAction(flags: RecordFlags, cmd: Command) {
     viewport: flags.viewport,
   });
   if (!result.produced) {
-    throw new AutomaxError(
+    throw new SdodsError(
       'RUN_FAILED',
       'Codegen closed without writing a spec (nothing was recorded).',
       {
@@ -119,7 +119,7 @@ async function recordAction(flags: RecordFlags, cmd: Command) {
         device: flags.device,
         browser,
         har: result.harFile ? name : undefined,
-        automaxVersion: VERSION,
+        sdodsVersion: VERSION,
         playwright: await playwrightVersion(ctx.rootDir),
       },
       baseUrls: [config.env.ui.baseUrl, ...config.env.aliases],
@@ -153,14 +153,14 @@ async function recordAction(flags: RecordFlags, cmd: Command) {
   );
   if (summary.fragileLocators)
     warn(
-      `${summary.fragileLocators} CSS/XPath locator(s) marked // automax:fragile — prefer role/label/test-id locators.`,
+      `${summary.fragileLocators} CSS/XPath locator(s) marked // sdods:fragile — prefer role/label/test-id locators.`,
     );
   out(
     pc.dim(
-      `play back:  automax run -p ${entry.slug} -e ${config.env.name} -l recorded --grep "${name}"`,
+      `play back:  sdods run -p ${entry.slug} -e ${config.env.name} -l recorded --grep "${name}"`,
     ),
   );
-  out(pc.dim(`convert:    automax record convert ${spec}`));
+  out(pc.dim(`convert:    sdods record convert ${spec}`));
 }
 
 export function register(program: Command) {
@@ -183,7 +183,7 @@ export function register(program: Command) {
     .action(async (spec: string, opts: { dryRun?: boolean; adapter?: string }, cmd: Command) => {
       const ctx = createContext(cmd);
       if (!existsSync(spec))
-        throw new AutomaxError('CONFIG_NOT_FOUND', `Spec not found: ${spec}`, { exitCode: 2 });
+        throw new SdodsError('CONFIG_NOT_FOUND', `Spec not found: ${spec}`, { exitCode: 2 });
       const args = [process.argv[1]!, 'agent', 'generate', '--from-spec', spec];
       if (opts.dryRun) args.push('--dry-run');
       if (opts.adapter) args.push('--adapter', opts.adapter);

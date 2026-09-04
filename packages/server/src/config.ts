@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, resolve } from 'node:path';
-import { ProjectRegistry } from '@automax/core/config';
+import { ProjectRegistry } from '@sdods/core/config';
 
 /**
  * Locate Playwright's bundled trace viewer. Under bun/pnpm layouts `playwright-core` is not
@@ -63,7 +63,7 @@ export interface ServerConfig {
   ingestMaxMb: number;
   allowedHosts: string[];
   cliBin: string;
-  /** login attempts per IP per minute (AUTOMAX_LOGIN_RATE_LIMIT; test rigs raise it) */
+  /** login attempts per IP per minute (SDODS_LOGIN_RATE_LIMIT; test rigs raise it) */
   loginRateLimit: number;
 }
 
@@ -72,38 +72,38 @@ export function loadServerConfig(
   env = process.env,
 ): ServerConfig {
   const rootDir = resolve(
-    overrides.rootDir ?? ProjectRegistry.findRepoRoot(env.AUTOMAX_ROOT ?? process.cwd()),
+    overrides.rootDir ?? ProjectRegistry.findRepoRoot(env.SDODS_ROOT ?? process.cwd()),
   );
   const webDist =
     overrides.webDist ??
     firstExisting([
       resolve(rootDir, 'packages/web/dist'),
-      resolve(rootDir, 'node_modules/@automax/web/dist'),
+      resolve(rootDir, 'node_modules/@sdods/web/dist'),
     ]);
   const traceViewerDir = overrides.traceViewerDir ?? resolveTraceViewerDir(rootDir);
   return {
     rootDir,
     host: overrides.host ?? env.HOST ?? '127.0.0.1',
     port: overrides.port ?? Number(env.PORT ?? 4444),
-    publicUrl: overrides.publicUrl ?? env.AUTOMAX_PUBLIC_URL,
+    publicUrl: overrides.publicUrl ?? env.SDODS_PUBLIC_URL,
     sessionSecret:
-      overrides.sessionSecret ?? env.SESSION_SECRET ?? 'automax-dev-session-secret-change-me',
+      overrides.sessionSecret ?? env.SESSION_SECRET ?? 'sdods-dev-session-secret-change-me',
     sessionTtlMs: overrides.sessionTtlMs ?? 7 * 24 * 60 * 60 * 1000,
     authDisabled: overrides.authDisabled ?? env.AUTH_DISABLED === '1',
     artifactsDir: resolve(
       rootDir,
-      overrides.artifactsDir ?? env.AUTOMAX_ARTIFACTS_DIR ?? '.automax/runs',
+      overrides.artifactsDir ?? env.SDODS_ARTIFACTS_DIR ?? '.sdods/runs',
     ),
-    projectsDir: resolve(rootDir, overrides.projectsDir ?? env.AUTOMAX_PROJECTS_DIR ?? 'projects'),
+    projectsDir: resolve(rootDir, overrides.projectsDir ?? env.SDODS_PROJECTS_DIR ?? 'projects'),
     webDist,
     traceViewerDir,
-    maxConcurrentRuns: overrides.maxConcurrentRuns ?? Number(env.AUTOMAX_MAX_CONCURRENT_RUNS ?? 2),
-    ingestMaxMb: overrides.ingestMaxMb ?? Number(env.AUTOMAX_INGEST_MAX_MB ?? 512),
+    maxConcurrentRuns: overrides.maxConcurrentRuns ?? Number(env.SDODS_MAX_CONCURRENT_RUNS ?? 2),
+    ingestMaxMb: overrides.ingestMaxMb ?? Number(env.SDODS_INGEST_MAX_MB ?? 512),
     allowedHosts:
       overrides.allowedHosts ??
-      (env.AUTOMAX_ALLOWED_HOSTS ? env.AUTOMAX_ALLOWED_HOSTS.split(',') : ['*']),
+      (env.SDODS_ALLOWED_HOSTS ? env.SDODS_ALLOWED_HOSTS.split(',') : ['*']),
     cliBin: overrides.cliBin ?? resolve(rootDir, 'packages/cli/src/bin.ts'),
-    loginRateLimit: overrides.loginRateLimit ?? Number(env.AUTOMAX_LOGIN_RATE_LIMIT ?? 10),
+    loginRateLimit: overrides.loginRateLimit ?? Number(env.SDODS_LOGIN_RATE_LIMIT ?? 10),
   };
 }
 

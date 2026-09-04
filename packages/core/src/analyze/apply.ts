@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join, relative, resolve as resolvePath, sep } from 'node:path';
-import type { ProjectProposal } from '@automax/contracts';
-import { AutomaxError } from '../errors.js';
+import type { ProjectProposal } from '@sdods/contracts';
+import { SdodsError } from '../errors.js';
 import { PROJECT_FILE } from '../config/defaults.js';
 
 export interface ApplyOptions {
@@ -27,11 +27,11 @@ export interface ApplyResult {
 export function applyProposal(proposal: ProjectProposal, opts: ApplyOptions): ApplyResult {
   const projectsDir = resolvePath(
     opts.rootDir,
-    opts.projectsDir ?? process.env.AUTOMAX_PROJECTS_DIR ?? 'projects',
+    opts.projectsDir ?? process.env.SDODS_PROJECTS_DIR ?? 'projects',
   );
   const root = join(projectsDir, proposal.slug);
   if (existsSync(join(root, PROJECT_FILE)) && !opts.force) {
-    throw new AutomaxError(
+    throw new SdodsError(
       'CONFIG_INVALID',
       `Project "${proposal.slug}" already exists at ${root}.`,
       {
@@ -127,7 +127,7 @@ export function importPlaywrightSpecs(appPath: string, projectRoot: string): str
       const rel = relative(app, abs).split(sep).join('/');
       const target = join(projectRoot, 'recorded', 'imported', rel);
       mkdirSync(dirname(target), { recursive: true });
-      const header = `// @automax-imported ${JSON.stringify({ from: rel, app: basename(app), importedAt: new Date().toISOString() })}\n`;
+      const header = `// @sdods-imported ${JSON.stringify({ from: rel, app: basename(app), importedAt: new Date().toISOString() })}\n`;
       writeFileSync(target, header + text);
       out.push(`recorded/imported/${rel}`);
     }

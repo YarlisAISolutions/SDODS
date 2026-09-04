@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import type { Command } from 'commander';
 import pc from 'picocolors';
-import { AutomaxError } from '@automax/core';
+import { SdodsError } from '@sdods/core';
 import { createContext } from '../context.js';
 import { collect, json, ok, out, table } from '../ui.js';
 
@@ -62,7 +62,7 @@ export function register(program: Command) {
       .action(async (opts, cmd) => {
         const ctx = createContext(cmd);
         ctx.registry.entry(opts.project);
-        const { prepareJob, runJob } = await import('@automax/agents');
+        const { prepareJob, runJob } = await import('@sdods/agents');
         const role = ROLE_MAP[verb];
         const input = {
           project: opts.project,
@@ -102,7 +102,7 @@ export function register(program: Command) {
             prompt: prep.prompt,
           };
           if (ctx.opts.json) return json(view);
-          out(pc.bold(`Dry run: automax agent ${verb} (${role})`));
+          out(pc.bold(`Dry run: sdods agent ${verb} (${role})`));
           out(
             `${pc.dim('adapter:')} fake  ${pc.dim('budget:')} $${view.job.budgetUsd}  ${pc.dim('max turns:')} ${view.job.maxTurns}`,
           );
@@ -139,7 +139,7 @@ export function register(program: Command) {
         out('');
         const line = `${job.status} · turns ${job.turns ?? 0} · tool calls ${job.toolCalls ?? 0} · cost $${(job.costUsd ?? 0).toFixed(3)} · model ${job.model}`;
         if (job.status === 'failed')
-          throw new AutomaxError(
+          throw new SdodsError(
             'RUN_FAILED',
             `Agent job ${job.id} failed: ${job.error ?? 'unknown'}`,
             { details: { job: job.id } },
@@ -147,7 +147,7 @@ export function register(program: Command) {
         ok(`Job ${job.id}: ${line}`);
         if (job.proposalIds.length) {
           out(`Proposals: ${job.proposalIds.join(', ')}`);
-          out(pc.dim(`Review with: automax proposals show ${job.proposalIds[0]}`));
+          out(pc.dim(`Review with: sdods proposals show ${job.proposalIds[0]}`));
         }
       });
   }
@@ -158,7 +158,7 @@ export function register(program: Command) {
     .option('--limit <n>', 'max rows', '20')
     .action(async (opts, cmd) => {
       const ctx = createContext(cmd);
-      const { JobJournal } = await import('@automax/agents');
+      const { JobJournal } = await import('@sdods/agents');
       const rows = new JobJournal(ctx.rootDir).list(Number(opts.limit)).map((j) => ({
         id: j.id,
         role: j.role,
@@ -181,12 +181,12 @@ export function register(program: Command) {
     const ctx = createContext(cmd);
     const target = (forced ?? opts.for ?? 'all') as 'claude' | 'codex' | 'all';
     if (!['claude', 'codex', 'all'].includes(target)) {
-      throw new AutomaxError('NOT_SUPPORTED', `Unknown target "${target}".`, {
+      throw new SdodsError('NOT_SUPPORTED', `Unknown target "${target}".`, {
         hint: 'Use --for claude, --for codex or --for all.',
         exitCode: 2,
       });
     }
-    const { installCodingAgents } = await import('@automax/agents');
+    const { installCodingAgents } = await import('@sdods/agents');
     const written = installCodingAgents(ctx.rootDir, {
       for: target,
       project: opts.project,
@@ -217,13 +217,13 @@ export function register(program: Command) {
   agent
     .command('install')
     .description(
-      'Set up coding-agent CLIs: --for claude writes .claude/agents/automax-*.md + CLAUDE.md, --for codex writes AGENTS.md; both get AGENT.md/SKILL.md and the MCP registration',
+      'Set up coding-agent CLIs: --for claude writes .claude/agents/sdods-*.md + CLAUDE.md, --for codex writes AGENTS.md; both get AGENT.md/SKILL.md and the MCP registration',
     )
     .option('--for <client>', 'claude | codex | all', 'all')
     .option('-p, --project <slug>')
     .option('-e, --env <name>')
     .option('--force', 'overwrite existing files')
-    .option('--no-mcp', 'skip `automax mcp install <client>`')
+    .option('--no-mcp', 'skip `sdods mcp install <client>`')
     .action((opts, cmd) => installAction(opts, cmd));
 
   agent
@@ -232,6 +232,6 @@ export function register(program: Command) {
     .option('-p, --project <slug>')
     .option('-e, --env <name>')
     .option('--force', 'overwrite existing files')
-    .option('--no-mcp', 'skip `automax mcp install claude`')
+    .option('--no-mcp', 'skip `sdods mcp install claude`')
     .action((opts, cmd) => installAction(opts, cmd, 'claude'));
 }

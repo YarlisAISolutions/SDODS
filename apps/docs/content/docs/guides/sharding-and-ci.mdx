@@ -1,6 +1,6 @@
 ---
 title: Sharding and CI
-description: Split a run across machines, merge reports, and wire AutoMax into GitHub Actions.
+description: Split a run across machines, merge reports, and wire SDODS into GitHub Actions.
 ---
 
 <Learn>
@@ -11,10 +11,10 @@ description: Split a run across machines, merge reports, and wire AutoMax into G
 ## Shard
 
 ```bash
-bun run automax run -p demo-shop -e staging -b chromium --shard 1/3 --run-id gh-123 --reporter blob
-bun run automax run -p demo-shop -e staging -b chromium --shard 2/3 --run-id gh-123 --reporter blob
-bun run automax run -p demo-shop -e staging -b chromium --shard 3/3 --run-id gh-123 --reporter blob
-npx playwright merge-reports --reporter html,junit .automax/runs/gh-123/blob-report
+bun run sdods run -p demo-shop -e staging -b chromium --shard 1/3 --run-id gh-123 --reporter blob
+bun run sdods run -p demo-shop -e staging -b chromium --shard 2/3 --run-id gh-123 --reporter blob
+bun run sdods run -p demo-shop -e staging -b chromium --shard 3/3 --run-id gh-123 --reporter blob
+npx playwright merge-reports --reporter html,junit .sdods/runs/gh-123/blob-report
 ```
 
 All shards share the `runId`, so user-pool leases stay unique (`shardOffset + parallelIndex`) and ingest merges the NDJSON files of every shard into one run.
@@ -23,7 +23,7 @@ All shards share the `runId`, so user-pool leases stay unique (`shardOffset + pa
 
 ```mermaid
 flowchart LR
-  S["setup<br/>bun install · matrix from<br/>automax project list --matrix"] --> T1["test demo-shop chromium"]
+  S["setup<br/>bun install · matrix from<br/>sdods project list --matrix"] --> T1["test demo-shop chromium"]
   S --> T2["test demo-shop firefox"]
   S --> T3["test demo-shop webkit"]
   T1 & T2 & T3 --> R["report<br/>merge-reports · ingest · integrations notify"]
@@ -31,7 +31,7 @@ flowchart LR
   R --> DB[("Postgres, optional")]
 ```
 
-`.github/workflows/ci.yml` runs lint, typecheck and unit tests, then the demo project per browser, uploads artifacts, merges reports, ingests when a database or a server token is configured, and calls `automax integrations notify` with the GitHub token. Pull requests run `@smoke`; `main` runs `@regression`; a nightly job runs the full matrix.
+`.github/workflows/ci.yml` runs lint, typecheck and unit tests, then the demo project per browser, uploads artifacts, merges reports, ingests when a database or a server token is configured, and calls `sdods integrations notify` with the GitHub token. Pull requests run `@smoke`; `main` runs `@regression`; a nightly job runs the full matrix.
 
 ## Offline CI
 
@@ -40,8 +40,8 @@ Tag scenarios with `@har:<name>` and run with `--har-replay --strict` so the pip
 ## Ingest from CI
 
 ```bash
-bun run automax report ingest --run-id gh-123 .automax/runs/gh-123/messages*.ndjson          # direct DB
-bun run automax report ingest --run-id gh-123 --server https://automax.example.com --token $AUTOMAX_TOKEN .automax/runs/gh-123/messages*.ndjson
+bun run sdods report ingest --run-id gh-123 .sdods/runs/gh-123/messages*.ndjson          # direct DB
+bun run sdods report ingest --run-id gh-123 --server https://sdods.example.com --token $SDODS_TOKEN .sdods/runs/gh-123/messages*.ndjson
 ```
 
 The second form uploads through the server with a scoped API token, so CI never holds database credentials.

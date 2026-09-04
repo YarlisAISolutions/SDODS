@@ -11,14 +11,14 @@ export interface RecordingMeta {
   browser?: string;
   playwright?: string;
   har?: string;
-  automaxVersion?: string;
+  sdodsVersion?: string;
 }
 
-export const RECORDING_HEADER_PREFIX = '// @automax-recording ';
+export const RECORDING_HEADER_PREFIX = '// @sdods-recording ';
 
 export function formatRecordingHeader(meta: RecordingMeta): string {
   const rerun = [
-    'automax record',
+    'sdods record',
     `-p ${meta.project}`,
     `-e ${meta.env}`,
     `--name ${meta.name}`,
@@ -31,8 +31,8 @@ export function formatRecordingHeader(meta: RecordingMeta): string {
     .join(' ');
   return [
     `${RECORDING_HEADER_PREFIX}${JSON.stringify(meta)}`,
-    `// Recorded with AutoMax. Re-record with: ${rerun}`,
-    `// Convert to Gherkin (reviewed proposal): automax record convert projects/${meta.project}/recorded/${meta.name}.spec.ts`,
+    `// Recorded with SDODS. Re-record with: ${rerun}`,
+    `// Convert to Gherkin (reviewed proposal): sdods record convert projects/${meta.project}/recorded/${meta.name}.spec.ts`,
   ].join('\n');
 }
 

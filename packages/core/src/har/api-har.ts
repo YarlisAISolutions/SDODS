@@ -1,14 +1,14 @@
 import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
-import type { ApiSnapshot } from '@automax/contracts';
+import type { ApiSnapshot } from '@sdods/contracts';
 import type { ApiClientDeps } from '../api/client.js';
 import { redact } from '../logger.js';
 import { VERSION } from '../version.js';
 
 /**
  * API-layer HAR: Playwright's routeFromHAR only exists on Page/BrowserContext, so the ApiClient
- * records and replays through this module. Entries are HAR 1.2 with an `_automax.key` used for
+ * records and replays through this module. Entries are HAR 1.2 with an `_sdods.key` used for
  * lookup: `METHOD normalizedUrl sha1(body)`.
  */
 export type ApiHarMode = 'off' | 'update' | 'replay';
@@ -18,7 +18,7 @@ interface HarHeader {
   value: string;
 }
 
-export interface AutomaxHarEntry {
+export interface SdodsHarEntry {
   startedDateTime: string;
   time: number;
   request: {
@@ -45,14 +45,14 @@ export interface AutomaxHarEntry {
   };
   cache: Record<string, never>;
   timings: { send: number; wait: number; receive: number };
-  _automax: { key: string; recordedAt: string };
+  _sdods: { key: string; recordedAt: string };
 }
 
 export interface HarFile {
   log: {
     version: '1.2';
     creator: { name: string; version: string };
-    entries: AutomaxHarEntry[];
+    entries: SdodsHarEntry[];
   };
 }
 
@@ -109,19 +109,19 @@ function fromHeaders(headers: HarHeader[]): Record<string, string> {
 
 export function readHarFile(file: string): HarFile {
   if (!existsSync(file)) {
-    return { log: { version: '1.2', creator: { name: 'AutoMax', version: VERSION }, entries: [] } };
+    return { log: { version: '1.2', creator: { name: 'SDODS', version: VERSION }, entries: [] } };
   }
   const parsed = JSON.parse(readFileSync(file, 'utf8')) as Partial<HarFile>;
   return {
     log: {
       version: '1.2',
-      creator: parsed.log?.creator ?? { name: 'AutoMax', version: VERSION },
+      creator: parsed.log?.creator ?? { name: 'SDODS', version: VERSION },
       entries: parsed.log?.entries ?? [],
     },
   };
 }
 
-export function snapshotToEntry(snap: ApiSnapshot): AutomaxHarEntry {
+export function snapshotToEntry(snap: ApiSnapshot): SdodsHarEntry {
   const key = harKey(snap.request.method, snap.request.url, snap.request.body);
   const body = snap.request.body;
   const safeBody = redact(body);
@@ -171,11 +171,11 @@ export function snapshotToEntry(snap: ApiSnapshot): AutomaxHarEntry {
     },
     cache: {},
     timings: { send: 0, wait: snap.response.responseTime, receive: 0 },
-    _automax: { key, recordedAt: new Date().toISOString() },
+    _sdods: { key, recordedAt: new Date().toISOString() },
   };
 }
 
-export function entryToResponse(entry: AutomaxHarEntry): ApiSnapshot['response'] {
+export function entryToResponse(entry: SdodsHarEntry): ApiSnapshot['response'] {
   const text = entry.response.content.text ?? '';
   let body: unknown = text;
   try {
@@ -207,7 +207,7 @@ export class HarRecorder {
 
   async record(snap: ApiSnapshot): Promise<void> {
     const entry = snapshotToEntry(snap);
-    const idx = this.har.log.entries.findIndex((e) => e._automax?.key === entry._automax.key);
+    const idx = this.har.log.entries.findIndex((e) => e._sdods?.key === entry._sdods.key);
     if (idx >= 0) this.har.log.entries[idx] = entry;
     else this.har.log.entries.push(entry);
     this.flush();
@@ -221,7 +221,7 @@ export class HarRecorder {
 
 /** Serves recorded responses for matching requests; misses return undefined (or throw in strict mode). */
 export class HarReplayer {
-  private readonly byKey = new Map<string, AutomaxHarEntry>();
+  private readonly byKey = new Map<string, SdodsHarEntry>();
   readonly hits: string[] = [];
   readonly misses: string[] = [];
 
@@ -231,7 +231,7 @@ export class HarReplayer {
   ) {
     for (const e of readHarFile(file).log.entries) {
       const key =
-        e._automax?.key ?? harKey(e.request.method, e.request.url, e.request.postData?.text);
+        e._sdods?.key ?? harKey(e.request.method, e.request.url, e.request.postData?.text);
       this.byKey.set(key, e);
     }
   }

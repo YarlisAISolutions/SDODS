@@ -17,7 +17,7 @@ import {
 } from '../components/ui';
 import { Dialog } from '../components/ui/Dialog';
 import { useToast } from '../components/ui/Toast';
-import { WORKSPACE_ROLES } from '@automax/contracts/scopes';
+import { WORKSPACE_ROLES } from '@sdods/contracts/scopes';
 
 export function WorkspacesPage() {
   const { org, workspaces, workspace, setWorkspace } = useWorkspace();
@@ -107,7 +107,7 @@ export function WorkspacesPage() {
         open={creating}
         onOpenChange={setCreating}
         title="New workspace"
-        description="Projects opt into a workspace with `workspace: <slug>` in automax.project.yaml."
+        description="Projects opt into a workspace with `workspace: <slug>` in sdods.project.yaml."
         footer={
           <>
             <Button onClick={() => setCreating(false)}>Cancel</Button>

@@ -1,5 +1,5 @@
 // Manual round-trip check: sqlite → postgres → sqlite via the library API. Usage:
-//   PGURL=postgres://automax:automax@localhost:5432/automax node --import tsx packages/db/test/fixtures/switch-smoke.ts <sqlite.db> <envfile>
+//   PGURL=postgres://sdods:sdods@localhost:5432/sdods node --import tsx packages/db/test/fixtures/switch-smoke.ts <sqlite.db> <envfile>
 import { readFileSync } from 'node:fs';
 import { createDb } from '../../src/create-db.js';
 import { switchDriver } from '../../src/switch/switch.js';

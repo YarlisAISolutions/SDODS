@@ -8,8 +8,8 @@ import {
   newRunId,
   type EnvConfig,
   type ProjectConfig,
-} from '@automax/contracts';
-import { AutomaxConfigError } from '../errors.js';
+} from '@sdods/contracts';
+import { SdodsConfigError } from '../errors.js';
 import {
   DEFAULT_ARTIFACTS_DIR,
   ENV_TO_CONFIG_PATH,
@@ -85,7 +85,7 @@ export function readYamlFile<T = unknown>(file: string): T {
   try {
     return parseYaml(readFileSync(file, 'utf8')) as T;
   } catch (e) {
-    throw new AutomaxConfigError(`Cannot parse YAML at ${file}: ${(e as Error).message}`, {
+    throw new SdodsConfigError(`Cannot parse YAML at ${file}: ${(e as Error).message}`, {
       cause: e,
     });
   }
@@ -94,9 +94,9 @@ export function readYamlFile<T = unknown>(file: string): T {
 export function loadProjectFile(projectRoot: string): ProjectConfig {
   const file = join(projectRoot, PROJECT_FILE);
   if (!existsSync(file)) {
-    throw new AutomaxConfigError(`No ${PROJECT_FILE} in ${projectRoot}`, {
+    throw new SdodsConfigError(`No ${PROJECT_FILE} in ${projectRoot}`, {
       code: 'CONFIG_NOT_FOUND',
-      hint: 'Run `automax project create <slug>` or `automax analyze <app>` to create one.',
+      hint: 'Run `sdods project create <slug>` or `sdods analyze <app>` to create one.',
     });
   }
   const raw = readYamlFile<Record<string, unknown>>(file) ?? {};
@@ -105,7 +105,7 @@ export function loadProjectFile(projectRoot: string): ProjectConfig {
     const parsed = ProjectConfigSchema.parse(merged);
     const dirSlug = basename(projectRoot);
     if (parsed.slug !== dirSlug) {
-      throw new AutomaxConfigError(
+      throw new SdodsConfigError(
         `Project slug "${parsed.slug}" does not match its directory "${dirSlug}".`,
         {
           hint: `Rename the directory to ${parsed.slug} or set slug: ${dirSlug}.`,
@@ -122,9 +122,9 @@ export function loadProjectFile(projectRoot: string): ProjectConfig {
 export function loadEnvFile(projectRoot: string, envName: string): EnvConfig {
   const file = join(projectRoot, 'envs', `${envName}.yaml`);
   if (!existsSync(file)) {
-    throw new AutomaxConfigError(`Environment "${envName}" has no file at ${file}`, {
+    throw new SdodsConfigError(`Environment "${envName}" has no file at ${file}`, {
       code: 'ENV_NOT_FOUND',
-      hint: `Run \`automax env add ${envName} --project ${basename(projectRoot)} --ui-url ... --api-url ...\`.`,
+      hint: `Run \`sdods env add ${envName} --project ${basename(projectRoot)} --ui-url ... --api-url ...\`.`,
     });
   }
   const raw = readYamlFile<Record<string, unknown>>(file) ?? {};
@@ -136,11 +136,11 @@ export function loadEnvFile(projectRoot: string, envName: string): EnvConfig {
   }
 }
 
-export function zodToConfigError(e: ZodError, file: string): AutomaxConfigError {
+export function zodToConfigError(e: ZodError, file: string): SdodsConfigError {
   const issues = e.issues
     .map((i) => `  • ${i.path.join('.') || '<root>'}: ${i.message}`)
     .join('\n');
-  return new AutomaxConfigError(`Invalid configuration in ${file}:\n${issues}`, {
+  return new SdodsConfigError(`Invalid configuration in ${file}:\n${issues}`, {
     details: { file, issues: e.issues },
   });
 }
@@ -159,9 +159,9 @@ export function resolveConfig(opts: ResolveOptions): ResolvedConfig {
   markAll(project as unknown as Record<string, unknown>, prov, 'project', 'project');
 
   // 3: env selection + env yaml
-  const envName = cli.env ?? opts.env ?? processEnv.AUTOMAX_ENV ?? project.envs.default;
+  const envName = cli.env ?? opts.env ?? processEnv.SDODS_ENV ?? project.envs.default;
   if (!project.envs.available.includes(envName)) {
-    throw new AutomaxConfigError(
+    throw new SdodsConfigError(
       `Environment "${envName}" is not in envs.available [${project.envs.available.join(', ')}] for project ${project.slug}.`,
       {
         code: 'ENV_NOT_FOUND',
@@ -214,7 +214,7 @@ export function resolveConfig(opts: ResolveOptions): ResolvedConfig {
     },
   };
 
-  // 5b: AUTOMAX_* → config paths
+  // 5b: SDODS_* → config paths
   for (const [envKey, dotted] of Object.entries(ENV_TO_CONFIG_PATH)) {
     const raw = processEnv[envKey];
     if (raw === undefined || raw === '') continue;
@@ -301,7 +301,7 @@ function applyCli(
   set('project.heal.enabled', cli.heal);
 }
 
-/** Config paths that are booleans: `AUTOMAX_X=1|true|yes|on` → true, `0|false|no|off` → false. */
+/** Config paths that are booleans: `SDODS_X=1|true|yes|on` → true, `0|false|no|off` → false. */
 const BOOLEAN_PATHS = new Set([
   'runtime.headed',
   'runtime.offline',
@@ -317,11 +317,11 @@ export function coerceBool(raw: string): boolean {
 export function parseShard(raw: string): { current: number; total: number } {
   const m = /^(\d+)\s*\/\s*(\d+)$/.exec(String(raw).trim());
   if (!m)
-    throw new AutomaxConfigError(`Invalid shard "${raw}", expected "<current>/<total>" like 1/3.`);
+    throw new SdodsConfigError(`Invalid shard "${raw}", expected "<current>/<total>" like 1/3.`);
   return { current: Number(m[1]), total: Number(m[2]) };
 }
 
-export const CLI_OVERRIDES_ENV = 'AUTOMAX_CLI_OVERRIDES';
+export const CLI_OVERRIDES_ENV = 'SDODS_CLI_OVERRIDES';
 
 export function parseCliOverridesEnv(env: NodeJS.ProcessEnv): CliOverrides {
   const raw = env[CLI_OVERRIDES_ENV];
@@ -337,7 +337,7 @@ export function serializeCliOverrides(cli: CliOverrides): string {
   return JSON.stringify(Object.fromEntries(Object.entries(cli).filter(([, v]) => v !== undefined)));
 }
 
-/** Useful for `automax config show`: winning layer per path, plus values. */
+/** Useful for `sdods config show`: winning layer per path, plus values. */
 export function explainConfig(
   cfg: ResolvedConfig,
 ): Array<{ path: string; value: unknown; layer: LayerName }> {

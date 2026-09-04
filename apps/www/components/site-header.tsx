@@ -16,6 +16,9 @@ export function SiteHeader() {
           </span>
         </Link>
         <div className="hidden items-center gap-6 text-sm md:flex">
+          <Link href="/install/" className="hover:underline">
+            Install
+          </Link>
           <a href={DOCS_URL} className="hover:underline">
             Docs
           </a>
@@ -30,9 +33,9 @@ export function SiteHeader() {
           </a>
         </div>
         <div className="flex items-center gap-3">
-          <a href={DOCS_URL} className="btn btn-primary hidden text-sm sm:inline-flex">
-            Read the docs
-          </a>
+          <Link href="/install/" className="btn btn-primary hidden text-sm sm:inline-flex">
+            Install
+          </Link>
           <ThemeToggle />
         </div>
       </nav>

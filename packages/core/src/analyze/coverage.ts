@@ -3,7 +3,7 @@ import { join, relative, resolve as resolvePath, sep } from 'node:path';
 import * as Gherkin from '@cucumber/gherkin';
 import * as Messages from '@cucumber/messages';
 import { parse as parseYaml } from 'yaml';
-import type { CoverageReport, CoverageRow, CoverageScenarioRef } from '@automax/contracts';
+import type { CoverageReport, CoverageRow, CoverageScenarioRef } from '@sdods/contracts';
 import type { ProjectRegistry } from '../config/registry.js';
 
 export interface CoverageOptions {

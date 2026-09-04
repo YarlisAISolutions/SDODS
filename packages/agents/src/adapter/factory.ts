@@ -10,7 +10,7 @@ export interface CreateAdapterOptions {
   provider?: Provider | string;
   model?: string;
   fake?: FakeAdapterOptions;
-  /** repo root, project and env let the CLI adapters start the automax MCP server */
+  /** repo root, project and env let the CLI adapters start the sdods MCP server */
   rootDir?: string;
   project?: string;
   env?: string;
@@ -55,7 +55,7 @@ export function resolveProvider(
   projectDefault?: string,
   onAutoDetect?: (provider: Provider, reason: string) => void,
 ): Provider {
-  const chosen = explicit ?? process.env.AUTOMAX_LLM_PROVIDER ?? projectDefault;
+  const chosen = explicit ?? process.env.SDODS_LLM_PROVIDER ?? projectDefault;
   if (chosen) return normalizeProvider(chosen);
   const d = detectProvider();
   onAutoDetect?.(d.provider, d.reason);

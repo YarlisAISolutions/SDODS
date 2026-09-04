@@ -1,7 +1,7 @@
 import { createWriteStream, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { sql } from 'kysely';
-import type { AutomaxDb } from '../create-db.js';
+import type { SdodsDb } from '../create-db.js';
 import { TABLES_IN_FK_ORDER } from '../schema.js';
 import { listTdTables } from '../test-data.js';
 
@@ -12,7 +12,7 @@ export interface ExportResult {
 
 /** Stream every platform table (+ td_* tables) to `<dir>/<table>.jsonl` in FK order. */
 export async function exportAll(
-  adb: AutomaxDb,
+  adb: SdodsDb,
   dir: string,
   opts: { batch?: number } = {},
 ): Promise<ExportResult> {
@@ -71,7 +71,7 @@ function normalizeRow(row: Record<string, unknown>): Record<string, unknown> {
   return out;
 }
 
-export async function countRows(adb: AutomaxDb, table: string): Promise<number> {
+export async function countRows(adb: SdodsDb, table: string): Promise<number> {
   const res = await sql<{
     n: number | string;
   }>`select count(*) as n from ${sql.table(table)}`.execute(adb.db);

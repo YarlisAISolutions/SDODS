@@ -116,8 +116,8 @@ export function ProjectFormPage() {
         title={isNew ? 'New project' : form.name}
         subtitle={
           isNew
-            ? 'Writes projects/<slug>/automax.project.yaml'
-            : `projects/${form.slug}/automax.project.yaml · workspace ${form.workspace}`
+            ? 'Writes projects/<slug>/sdods.project.yaml'
+            : `projects/${form.slug}/sdods.project.yaml · workspace ${form.workspace}`
         }
         actions={
           editable && (
@@ -476,8 +476,8 @@ export function ProjectFormPage() {
           }
         >
           <div className="muted mb-2 text-xs">
-            Named run recipes: `automax run --process &lt;name&gt;`. Workspace defaults apply unless
-            a project process has the same name.
+            Named run recipes: `sdods run --process &lt;name&gt;`. Workspace defaults apply unless a
+            project process has the same name.
           </div>
           <div className="space-y-3">
             {form.processes.map((p, i) => (

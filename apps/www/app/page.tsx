@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { InstallTabs } from '@/components/install-tabs';
 import { DOCS_URL, REPO_URL } from '@/lib/links';
 
 const WHY: Array<[string, string]> = [
@@ -63,7 +64,7 @@ const FEATURES: Array<[string, string]> = [
 
 function Flow() {
   const nodes = [
-    'automax CLI',
+    'sdods CLI',
     'Config + registry',
     'Playwright runs',
     'NDJSON + screenshots',
@@ -73,7 +74,7 @@ function Flow() {
   return (
     <ol
       className="flex flex-wrap items-center justify-center gap-2 text-sm"
-      aria-label="How AutoMax works"
+      aria-label="How SDODS works"
     >
       {nodes.map((n, i) => (
         <li key={n} className="flex items-center gap-2">
@@ -97,7 +98,7 @@ export default function HomePage() {
           Open source · Apache-2.0 · API tokens are free
         </p>
         <h1 className="mx-auto max-w-4xl text-4xl font-extrabold tracking-tight md:text-6xl">
-          <span className="brand-gradient">AutoMax</span> — an automation platform with a reusable
+          <span className="brand-gradient">SDODS</span> — an automation platform with a reusable
           architecture
         </h1>
         <p className="muted mx-auto mt-6 max-w-2xl text-lg">
@@ -106,23 +107,31 @@ export default function HomePage() {
           server, AI agents, GitHub and Jira integration and a web UI. Runs on Playwright.
         </p>
         <div className="mt-8 flex flex-wrap justify-center gap-3">
-          <a href={DOCS_URL} className="btn btn-primary">
+          <Link href="/install/" className="btn btn-primary">
+            Install SDODS
+          </Link>
+          <a href={DOCS_URL} className="btn btn-secondary">
             Read the docs
           </a>
           <a href={REPO_URL} className="btn btn-secondary" rel="noreferrer">
             View on GitHub
           </a>
         </div>
+
+        <div className="card mx-auto mt-10 max-w-3xl p-5 text-left">
+          <p className="muted mb-3 text-sm">Install in one line, on any operating system:</p>
+          <InstallTabs compact />
+        </div>
       </section>
 
       <section className="mx-auto max-w-6xl px-4 py-12" aria-labelledby="why">
         <h2 id="why" className="text-2xl font-bold">
-          Why AutoMax
+          Why SDODS
         </h2>
         <p className="muted mt-2 max-w-3xl">
           Playwright is an excellent engine. Teams still rebuild the same things around it:
           environment switching, tagging policy, test data, login reuse, reporting, flaky triage, CI
-          wiring, and now AI helpers. AutoMax ships those once, with opinions.
+          wiring, and now AI helpers. SDODS ships those once, with opinions.
         </p>
         <div className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {WHY.map(([title, body]) => (
@@ -179,7 +188,7 @@ export default function HomePage() {
         <figure className="card mt-4 overflow-hidden">
           <img
             src="/screenshots/ui/scenario-steps.png"
-            alt="AutoMax run viewer showing the step timeline with a before/after comparison"
+            alt="SDODS run viewer showing the step timeline with a before/after comparison"
             loading="lazy"
           />
           <figcaption className="muted p-3 text-sm">
@@ -207,12 +216,18 @@ export default function HomePage() {
           Quickstart
         </h2>
         <pre className="mt-6">
-          <code>{`git clone https://github.com/siri1410/AutoMax.git && cd AutoMax && bun install
-npx playwright install --with-deps
-bun run automax run -p demo-shop -e staging -l ui -b chromium -t @smoke`}</code>
+          <code>{`curl -fsSL https://sdods.com/install.sh | sh   # or on Windows: irm .../install.ps1 | iex
+
+cd ~/.sdods/app
+sdods run -p demo-shop -e staging -l api
+sdods run -p demo-shop -e staging -l ui -b chromium -t @smoke`}</code>
         </pre>
         <p className="muted mt-3 text-sm">
-          Prerequisites: Node 22 and Bun (or pnpm). Full walkthrough in the{' '}
+          Only Node 22 is required. Options, upgrade and uninstall are on the{' '}
+          <Link href="/install/" className="underline">
+            install page
+          </Link>{' '}
+          and in the{' '}
           <a href={`${DOCS_URL}/docs/getting-started/installation/`} className="underline">
             installation guide
           </a>
@@ -227,9 +242,9 @@ bun run automax run -p demo-shop -e staging -l ui -b chromium -t @smoke`}</code>
               Works with Claude Code and Codex
             </h2>
             <p className="muted mt-1 text-sm">
-              AutoMax is an MCP server: <code>automax mcp install claude</code> or{' '}
-              <code>automax mcp install codex</code>, then ask your assistant to run, analyze or
-              heal tests. Agents can reuse your logged-in CLI session, so no API key is required.
+              SDODS is an MCP server: <code>sdods mcp install claude</code> or{' '}
+              <code>sdods mcp install codex</code>, then ask your assistant to run, analyze or heal
+              tests. Agents can reuse your logged-in CLI session, so no API key is required.
             </p>
           </div>
           <a href={`${DOCS_URL}/docs/guides/mcp/`} className="btn btn-secondary whitespace-nowrap">

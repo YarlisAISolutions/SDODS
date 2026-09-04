@@ -7,11 +7,11 @@ import {
 } from 'kysely/migration';
 import { col, type Col } from './col.js';
 import type { Driver } from './driver.js';
-import type { AutomaxDb } from './create-db.js';
+import type { SdodsDb } from './create-db.js';
 import { MIGRATIONS } from './migrations/index.js';
 import { MIGRATION_LOCK_TABLE, MIGRATION_TABLE } from './schema.js';
 
-export interface AutomaxMigration {
+export interface SdodsMigration {
   up(db: Kysely<any>, c: Col, driver: Driver): Promise<void>;
   down?(db: Kysely<any>, c: Col, driver: Driver): Promise<void>;
 }
@@ -32,7 +32,7 @@ class DriverBoundProvider implements MigrationProvider {
   }
 }
 
-export function createMigrator({ db, driver }: AutomaxDb): Migrator {
+export function createMigrator({ db, driver }: SdodsDb): Migrator {
   return new Migrator({
     db,
     provider: new DriverBoundProvider(driver),
@@ -47,19 +47,19 @@ function assertOk(result: MigrationResultSet) {
   return result.results ?? [];
 }
 
-export async function migrateToLatest(adb: AutomaxDb) {
+export async function migrateToLatest(adb: SdodsDb) {
   return assertOk(await createMigrator(adb).migrateToLatest());
 }
 
-export async function migrateDown(adb: AutomaxDb) {
+export async function migrateDown(adb: SdodsDb) {
   return assertOk(await createMigrator(adb).migrateDown());
 }
 
-export async function migrateTo(adb: AutomaxDb, name: string) {
+export async function migrateTo(adb: SdodsDb, name: string) {
   return assertOk(await createMigrator(adb).migrateTo(name));
 }
 
-export async function migrationStatus(adb: AutomaxDb) {
+export async function migrationStatus(adb: SdodsDb) {
   const list = await createMigrator(adb).getMigrations();
   return list.map((m) => ({
     name: m.name,
@@ -67,8 +67,8 @@ export async function migrationStatus(adb: AutomaxDb) {
   }));
 }
 
-/** Drop every AutoMax table (sqlite only, guarded by the CLI `--yes`). */
-export async function resetDatabase(adb: AutomaxDb) {
+/** Drop every SDODS table (sqlite only, guarded by the CLI `--yes`). */
+export async function resetDatabase(adb: SdodsDb) {
   if (adb.driver !== 'sqlite')
     throw new Error('reset is only supported on sqlite; drop the Postgres database yourself.');
   const migrator = createMigrator(adb);

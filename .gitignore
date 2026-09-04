@@ -1,6 +1,6 @@
 node_modules/
 dist/
-.automax/
+.sdods/
 .features-gen/
 test-results/
 playwright-report/
@@ -20,3 +20,9 @@ packages/web/dist/
 .idea/
 *.tsbuildinfo
 .firebase/
+
+# Installer copies: generated from installer/ by scripts/sync-installer.ts at build time
+apps/docs/public/install.sh*
+apps/docs/public/install.ps1*
+apps/www/public/install.sh*
+apps/www/public/install.ps1*

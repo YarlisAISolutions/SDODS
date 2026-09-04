@@ -2,10 +2,10 @@ import { spawn, spawnSync } from 'node:child_process';
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { delimiter, join } from 'node:path';
-import { resolveCliInvocation } from '@automax/mcp';
+import { resolveCliInvocation } from '@sdods/mcp';
 import { AgentsConfigError, type ExternalMcpServerConfig } from './types.js';
 
-/** Where the automax MCP server for a project comes from (same resolution as packages/mcp). */
+/** Where the sdods MCP server for a project comes from (same resolution as packages/mcp). */
 export interface McpStdioSpec {
   command: string;
   args: string[];
@@ -41,7 +41,7 @@ export function findOnPath(bin: string): string | null {
   return null;
 }
 
-export function automaxMcpServerSpec(ctx: CliAdapterContext): McpStdioSpec {
+export function sdodsMcpServerSpec(ctx: CliAdapterContext): McpStdioSpec {
   const rootDir = ctx.rootDir ?? process.cwd();
   const inv = resolveCliInvocation(rootDir);
   const args = [...inv.args, 'mcp', '--caps', 'all'];
@@ -54,13 +54,13 @@ export function playwrightMcpSpec(): McpStdioSpec {
   return { command: 'npx', args: ['playwright', 'mcp', '--headless'] };
 }
 
-/** Full MCP server map for a run: automax + playwright + the project's external servers. */
+/** Full MCP server map for a run: sdods + playwright + the project's external servers. */
 export function mcpServerMap(
   ctx: CliAdapterContext,
   external: Record<string, ExternalMcpServerConfig> = {},
 ): Record<string, Record<string, unknown>> {
   const servers: Record<string, Record<string, unknown>> = {
-    automax: { type: 'stdio', ...automaxMcpServerSpec(ctx) },
+    sdods: { type: 'stdio', ...sdodsMcpServerSpec(ctx) },
   };
   if (ctx.withPlaywrightMcp !== false)
     servers.playwright = { type: 'stdio', ...playwrightMcpSpec() };

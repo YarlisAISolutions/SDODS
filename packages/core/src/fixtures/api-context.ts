@@ -1,4 +1,4 @@
-import type { ApiSnapshot } from '@automax/contracts';
+import type { ApiSnapshot } from '@sdods/contracts';
 
 /** Per-scenario API state: last response, chained variables, pending headers/query. No module globals. */
 export class ApiContext {

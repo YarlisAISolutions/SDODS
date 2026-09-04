@@ -1,7 +1,7 @@
 {
-  "name": "@automax/mcp",
+  "name": "@sdods/mcp",
   "version": "0.1.0",
-  "description": "AutoMax MCP server: one tool registry serving MCP clients (stdio, streamable HTTP) and the AutoMax agents.",
+  "description": "SDODS MCP server: one tool registry serving MCP clients (stdio, streamable HTTP) and the SDODS agents.",
   "license": "Apache-2.0",
   "author": "Sireesh Yarlagadda (https://www.linkedin.com/in/yarlagadda/)",
   "type": "module",
@@ -36,7 +36,7 @@
     "node": ">=22"
   },
   "dependencies": {
-    "@automax/contracts": "workspace:*",
+    "@sdods/contracts": "workspace:*",
     "@cucumber/gherkin": "^42.0.1",
     "@cucumber/messages": "^34.2.1",
     "@modelcontextprotocol/node": "^2.0.0",

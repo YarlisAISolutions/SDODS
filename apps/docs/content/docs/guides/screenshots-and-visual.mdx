@@ -16,10 +16,10 @@ flowchart LR
   T -->|"@regression"| ST["step<br/>before + after every UI step"]
   T -->|"@visual"| V["visual<br/>step + toHaveScreenshot baseline"]
   T -->|"none matched"| F["on-failure"]
-  X["AUTOMAX_SHOTS_ONLY_ON_FAILURE=1<br/>screenshots.onlyOnFailure"] -.->|downgrade| F
+  X["SDODS_SHOTS_ONLY_ON_FAILURE=1<br/>screenshots.onlyOnFailure"] -.->|downgrade| F
 ```
 
-```yaml title="automax.project.yaml"
+```yaml title="sdods.project.yaml"
 screenshots:
   policy:
     default: on-failure
@@ -37,14 +37,14 @@ An environment file may override the section, for example `screenshots: { onlyOn
 ## Files and attachments
 
 ```text
-.automax/runs/<runId>/demo-shop/<fingerprint>/r0/
+.sdods/runs/<runId>/demo-shop/<fingerprint>/r0/
   scenario-start.png
   03-before.png   03-after.png
   scenario-end.png
   failure.png
 ```
 
-Each file is also attached to the Playwright test with a stable name (`automax/shot/step/03/before`), which is what the database ingest and the run viewer pair up. API steps attach `request.json` and `response.json` instead.
+Each file is also attached to the Playwright test with a stable name (`sdods/shot/step/03/before`), which is what the database ingest and the run viewer pair up. API steps attach `request.json` and `response.json` instead.
 
 ## Sample output
 

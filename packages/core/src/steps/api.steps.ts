@@ -12,7 +12,7 @@ import {
   validateJsonSchema,
   validateZod,
 } from '../api/validate.js';
-import { AutomaxError } from '../errors.js';
+import { SdodsError } from '../errors.js';
 
 /* ── requests ─────────────────────────────────────────────────────────── */
 
@@ -62,7 +62,7 @@ Given('I clear the request headers and query parameters', async ({ apiContext })
 Given('I authenticate with bearer token from {string}', async ({ apiContext }, varName: string) => {
   const token = process.env[varName] ?? apiContext.vars.get<string>(varName);
   if (!token)
-    throw new AutomaxError(
+    throw new SdodsError(
       'AUTH_FAILED',
       `No token found in env var or scenario variable "${varName}".`,
     );
@@ -207,7 +207,7 @@ When(
   async ({ apiContext }, path: string, name: string) => {
     const value = getPath(apiContext.last().response.body, path);
     if (value === undefined)
-      throw new AutomaxError(
+      throw new SdodsError(
         'RUN_FAILED',
         `JSON path ${path} is undefined in the last response; cannot save as {{${name}}}.`,
       );

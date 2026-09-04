@@ -16,7 +16,7 @@ import { registerResources } from './resources.js';
 import { ROLE_PROMPTS, renderPrompt, type RoleName } from './prompts/index.js';
 import { createRegistry } from './tools/index.js';
 
-export const MCP_SERVER_NAME = 'automax';
+export const MCP_SERVER_NAME = 'sdods';
 export const MCP_SERVER_VERSION = '0.1.0';
 
 export interface BuildServerOptions {
@@ -31,9 +31,9 @@ export interface BuildServerOptions {
   onProgress?: ToolContext['onProgress'];
 }
 
-export function stderrLogger(prefix = 'automax-mcp'): ToolLogger {
+export function stderrLogger(prefix = 'sdods-mcp'): ToolLogger {
   const w = (level: string, msg: string, data?: unknown) => {
-    if (process.env.AUTOMAX_MCP_QUIET === '1' && level !== 'warn') return;
+    if (process.env.SDODS_MCP_QUIET === '1' && level !== 'warn') return;
     process.stderr.write(
       `[${prefix}] ${level} ${msg}${data !== undefined ? ' ' + JSON.stringify(data) : ''}\n`,
     );
@@ -41,7 +41,7 @@ export function stderrLogger(prefix = 'automax-mcp'): ToolLogger {
   return {
     info: (m, d) => w('info', m, d),
     warn: (m, d) => w('warn', m, d),
-    debug: (m, d) => (process.env.AUTOMAX_DEBUG ? w('debug', m, d) : undefined),
+    debug: (m, d) => (process.env.SDODS_DEBUG ? w('debug', m, d) : undefined),
   };
 }
 
@@ -114,7 +114,7 @@ function allScopes(): string[] {
 }
 
 /** Build a fully wired MCP server (tools + resources + prompts) for a context. */
-export function buildAutomaxMcpServer(opts: BuildServerOptions = {}): {
+export function buildSdodsMcpServer(opts: BuildServerOptions = {}): {
   server: McpServer;
   ctx: ToolContext;
   registry: ToolRegistry;
@@ -127,7 +127,7 @@ export function buildAutomaxMcpServer(opts: BuildServerOptions = {}): {
     {
       capabilities: { tools: {}, resources: {}, prompts: {}, logging: {} },
       instructions:
-        'AutoMax is an automation platform with a reusable architecture built on Playwright. Tools are grouped by prefix: project_*, workspace_*, process_*, feature_*, step_*, run_*, heal_*, data_*, analyze_*, issue_*, schedule_*, proposal_*. Write tools only create proposals; nothing touches the working tree until a person accepts. Start with project_list, then feature_list / step_list before writing scenarios.',
+        'SDODS is an automation platform with a reusable architecture built on Playwright. Tools are grouped by prefix: project_*, workspace_*, process_*, feature_*, step_*, run_*, heal_*, data_*, analyze_*, issue_*, schedule_*, proposal_*. Write tools only create proposals; nothing touches the working tree until a person accepts. Start with project_list, then feature_list / step_list before writing scenarios.',
     },
   );
   const toolCount = toMcpServer(registry, server, ctx);
@@ -140,7 +140,7 @@ export function registerPrompts(server: McpServer, ctx: ToolContext): void {
   for (const role of Object.keys(ROLE_PROMPTS) as RoleName[]) {
     const p = ROLE_PROMPTS[role];
     server.registerPrompt(
-      `automax-${role === 'planner' ? 'plan' : role === 'generator' ? 'generate' : role === 'healer' ? 'heal' : role === 'upgrader' ? 'upgrade' : 'review'}`,
+      `sdods-${role === 'planner' ? 'plan' : role === 'generator' ? 'generate' : role === 'healer' ? 'heal' : role === 'upgrader' ? 'upgrade' : 'review'}`,
       {
         title: p.title,
         description: p.description,

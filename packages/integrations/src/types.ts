@@ -4,7 +4,7 @@ import type {
   RunRecord,
   RunTotals,
   SuiteStatus,
-} from '@automax/contracts';
+} from '@sdods/contracts';
 
 export type ProviderName = 'github' | 'jira' | (string & {});
 

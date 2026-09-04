@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { useMutation } from '@tanstack/react-query';
-import { SCOPES, scopesForRole, type Scope } from '@automax/contracts/scopes';
+import { SCOPES, scopesForRole, type Scope } from '@sdods/contracts/scopes';
 import { api } from '../api/client';
 import { useInvalidate, useMcpInfo, useTokens } from '../api/queries';
 import type { ApiToken } from '../api/types';
@@ -103,7 +103,7 @@ function TokensTab() {
             </Button>
           </div>
           <div className="mt-1 text-xs text-amber-600">
-            It will not be shown again. Use it as `Authorization: Bearer …` or `AUTOMAX_TOKEN`.
+            It will not be shown again. Use it as `Authorization: Bearer …` or `SDODS_TOKEN`.
           </div>
         </Card>
       )}
@@ -269,7 +269,7 @@ function McpTab() {
         params: {
           protocolVersion: '2025-06-18',
           capabilities: {},
-          clientInfo: { name: 'automax-web', version: '0.1.0' },
+          clientInfo: { name: 'sdods-web', version: '0.1.0' },
         },
       });
       await rpc({ jsonrpc: '2.0', method: 'notifications/initialized' });
@@ -282,18 +282,18 @@ function McpTab() {
   const snippets: Array<{ label: string; code: string }> = [
     {
       label: 'Claude Code (remote)',
-      code: `claude mcp add --transport http automax ${url} --header "Authorization: Bearer ${token}"`,
+      code: `claude mcp add --transport http sdods ${url} --header "Authorization: Bearer ${token}"`,
     },
     {
       label: 'Claude Code (local stdio)',
-      code: `claude mcp add automax -- npx automax mcp --project demo-shop --env staging`,
+      code: `claude mcp add sdods -- npx sdods mcp --project demo-shop --env staging`,
     },
     {
       label: 'JSON config (Claude Desktop, Cursor, Windsurf)',
       code: JSON.stringify(
         {
           mcpServers: {
-            automax: { type: 'http', url, headers: { Authorization: `Bearer ${token}` } },
+            sdods: { type: 'http', url, headers: { Authorization: `Bearer ${token}` } },
           },
         },
         null,
@@ -306,17 +306,17 @@ function McpTab() {
         {
           inputs: [
             {
-              id: 'automax-token',
+              id: 'sdods-token',
               type: 'promptString',
-              description: 'AutoMax API token',
+              description: 'SDODS API token',
               password: true,
             },
           ],
           servers: {
-            automax: {
+            sdods: {
               type: 'http',
               url,
-              headers: { Authorization: 'Bearer ${input:automax-token}' },
+              headers: { Authorization: 'Bearer ${input:sdods-token}' },
             },
           },
         },
@@ -327,7 +327,7 @@ function McpTab() {
     {
       label: 'Local stdio (any client)',
       code: JSON.stringify(
-        { mcpServers: { automax: { command: 'npx', args: ['automax', 'mcp'], cwd: '<repo>' } } },
+        { mcpServers: { sdods: { command: 'npx', args: ['sdods', 'mcp'], cwd: '<repo>' } } },
         null,
         2,
       ),

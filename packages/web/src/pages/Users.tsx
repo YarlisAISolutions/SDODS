@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
-import { ROLES, type Role } from '@automax/contracts/scopes';
+import { ROLES, type Role } from '@sdods/contracts/scopes';
 import { api } from '../api/client';
 import { useInvalidate, useUsers } from '../api/queries';
 import type { UserRow } from '../api/types';

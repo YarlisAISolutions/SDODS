@@ -64,7 +64,7 @@ export function RecorderPage() {
     <div className="space-y-4">
       <PageHeader
         title="Recorder"
-        subtitle="Playwright codegen with AutoMax post-processing: fixtures, routes instead of absolute URLs, tags, and login state for a pool user. Runs where the server runs, so a display is required."
+        subtitle="Playwright codegen with SDODS post-processing: fixtures, routes instead of absolute URLs, tags, and login state for a pool user. Runs where the server runs, so a display is required."
       />
       <div className="grid gap-4 lg:grid-cols-[360px_minmax(0,1fr)]">
         <Card title="Session">
@@ -138,7 +138,7 @@ export function RecorderPage() {
             <div className="muted text-[11px]">
               CLI equivalent:{' '}
               <code className="mono">
-                automax record -p {slug} -e {form.env || project.data?.envs.default} --name{' '}
+                sdods record -p {slug} -e {form.env || project.data?.envs.default} --name{' '}
                 {form.name || '<name>'}
                 {form.user ? ` --user ${form.user}` : ''}
                 {form.device ? ` --device "${form.device}"` : ''}
@@ -184,7 +184,7 @@ export function RecorderPage() {
             />
             <div className="muted mt-2 text-[11px]">
               Re-record the same flow for other roles, environments or devices by changing the form
-              and using a distinct name; the `.claude/skills/automax-record` skill automates the
+              and using a distinct name; the `.claude/skills/sdods-record` skill automates the
               matrix.
             </div>
           </Card>

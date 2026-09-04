@@ -1,7 +1,7 @@
 {
-  "name": "@automax/core",
+  "name": "@sdods/core",
   "version": "0.1.0",
-  "description": "AutoMax runtime: config, project registry, merged Playwright/BDD fixtures, step libraries, data providers, screenshots, self-healing, recorder, lint and reporters.",
+  "description": "SDODS runtime: config, project registry, merged Playwright/BDD fixtures, step libraries, data providers, screenshots, self-healing, recorder, lint and reporters.",
   "license": "Apache-2.0",
   "author": "Sireesh Yarlagadda (https://www.linkedin.com/in/yarlagadda/)",
   "type": "module",
@@ -64,7 +64,7 @@
     "playwright-bdd": ">=9"
   },
   "dependencies": {
-    "@automax/contracts": "workspace:*",
+    "@sdods/contracts": "workspace:*",
     "@cucumber/gherkin": "^42.0.1",
     "@cucumber/messages": "^34.2.1",
     "@faker-js/faker": "^10.6.0",
@@ -81,7 +81,7 @@
     "ts-morph": "^28.0.0",
     "yaml": "^2.9.0",
     "zod": "^4.5.4",
-    "@automax/db": "workspace:*"
+    "@sdods/db": "workspace:*"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1",

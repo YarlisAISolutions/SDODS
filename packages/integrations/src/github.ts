@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { basename } from 'node:path';
 import { Octokit } from '@octokit/rest';
-import type { RunRecord } from '@automax/contracts';
+import type { RunRecord } from '@sdods/contracts';
 import { gherkinBlock, selectIssueScreenshots, truncate } from './context.js';
 import { IssueDedupe, fingerprintMarker, issueTitle } from './dedupe.js';
 import type {
@@ -19,7 +19,7 @@ import type {
   ScenarioSummary,
 } from './types.js';
 
-export const PR_COMMENT_MARKER = '<!-- automax:run-summary -->';
+export const PR_COMMENT_MARKER = '<!-- sdods:run-summary -->';
 const ANNOTATION_BATCH = 50;
 
 export interface GitHubProviderOptions {
@@ -51,7 +51,7 @@ export class GitHubProvider implements IntegrationProvider<GitHubConfig> {
       new Octokit({
         auth: secrets.token,
         baseUrl: this.options.baseUrl ?? process.env.GITHUB_API_URL,
-        userAgent: 'automax',
+        userAgent: 'sdods',
       });
   }
 
@@ -186,7 +186,7 @@ export class GitHubProvider implements IntegrationProvider<GitHubConfig> {
     for (const [group, scenarios] of groups) {
       const failed = scenarios.filter((s) => s.status === 'failed' || s.status === 'timedOut');
       const flaky = scenarios.filter((s) => s.flaky);
-      const name = `AutoMax / ${summary.run.projectSlug} / ${group}`;
+      const name = `SDODS / ${summary.run.projectSlug} / ${group}`;
       const conclusion = failed.length ? 'failure' : 'success';
       const title = `${scenarios.length - failed.length}/${scenarios.length} passed${flaky.length ? `, ${flaky.length} flaky` : ''}`;
       const text = this.checkSummaryMarkdown(summary, scenarios, failed, flaky, ctx);
@@ -278,7 +278,7 @@ export class GitHubProvider implements IntegrationProvider<GitHubConfig> {
     const status = t.failed ? '❌' : '✅';
     const body = [
       PR_COMMENT_MARKER,
-      `### ${status} AutoMax · ${summary.run.projectSlug} · ${summary.run.env}`,
+      `### ${status} SDODS · ${summary.run.projectSlug} · ${summary.run.env}`,
       '',
       `| total | passed | failed | skipped | flaky | duration |`,
       `|---|---|---|---|---|---|`,

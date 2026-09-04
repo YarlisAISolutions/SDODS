@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { McpServer } from '@modelcontextprotocol/server';
 import { ResourceTemplate } from '@modelcontextprotocol/server';
-import { runFiles } from '@automax/contracts';
+import { runFiles } from '@sdods/contracts';
 import { getRun, listRuns, projectRoot, safeJoin, walk } from './fs.js';
 import { ProposalStore } from './proposals.js';
 import type { ToolContext } from './registry/registry.js';
@@ -11,16 +11,16 @@ import type { ToolContext } from './registry/registry.js';
 export function registerResources(server: McpServer, ctx: ToolContext): void {
   server.registerResource(
     'feature',
-    new ResourceTemplate('automax://project/{slug}/features/{+path}', {
+    new ResourceTemplate('sdods://project/{slug}/features/{+path}', {
       list: async () => {
         const resources: Array<{ uri: string; name: string; mimeType: string }> = [];
-        const projectsDir = join(ctx.rootDir, process.env.AUTOMAX_PROJECTS_DIR ?? 'projects');
+        const projectsDir = join(ctx.rootDir, process.env.SDODS_PROJECTS_DIR ?? 'projects');
         for (const f of walk(projectsDir, (x) => x.endsWith('.feature'), 500)) {
           const rel = f.slice(projectsDir.length + 1).replace(/\\/g, '/');
           const [slug, ...rest] = rel.split('/');
           if (!slug || rest[0] !== 'features') continue;
           resources.push({
-            uri: `automax://project/${slug}/features/${rest.slice(1).join('/')}`,
+            uri: `sdods://project/${slug}/features/${rest.slice(1).join('/')}`,
             name: rel,
             mimeType: 'text/x-gherkin',
           });
@@ -46,10 +46,10 @@ export function registerResources(server: McpServer, ctx: ToolContext): void {
 
   server.registerResource(
     'run-summary',
-    new ResourceTemplate('automax://run/{runId}/summary', {
+    new ResourceTemplate('sdods://run/{runId}/summary', {
       list: async () => ({
         resources: listRuns(ctx.rootDir, 50).map((r) => ({
-          uri: `automax://run/${r.runId}/summary`,
+          uri: `sdods://run/${r.runId}/summary`,
           name: `run ${r.runId}`,
           mimeType: 'application/json',
         })),
@@ -77,7 +77,7 @@ export function registerResources(server: McpServer, ctx: ToolContext): void {
 
   server.registerResource(
     'run-messages',
-    new ResourceTemplate('automax://run/{runId}/messages.ndjson', { list: undefined }),
+    new ResourceTemplate('sdods://run/{runId}/messages.ndjson', { list: undefined }),
     {
       title: 'Cucumber messages',
       description: 'NDJSON messages of a run',
@@ -98,7 +98,7 @@ export function registerResources(server: McpServer, ctx: ToolContext): void {
 
   server.registerResource(
     'screenshot',
-    new ResourceTemplate('automax://screenshot/{runId}/{fingerprint}/{retry}/{file}', {
+    new ResourceTemplate('sdods://screenshot/{runId}/{fingerprint}/{retry}/{file}', {
       list: undefined,
     }),
     {
@@ -126,10 +126,10 @@ export function registerResources(server: McpServer, ctx: ToolContext): void {
 
   server.registerResource(
     'proposal',
-    new ResourceTemplate('automax://proposal/{id}', {
+    new ResourceTemplate('sdods://proposal/{id}', {
       list: async () => ({
         resources: new ProposalStore(ctx.rootDir).list().map((p) => ({
-          uri: `automax://proposal/${p.id}`,
+          uri: `sdods://proposal/${p.id}`,
           name: p.summary,
           mimeType: 'application/json',
         })),

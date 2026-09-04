@@ -4,7 +4,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 /**
- * CLI-first bridge: every MCP tool that needs AutoMax behaviour spawns the `automax` CLI
+ * CLI-first bridge: every MCP tool that needs SDODS behaviour spawns the `sdods` CLI
  * with `--json` and parses its output. This keeps the MCP package decoupled from in-flight
  * runtime code and guarantees tools and humans see the same results.
  */
@@ -15,14 +15,14 @@ export interface CliError {
   docsUrl?: string;
 }
 
-export class AutomaxCliError extends Error {
+export class SdodsCliError extends Error {
   constructor(
     readonly error: CliError,
     readonly exitCode: number,
     readonly stderr: string,
   ) {
     super(error.message);
-    this.name = 'AutomaxCliError';
+    this.name = 'SdodsCliError';
   }
   get notSupported(): boolean {
     return this.error.code === 'NOT_SUPPORTED';
@@ -47,12 +47,12 @@ export interface CliResult<T = unknown> {
   exitCode: number;
 }
 
-/** Resolve the repo root (contains automax.workspace.yaml or projects/) from a starting dir. */
+/** Resolve the repo root (contains sdods.workspace.yaml or projects/) from a starting dir. */
 export function findRepoRoot(start = process.cwd()): string {
   let dir = resolve(start);
   for (let i = 0; i < 12; i++) {
     if (
-      existsSync(join(dir, 'automax.workspace.yaml')) ||
+      existsSync(join(dir, 'sdods.workspace.yaml')) ||
       (existsSync(join(dir, 'projects')) && existsSync(join(dir, 'package.json')))
     )
       return dir;
@@ -74,16 +74,16 @@ export function resolveCliInvocation(rootDir: string): { command: string; args: 
     if (existsSync(c)) return { command: process.execPath, args: ['--import', 'tsx', c] };
   }
   const distBin = [
-    join(rootDir, 'node_modules', '.bin', 'automax'),
-    resolve(here, '..', '..', 'cli', 'bin', 'automax.js'),
+    join(rootDir, 'node_modules', '.bin', 'sdods'),
+    resolve(here, '..', '..', 'cli', 'bin', 'sdods.js'),
   ];
   for (const c of distBin) {
     if (existsSync(c)) return { command: process.execPath, args: [c] };
   }
-  return { command: 'automax', args: [] };
+  return { command: 'sdods', args: [] };
 }
 
-export async function automaxCli<T = unknown>(
+export async function sdodsCli<T = unknown>(
   args: string[],
   opts: CliOptions = {},
 ): Promise<CliResult<T>> {
@@ -126,7 +126,7 @@ export async function automaxCli<T = unknown>(
       if (timer) clearTimeout(timer);
       const exitCode = code ?? 1;
       if (exitCode !== 0) {
-        reject(new AutomaxCliError(parseCliError(stderr, stdout, exitCode), exitCode, stderr));
+        reject(new SdodsCliError(parseCliError(stderr, stdout, exitCode), exitCode, stderr));
         return;
       }
       resolvePromise({
@@ -150,7 +150,7 @@ export function parseCliError(stderr: string, stdout: string, exitCode: number):
       /* keep looking */
     }
   }
-  const plain = stderr.trim() || stdout.trim() || `automax exited with code ${exitCode}`;
+  const plain = stderr.trim() || stdout.trim() || `sdods exited with code ${exitCode}`;
   const m = /✖\s+([A-Z_]+):\s+(.*)/.exec(plain);
   if (m) return { code: m[1]!, message: m[2]! };
   return { code: exitCode === 2 ? 'CONFIG_INVALID' : 'RUN_FAILED', message: plain.split('\n')[0]! };
@@ -183,11 +183,11 @@ export async function cliOrNote<T>(
   opts: CliOptions = {},
 ): Promise<T | { note: string }> {
   try {
-    const r = await automaxCli<T>(args, opts);
+    const r = await sdodsCli<T>(args, opts);
     return r.json;
   } catch (e) {
-    if (e instanceof AutomaxCliError && e.notSupported) {
-      return { note: `command not available in this build: automax ${args.join(' ')}` };
+    if (e instanceof SdodsCliError && e.notSupported) {
+      return { note: `command not available in this build: sdods ${args.join(' ')}` };
     }
     throw e;
   }

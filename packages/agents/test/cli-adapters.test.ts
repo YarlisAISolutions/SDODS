@@ -14,8 +14,8 @@ import { AgentsConfigError, type AgentEvent } from '../src/adapter/types.js';
  * Codex 0.150.1 (`codex exec --json`), so the adapters are tested without a login.
  */
 const CLAUDE_STREAM = [
-  '{"type":"system","subtype":"init","cwd":"/tmp","session_id":"s1","tools":["Read"],"mcp_servers":[{"name":"automax","status":"connected"}]}',
-  '{"type":"assistant","message":{"model":"claude-fable-5-1","id":"m1","type":"message","role":"assistant","content":[{"type":"tool_use","id":"t1","name":"mcp__automax__project_list","input":{}}],"usage":{"input_tokens":2,"output_tokens":1}},"session_id":"s1"}',
+  '{"type":"system","subtype":"init","cwd":"/tmp","session_id":"s1","tools":["Read"],"mcp_servers":[{"name":"sdods","status":"connected"}]}',
+  '{"type":"assistant","message":{"model":"claude-fable-5-1","id":"m1","type":"message","role":"assistant","content":[{"type":"tool_use","id":"t1","name":"mcp__sdods__project_list","input":{}}],"usage":{"input_tokens":2,"output_tokens":1}},"session_id":"s1"}',
   '{"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"t1","content":[{"type":"text","text":"[{\\"slug\\":\\"demo-shop\\"}]"}]}]},"session_id":"s1"}',
   '{"type":"assistant","message":{"model":"claude-fable-5-1","id":"m2","type":"message","role":"assistant","content":[{"type":"text","text":"pong"}],"usage":{"input_tokens":2,"output_tokens":1}},"session_id":"s1"}',
   '{"type":"rate_limit_event","rate_limit_info":{"status":"allowed"},"session_id":"s1"}',
@@ -26,15 +26,15 @@ const CODEX_STREAM = [
   '{"type":"thread.started","thread_id":"01a06a42-4a84-7333-863f-5b509a89fe99"}',
   '{"type":"turn.started"}',
   '{"type":"item.completed","item":{"id":"item_0","type":"error","message":"clamping SessionEnd hook timeout to 3s"}}',
-  '{"type":"item.started","item":{"id":"item_1","type":"mcp_tool_call","server":"automax","tool":"project_list","arguments":{},"status":"in_progress"}}',
-  '{"type":"item.completed","item":{"id":"item_1","type":"mcp_tool_call","server":"automax","tool":"project_list","arguments":{},"status":"completed","result":{"content":[{"type":"text","text":"demo-shop"}]}}}',
+  '{"type":"item.started","item":{"id":"item_1","type":"mcp_tool_call","server":"sdods","tool":"project_list","arguments":{},"status":"in_progress"}}',
+  '{"type":"item.completed","item":{"id":"item_1","type":"mcp_tool_call","server":"sdods","tool":"project_list","arguments":{},"status":"completed","result":{"content":[{"type":"text","text":"demo-shop"}]}}}',
   '{"type":"item.completed","item":{"id":"item_2","type":"reasoning","text":"thinking"}}',
   '{"type":"item.completed","item":{"id":"item_3","type":"agent_message","text":"pong"}}',
   '{"type":"turn.completed","usage":{"input_tokens":18755,"cached_input_tokens":9984,"cache_write_input_tokens":0,"output_tokens":5,"reasoning_output_tokens":0}}',
 ];
 
 function fakeBins(): { dir: string; claudeArgs: string; codexArgs: string } {
-  const dir = mkdtempSync(join(tmpdir(), 'automax-fake-cli-'));
+  const dir = mkdtempSync(join(tmpdir(), 'sdods-fake-cli-'));
   const claudeArgs = join(dir, 'claude.args');
   const codexArgs = join(dir, 'codex.args');
   const claude = join(dir, 'claude');
@@ -77,7 +77,7 @@ describe('CLI adapters (claude-code, codex) against fake binaries', () => {
     process.env.PATH = `${bins.dir}${delimiter}${originalPath ?? ''}`;
     delete process.env.ANTHROPIC_API_KEY;
     delete process.env.OPENAI_API_KEY;
-    delete process.env.AUTOMAX_LLM_PROVIDER;
+    delete process.env.SDODS_LLM_PROVIDER;
   });
   afterEach(() => {
     process.env.PATH = originalPath;
@@ -123,14 +123,14 @@ describe('CLI adapters (claude-code, codex) against fake binaries', () => {
       .slice(0, -1);
     expect(args).toContain('-p');
     expect(args).toContain('--strict-mcp-config');
-    expect(args).toContain('mcp__automax__*');
+    expect(args).toContain('mcp__sdods__*');
     expect(args).toContain('--disallowedTools');
     expect(args[args.indexOf('--max-turns') + 1]).toBe('7');
     expect(args[args.indexOf('--model') + 1]).toBe('claude-opus-5');
     expect(args[args.indexOf('--append-system-prompt') + 1]).toBe('SYSTEM RULES');
     const mcpFile = args[args.indexOf('--mcp-config') + 1]!;
     const mcp = JSON.parse((await import('node:fs')).readFileSync(mcpFile, 'utf8'));
-    expect(mcp.mcpServers.automax.args).toEqual(
+    expect(mcp.mcpServers.sdods.args).toEqual(
       expect.arrayContaining(['mcp', '--project', 'demo-shop', '--env', 'staging']),
     );
     expect(mcp.mcpServers.playwright.args).toEqual(['playwright', 'mcp', '--headless']);
@@ -154,7 +154,7 @@ describe('CLI adapters (claude-code, codex) against fake binaries', () => {
     expect(r.usage).toMatchObject({ inputTokens: 18755, cacheReadTokens: 9984, outputTokens: 5 });
     expect(r.costUsd).toBeUndefined();
     expect(
-      events.some((e) => e.type === 'tool_call' && e.name === 'mcp__automax__project_list'),
+      events.some((e) => e.type === 'tool_call' && e.name === 'mcp__sdods__project_list'),
     ).toBe(true);
     expect(events.some((e) => e.type === 'status')).toBe(true); // the hook warning
     const args = (await import('node:fs'))
@@ -164,10 +164,10 @@ describe('CLI adapters (claude-code, codex) against fake binaries', () => {
     expect(args.slice(0, 3)).toEqual(['exec', '--json', '--skip-git-repo-check']);
     expect(args).toContain('--ephemeral');
     expect(args[args.indexOf('-s') + 1]).toBe('read-only');
-    expect(args.some((a) => a.startsWith('mcp_servers.automax.command='))).toBe(true);
+    expect(args.some((a) => a.startsWith('mcp_servers.sdods.command='))).toBe(true);
     expect(
       args.some(
-        (a) => a.startsWith('mcp_servers.automax.args=[') && a.includes('"--project","demo-shop"'),
+        (a) => a.startsWith('mcp_servers.sdods.args=[') && a.includes('"--project","demo-shop"'),
       ),
     ).toBe(true);
     expect(args[args.length - 1]).toContain('SYSTEM RULES');

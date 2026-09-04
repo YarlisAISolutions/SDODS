@@ -1,13 +1,8 @@
 import { writeFileSync } from 'node:fs';
 import { expect, type Locator, type TestInfo } from '@playwright/test';
-import {
-  attachmentNames,
-  scenarioFiles,
-  type HealConfig,
-  type HealEvent,
-} from '@automax/contracts';
+import { attachmentNames, scenarioFiles, type HealConfig, type HealEvent } from '@sdods/contracts';
 import { Logger } from '../logger.js';
-import { AutomaxError } from '../errors.js';
+import { SdodsError } from '../errors.js';
 import type { ScenarioMeta } from '../fixtures/scenario.js';
 import { buildCandidates } from './strategies.js';
 import type { HealAction, HealContext, HealProbe } from './types.js';
@@ -142,7 +137,7 @@ export class Healer {
       };
       this.record(event);
       if (!event.succeeded || !best) {
-        throw new AutomaxError(
+        throw new SdodsError(
           'HEAL_FAILED',
           `Could not locate "${ctx.description}" (${String(primary)}) and no healing candidate scored ≥ ${cfg.minScore}.`,
           {
@@ -202,7 +197,7 @@ export class Healer {
           contentType: 'application/json',
         });
         testInfo.annotations.push({
-          type: 'automax:heal',
+          type: 'sdods:heal',
           description: `${event.description}: ${event.originalSelector} → ${event.healedSelector ?? 'FAILED'}`,
         });
       }

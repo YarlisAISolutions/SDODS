@@ -1,5 +1,5 @@
 import {
-  automaxMcpServerSpec,
+  sdodsMcpServerSpec,
   playwrightMcpSpec,
   requireCli,
   runJsonl,
@@ -22,7 +22,7 @@ import {
 const INSTALL_HINT =
   'Install Codex (`npm i -g @openai/codex`) and run `codex login`, or use --adapter claude-code, --adapter claude with ANTHROPIC_API_KEY, or --dry-run.';
 
-/** Codex `exec --json` event stream → AutoMax events. */
+/** Codex `exec --json` event stream → SDODS events. */
 export function normalizeCodexEvent(ev: Record<string, any>): AgentEvent[] {
   const out: AgentEvent[] = [];
   const item = ev.item as Record<string, any> | undefined;
@@ -97,8 +97,8 @@ export function codexUsage(u: Record<string, any> | undefined): TokenUsage | und
 }
 
 /**
- * Runs AutoMax agent roles through the user's logged-in OpenAI Codex CLI (`codex exec --json`).
- * No OPENAI_API_KEY is needed when Codex is logged in with a ChatGPT account. The automax MCP
+ * Runs SDODS agent roles through the user's logged-in OpenAI Codex CLI (`codex exec --json`).
+ * No OPENAI_API_KEY is needed when Codex is logged in with a ChatGPT account. The sdods MCP
  * server and the bundled Playwright MCP are injected with `-c mcp_servers.*` overrides; the run
  * is ephemeral, read-only sandboxed, and the system prompt is prepended to the task.
  */
@@ -107,12 +107,12 @@ export class CodexCliAdapter implements LlmAdapter {
   readonly defaultModel: string;
 
   constructor(private readonly ctx: CliAdapterContext & { model?: string } = {}) {
-    this.defaultModel = ctx.model ?? process.env.AUTOMAX_CODEX_MODEL ?? DEFAULT_MODELS.codex;
+    this.defaultModel = ctx.model ?? process.env.SDODS_CODEX_MODEL ?? DEFAULT_MODELS.codex;
   }
 
   bin(): string {
     const bin = requireCli(this.ctx.bin ?? 'codex', INSTALL_HINT);
-    if (process.env.AUTOMAX_SKIP_CLI_AUTH_CHECK !== '1') {
+    if (process.env.SDODS_SKIP_CLI_AUTH_CHECK !== '1') {
       const r = runQuiet(bin, ['login', 'status']);
       if (r.ok && /not logged in/i.test(r.stdout)) {
         throw new AgentsConfigError(
@@ -162,12 +162,12 @@ export class CodexCliAdapter implements LlmAdapter {
   }
 
   private mcpArgs(o: { cwd?: string; mcpServers?: RunAgentOptions['mcpServers'] }): string[] {
-    const automax = automaxMcpServerSpec({ ...this.ctx, rootDir: this.ctx.rootDir ?? o.cwd });
+    const sdods = sdodsMcpServerSpec({ ...this.ctx, rootDir: this.ctx.rootDir ?? o.cwd });
     const args = [
       '-c',
-      `mcp_servers.automax.command=${tomlString(automax.command)}`,
+      `mcp_servers.sdods.command=${tomlString(sdods.command)}`,
       '-c',
-      `mcp_servers.automax.args=${tomlArray(automax.args)}`,
+      `mcp_servers.sdods.args=${tomlArray(sdods.args)}`,
     ];
     if (this.ctx.withPlaywrightMcp !== false) {
       const pw = playwrightMcpSpec();

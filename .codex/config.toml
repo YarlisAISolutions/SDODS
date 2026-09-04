@@ -1,0 +1,18 @@
+[mcp_servers.sdods]
+command = "npx"
+args = [
+    "sdods",
+    "mcp",
+    "--project",
+    "demo-shop",
+    "--env",
+    "staging",
+]
+
+[mcp_servers.playwright]
+command = "npx"
+args = [
+    "playwright",
+    "mcp",
+    "--headless",
+]

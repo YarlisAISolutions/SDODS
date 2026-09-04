@@ -1,11 +1,11 @@
 blank_issues_enabled: false
 contact_links:
   - name: Ideas and questions (Discussions)
-    url: https://github.com/siri1410/AutoMax/discussions/categories/ideas
+    url: https://github.com/siri1410/SDODS/discussions/categories/ideas
     about: Not sure it is a feature yet? Start a discussion.
   - name: Documentation
-    url: https://automax.sdods.com
+    url: https://docs.sdods.com
     about: Guides, references, best practices, known limitations.
   - name: Security policy
-    url: https://github.com/siri1410/AutoMax/blob/main/SECURITY.md
+    url: https://github.com/siri1410/SDODS/blob/main/SECURITY.md
     about: Report vulnerabilities privately, not as issues.

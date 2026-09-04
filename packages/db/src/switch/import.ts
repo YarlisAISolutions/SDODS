@@ -2,7 +2,7 @@ import { createReadStream, existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { createInterface } from 'node:readline';
 import { sql } from 'kysely';
-import type { AutomaxDb } from '../create-db.js';
+import type { SdodsDb } from '../create-db.js';
 import { TABLES_IN_FK_ORDER } from '../schema.js';
 import { isTdTable, listTdColumns } from '../test-data.js';
 
@@ -28,7 +28,7 @@ const BOOL_COLUMNS = new Set([
  * td_* tables are created on the fly (text columns) when missing.
  */
 export async function importAll(
-  adb: AutomaxDb,
+  adb: SdodsDb,
   dir: string,
   opts: { batch?: number } = {},
 ): Promise<ImportResult> {
@@ -77,7 +77,7 @@ export async function importAll(
   return result;
 }
 
-function denormalizeRow(adb: AutomaxDb, row: Record<string, unknown>): Record<string, unknown> {
+function denormalizeRow(adb: SdodsDb, row: Record<string, unknown>): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(row)) {
     if (v && typeof v === 'object' && '$base64' in (v as any))
@@ -90,7 +90,7 @@ function denormalizeRow(adb: AutomaxDb, row: Record<string, unknown>): Record<st
   return out;
 }
 
-async function ensureTdTable(trx: any, adb: AutomaxDb, table: string, columns: string[]) {
+async function ensureTdTable(trx: any, adb: SdodsDb, table: string, columns: string[]) {
   const existing = await listTdColumns(trx, adb.driver, table);
   if (existing.length === 0) {
     let b = trx.schema

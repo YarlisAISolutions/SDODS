@@ -8,7 +8,7 @@ const meViewer: Me = {
   user: { id: 'u3', username: 'viewer', role: 'viewer', active: true },
   csrfToken: 'x',
   scopes: ['projects:read', 'runs:read'],
-  orgRoles: { automax: 'member' },
+  orgRoles: { sdods: 'member' },
   workspaceRoles: { default: 'viewer' },
 };
 const meEditor: Me = {
@@ -26,7 +26,7 @@ vi.mock('../api/client', async (orig) => {
     api: vi.fn(async (path: string) => {
       if (path === '/api/auth/me') return currentMe;
       if (path === '/api/orgs')
-        return [{ id: 'o1', slug: 'automax', name: 'AutoMax', myRole: currentMe.orgRoles.automax }];
+        return [{ id: 'o1', slug: 'sdods', name: 'SDODS', myRole: currentMe.orgRoles.sdods }];
       if (path.startsWith('/api/workspaces'))
         return [
           {

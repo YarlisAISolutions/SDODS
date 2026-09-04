@@ -28,7 +28,7 @@ describe('postProcessRecording', () => {
   });
 
   it('rewrites the import, relativises known origins, wraps in describe with tags, marks fragile locators', () => {
-    expect(result.code).toContain("from '@automax/core/test'");
+    expect(result.code).toContain("from '@sdods/core/test'");
     expect(result.code).not.toContain("from '@playwright/test'");
     expect(result.code).toContain("page.goto('/')");
     expect(result.code).toContain("toHaveURL('/inventory.html')");
@@ -39,7 +39,7 @@ describe('postProcessRecording', () => {
     expect(result.rewrittenUrls).toBe(2);
     // #user-name, #password, [data-test=...], .cart_item, //button → 5 fragile; getByRole/getByTestId are fine
     expect(result.fragileLocators).toBe(5);
-    expect(result.code.match(/automax:fragile/g)?.length).toBe(5);
+    expect(result.code.match(/sdods:fragile/g)?.length).toBe(5);
     expect(result.warnings.some((w) => w.includes('https://cdn.example.net/help'))).toBe(true);
   });
 
@@ -65,7 +65,7 @@ describe('postProcessRecording', () => {
       har: 'checkout-standard',
     });
     expect(header).toContain(
-      'automax record -p demo-shop -e staging --name checkout-standard --user standard --device "iPhone 15" --save-har',
+      'sdods record -p demo-shop -e staging --name checkout-standard --user standard --device "iPhone 15" --save-har',
     );
   });
 });
@@ -85,7 +85,7 @@ describe('codegen args', () => {
       aliases: [],
       use: { locale: 'en-US', timezoneId: 'America/New_York' },
     },
-    runtime: { repoRoot: '/repo', artifactsDir: '/repo/.automax/runs' },
+    runtime: { repoRoot: '/repo', artifactsDir: '/repo/.sdods/runs' },
   } as unknown as ResolvedConfig;
 
   it('resolves route names, paths and absolute URLs', () => {

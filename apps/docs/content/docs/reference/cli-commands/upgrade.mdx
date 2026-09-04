@@ -1,10 +1,10 @@
 ---
-title: automax upgrade
-description: Compare installed @automax/* packages with the npm registry and optionally install the latest.
+title: sdods upgrade
+description: Compare installed @sdods/* packages with the npm registry and optionally install the latest.
 ---
 
 ```text
-automax upgrade [--apply] [--pm bun|pnpm|npm] [--json]
+sdods upgrade [--apply] [--pm bun|pnpm|npm] [--json]
 ```
 
 | Column    | Meaning                                                                                         |
@@ -16,6 +16,6 @@ automax upgrade [--apply] [--pm bun|pnpm|npm] [--json]
 `--apply` runs `bun add` / `pnpm add` / `npm install` for every outdated package; the manager is detected from the lockfile unless `--pm` is given. Nothing is written without `--apply`.
 
 ```bash
-automax upgrade
-automax upgrade --apply
+sdods upgrade
+sdods upgrade --apply
 ```

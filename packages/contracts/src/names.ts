@@ -5,24 +5,24 @@
 export type ScenarioShotPhase = 'start' | 'end' | 'failure';
 export type StepShotPhase = 'before' | 'after';
 
-export const ATTACHMENT_PREFIX = 'automax/';
+export const ATTACHMENT_PREFIX = 'sdods/';
 
 export function pad2(n: number): string {
   return String(n).padStart(2, '0');
 }
 
 export const attachmentNames = {
-  shotScenario: (phase: ScenarioShotPhase) => `automax/shot/scenario/${phase}`,
+  shotScenario: (phase: ScenarioShotPhase) => `sdods/shot/scenario/${phase}`,
   shotStep: (stepIndex: number, phase: StepShotPhase) =>
-    `automax/shot/step/${pad2(stepIndex)}/${phase}`,
-  visual: (stepIndex: number, name: string) => `automax/visual/${pad2(stepIndex)}/${name}`,
+    `sdods/shot/step/${pad2(stepIndex)}/${phase}`,
+  visual: (stepIndex: number, name: string) => `sdods/visual/${pad2(stepIndex)}/${name}`,
   api: (stepIndex: number, callIndex: number, kind: 'request' | 'response') =>
-    `automax/api/${pad2(stepIndex)}/${callIndex}/${kind}`,
-  heal: (stepIndex: number, n: number) => `automax/heal/${pad2(stepIndex)}/${n}`,
-  perf: (stepIndex: number) => `automax/perf/${pad2(stepIndex)}`,
-  a11y: (stepIndex: number) => `automax/a11y/${pad2(stepIndex)}`,
-  cleanupErrors: 'automax/cleanup-errors',
-  meta: 'automax/meta',
+    `sdods/api/${pad2(stepIndex)}/${callIndex}/${kind}`,
+  heal: (stepIndex: number, n: number) => `sdods/heal/${pad2(stepIndex)}/${n}`,
+  perf: (stepIndex: number) => `sdods/perf/${pad2(stepIndex)}`,
+  a11y: (stepIndex: number) => `sdods/a11y/${pad2(stepIndex)}`,
+  cleanupErrors: 'sdods/cleanup-errors',
+  meta: 'sdods/meta',
 } as const;
 
 export type ParsedAttachment =

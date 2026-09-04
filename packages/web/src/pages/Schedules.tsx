@@ -97,7 +97,7 @@ export function SchedulesPage() {
     <div className="space-y-4">
       <PageHeader
         title="Schedules"
-        subtitle="Cron-driven runs. YAML-managed schedules come from automax.project.yaml (version-controlled); database ones are edited here. Without a server, `automax schedule install` writes crontab/launchd/systemd or a GitHub Actions workflow."
+        subtitle="Cron-driven runs. YAML-managed schedules come from sdods.project.yaml (version-controlled); database ones are edited here. Without a server, `sdods schedule install` writes crontab/launchd/systemd or a GitHub Actions workflow."
         actions={
           canEdit(workspace?.slug) && (
             <Button

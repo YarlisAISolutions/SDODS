@@ -2,7 +2,7 @@ import './params.js';
 import { Given, When } from '../fixtures/test.js';
 import type { HttpMethod } from '../api/client.js';
 import { render } from '../api/template.js';
-import { AutomaxError } from '../errors.js';
+import { SdodsError } from '../errors.js';
 
 /* ── datasets ─────────────────────────────────────────────────────────── */
 
@@ -18,7 +18,7 @@ Given(
   async ({ data, apiContext }, name: string, column: string, value: string) => {
     const row = await data.find(name, { [column]: value });
     if (!row)
-      throw new AutomaxError(
+      throw new SdodsError(
         'DATASET_ROW_NOT_FOUND',
         `No row in dataset "${name}" where ${column} = "${value}".`,
       );
@@ -38,7 +38,7 @@ Given(
 Given(
   'I use a leased user with role {string}',
   async (
-    { userPool, authCache, auth, automax, apiContext, page, context, browser, $testInfo },
+    { userPool, authCache, auth, sdods, apiContext, page, context, browser, $testInfo },
     role: string,
   ) => {
     const user = await userPool.lease(role, $testInfo.parallelIndex);
@@ -49,7 +49,7 @@ Given(
       role: user.role,
       ...user.extra,
     });
-    if (automax.layer !== 'api') await authCache.apply({ context, page, user, auth, browser });
+    if (sdods.layer !== 'api') await authCache.apply({ context, page, user, auth, browser });
   },
 );
 
@@ -58,8 +58,7 @@ Given(
   async ({ userPool, apiContext, $testInfo }, username: string) => {
     const status = await userPool.status();
     const entry = status.find((u) => u.username === username);
-    if (!entry)
-      throw new AutomaxError('DATASET_ROW_NOT_FOUND', `No pool user named "${username}".`);
+    if (!entry) throw new SdodsError('DATASET_ROW_NOT_FOUND', `No pool user named "${username}".`);
     const user = await userPool.lease(entry.role, $testInfo.parallelIndex);
     apiContext.vars.setAll({
       username: user.username,

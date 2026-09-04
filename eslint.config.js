@@ -11,7 +11,7 @@ export default tseslint.config(
       '**/dist/**',
       '**/node_modules/**',
       '**/.features-gen/**',
-      '**/.automax/**',
+      '**/.sdods/**',
       'apps/docs/out/**',
       'apps/docs/.next/**',
       'apps/docs/.source/**',

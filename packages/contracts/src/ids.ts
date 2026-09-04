@@ -60,7 +60,7 @@ export function shortId(length = 6): string {
     .slice(0, length);
 }
 
-/** Split an AutoMax-generated Playwright project name into its parts. */
+/** Split an SDODS-generated Playwright project name into its parts. */
 export interface PwProjectParts {
   project: string;
   layer: string;

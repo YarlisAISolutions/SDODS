@@ -4,8 +4,8 @@ description: Provider-agnostic AI roles that plan, generate, heal, upgrade and r
 ---
 
 <Learn>
-  Which agent roles exist, what each reads and produces, how the adapter keeps AutoMax independent
-  of one LLM vendor, how proposals are reviewed, and how cost is bounded.
+  Which agent roles exist, what each reads and produces, how the adapter keeps SDODS independent of
+  one LLM vendor, how proposals are reviewed, and how cost is bounded.
 </Learn>
 
 ## Roles
@@ -24,41 +24,41 @@ flowchart LR
   A -->|reads| T["MCP tools: project config, steps, features,<br/>run scenario, run history, locator stats, source"]
   A -->|browses| PW["Playwright MCP"]
   A -->|writes only| P["proposals/&lt;id&gt;/"]
-  P --> R["review: UI diff or automax proposals show"]
+  P --> R["review: UI diff or sdods proposals show"]
   R -->|accept| W["working tree or branch → lint → bddgen"]
 ```
 
 ## Adapter
 
-Roles do not know which model runs them. `--adapter`, `AUTOMAX_LLM_PROVIDER` or `agents.provider` in the project YAML picks one; when none is set AutoMax auto-detects in this order: `ANTHROPIC_API_KEY` → `claude` CLI → `codex` CLI → `OPENAI_API_KEY` → `fake`.
+Roles do not know which model runs them. `--adapter`, `SDODS_LLM_PROVIDER` or `agents.provider` in the project YAML picks one; when none is set SDODS auto-detects in this order: `ANTHROPIC_API_KEY` → `claude` CLI → `codex` CLI → `OPENAI_API_KEY` → `fake`.
 
-| Adapter             | Runs on                                         | Needs                                  | Notes                                                                            |
-| ------------------- | ----------------------------------------------- | -------------------------------------- | -------------------------------------------------------------------------------- |
-| `claude`            | Claude Agent SDK + bundled Playwright MCP       | `ANTHROPIC_API_KEY`                    | full tool loop, budgets enforced by the SDK                                      |
-| `claude-code`       | your logged-in Claude Code CLI (`claude -p`)    | `claude login`                         | no API key; uses your subscription; tools via the automax MCP server             |
-| `codex`             | your logged-in OpenAI Codex CLI (`codex exec`)  | `codex login`                          | no API key; ChatGPT account; tools via the automax MCP server, read-only sandbox |
-| `openai-compatible` | any chat-completions endpoint with tool calling | `OPENAI_API_KEY` (+ `OPENAI_BASE_URL`) | Azure, Ollama, vLLM …                                                            |
-| `fake`              | scripted responses                              | nothing                                | tests and `--dry-run`                                                            |
+| Adapter             | Runs on                                         | Needs                                  | Notes                                                                          |
+| ------------------- | ----------------------------------------------- | -------------------------------------- | ------------------------------------------------------------------------------ |
+| `claude`            | Claude Agent SDK + bundled Playwright MCP       | `ANTHROPIC_API_KEY`                    | full tool loop, budgets enforced by the SDK                                    |
+| `claude-code`       | your logged-in Claude Code CLI (`claude -p`)    | `claude login`                         | no API key; uses your subscription; tools via the sdods MCP server             |
+| `codex`             | your logged-in OpenAI Codex CLI (`codex exec`)  | `codex login`                          | no API key; ChatGPT account; tools via the sdods MCP server, read-only sandbox |
+| `openai-compatible` | any chat-completions endpoint with tool calling | `OPENAI_API_KEY` (+ `OPENAI_BASE_URL`) | Azure, Ollama, vLLM …                                                          |
+| `fake`              | scripted responses                              | nothing                                | tests and `--dry-run`                                                          |
 
-LLM keys and logins are yours and billed by the provider; AutoMax's own API tokens are free. See [Claude Code and Codex CLI](/docs/guides/claude-code-and-codex) and [Tokens and keys](/docs/reference/tokens-and-keys).
+LLM keys and logins are yours and billed by the provider; SDODS's own API tokens are free. See [Claude Code and Codex CLI](/docs/guides/claude-code-and-codex) and [Tokens and keys](/docs/reference/tokens-and-keys).
 
 ## Commands
 
 ```bash
-bun run automax agent plan     -p demo-shop --goal "checkout with a discount code"
-bun run automax agent generate -p demo-shop --plan docs/test-plans/checkout.md
-bun run automax agent heal     -p demo-shop --scenario <fingerprint>
-bun run automax agent upgrade  -p demo-shop --diff main..feature/x
-bun run automax agent review   -p demo-shop
-bun run automax agent generate -p demo-shop --goal "login" --dry-run --adapter fake
-bun run automax proposals list
-bun run automax proposals show <id>
-bun run automax proposals accept <id> --branch automax/<id>
+bun run sdods agent plan     -p demo-shop --goal "checkout with a discount code"
+bun run sdods agent generate -p demo-shop --plan docs/test-plans/checkout.md
+bun run sdods agent heal     -p demo-shop --scenario <fingerprint>
+bun run sdods agent upgrade  -p demo-shop --diff main..feature/x
+bun run sdods agent review   -p demo-shop
+bun run sdods agent generate -p demo-shop --goal "login" --dry-run --adapter fake
+bun run sdods proposals list
+bun run sdods proposals show <id>
+bun run sdods proposals accept <id> --branch sdods/<id>
 ```
 
 ## Budgets
 
-```yaml title="automax.project.yaml"
+```yaml title="sdods.project.yaml"
 agents:
   models: { planner: claude-opus-5, generator: claude-opus-5, healer: claude-opus-5 }
   maxTurns: { healer: 30 }
@@ -70,7 +70,7 @@ Every job records model, turns and cost; a job stops at its budget.
 
 ## Claude Code
 
-`automax agent install-claude` writes `.claude/agents/automax-*.md`, `.mcp.json` and the repository's `AGENT.md`/`SKILL.md`, so Claude Code users get the same roles as the CLI.
+`sdods agent install-claude` writes `.claude/agents/sdods-*.md`, `.mcp.json` and the repository's `AGENT.md`/`SKILL.md`, so Claude Code users get the same roles as the CLI.
 
 ## Next steps
 

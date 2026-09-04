@@ -1,6 +1,6 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { ProjectConfigSchema, WorkspaceFileSchema } from '@automax/contracts/schemas';
-import type { AutomaxDb } from '../src/create-db.js';
+import { ProjectConfigSchema, WorkspaceFileSchema } from '@sdods/contracts/schemas';
+import type { SdodsDb } from '../src/create-db.js';
 import { computeInsights } from '../src/insights.js';
 import {
   createApiToken,
@@ -55,7 +55,7 @@ import { enc, nowIso } from '../src/col.js';
 import { testDb } from './helpers.js';
 
 describe('repos', () => {
-  let adb: AutomaxDb;
+  let adb: SdodsDb;
   beforeAll(async () => {
     adb = await testDb();
   });

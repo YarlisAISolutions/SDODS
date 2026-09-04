@@ -576,5 +576,5 @@ export const TABLES_IN_FK_ORDER: Array<keyof Database> = [
   'audit_log',
 ];
 
-export const MIGRATION_TABLE = 'automax_migrations';
-export const MIGRATION_LOCK_TABLE = 'automax_migrations_lock';
+export const MIGRATION_TABLE = 'sdods_migrations';
+export const MIGRATION_LOCK_TABLE = 'sdods_migrations_lock';

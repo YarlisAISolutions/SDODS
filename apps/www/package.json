@@ -1,13 +1,13 @@
 {
-  "name": "@automax/www",
+  "name": "@sdods/www",
   "version": "0.1.0",
   "private": true,
-  "description": "AutoMax landing site (sdods.com / www.sdods.com): Next.js static export on Firebase Hosting.",
+  "description": "SDODS landing site (sdods.com / www.sdods.com): Next.js static export on Firebase Hosting.",
   "license": "Apache-2.0",
   "author": "Sireesh Yarlagadda (https://www.linkedin.com/in/yarlagadda/)",
   "scripts": {
     "dev": "next dev --port 3100",
-    "build": "next build",
+    "build": "node --import tsx ../../scripts/sync-installer.ts && next build",
     "typecheck": "tsc --noEmit",
     "screenshots": "node --import tsx scripts/screenshots.ts"
   },

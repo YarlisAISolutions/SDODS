@@ -63,7 +63,7 @@ describe('gherkin parsing and tag checks', () => {
 
 describe('proposals', () => {
   it('creates, diffs, accepts into a target root and rejects', () => {
-    const root = mkdtempSync(join(tmpdir(), 'automax-prop-'));
+    const root = mkdtempSync(join(tmpdir(), 'sdods-prop-'));
     mkdirSync(join(root, 'projects', 'shop', 'features'), { recursive: true });
     writeFileSync(join(root, 'projects', 'shop', 'features', 'a.feature'), 'Feature: old\n');
     const store = new ProposalStore(root);
@@ -82,7 +82,7 @@ describe('proposals', () => {
     expect(diff).toContain('+Feature: new');
     expect(diff).toContain('-Feature: old');
     expect(store.list({ status: 'pending' })).toHaveLength(1);
-    const target = mkdtempSync(join(tmpdir(), 'automax-target-'));
+    const target = mkdtempSync(join(tmpdir(), 'sdods-target-'));
     const written = store.accept(m.id, { targetRoot: target, reviewedBy: 'tester' });
     expect(written).toHaveLength(2);
     expect(readFileSync(join(target, 'projects/shop/features/b.feature'), 'utf8')).toBe(
@@ -135,7 +135,7 @@ describe('data helpers', () => {
     expect(maskRows([{ username: 'a', password: 'x', role: 'r' }])).toEqual([
       { username: 'a', password: '***', role: 'r' },
     ]);
-    const root = mkdtempSync(join(tmpdir(), 'automax-data-'));
+    const root = mkdtempSync(join(tmpdir(), 'sdods-data-'));
     mkdirSync(join(root, 'data', 'common'), { recursive: true });
     mkdirSync(join(root, 'data', 'staging'), { recursive: true });
     writeFileSync(join(root, 'data', 'common', 'users.csv'), 'id\n1\n');
@@ -155,7 +155,7 @@ describe('data helpers', () => {
 
 describe('analysis heuristics', () => {
   it('detects framework, routes, test ids and proposes a project', () => {
-    const app = mkdtempSync(join(tmpdir(), 'automax-app-'));
+    const app = mkdtempSync(join(tmpdir(), 'sdods-app-'));
     writeFileSync(
       join(app, 'package.json'),
       JSON.stringify({
@@ -194,11 +194,11 @@ describe('analysis heuristics', () => {
   });
 
   it('computes coverage, best practices and locator scores for a project dir', () => {
-    const root = mkdtempSync(join(tmpdir(), 'automax-proj-'));
+    const root = mkdtempSync(join(tmpdir(), 'sdods-proj-'));
     mkdirSync(join(root, 'features', 'auth'), { recursive: true });
     mkdirSync(join(root, 'pages'), { recursive: true });
     writeFileSync(
-      join(root, 'automax.project.yaml'),
+      join(root, 'sdods.project.yaml'),
       'slug: p\nroutes: { login: /, inventory: /inventory.html, cart: /cart.html }\nmodules:\n  - { name: auth, endpoints: ["GET /users"] }\n',
     );
     writeFileSync(

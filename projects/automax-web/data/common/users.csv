@@ -1,3 +1,0 @@
-id,username,password,role,displayName
-1,admin,${AUTOMAX_UI_ADMIN_PASSWORD:-Admin#12345},admin,Platform admin (org owner)
-2,vera,${AUTOMAX_UI_VERA_PASSWORD:-Vera#12345},member,Workspace member (platform-qa viewer)

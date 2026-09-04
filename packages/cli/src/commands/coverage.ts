@@ -1,6 +1,6 @@
 import type { Command } from 'commander';
 import pc from 'picocolors';
-import type { CoverageReport, CoverageRow } from '@automax/contracts';
+import type { CoverageReport, CoverageRow } from '@sdods/contracts';
 import { createContext } from '../context.js';
 import { heading, json, out, table } from '../ui.js';
 
@@ -20,7 +20,7 @@ export function register(program: Command) {
     .option('--uncovered', 'only rows without scenarios')
     .action(async (opts, cmd) => {
       const ctx = createContext(cmd);
-      const { computeCoverage } = await import('@automax/core/analyze');
+      const { computeCoverage } = await import('@sdods/core/analyze');
       const report = computeCoverage(ctx.registry, opts.project, {
         env: opts.env,
         openapi: opts.openapi === true ? true : (opts.openapi ?? false),

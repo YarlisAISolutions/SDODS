@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { fingerprint } from '@automax/contracts';
+import { fingerprint } from '@sdods/contracts';
 import { buildRunSummaryFromFiles } from '../src/summary.js';
 import { selectIssueScreenshots } from '../src/context.js';
 import { IssueDedupe } from '../src/dedupe.js';
@@ -93,7 +93,7 @@ function ndjson(): string {
       attachment: {
         testCaseStartedId: 'tc1-attempt-0',
         testStepId: 'ts2',
-        fileName: 'automax/shot/step/01/before',
+        fileName: 'sdods/shot/step/01/before',
         mediaType: 'image/png',
         body: 'AA==',
         contentEncoding: 'BASE64',
@@ -114,7 +114,7 @@ function ndjson(): string {
     {
       attachment: {
         testCaseStartedId: 'tc1-attempt-0',
-        fileName: 'automax/shot/scenario/failure',
+        fileName: 'sdods/shot/scenario/failure',
         mediaType: 'image/png',
         body: 'AA==',
         contentEncoding: 'BASE64',
@@ -147,7 +147,7 @@ function ndjson(): string {
     {
       attachment: {
         testCaseStartedId: 'tc1-attempt-1',
-        fileName: 'automax/shot/scenario/end',
+        fileName: 'sdods/shot/scenario/end',
         mediaType: 'image/png',
         body: 'AA==',
         contentEncoding: 'BASE64',
@@ -196,7 +196,7 @@ function ndjson(): string {
 }
 
 function makeRunDir(): string {
-  const dir = mkdtempSync(join(tmpdir(), 'automax-sum-'));
+  const dir = mkdtempSync(join(tmpdir(), 'sdods-sum-'));
   const runDir = join(dir, 'run-abc');
   mkdirSync(runDir, { recursive: true });
   writeFileSync(
@@ -210,8 +210,8 @@ function makeRunDir(): string {
       trigger: 'cli',
       startedAt: '2026-09-03T10:00:00.000Z',
       finishedAt: '2026-09-03T10:00:05.000Z',
-      command: 'automax run',
-      automaxVersion: '0.1.0',
+      command: 'sdods run',
+      sdodsVersion: '0.1.0',
       git: { sha: 'abc123', branch: 'main' },
       exitCode: 1,
     }),
@@ -305,7 +305,7 @@ describe('buildRunSummaryFromFiles', () => {
 
 describe('FileIssueLinkStore + IssueDedupe', () => {
   it('persists links to disk and decides create/comment/skip', async () => {
-    const file = join(mkdtempSync(join(tmpdir(), 'automax-links-')), 'links.json');
+    const file = join(mkdtempSync(join(tmpdir(), 'sdods-links-')), 'links.json');
     const store = new FileIssueLinkStore(file);
     const dedupe = new IssueDedupe(store, { reopenAfterDays: 7 });
     expect((await dedupe.decide('shop', 'github', 'fp')).action).toBe('create');

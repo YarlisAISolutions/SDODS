@@ -2,7 +2,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Command } from 'commander';
 import { parseDocument } from 'yaml';
-import { AutomaxError, PROJECT_FILE } from '@automax/core';
+import { SdodsError, PROJECT_FILE } from '@sdods/core';
 import { createContext } from '../context.js';
 import { json, ok, table } from '../ui.js';
 
@@ -46,7 +46,7 @@ export function registerEnvCommands(program: Command) {
       const e = ctx.registry.entry(opts.project);
       const file = join(e.root, 'envs', `${name}.yaml`);
       if (existsSync(file))
-        throw new AutomaxError('CONFIG_INVALID', `${file} already exists.`, { exitCode: 2 });
+        throw new SdodsError('CONFIG_INVALID', `${file} already exists.`, { exitCode: 2 });
       writeFileSync(
         file,
         `name: ${name}\nui:\n  baseUrl: ${opts.uiUrl}\napi:\n  baseUrl: ${opts.apiUrl}\n  headers: { Accept: application/json }\n  auth: { type: none }\nusers:\n  poolSize: ${Number(opts.poolSize)}\nvars: {}\n`,
