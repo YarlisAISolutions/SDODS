@@ -1,4 +1,15 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync, readdirSync, statSync } from 'node:fs';
+import {
+  closeSync,
+  existsSync,
+  mkdirSync,
+  openSync,
+  readFileSync,
+  readdirSync,
+  renameSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs';
 import { join } from 'node:path';
 import type { Browser, BrowserContext, Page } from '@playwright/test';
 import type { ResolvedConfig } from '../config/resolve.js';
@@ -18,7 +29,18 @@ export interface CachedState {
   role: string;
 }
 
-/** storageState per pool user: `projects/<slug>/.auth/<env>/<role>-<n>.json` (gitignored). */
+/** How long another worker may hold the refresh lock before we treat it as crashed. */
+const LOCK_STALE_MS = 90_000;
+const LOCK_POLL_MS = 250;
+
+/**
+ * storageState per pool user: `projects/<slug>/.auth/<env>/<role>-<n>.json` (gitignored).
+ *
+ * Several workers (and several browser projects) may need the same user at the same moment,
+ * so refreshes are serialised with a lock file, state files are written atomically
+ * (temp + rename) and a cached file is only trusted when it parses and carries cookies or
+ * localStorage.
+ */
 export class AuthStateCache {
   private readonly log = new Logger('auth');
   readonly dir: string;
@@ -35,15 +57,47 @@ export class AuthStateCache {
     return this.fileFor(user).replace(/\.json$/, '.meta.json');
   }
 
+  private lockFor(user: PoolUserLike): string {
+    return this.fileFor(user).replace(/\.json$/, '.lock');
+  }
+
+  /** Fresh = sidecar within maxAgeMinutes AND the state file is valid JSON with something in it. */
   isFresh(user: PoolUserLike): boolean {
     const side = this.sidecarFor(user);
-    if (!existsSync(this.fileFor(user)) || !existsSync(side)) return false;
+    const file = this.fileFor(user);
+    if (!existsSync(file) || !existsSync(side)) return false;
     try {
       const meta = JSON.parse(readFileSync(side, 'utf8')) as { capturedAt: string };
       const age = (Date.now() - Date.parse(meta.capturedAt)) / 60_000;
-      return age < this.config.project.auth.maxAgeMinutes;
+      if (!(age < this.config.project.auth.maxAgeMinutes)) return false;
+      return this.readState(file) !== undefined;
     } catch {
       return false;
+    }
+  }
+
+  private readState(file: string): StorageStateJson | undefined {
+    try {
+      const state = JSON.parse(readFileSync(file, 'utf8')) as StorageStateJson;
+      // Session cookies often expire long before maxAgeMinutes (SauceDemo: 10 minutes).
+      // Drop expired ones; if nothing usable remains the state is stale and gets refreshed.
+      const nowSec = Date.now() / 1000 + 30;
+      const hadCookies = Array.isArray(state.cookies) && state.cookies.length > 0;
+      if (Array.isArray(state.cookies)) {
+        state.cookies = state.cookies.filter((c) => {
+          const exp = typeof c.expires === 'number' ? c.expires : -1;
+          return exp === -1 || exp > nowSec;
+        });
+      }
+      const hasCookies = Array.isArray(state.cookies) && state.cookies.length > 0;
+      // A login captured as cookies whose cookies have all expired is stale even if
+      // unrelated localStorage entries (analytics ids) survive.
+      if (hadCookies && !hasCookies) return undefined;
+      const hasStorage =
+        Array.isArray(state.origins) && state.origins.some((o) => o.localStorage?.length > 0);
+      return hasCookies || hasStorage ? state : undefined;
+    } catch {
+      return undefined;
     }
   }
 
@@ -61,24 +115,33 @@ export class AuthStateCache {
       );
       return existsSync(this.fileFor(user)) ? this.fileFor(user) : undefined;
     }
-    this.log.step(`capturing login state for ${user.username} (${user.role})`);
-    const state = await auth.login({ browser, config: this.config, user });
-    if (!state) return undefined;
-    return this.save(user, state);
+    return this.withLock(user, async () => {
+      // another worker may have refreshed while we waited for the lock
+      if (this.isFresh(user)) return this.fileFor(user);
+      this.log.step(`capturing login state for ${user.username} (${user.role})`);
+      const state = await auth.login({ browser, config: this.config, user });
+      if (!state) return undefined;
+      return this.save(user, state);
+    });
   }
 
+  /** Atomic save: temp file + rename, sidecar written last. */
   save(user: PoolUserLike, state: Record<string, unknown>): string {
     mkdirSync(this.dir, { recursive: true });
     const file = this.fileFor(user);
-    writeFileSync(file, JSON.stringify(state, null, 2));
+    const tmp = `${file}.${process.pid}.${Math.random().toString(36).slice(2, 8)}.tmp`;
+    writeFileSync(tmp, JSON.stringify(state, null, 2));
+    renameSync(tmp, file);
+    const sideTmp = `${this.sidecarFor(user)}.${process.pid}.tmp`;
     writeFileSync(
-      this.sidecarFor(user),
+      sideTmp,
       JSON.stringify(
         { capturedAt: new Date().toISOString(), user: user.username, role: user.role },
         null,
         2,
       ),
     );
+    renameSync(sideTmp, this.sidecarFor(user));
     return file;
   }
 
@@ -92,16 +155,21 @@ export class AuthStateCache {
   }): Promise<boolean> {
     const { context, page, user, auth, browser } = args;
     if (auth.strategy === 'none') return false;
-    const file = this.isFresh(user) ? this.fileFor(user) : undefined;
+    let file = this.isFresh(user) ? this.fileFor(user) : undefined;
     if (!file && auth.strategy !== 'sso') {
-      const state = await auth.login({ browser, config: this.config, user, page, context });
-      if (state) {
+      const refreshed = await this.withLock(user, async () => {
+        if (this.isFresh(user)) return { file: this.fileFor(user), live: false };
+        const state = await auth.login({ browser, config: this.config, user, page, context });
+        if (!state) return undefined;
         this.save(user, state);
-        return true; // logged in live in this very page
-      }
+        return { file: undefined, live: true };
+      });
+      if (refreshed?.live) return true; // logged in live in this very page
+      file = refreshed?.file;
     }
     if (!file) return false;
-    const state = JSON.parse(readFileSync(file, 'utf8')) as StorageStateJson;
+    const state = this.readState(file);
+    if (!state) return false;
     if (state.cookies?.length) await context.addCookies(state.cookies as any);
     for (const origin of state.origins ?? []) {
       if (!origin.localStorage?.length) continue;
@@ -111,6 +179,45 @@ export class AuthStateCache {
       }, origin.localStorage);
     }
     return true;
+  }
+
+  /**
+   * Cross-process lock around a refresh. Uses an O_EXCL lock file; a lock older than
+   * LOCK_STALE_MS is treated as abandoned by a crashed worker.
+   */
+  private async withLock<T>(user: PoolUserLike, fn: () => Promise<T>): Promise<T> {
+    mkdirSync(this.dir, { recursive: true });
+    const lock = this.lockFor(user);
+    const deadline = Date.now() + LOCK_STALE_MS * 2;
+    for (;;) {
+      try {
+        closeSync(openSync(lock, 'wx'));
+        break;
+      } catch (e) {
+        if ((e as NodeJS.ErrnoException).code !== 'EEXIST') throw e;
+        let stale = false;
+        try {
+          stale = Date.now() - statSync(lock).mtimeMs > LOCK_STALE_MS;
+        } catch {
+          continue; // lock vanished between the failed open and stat: retry immediately
+        }
+        if (stale) {
+          this.log.warn(`removing stale auth lock ${lock}`);
+          rmSync(lock, { force: true });
+          continue;
+        }
+        if (Date.now() > deadline) {
+          this.log.warn(`giving up waiting for auth lock ${lock}; refreshing anyway`);
+          break;
+        }
+        await new Promise((r) => setTimeout(r, LOCK_POLL_MS));
+      }
+    }
+    try {
+      return await fn();
+    } finally {
+      rmSync(lock, { force: true });
+    }
   }
 
   list(): CachedState[] {

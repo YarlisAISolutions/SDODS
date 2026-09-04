@@ -154,6 +154,14 @@ export function buildPlaywrightConfig(
             name: pwProjectName({ project: p.slug, layer, browser }),
             testDir: recordedDir,
             testMatch: '**/*.spec.ts',
+            snapshotPathTemplate: join(
+              p.root,
+              'features',
+              '__screenshots__',
+              '{projectName}',
+              '{platform}',
+              '{arg}{ext}',
+            ),
             use: {
               ...devices[DEVICE_FOR_BROWSER[browser]],
               ...(p.channel && (browser === 'chromium' || browser === 'mobile-chrome')
@@ -207,6 +215,16 @@ export function buildPlaywrightConfig(
         projects.push({
           name: pwProjectName({ project: p.slug, layer, browser }),
           testDir,
+          // Baselines live with the project (generated specs are per-run and deleted):
+          // projects/<slug>/features/__screenshots__/<pw project>/<platform>/<name>.png
+          snapshotPathTemplate: join(
+            p.root,
+            'features',
+            '__screenshots__',
+            '{projectName}',
+            '{platform}',
+            '{arg}{ext}',
+          ),
           use: {
             ...devices[DEVICE_FOR_BROWSER[browser]],
             ...(p.channel && (browser === 'chromium' || browser === 'mobile-chrome')
