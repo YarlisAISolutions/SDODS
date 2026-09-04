@@ -119,3 +119,25 @@ textarea:focus {
   outline: 2px solid var(--brand);
   outline-offset: 1px;
 }
+
+/* The only motion on the site: the amber marker breathing on the roadmap rail. */
+.pulse-today {
+  transform-origin: center;
+  animation: pulse-today 3.4s ease-in-out infinite;
+}
+@keyframes pulse-today {
+  0%,
+  100% {
+    opacity: 1;
+    r: 22;
+  }
+  50% {
+    opacity: 0.3;
+    r: 30;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pulse-today {
+    animation: none;
+  }
+}
