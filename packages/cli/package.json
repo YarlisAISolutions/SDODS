@@ -39,7 +39,8 @@
     "@automax/mcp": "workspace:*",
     "@automax/agents": "workspace:*",
     "@automax/db": "workspace:*",
-    "csv-parse": "^7.0.2"
+    "csv-parse": "^7.0.2",
+    "@automax/server": "workspace:*"
   },
   "devDependencies": {
     "@types/semver": "^7.7.0"

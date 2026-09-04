@@ -1,0 +1,49 @@
+{
+  "name": "@automax/server",
+  "version": "0.1.0",
+  "description": "AutoMax web server: Fastify REST API, SSE run streams, sessions/roles/API tokens, run manager, cron scheduler, MCP over HTTP, static reports and the web UI.",
+  "license": "Apache-2.0",
+  "author": "Sireesh Yarlagadda (https://www.linkedin.com/in/yarlagadda/)",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./schemas": "./src/schemas/index.ts"
+  },
+  "publishConfig": {
+    "exports": {
+      ".": "./dist/index.js",
+      "./schemas": "./dist/schemas/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "@automax/contracts": "workspace:*",
+    "@automax/core": "workspace:*",
+    "@automax/db": "workspace:*",
+    "@automax/mcp": "workspace:*",
+    "@fastify/cookie": "^11.1.2",
+    "@fastify/multipart": "^10.1.1",
+    "@fastify/rate-limit": "^11.2.0",
+    "@fastify/static": "^10.1.3",
+    "argon2": "^0.45.1",
+    "croner": "^10.0.1",
+    "csv-parse": "^7.0.2",
+    "execa": "^10.0.1",
+    "fastify": "^5.12.1",
+    "picocolors": "^1.1.1",
+    "pixelmatch": "^7.2.0",
+    "pngjs": "^7.0.0",
+    "yaml": "^2.9.0",
+    "zod": "^4.5.4",
+    "fastify-plugin": "^5.0.1"
+  },
+  "devDependencies": {
+    "@types/pngjs": "^6.0.5",
+    "@types/pixelmatch": "^5.2.6"
+  }
+}
