@@ -15,6 +15,8 @@ export interface SwitchOptions {
   targetUrl?: string;
   targetPath?: string;
   dryRun?: boolean;
+  /** clear the target's platform tables before importing (required when the target has data) */
+  truncate?: boolean;
   envFile?: string;
   keepExport?: boolean;
 }
@@ -50,12 +52,49 @@ export async function switchDriver(opts: SwitchOptions): Promise<SwitchResult> {
   const dir = mkdtempSync(join(tmpdir(), 'automax-switch-'));
   try {
     await migrateToLatest(target);
-    await exportAll(opts.source, dir);
-    await importAll(target, dir);
+
+    // A target that already holds platform rows cannot be merged safely: slug conflicts would keep
+    // the target's ids while child rows reference the source's ids (foreign key failures).
+    const occupied: string[] = [];
+    for (const table of TABLES_IN_FK_ORDER) {
+      const n = await countRows(target, table).catch(() => 0);
+      if (n > 0) occupied.push(`${table} (${n})`);
+    }
+    if (occupied.length && !opts.truncate) {
+      throw new Error(
+        `Target ${targetCfg.driver} database already has data in ${occupied.join(', ')}. ` +
+          'Point at an empty database, or pass --truncate to clear its platform tables first.',
+      );
+    }
+    if (occupied.length && opts.truncate && !opts.dryRun) {
+      for (const table of [...TABLES_IN_FK_ORDER].reverse()) {
+        await target.db.deleteFrom(table as any).execute();
+      }
+    }
+
     const tables = [
       ...TABLES_IN_FK_ORDER,
       ...(await listTdTables(opts.source.db as any, opts.source.driver)),
     ];
+
+    if (opts.dryRun) {
+      // Verify without writing: report what would be copied and confirm the target is (or will be) empty.
+      const rows: SwitchResult['tables'] = [];
+      for (const table of tables) {
+        const s = await countRows(opts.source, table);
+        const t = await countRows(target, table).catch(() => 0);
+        rows.push({
+          table,
+          source: s,
+          target: opts.truncate ? 0 : t,
+          ok: opts.truncate || t === 0,
+        });
+      }
+      return { target: targetCfg, dryRun: true, tables: rows, ok: rows.every((r) => r.ok) };
+    }
+
+    await exportAll(opts.source, dir);
+    await importAll(target, dir);
     const rows: SwitchResult['tables'] = [];
     for (const table of tables) {
       const s = await countRows(opts.source, table);
@@ -65,11 +104,11 @@ export async function switchDriver(opts: SwitchOptions): Promise<SwitchResult> {
     const ok = rows.every((r) => r.ok);
     const result: SwitchResult = {
       target: targetCfg,
-      dryRun: Boolean(opts.dryRun),
+      dryRun: false,
       tables: rows,
       ok,
     };
-    if (!ok || opts.dryRun) return result;
+    if (!ok) return result;
     const envFile = resolve(opts.envFile ?? '.env');
     result.envFile = envFile;
     result.envChanges = rewriteEnv(envFile, targetCfg);

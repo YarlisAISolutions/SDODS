@@ -102,17 +102,45 @@ describe('export / import / switch / prune', () => {
     });
     expect(dry.ok).toBe(true);
     expect(dry.dryRun).toBe(true);
+    // a dry run never writes into the target: it reports what would be copied
     expect(dry.tables.find((t) => t.table === 'runs')).toMatchObject({
       source: 3,
-      target: 3,
+      target: 0,
       ok: true,
     });
     expect(readFileSync(envFile, 'utf8')).toContain('DB_DRIVER=sqlite');
     const real = await switchDriver({ source: adb, target: 'sqlite', targetPath, envFile });
     expect(real.ok).toBe(true);
+    expect(real.tables.find((t) => t.table === 'runs')).toMatchObject({ source: 3, target: 3 });
     const env = readFileSync(envFile, 'utf8');
     expect(env).toContain(`SQLITE_PATH=${targetPath}`);
     expect(env).toContain('PORT=4444');
+
+    // the target now holds data: a second switch must refuse unless --truncate is given
+    await expect(
+      switchDriver({ source: adb, target: 'sqlite', targetPath, envFile, dryRun: true }),
+    ).rejects.toThrow(/already has data/);
+    const truncatedDry = await switchDriver({
+      source: adb,
+      target: 'sqlite',
+      targetPath,
+      envFile,
+      dryRun: true,
+      truncate: true,
+    });
+    expect(truncatedDry.ok).toBe(true);
+    const truncated = await switchDriver({
+      source: adb,
+      target: 'sqlite',
+      targetPath,
+      envFile,
+      truncate: true,
+    });
+    expect(truncated.ok).toBe(true);
+    expect(truncated.tables.find((t) => t.table === 'runs')).toMatchObject({
+      source: 3,
+      target: 3,
+    });
   });
 
   it('rewriteEnv switches to postgres and comments out the sqlite path', () => {
