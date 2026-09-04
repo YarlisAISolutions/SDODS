@@ -1,17 +1,31 @@
 name: docs
 
+# Builds the Fumadocs site (apps/docs) and deploys it to Firebase Hosting.
+# - push to main → live channel at https://automax.sdods.com
+# - pull request  → temporary preview channel (URL posted on the PR)
+
 on:
   push:
     branches: [main]
-    paths: ['apps/docs/**', 'packages/**', 'projects/**', '.github/workflows/docs.yml']
+    paths:
+      - 'apps/docs/**'
+      - 'packages/contracts/**'
+      - 'packages/cli/**'
+      - 'firebase.json'
+      - '.firebaserc'
+      - '.github/workflows/docs.yml'
   pull_request:
-    paths: ['apps/docs/**', '.github/workflows/docs.yml']
+    paths:
+      - 'apps/docs/**'
+      - 'firebase.json'
+      - '.firebaserc'
+      - '.github/workflows/docs.yml'
   workflow_dispatch:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
+  checks: write
+  pull-requests: write
 
 concurrency:
   group: docs-${{ github.ref }}
@@ -29,21 +43,34 @@ jobs:
         with:
           node-version: 22
       - run: bun install --frozen-lockfile
-      - name: Verify documented commands against the CLI
+      - name: Verify executable examples
         run: bun run docs:verify
-      - name: Build static site (collect screenshots, next build, check links)
+      - name: Build (root base path for automax.sdods.com)
         run: bun run docs:build
-      - uses: actions/upload-pages-artifact@v3
+        env:
+          NEXT_PUBLIC_SITE_URL: https://automax.sdods.com
+      - uses: actions/upload-artifact@v4
         with:
+          name: docs-site
           path: apps/docs/out
+          retention-days: 7
 
   deploy:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     needs: build
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: docs-site
+          path: apps/docs/out
+      - name: Deploy to Firebase Hosting
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_AUTOMAX_DOCS }}
+          projectId: automax-docs
+          target: docs
+          channelId: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.number) || 'live' }}
+          expires: 7d
