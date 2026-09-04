@@ -1,0 +1,119 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-brand-50: #eef2ff;
+  --color-brand-100: #e0e7ff;
+  --color-brand-500: #6366f1;
+  --color-brand-600: #4f46e5;
+  --color-brand-700: #4338ca;
+  --color-accent-400: #2dd4bf;
+  --color-accent-500: #14b8a6;
+  --font-sans: Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+:root {
+  color-scheme: light dark;
+  --bg: #f8fafc;
+  --panel: #ffffff;
+  --panel-2: #f1f5f9;
+  --border: #e2e8f0;
+  --text: #0f172a;
+  --muted: #64748b;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0b1220;
+    --panel: #111a2e;
+    --panel-2: #172238;
+    --border: #243049;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+  }
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 13.5px;
+  -webkit-font-smoothing: antialiased;
+}
+* {
+  box-sizing: border-box;
+}
+a {
+  color: inherit;
+}
+::selection {
+  background: var(--color-brand-500);
+  color: white;
+}
+:focus-visible {
+  outline: 2px solid var(--color-brand-500);
+  outline-offset: 2px;
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.panel-2 {
+  background: var(--panel-2);
+}
+.muted {
+  color: var(--muted);
+}
+.border-line {
+  border-color: var(--border);
+}
+.mono {
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+.scrollbar-thin::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 8px;
+}
+
+/* CodeMirror */
+.cm-editor {
+  height: 100%;
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+.cm-editor.cm-focused {
+  outline: none;
+}
+.cm-gherkin-keyword {
+  color: var(--color-brand-600);
+  font-weight: 600;
+}
+
+/* status colours */
+.status-passed {
+  color: #16a34a;
+}
+.status-failed {
+  color: #dc2626;
+}
+.status-skipped {
+  color: #a16207;
+}
+.status-running {
+  color: #2563eb;
+}
+.status-flaky {
+  color: #d97706;
+}

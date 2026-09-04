@@ -15,7 +15,7 @@
   ],
   "scripts": {
     "automax": "node --import tsx ./packages/cli/src/bin.ts",
-    "typecheck": "tsc -b",
+    "typecheck": "tsc -b && bun run --filter @automax/web typecheck",
     "lint": "eslint . && prettier --check .",
     "format": "prettier --write .",
     "test": "vitest run",
@@ -26,7 +26,9 @@
     "release:check": "node --import tsx ./packages/cli/src/bin.ts run -p demo-shop --project-matrix --har-replay --strict",
     "docs:dev": "bun run --cwd apps/docs dev",
     "docs:build": "bun run --cwd apps/docs build",
-    "docs:verify": "bun run --cwd apps/docs verify"
+    "docs:verify": "bun run --cwd apps/docs verify",
+    "web:dev": "bun run --filter @automax/web dev:mocks",
+    "web:build": "bun run --filter @automax/web build"
   },
   "devDependencies": {
     "@types/node": "^22.15.0",
