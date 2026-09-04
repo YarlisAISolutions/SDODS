@@ -290,7 +290,7 @@ export class GitHubProvider implements IntegrationProvider<GitHubConfig> {
             '',
             ...summary.failed.map(
               (s) =>
-                `- \`${s.pwProject}\` ${s.featureName} › ${s.scenarioName}${s.errorMessage ? `<br/><code>${escapeHtml(firstLine(s.errorMessage))}</code>` : ''}`,
+                `- \`${s.runnerProject}\` ${s.featureName} › ${s.scenarioName}${s.errorMessage ? `<br/><code>${escapeHtml(firstLine(s.errorMessage))}</code>` : ''}`,
             ),
             '',
             '</details>',

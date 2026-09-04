@@ -3,7 +3,7 @@ import { join, relative } from 'node:path';
 import type { TestInfo } from '@playwright/test';
 import {
   fingerprint as makeFingerprint,
-  parsePwProjectName,
+  parseRunnerProjectName,
   scenarioFiles,
   type BrowserName,
   type Layer,
@@ -32,7 +32,7 @@ export class ScenarioMeta {
   constructor(init: ScenarioInit) {
     const { config, testInfo, tags } = init;
     const featureUri = relative(config.project.root, init.featureUri).replace(/\\/g, '/');
-    const parts = parsePwProjectName(testInfo.project.name);
+    const parts = parseRunnerProjectName(testInfo.project.name);
     const layer = (parts?.layer ?? init.sdods.layer) as Layer;
     const browser = (parts?.browser ?? init.sdods.browser) as BrowserName | undefined;
     const fp = makeFingerprint({
@@ -54,7 +54,7 @@ export class ScenarioMeta {
       project: config.project.slug,
       layer,
       browser,
-      pwProject: testInfo.project.name,
+      runnerProject: testInfo.project.name,
       featureUri,
       featureName: testInfo.titlePath[1] ?? '',
       scenarioName: testInfo.title,

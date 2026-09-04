@@ -18,7 +18,7 @@ export async function listSteps(
     SDODS_ARTIFACTS_DIR: join(rootDir, '.sdods', 'lint'),
     SDODS_LAYERS: '',
   };
-  const args = ['bddgen', 'export', '-c', join(rootDir, 'playwright.config.ts')];
+  const args = ['bddgen', 'export', '-c', join(rootDir, 'sdods.runner.config.ts')];
   if (opts.unused) args.push('--unused-steps');
   const result = await execa('npx', args, { cwd: rootDir, env, reject: false, all: true });
   if (result.exitCode !== 0) {

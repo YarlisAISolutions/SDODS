@@ -16,7 +16,7 @@ Re-runnable recipe. Ask for the parameters you do not have, then follow the step
 | `name` | yes | `checkout-standard` | becomes `recorded/<name>.spec.ts`; include the role in the name |
 | `role` | no | `standard`, `problem`, `admin` | leases a pool user of that role and starts logged in (storageState) |
 | `url` | no | `/inventory.html` | route path or absolute URL to open first |
-| `device` | no | `"iPhone 15"`, `"Pixel 7"` | Playwright device name for mobile emulation |
+| `device` | no | `"iPhone 15"`, `"Pixel 7"` | device name for mobile emulation |
 | `browser` | no | `chromium` (default), `firefox`, `webkit` | |
 | `har` | no | `true` | also capture network into `har/<env>/<name>.har` for offline replay |
 
@@ -32,7 +32,7 @@ Re-runnable recipe. Ask for the parameters you do not have, then follow the step
    bun run sdods auth list -p <project> -e <env>
    bun run sdods auth capture -p <project> -e <env> --user <role>      # only if missing or expired
    ```
-3. **Record** (opens Playwright codegen; the person performs the flow and closes the window):
+3. **Record** (opens the recorder; the person performs the flow and closes the window):
    ```bash
    bun run sdods record -p <project> -e <env> --name <name> [--user <role>] [--url <url>] [--device "<device>"] [--browser <browser>] [--save-har]
    ```

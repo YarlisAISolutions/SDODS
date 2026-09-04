@@ -41,7 +41,7 @@ heal:
 
 ## What is recorded
 
-Every heal is attached to the scenario (`sdods/heal/<step>/<n>`), appended to `heal.jsonl` in the run directory, annotated on the Playwright test, and logged with the suggested rewrite. With a database, heals feed `heal_events` and `locator_stats`.
+Every heal is attached to the scenario (`sdods/heal/<step>/<n>`), appended to `heal.jsonl` in the run directory, annotated on the test, and logged with the suggested rewrite. With a database, heals feed `heal_events` and `locator_stats`.
 
 ```bash
 bun run sdods heal report --last

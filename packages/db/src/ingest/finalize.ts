@@ -135,10 +135,10 @@ export async function finalizeRun(
     .execute();
 
   // flaky stats over the window for every scenario key touched by this run
-  const keys = new Set(scenarios.map((s) => `${s.fingerprint}|${s.pw_project}`));
+  const keys = new Set(scenarios.map((s) => `${s.fingerprint}|${s.runner_project}`));
   for (const key of keys) {
-    const [fingerprint, pwProject] = key.split('|') as [string, string];
-    await recomputeFlakyStats(db, driver, { projectId, fingerprint, pwProject });
+    const [fingerprint, runnerProject] = key.split('|') as [string, string];
+    await recomputeFlakyStats(db, driver, { projectId, fingerprint, runnerProject });
   }
   // locator stats
   for (const [selector, c] of input.locatorCounters) {

@@ -180,7 +180,7 @@ function ndjson(): string {
         testCaseStartedId: 'tc2-attempt-0',
         fileName: 'trace',
         mediaType: 'application/zip',
-        url: 'pw-output/tc2/trace.zip',
+        url: 'runner-output/tc2/trace.zip',
       },
     },
     {
@@ -251,7 +251,7 @@ describe('buildRunSummaryFromFiles', () => {
       layer: 'ui',
       suiteTag: '@smoke',
       line: 5,
-      pwProject: 'shop--ui--chromium',
+      runnerProject: 'shop--ui--chromium',
       featureUri: 'features/ui/login.feature',
       featureName: 'Login',
     });
@@ -277,7 +277,7 @@ describe('buildRunSummaryFromFiles', () => {
       line: 12,
       errorMessage: 'expected 1 to be 2',
       jiraKeys: ['SHOP-7'],
-      tracePath: 'pw-output/tc2/trace.zip',
+      tracePath: 'runner-output/tc2/trace.zip',
     });
     expect(s.flaky.map((x) => x.scenarioName)).toEqual(['Successful login']);
     expect(s.passed.map((x) => x.scenarioName)).toEqual(['Successful login']);

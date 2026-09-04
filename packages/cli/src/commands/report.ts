@@ -21,7 +21,7 @@ function latestRunId(root: string): string | null {
         statSync(d.dir).isDirectory() &&
         (existsSync(join(d.dir, runFiles.manifest)) ||
           existsSync(join(d.dir, runFiles.messages)) ||
-          existsSync(join(d.dir, runFiles.pwResults))),
+          existsSync(join(d.dir, runFiles.results))),
     )
     .sort((a, b) => statSync(b.dir).mtimeMs - statSync(a.dir).mtimeMs);
   return dirs[0]?.name ?? null;
@@ -48,8 +48,8 @@ export function register(program: Command) {
     .description('Open reports of a run, ingest results into the database, render dashboards')
     .option('--last', 'use the most recent run')
     .option('--run <id>', 'run id')
-    .option('--open', 'open the Playwright HTML report and dashboard')
-    .option('--html', 'open only the Playwright HTML report')
+    .option('--open', 'open the HTML report and dashboard')
+    .option('--html', 'open only the HTML report')
     .option('--dashboard', 'open only the SDODS dashboard')
     .action(async (opts, cmd) => {
       const ctx = createContext(cmd);
@@ -63,7 +63,7 @@ export function register(program: Command) {
       const dir = join(root, runId);
       const manifest = readJsonFile<Record<string, unknown>>(join(dir, runFiles.manifest));
       const summary = readJsonFile<Record<string, unknown>>(join(dir, runFiles.summary));
-      const html = join(dir, runFiles.pwReport, 'index.html');
+      const html = join(dir, runFiles.htmlReport, 'index.html');
       const dashboard = join(dir, runFiles.dashboard, 'index.html');
       const info = {
         runId,
@@ -101,11 +101,11 @@ export function register(program: Command) {
 
   report
     .command('ingest [files...]')
-    .description('Ingest cucumber messages NDJSON and Playwright JSON results into the database')
+    .description('Ingest cucumber messages NDJSON and runner JSON results into the database')
     .requiredOption('--run-id <id>', 'run id (directory name under the artifacts root)')
     .option('-p, --project <slug>', 'project slug when run.json is missing')
     .option('--manifest <file>', 'explicit run.json path')
-    .option('--format <fmt>', 'auto|cucumber|pw-json', 'auto')
+    .option('--format <fmt>', 'auto|cucumber|runner-json (alias: pw-json)', 'auto')
     .option('--artifacts-dir <dir>', 'artifacts root (default .sdods/runs)')
     .option('--replace', 'delete previously ingested rows of this run first')
     .option('-e, --env <name>', 'environment name when run.json is missing')
@@ -162,16 +162,19 @@ export function register(program: Command) {
           ? resolve(ctx.rootDir, opts.artifactsDir)
           : artifactsRoot(ctx.rootDir);
         const ndjson: string[] = [];
-        const pwJson: string[] = [];
+        const runnerJson: string[] = [];
         for (const f of files) {
           const abs = resolve(ctx.rootDir, f);
           const fmt =
             opts.format === 'auto'
               ? abs.endsWith('.ndjson')
                 ? 'cucumber'
-                : 'pw-json'
-              : opts.format;
-          (fmt === 'cucumber' ? ndjson : pwJson).push(abs);
+                : 'runner-json'
+              : // `pw-json` is the pre-1.0 name, still accepted
+                opts.format === 'pw-json'
+                ? 'runner-json'
+                : opts.format;
+          (fmt === 'cucumber' ? ndjson : runnerJson).push(abs);
         }
         const manifest = opts.manifest
           ? readJsonFile<any>(resolve(ctx.rootDir, opts.manifest))
@@ -181,7 +184,7 @@ export function register(program: Command) {
           projectSlug: opts.project,
           manifest,
           ndjsonPaths: ndjson,
-          pwJsonPaths: pwJson,
+          runnerJsonPaths: runnerJson,
           artifactsRoot: root,
           replace: Boolean(opts.replace),
           env: opts.env,
@@ -202,9 +205,60 @@ export function register(program: Command) {
       }
     });
 
+  report
+    .command('merge <dirs...>')
+    .description('Merge sharded run reports into one HTML report and JUnit file')
+    .option('--run <id>', 'run id to write the merged report into (default: latest)')
+    .option('--reporter <list>', 'reporters for the merged output', 'html,junit')
+    .action(async (dirs: string[], opts, cmd) => {
+      const ctx = createContext(cmd);
+      const root = artifactsRoot(ctx.rootDir);
+      const runId: string | null = opts.run ?? latestRunId(root);
+      if (!runId) {
+        throw new SdodsError('CONFIG_NOT_FOUND', 'No run to merge into.', {
+          hint: 'Pass --run <id>, or run a suite first.',
+          exitCode: 2,
+        });
+      }
+      const runDir = join(root, runId);
+      const missing = dirs.filter((d) => !existsSync(resolve(ctx.rootDir, d)));
+      if (missing.length) {
+        throw new SdodsError(
+          'CONFIG_NOT_FOUND',
+          `No such shard report directory: ${missing.join(', ')}`,
+          {
+            hint: 'Each argument is a directory of shard reports downloaded from CI.',
+            exitCode: 2,
+          },
+        );
+      }
+      // Shard reports are produced by `sdods run --reporter blob --shard i/n`; merging them
+      // rebuilds one HTML report and JUnit file for the whole matrix.
+      const args = [
+        'playwright',
+        'merge-reports',
+        '--reporter',
+        opts.reporter,
+        ...dirs.map((d) => resolve(ctx.rootDir, d)),
+      ];
+      const res = await execa('npx', args, {
+        cwd: ctx.rootDir,
+        reject: false,
+        env: { ...process.env, PLAYWRIGHT_HTML_OUTPUT_DIR: join(runDir, runFiles.htmlReport) },
+      });
+      if (res.exitCode !== 0) {
+        throw new SdodsError('RUN_FAILED', `Merging shard reports failed (exit ${res.exitCode}).`, {
+          hint: res.stderr?.split('\n').slice(-3).join(' ') || undefined,
+        });
+      }
+      if (ctx.opts.json)
+        return json({ runId, merged: dirs.length, htmlReport: join(runDir, runFiles.htmlReport) });
+      ok(`Merged ${dirs.length} shard report dir(s) into ${join(runDir, runFiles.htmlReport)}`);
+    });
+
   program
     .command('show-report')
-    .description('Open the Playwright HTML report of a run')
+    .description('Open the HTML report of a run')
     .option('--run <id>', 'run id (default: latest)')
     .action(async (opts, cmd) => {
       const ctx = createContext(cmd);
@@ -212,10 +266,10 @@ export function register(program: Command) {
       const runId: string | null = opts.run ?? latestRunId(root);
       if (!runId)
         throw new SdodsError('RUN_FAILED', `No runs found under ${root}.`, { exitCode: 2 });
-      const html = join(root, runId, runFiles.pwReport, 'index.html');
+      const html = join(root, runId, runFiles.htmlReport, 'index.html');
       if (!existsSync(html))
         throw new SdodsError('RUN_FAILED', `No HTML report at ${html}.`, { exitCode: 2 });
-      await execa('npx', ['playwright', 'show-report', join(root, runId, runFiles.pwReport)], {
+      await execa('npx', ['playwright', 'show-report', join(root, runId, runFiles.htmlReport)], {
         stdio: 'inherit',
         cwd: ctx.rootDir,
       });

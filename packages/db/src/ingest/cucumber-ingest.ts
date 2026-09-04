@@ -1,5 +1,9 @@
 import { join } from 'node:path';
-import { fingerprint as makeFingerprint, newId, parsePwProjectName } from '@sdods/contracts/ids';
+import {
+  fingerprint as makeFingerprint,
+  newId,
+  parseRunnerProjectName,
+} from '@sdods/contracts/ids';
 import type { ParsedAttachment } from '@sdods/contracts/names';
 import type {
   ApiSnapshot,
@@ -106,8 +110,8 @@ export class IngestSession {
     if (!testCase) return;
     const pickle = this.idx.pickles.get(testCase.pickleId);
     if (!pickle) return;
-    const { pwProject, uri } = splitUri(pickle.uri);
-    const parts = pwProject ? parsePwProjectName(pwProject) : null;
+    const { runnerProject, uri } = splitUri(pickle.uri);
+    const parts = runnerProject ? parseRunnerProjectName(runnerProject) : null;
     const slug = parts?.project ?? this.ctx.projectSlug;
     const layer = parts?.layer ?? layerFromTags(pickle.tags) ?? 'ui';
     const browser = parts?.browser ?? null;
@@ -120,7 +124,7 @@ export class IngestSession {
       exampleIndex,
       layer,
     });
-    const naturalKey = `${pwProject ?? layer}:${pickle.id}`;
+    const naturalKey = `${runnerProject ?? layer}:${pickle.id}`;
     const attempt = Number(tcs.attempt ?? 0);
     const { db, driver } = this.ctx.adb;
 
@@ -149,7 +153,7 @@ export class IngestSession {
           scenario_name: exampleIndex ? pickle.name : scenarioName,
           module: moduleFromUri(uri),
           examples_row: exampleIndex,
-          pw_project: pwProject ?? `${slug}--${layer}`,
+          runner_project: runnerProject ?? `${slug}--${layer}`,
           layer,
           browser,
           suite_tag: suiteFromTags(pickle.tags),

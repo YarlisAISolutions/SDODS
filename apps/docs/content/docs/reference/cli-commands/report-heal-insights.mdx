@@ -7,11 +7,11 @@ description: Open reports, ingest results and inspect self-healing events.
 
 ```text
 sdods report [--last | --run <id>] [--open] [--html] [--dashboard]
-sdods report ingest [files...] --run-id <id> [-p <slug>] [-e <env>] [--manifest <file>] [--format auto|cucumber|pw-json] [--artifacts-dir <dir>] [--replace]
+sdods report ingest [files...] --run-id <id> [-p <slug>] [-e <env>] [--manifest <file>] [--format auto|cucumber|runner-json] [--artifacts-dir <dir>] [--replace]
 sdods show-report [--run <id>]
 ```
 
-`report` prints the summary of a run (totals, failed and flaky scenarios, report paths); `--open` opens the Playwright HTML report and the SDODS dashboard, `--html` / `--dashboard` open one of them. `report ingest` loads cucumber messages NDJSON and Playwright JSON results into the database (`sdods run` does this automatically when a database is configured); `--replace` deletes previously ingested rows of the run first. `show-report` opens the Playwright HTML report of the latest or a given run.
+`report` prints the summary of a run (totals, failed and flaky scenarios, report paths); `--open` opens the HTML report and the SDODS dashboard, `--html` / `--dashboard` open one of them. `report ingest` loads cucumber messages NDJSON and runner JSON results into the database (`sdods run` does this automatically when a database is configured); `--replace` deletes previously ingested rows of the run first. `show-report` opens the HTML report of the latest or a given run.
 
 ## `heal report`
 

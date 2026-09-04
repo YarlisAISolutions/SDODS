@@ -15,7 +15,7 @@ sdods record convert <spec> [--dry-run] [--adapter claude|openai|fake]
 | -------------------------- | ----------------------------------------------------------------------------------------------- |
 | `--name <name>`            | recording name → `recorded/<name>.spec.ts` (default `rec-<timestamp>`)                          |
 | `--url <route\|path\|url>` | route name from the project YAML, a path, or an absolute URL (default `/`)                      |
-| `--device <name>`          | Playwright device, e.g. `"iPhone 15"`                                                           |
+| `--device <name>`          | device name, e.g. `"iPhone 15"`                                                                 |
 | `--user <role>`            | lease a pool user of this role and start logged in (storage state)                              |
 | `-b, --browser <name>`     | `chromium` (default), `firefox`, `webkit`                                                       |
 | `--save-har`               | also capture network into `har/<env>/<name>.har`; `--har-glob` limits the URLs (default `**/*`) |

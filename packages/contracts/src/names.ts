@@ -35,8 +35,8 @@ export type ParsedAttachment =
   | { kind: 'a11y'; stepIndex: number }
   | { kind: 'cleanup-errors' }
   | { kind: 'meta' }
-  | { kind: 'pw-visual'; phase: 'expected' | 'actual' | 'diff'; name: string }
-  | { kind: 'pw-builtin'; name: 'trace' | 'screenshot' | 'video' }
+  | { kind: 'visual-baseline'; phase: 'expected' | 'actual' | 'diff'; name: string }
+  | { kind: 'runner-builtin'; name: 'trace' | 'screenshot' | 'video' }
   | { kind: 'other'; name: string };
 
 export function parseAttachmentName(name: string): ParsedAttachment {
@@ -87,12 +87,12 @@ export function parseAttachmentName(name: string): ParsedAttachment {
   const visual = /^(.*)-(expected|actual|diff)\.png$/.exec(name);
   if (visual)
     return {
-      kind: 'pw-visual',
+      kind: 'visual-baseline',
       phase: visual[2] as 'expected' | 'actual' | 'diff',
       name: visual[1]!,
     };
   if (name === 'trace' || name === 'screenshot' || name === 'video')
-    return { kind: 'pw-builtin', name };
+    return { kind: 'runner-builtin', name };
   return { kind: 'other', name };
 }
 
@@ -119,11 +119,23 @@ export const runFiles = {
   manifest: 'run.json',
   messages: 'messages.ndjson',
   messagesShard: (shard: number) => `messages.shard-${shard}.ndjson`,
-  pwResults: 'pw-results.json',
-  pwReport: 'playwright-report',
+  results: 'runner-results.json',
+  htmlReport: 'html-report',
   dashboard: 'dashboard',
-  pwOutput: 'pw-output',
+  output: 'runner-output',
   junit: 'junit.xml',
   log: 'run.log',
   summary: 'summary.json',
+  shardReports: 'shard-reports',
+} as const;
+
+/**
+ * Names these files carried before the engine-neutral rename. Run directories are long-lived —
+ * ingest and the report route still read them so history recorded by an older version keeps working.
+ */
+export const legacyRunFiles = {
+  results: 'pw-results.json',
+  htmlReport: 'playwright-report',
+  output: 'pw-output',
+  shardReports: 'blob-report',
 } as const;

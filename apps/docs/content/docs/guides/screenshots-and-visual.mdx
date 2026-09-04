@@ -44,7 +44,7 @@ An environment file may override the section, for example `screenshots: { onlyOn
   failure.png
 ```
 
-Each file is also attached to the Playwright test with a stable name (`sdods/shot/step/03/before`), which is what the database ingest and the run viewer pair up. API steps attach `request.json` and `response.json` instead.
+Each file is also attached to the test with a stable name (`sdods/shot/step/03/before`), which is what the database ingest and the run viewer pair up. API steps attach `request.json` and `response.json` instead.
 
 ## Sample output
 
@@ -81,7 +81,7 @@ Baselines live under `projects/<slug>/features/__screenshots__/<browser>/` and a
 
 - `onlyOnFailure: true` (or the environment variable) keeps the visual baseline check but drops step captures.
 - Captures are skipped when a step made only API calls and the URL did not change.
-- Videos and traces stay on Playwright's `retain-on-failure` and `on-first-retry` settings.
+- Videos and traces stay on the `retain-on-failure` and `on-first-retry` settings.
 
 ## Next steps
 

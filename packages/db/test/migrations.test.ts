@@ -5,6 +5,7 @@ import { createMemoryDb } from '../src/create-db.js';
 import {
   MIGRATION_NAMES,
   migrateDown,
+  migrateTo,
   migrateToLatest,
   migrationStatus,
   resetDatabase,
@@ -85,6 +86,106 @@ describe('migrations (sqlite in-memory)', () => {
       adb.db,
     );
     expect(tables.rows.length).toBe(0);
+    await migrateToLatest(adb);
+  });
+});
+
+describe('0008_runner_naming carries existing rows through the rename', () => {
+  const adb = createMemoryDb();
+  afterAll(() => adb.close());
+
+  /** Minimal project/run/scenario/flaky rows written with the pre-rename column names. */
+  async function seedLegacyRows() {
+    const json = '{}';
+    await sql`insert into projects
+      (id, slug, name, config_json, layers_json, browsers_json, tags_policy_json, screenshot_policy_json)
+      values ('p1', 'demo-shop', 'Demo Shop', ${json}, ${json}, ${json}, ${json}, ${json})`.execute(
+      adb.db,
+    );
+    await sql`insert into runs
+      (id, project_id, env_name, layers_json, browsers_json, totals_json, pw_report_rel)
+      values ('r1', 'p1', 'staging', ${json}, ${json}, ${json}, 'playwright-report')`.execute(
+      adb.db,
+    );
+    await sql`insert into scenarios
+      (id, run_id, project_id, natural_key, fingerprint, source, feature_uri, scenario_name,
+       pw_project, layer, tags_json, jira_keys_json)
+      values ('s1', 'r1', 'p1', 'nk1', 'fp1', 'pw-json', 'recorded/checkout.spec.ts',
+              'checkout happy path', 'demo-shop--recorded--chromium', 'recorded', ${json}, ${json})`.execute(
+      adb.db,
+    );
+    await sql`insert into scenarios
+      (id, run_id, project_id, natural_key, fingerprint, source, feature_uri, scenario_name,
+       pw_project, layer, tags_json, jira_keys_json)
+      values ('s2', 'r1', 'p1', 'nk2', 'fp2', 'gherkin', 'features/ui/login.feature',
+              'Successful login', 'demo-shop--ui--chromium', 'ui', ${json}, ${json})`.execute(
+      adb.db,
+    );
+    await sql`insert into flaky_stats
+      (id, project_id, fingerprint, pw_project, runs_count, flaky_count, flaky_rate)
+      values ('f1', 'p1', 'fp2', 'demo-shop--ui--chromium', 9, 3, 0.33)`.execute(adb.db);
+  }
+
+  it('renames columns, rewrites the source value, and leaves other data intact', async () => {
+    await migrateTo(adb, '0007_hierarchy');
+    await seedLegacyRows();
+    await migrateToLatest(adb);
+
+    const scenarios = await sql<{
+      id: string;
+      source: string;
+      runner_project: string;
+    }>`select id, source, runner_project from scenarios order by id`.execute(adb.db);
+    expect(scenarios.rows).toEqual([
+      { id: 's1', source: 'runner-json', runner_project: 'demo-shop--recorded--chromium' },
+      { id: 's2', source: 'gherkin', runner_project: 'demo-shop--ui--chromium' },
+    ]);
+
+    const runs = await sql<{
+      html_report_rel: string;
+    }>`select html_report_rel from runs`.execute(adb.db);
+    expect(runs.rows[0]?.html_report_rel).toBe('playwright-report');
+
+    const flaky = await sql<{
+      runner_project: string;
+      runs_count: number;
+      flaky_count: number;
+    }>`select runner_project, runs_count, flaky_count from flaky_stats`.execute(adb.db);
+    expect(flaky.rows[0]).toMatchObject({
+      runner_project: 'demo-shop--ui--chromium',
+      runs_count: 9,
+      flaky_count: 3,
+    });
+
+    const idx = await sql<{
+      name: string;
+    }>`select name from sqlite_master where type='index' and tbl_name='flaky_stats'`.execute(
+      adb.db,
+    );
+    const idxNames = idx.rows.map((r) => r.name);
+    expect(idxNames).toContain('uq_flaky_project_fp_runner');
+    expect(idxNames).not.toContain('uq_flaky_project_fp_pw');
+  });
+
+  it('reverts cleanly on rollback', async () => {
+    await migrateDown(adb);
+    const scenarios = await sql<{
+      id: string;
+      source: string;
+      pw_project: string;
+    }>`select id, source, pw_project from scenarios order by id`.execute(adb.db);
+    expect(scenarios.rows).toEqual([
+      { id: 's1', source: 'pw-json', pw_project: 'demo-shop--recorded--chromium' },
+      { id: 's2', source: 'gherkin', pw_project: 'demo-shop--ui--chromium' },
+    ]);
+    const runs = await sql<{
+      pw_report_rel: string;
+    }>`select pw_report_rel from runs`.execute(adb.db);
+    expect(runs.rows[0]?.pw_report_rel).toBe('playwright-report');
+    const flaky = await sql<{
+      pw_project: string;
+    }>`select pw_project from flaky_stats`.execute(adb.db);
+    expect(flaky.rows[0]?.pw_project).toBe('demo-shop--ui--chromium');
     await migrateToLatest(adb);
   });
 });

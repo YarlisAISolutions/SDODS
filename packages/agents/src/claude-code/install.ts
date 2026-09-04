@@ -2,7 +2,8 @@ import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { CONVENTIONS, ROLE_PROMPTS, installClientConfig, type RoleName } from '@sdods/mcp';
 
-const TAGLINE = 'SDODS is an automation platform with a reusable architecture built on Playwright.';
+const TAGLINE =
+  'SDODS is an automation and orchestration platform with a reusable architecture: BDD for UI, API and hybrid flows.';
 
 export type CodingAgentTarget = 'claude' | 'codex' | 'all';
 
@@ -143,7 +144,7 @@ ${TAGLINE} This file orients an AI coding assistant working in this repository.
 ## Mental model
 
 - **Hierarchy**: organization → workspace(s) → project (\`projects/<slug>\`) → module (\`features/<module>/\`). \`sdods.workspace.yaml\` at the root names the org and workspaces; each project has \`sdods.project.yaml\` and \`envs/<env>.yaml\`.
-- **Layers**: \`@ui\`, \`@api\`, \`@hybrid\` scenarios share ONE merged Playwright/BDD fixture set (\`@sdods/core/fixtures\`). A scenario can seed through the API and assert in the browser.
+- **Layers**: \`@ui\`, \`@api\`, \`@hybrid\` scenarios share ONE merged BDD fixture set (\`@sdods/core/fixtures\`). A scenario can seed through the API and assert in the browser.
 - **Processes**: named run recipes (pr-check, nightly-regression, release-gate). \`sdods run --process <name>\`.
 - **Everything is CLI-first**: \`sdods run\`, \`lint\`, \`steps list\`, \`features list\`, \`report\`, \`heal report\`, \`record\`, \`har\`, \`db\`, \`mcp\`, \`agent\`, \`proposals\`, \`serve\`.
 - **Agents never edit the working tree**; they write proposals under \`proposals/<id>/\` that a person accepts with \`sdods proposals accept <id>\`.
@@ -180,7 +181,7 @@ bun run sdods run -p <slug> -e <env> -l ui -b chromium -t @smoke
 export function skillMdContent(): string {
   return `---
 name: sdods
-description: Work inside an SDODS repository — an automation platform with a reusable architecture built on Playwright. Use for writing or fixing Gherkin features, page objects, step definitions, project/env yaml, running suites, reading results, and driving the sdods CLI or MCP tools.
+description: Work inside an SDODS repository — an automation and orchestration platform with a reusable architecture. Use for writing or fixing Gherkin features, page objects, step definitions, project/env yaml, running suites, reading results, and driving the sdods CLI or MCP tools.
 ---
 
 # SDODS skill

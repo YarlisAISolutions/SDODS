@@ -9,7 +9,7 @@ export interface IngestRunOptions {
   projectSlug?: string;
   manifest?: RunManifest | null;
   ndjsonPaths?: string[];
-  pwJsonPaths?: string[];
+  runnerJsonPaths?: string[];
   /** root that contains `<runId>/…` (default `.sdods/runs`) */
   artifactsRoot: string;
   replace?: boolean;
@@ -70,7 +70,7 @@ export function cucumberStatus(s: string | undefined): SuiteStatus {
   }
 }
 
-export function pwStatus(s: string | undefined): SuiteStatus {
+export function runnerStatus(s: string | undefined): SuiteStatus {
   switch (s) {
     case 'passed':
       return 'passed';
@@ -99,9 +99,9 @@ export function moduleFromUri(uri: string): string | null {
 }
 
 /** Strip playwright-bdd's `[<project>]:` prefix from a feature uri. */
-export function splitUri(uri: string): { pwProject: string | null; uri: string } {
+export function splitUri(uri: string): { runnerProject: string | null; uri: string } {
   const m = /^\[([^\]]+)\]:(.*)$/.exec(uri);
-  return m ? { pwProject: m[1]!, uri: m[2]! } : { pwProject: null, uri };
+  return m ? { runnerProject: m[1]!, uri: m[2]! } : { runnerProject: null, uri };
 }
 
 const LOCATOR_PATTERNS = [

@@ -9,7 +9,7 @@ import type {
   TestCase,
   TestResult,
 } from '@playwright/test/reporter';
-import { parsePwProjectName } from '@sdods/contracts';
+import { parseRunnerProjectName } from '@sdods/contracts';
 
 interface Entry {
   id: string;
@@ -57,7 +57,7 @@ export default class DashboardReporter implements Reporter {
   }
 
   onTestEnd(test: TestCase, result: TestResult) {
-    const parts = parsePwProjectName(test.parent.project()?.name ?? '');
+    const parts = parseRunnerProjectName(test.parent.project()?.name ?? '');
     const fingerprint = test.annotations.find((a) => a.type === 'sdods:fingerprint')?.description;
     const heals = test.annotations.filter((a) => a.type === 'sdods:heal').length;
     const outcome = test.outcome();
@@ -131,12 +131,16 @@ export default class DashboardReporter implements Reporter {
         .map((r) => ({
           fingerprint: r.fingerprint,
           title: r.fullTitle,
-          pwProject: r.projectName,
+          runnerProject: r.projectName,
           error: r.error,
         })),
       flaky: rows
         .filter((r) => r.outcome === 'flaky')
-        .map((r) => ({ fingerprint: r.fingerprint, title: r.fullTitle, pwProject: r.projectName })),
+        .map((r) => ({
+          fingerprint: r.fingerprint,
+          title: r.fullTitle,
+          runnerProject: r.projectName,
+        })),
       tests: rows,
     };
     mkdirSync(this.outputDir, { recursive: true });
@@ -194,7 +198,7 @@ function renderHtml(m: Metrics): string {
   const failedCards = m.failed
     .map(
       (f) =>
-        `<div class="fail"><div class="t">${esc(f.title)} <small>${esc(f.pwProject)}</small></div><pre>${esc(f.error ?? '')}</pre></div>`,
+        `<div class="fail"><div class="t">${esc(f.title)} <small>${esc(f.runnerProject)}</small></div><pre>${esc(f.error ?? '')}</pre></div>`,
     )
     .join('');
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -268,7 +272,7 @@ interface Metrics {
   byLayer: Record<string, Group>;
   byBrowser: Record<string, Group>;
   byTag: Record<string, { total: number; passed: number; failed: number }>;
-  failed: Array<{ fingerprint?: string; title: string; pwProject: string; error?: string }>;
-  flaky: Array<{ fingerprint?: string; title: string; pwProject: string }>;
+  failed: Array<{ fingerprint?: string; title: string; runnerProject: string; error?: string }>;
+  flaky: Array<{ fingerprint?: string; title: string; runnerProject: string }>;
   tests: Entry[];
 }

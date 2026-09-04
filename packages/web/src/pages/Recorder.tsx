@@ -64,7 +64,7 @@ export function RecorderPage() {
     <div className="space-y-4">
       <PageHeader
         title="Recorder"
-        subtitle="Playwright codegen with SDODS post-processing: fixtures, routes instead of absolute URLs, tags, and login state for a pool user. Runs where the server runs, so a display is required."
+        subtitle="Records a browser session, then post-processes it: fixtures, routes instead of absolute URLs, tags, and login state for a pool user. Runs where the server runs, so a display is required."
       />
       <div className="grid gap-4 lg:grid-cols-[360px_minmax(0,1fr)]">
         <Card title="Session">

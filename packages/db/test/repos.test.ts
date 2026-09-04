@@ -330,7 +330,7 @@ describe('repos', () => {
           scenario_name: 'A works',
           module: 'ui',
           examples_row: null,
-          pw_project: 'ins--ui--chromium',
+          runner_project: 'ins--ui--chromium',
           layer: 'ui',
           browser: 'chromium',
           suite_tag: '@smoke',
@@ -373,7 +373,7 @@ describe('repos', () => {
     await recomputeFlakyStats(adb.db, adb.driver, {
       projectId,
       fingerprint: 'fp-a',
-      pwProject: 'ins--ui--chromium',
+      runnerProject: 'ins--ui--chromium',
     });
     const ins = await computeInsights(adb.db, { projectSlug: 'ins', window: 30 });
     expect(ins.runsConsidered).toBe(10);

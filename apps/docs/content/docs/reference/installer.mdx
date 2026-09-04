@@ -49,7 +49,7 @@ Both are served as `text/plain` with `Cache-Control: no-store`, and both come fr
     '--browsers / -Browsers': {
       type: "'all' | 'chromium' | 'none'",
       default: 'chromium',
-      description: 'SDODS_BROWSERS. Playwright engines to download.',
+      description: 'SDODS_BROWSERS. Browser engines to download.',
     },
     '--workspace / -Workspace': {
       type: 'path',
@@ -119,7 +119,7 @@ Both are served as `text/plain` with `Cache-Control: no-store`, and both come fr
 | `$SDODS_HOME/.fnm`                  | `--install-node` and neither fnm nor nvm was present  |
 | `$BIN_DIR/sdods`                    | source install (Windows: `sdods.cmd` and `sdods.ps1`) |
 | shell profile or user PATH          | only with `--modify-path`                             |
-| Playwright browser cache            | unless `--browsers none`                              |
+| Browser engine cache                | unless `--browsers none`                              |
 | the workspace you named             | only with `--workspace`                               |
 | `~/.claude.json`, `~/.codex/config` | only with `--mcp`, through `sdods mcp install`        |
 

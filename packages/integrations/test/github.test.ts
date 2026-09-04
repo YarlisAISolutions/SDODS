@@ -99,7 +99,7 @@ function scenario(over: Partial<ScenarioSummary> = {}): ScenarioSummary {
     featureName: 'Login',
     scenarioName: 'Successful login',
     line: 12,
-    pwProject: 'shop--ui--chromium',
+    runnerProject: 'shop--ui--chromium',
     layer: 'ui',
     browser: 'chromium',
     suiteTag: '@smoke',

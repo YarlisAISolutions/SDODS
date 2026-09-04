@@ -37,13 +37,13 @@ import { register as registerFeedback } from './commands/feedback.js';
 
 /**
  * All commands are registered eagerly (cheap) but each module keeps heavy imports
- * (server, agents, DB, Playwright) inside its action via dynamic import.
+ * (server, agents, DB, browser runner) inside its action via dynamic import.
  */
 export function buildProgram(): Command {
   const program = new Command('sdods');
   program
     .description(
-      'SDODS — an automation platform with a reusable architecture built on Playwright for BDD UI, API and hybrid automation.',
+      'SDODS — automation and orchestration for reliable business workflows: BDD for UI, API and hybrid flows.',
     )
     .version(VERSION, '-V, --version')
     .option('--json', 'machine-readable output')

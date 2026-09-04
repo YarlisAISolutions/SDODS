@@ -34,7 +34,7 @@ writeFileSync(
         ],
       },
     ],
-    { pwProject: PW },
+    { runnerProject: PW },
   ),
 );
 writeFileSync(
@@ -62,7 +62,7 @@ writeFileSync(
         ],
       },
     ],
-    { pwProject: PW },
+    { runnerProject: PW },
   ),
 );
 writeFileSync(
@@ -85,7 +85,7 @@ writeFileSync(
         ],
       },
     ],
-    { pwProject: 'demo-shop--api' },
+    { runnerProject: 'demo-shop--api' },
   ),
 );
 writeFileSync(
@@ -112,7 +112,7 @@ writeFileSync(
         ],
       },
     ],
-    { pwProject: 'demo-shop--api', startMs: Date.parse('2026-09-03T10:05:00.000Z') },
+    { runnerProject: 'demo-shop--api', startMs: Date.parse('2026-09-03T10:05:00.000Z') },
   ),
 );
 writeFileSync(
@@ -212,11 +212,11 @@ writeFileSync(
         ],
       },
     ],
-    { pwProject: PW },
+    { runnerProject: PW },
   ),
 );
 writeFileSync(
-  `${dir}/pw-results.json`,
+  `${dir}/runner-results.json`,
   buildPwJson({
     projectName: 'demo-shop--recorded--chromium',
     file: 'projects/demo-shop/recorded/checkout.spec.ts',

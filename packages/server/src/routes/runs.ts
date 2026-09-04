@@ -24,12 +24,23 @@ import {
   listRuns,
   computeInsights,
 } from '@sdods/db';
-import { runFiles } from '@sdods/contracts';
+import { legacyRunFiles, runFiles } from '@sdods/contracts';
+
 import { CompareQuery, RunListQuery, StartRunBody } from '../schemas/index.js';
 import { badRequest, forbidden, notFound, parse } from '../errors.js';
 import { diffPngs, pngSize } from '../services/image-diff.js';
 import { ArchiveTooLargeError, extractArtifacts } from '../services/artifacts-archive.js';
 import type { Principal, SseEvent } from '../types.js';
+
+/** Report and runner scratch directories are served or ignored elsewhere, never listed as run files. */
+const SKIP_RUN_DIRS = new Set<string>([
+  runFiles.output,
+  runFiles.htmlReport,
+  runFiles.shardReports,
+  legacyRunFiles.output,
+  legacyRunFiles.htmlReport,
+  legacyRunFiles.shardReports,
+]);
 
 export async function runRoutes(app: FastifyInstance) {
   // multipart is normally registered by the projects routes; in minimal builds register it here
@@ -142,7 +153,7 @@ export async function runRoutes(app: FastifyInstance) {
         failed: list.filter((s) => s.status === 'failed').length,
         scenarios: list.map((s) => s.id),
       })),
-      reportUrl: existsSync(join(runDirOf(id), runFiles.pwReport, 'index.html'))
+      reportUrl: existsSync(join(runDirOf(id), runFiles.htmlReport, 'index.html'))
         ? `/reports/${id}/index.html`
         : null,
       dashboardUrl: existsSync(join(runDirOf(id), runFiles.dashboard, 'index.html'))
@@ -254,7 +265,7 @@ export async function runRoutes(app: FastifyInstance) {
           const abs = join(dir, name);
           const st = statSync(abs);
           if (st.isDirectory()) {
-            if (name === 'pw-output' || name === 'playwright-report') continue;
+            if (SKIP_RUN_DIRS.has(name)) continue;
             walk(abs);
           } else out.push({ path: relative(base, abs).split(sep).join('/'), size: st.size });
         }
@@ -266,7 +277,7 @@ export async function runRoutes(app: FastifyInstance) {
 
   /**
    * CI ingest without DB credentials: multipart files (run.json, summary.json, messages*.ndjson,
-   * pw-results*.json) plus an optional `artifacts.tgz` holding the run directory (screenshots,
+   * runner-results*.json) plus an optional `artifacts.tgz` holding the run directory (screenshots,
    * api snapshots, meta.json …). The archive is extracted under the run dir; entries that would
    * escape it (absolute paths, `..`, symlinks/links) are dropped; total size is capped by
    * SDODS_INGEST_MAX_MB (multipart limit) and the extracted bytes by 4× that.
@@ -299,7 +310,7 @@ export async function runRoutes(app: FastifyInstance) {
           continue;
         }
         if (
-          !/^(run\.json|summary\.json|messages(\.shard-\d+)?\.ndjson|pw-results(\.shard-\d+)?\.json)$/.test(
+          !/^(run\.json|summary\.json|messages(\.shard-\d+)?\.ndjson|(runner|pw)-results(\.shard-\d+)?\.json)$/.test(
             name,
           )
         ) {
@@ -312,7 +323,7 @@ export async function runRoutes(app: FastifyInstance) {
       }
       if (!saved.length)
         throw badRequest(
-          'No accepted files. Send run.json, messages*.ndjson, pw-results*.json or artifacts.tgz.',
+          'No accepted files. Send run.json, messages*.ndjson, runner-results*.json or artifacts.tgz.',
         );
       const manifestFile = join(dir, runFiles.manifest);
       const manifest = existsSync(manifestFile)
@@ -323,14 +334,14 @@ export async function runRoutes(app: FastifyInstance) {
       const ndjsonPaths = present
         .filter((f) => /^messages(\.shard-\d+)?\.ndjson$/.test(f))
         .map((f) => join(dir, f));
-      const pwJsonPaths = present
-        .filter((f) => /^pw-results(\.shard-\d+)?\.json$/.test(f))
+      const runnerJsonPaths = present
+        .filter((f) => /^(runner|pw)-results(\.shard-\d+)?\.json$/.test(f))
         .map((f) => join(dir, f));
       const result = await ingestRun(app.adb, {
         runId: id,
         manifest,
         ndjsonPaths,
-        pwJsonPaths,
+        runnerJsonPaths,
         artifactsRoot: app.config.artifactsDir,
       } as never);
       await audit(app.adb.db, {

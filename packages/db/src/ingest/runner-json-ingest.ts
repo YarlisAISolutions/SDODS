@@ -1,12 +1,16 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { basename, dirname, isAbsolute, join, relative } from 'node:path';
-import { fingerprint as makeFingerprint, newId, parsePwProjectName } from '@sdods/contracts/ids';
+import {
+  fingerprint as makeFingerprint,
+  newId,
+  parseRunnerProjectName,
+} from '@sdods/contracts/ids';
 import { enc, nowIso } from '../col.js';
 import { artifactKindFor, parseAttachmentName, storeFile, targetFileFor } from './attachments.js';
 import type { LocatorCounter } from './finalize.js';
-import { moduleFromUri, pwStatus, selectorFromError, type IngestContext } from './types.js';
+import { moduleFromUri, runnerStatus, selectorFromError, type IngestContext } from './types.js';
 
-export interface PwJsonCounts {
+export interface RunnerJsonCounts {
   scenarios: number;
   attempts: number;
   steps: number;
@@ -14,13 +18,13 @@ export interface PwJsonCounts {
 }
 
 /** Ingest a Playwright `json` reporter file (recorded layer / plain specs) into the same tables. */
-export async function ingestPwJson(
+export async function ingestRunnerJson(
   ctx: IngestContext,
   file: string,
   locatorCounters: Map<string, LocatorCounter>,
-): Promise<PwJsonCounts & { startedAt: string | null; finishedAt: string | null }> {
+): Promise<RunnerJsonCounts & { startedAt: string | null; finishedAt: string | null }> {
   const report = JSON.parse(readFileSync(file, 'utf8'));
-  const counts: PwJsonCounts = { scenarios: 0, attempts: 0, steps: 0, artifacts: 0 };
+  const counts: RunnerJsonCounts = { scenarios: 0, attempts: 0, steps: 0, artifacts: 0 };
   let startedAt: string | null = null;
   let finishedAt: string | null = null;
   const { db, driver } = ctx.adb;
@@ -30,8 +34,8 @@ export async function ingestPwJson(
     for (const s of suite.suites ?? []) await walk(s);
     for (const spec of suite.specs ?? []) {
       for (const test of spec.tests ?? []) {
-        const pwProject: string = test.projectName ?? test.projectId ?? 'recorded';
-        const parts = parsePwProjectName(pwProject);
+        const runnerProject: string = test.projectName ?? test.projectId ?? 'recorded';
+        const parts = parseRunnerProjectName(runnerProject);
         const slug = parts?.project ?? ctx.projectSlug;
         const layer = parts?.layer ?? 'recorded';
         const browser = parts?.browser ?? null;
@@ -44,7 +48,7 @@ export async function ingestPwJson(
           exampleIndex: null,
           layer,
         });
-        const naturalKey = `${pwProject}:${test.id ?? `${specFile}:${spec.line ?? 0}`}`;
+        const naturalKey = `${runnerProject}:${test.id ?? `${specFile}:${spec.line ?? 0}`}`;
         const tags: string[] = (spec.tags ?? test.tags ?? []).map((t: string) =>
           t.startsWith('@') ? t : `@${t}`,
         );
@@ -67,13 +71,13 @@ export async function ingestPwJson(
               project_id: ctx.projectId,
               natural_key: naturalKey,
               fingerprint: fp,
-              source: 'pw-json',
+              source: 'runner-json',
               feature_uri: specFile,
               feature_name: suite.title ?? basename(specFile),
               scenario_name: title,
               module: moduleFromUri(specFile),
               examples_row: null,
-              pw_project: pwProject,
+              runner_project: runnerProject,
               layer,
               browser,
               suite_tag: tags.find((t) => ['@smoke', '@regression', '@sanity'].includes(t)) ?? null,
@@ -99,7 +103,7 @@ export async function ingestPwJson(
         for (const result of test.results ?? []) {
           const retry = Number(result.retry ?? 0);
           const tcsId = `${test.id ?? naturalKey}#${retry}`;
-          const status = pwStatus(result.status);
+          const status = runnerStatus(result.status);
           const started = result.startTime ? new Date(result.startTime).toISOString() : null;
           const finished =
             started && typeof result.duration === 'number'

@@ -9,7 +9,7 @@ import { deleteRunChildren, upsertRun } from '../repos/runs.js';
 import { IngestSession } from './cucumber-ingest.js';
 import { finalizeRun, type LocatorCounter } from './finalize.js';
 import { fileSha256, parseNdjson, type ParseStats } from './parse-ndjson.js';
-import { ingestPwJson } from './pw-json-ingest.js';
+import { ingestRunnerJson } from './runner-json-ingest.js';
 import type { IngestContext, IngestResult, IngestRunOptions } from './types.js';
 
 export * from './types.js';
@@ -17,7 +17,7 @@ export * from './parse-ndjson.js';
 export * from './message-index.js';
 export * from './attachments.js';
 export * from './cucumber-ingest.js';
-export * from './pw-json-ingest.js';
+export * from './runner-json-ingest.js';
 export * from './finalize.js';
 
 /** Read `<runDir>/run.json` when present. */
@@ -31,20 +31,23 @@ export function readManifest(runDir: string): RunManifest | null {
   }
 }
 
-/** Discover result files inside a run directory. */
-export function discoverRunFiles(runDir: string): { ndjson: string[]; pwJson: string[] } {
+/**
+ * Discover result files inside a run directory. Run directories outlive releases, so the
+ * pre-rename `pw-results*.json` name is still accepted alongside `runner-results*.json`.
+ */
+export function discoverRunFiles(runDir: string): { ndjson: string[]; runnerJson: string[] } {
   const ndjson: string[] = [];
-  const pwJson: string[] = [];
-  if (!existsSync(runDir)) return { ndjson, pwJson };
+  const runnerJson: string[] = [];
+  if (!existsSync(runDir)) return { ndjson, runnerJson };
   for (const f of readdirSync(runDir)) {
     if (/^messages(\.shard-\d+)?\.ndjson$/.test(f)) ndjson.push(join(runDir, f));
-    if (/^pw-results(\.shard-\d+)?\.json$/.test(f)) pwJson.push(join(runDir, f));
+    if (/^(runner|pw)-results(\.shard-\d+)?\.json$/.test(f)) runnerJson.push(join(runDir, f));
   }
-  return { ndjson: ndjson.sort(), pwJson: pwJson.sort() };
+  return { ndjson: ndjson.sort(), runnerJson: runnerJson.sort() };
 }
 
 /**
- * Ingest one run (all its NDJSON shards and Playwright JSON files) into the database.
+ * Ingest one run (all its NDJSON shards and runner JSON files) into the database.
  * Idempotent: natural keys converge on re-run; `replace` wipes the run's children first.
  */
 export async function ingestRun(adb: SdodsDb, opts: IngestRunOptions): Promise<IngestResult> {
@@ -58,12 +61,12 @@ export async function ingestRun(adb: SdodsDb, opts: IngestRunOptions): Promise<I
   const ndjsonPaths = (opts.ndjsonPaths?.length ? opts.ndjsonPaths : discovered.ndjson).map((p) =>
     resolve(p),
   );
-  const pwJsonPaths = (opts.pwJsonPaths?.length ? opts.pwJsonPaths : discovered.pwJson).map((p) =>
-    resolve(p),
-  );
-  if (ndjsonPaths.length === 0 && pwJsonPaths.length === 0)
+  const runnerJsonPaths = (
+    opts.runnerJsonPaths?.length ? opts.runnerJsonPaths : discovered.runnerJson
+  ).map((p) => resolve(p));
+  if (ndjsonPaths.length === 0 && runnerJsonPaths.length === 0)
     throw new Error(
-      `No messages*.ndjson or pw-results*.json found for run ${opts.runId} under ${runDir}.`,
+      `No messages*.ndjson or runner-results*.json found for run ${opts.runId} under ${runDir}.`,
     );
 
   const { db, driver } = adb;
@@ -111,7 +114,7 @@ export async function ingestRun(adb: SdodsDb, opts: IngestRunOptions): Promise<I
     command: manifest?.command ?? null,
     startedAt: manifest?.startedAt ?? null,
     artifactsDir: runDir,
-    pwReportRel: existsSync(join(runDir, runFiles.pwReport)) ? runFiles.pwReport : null,
+    htmlReportRel: existsSync(join(runDir, runFiles.htmlReport)) ? runFiles.htmlReport : null,
     exitCode: manifest?.exitCode ?? null,
     process: (manifest as any)?.process ?? null,
   });
@@ -157,14 +160,14 @@ export async function ingestRun(adb: SdodsDb, opts: IngestRunOptions): Promise<I
       runFinishedAt = session.runFinishedAt;
     filesIngested.push(key);
   }
-  for (const file of pwJsonPaths) {
+  for (const file of runnerJsonPaths) {
     const sha = fileSha256(file);
     const key = `${basename(file)}@${sha}`;
     if (alreadyIngested.has(key) && !opts.replace) {
       filesSkipped.push(file);
       continue;
     }
-    const r = await ingestPwJson(ctx, file, locatorCounters);
+    const r = await ingestRunnerJson(ctx, file, locatorCounters);
     counts.scenarios += r.scenarios;
     counts.attempts += r.attempts;
     counts.steps += r.steps;

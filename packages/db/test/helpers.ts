@@ -56,7 +56,7 @@ export interface FeatureSpec {
 }
 
 export interface BuildOptions {
-  pwProject: string; // e.g. demo-shop--ui--chromium
+  runnerProject: string; // e.g. demo-shop--ui--chromium
   startMs?: number;
   shard?: number;
 }
@@ -92,7 +92,7 @@ export function buildMessages(features: FeatureSpec[], opts: BuildOptions): stri
   });
 
   for (const f of features) {
-    const uri = `[${opts.pwProject}]:${f.uri}`;
+    const uri = `[${opts.runnerProject}]:${f.uri}`;
     const children: any[] = [];
     const scenarioAst = new Map<
       ScenarioSpec,

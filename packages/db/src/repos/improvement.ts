@@ -163,12 +163,12 @@ export async function listHealEvents(
 }
 
 /**
- * Recompute flaky stats for one (project, fingerprint, pw_project) over the last `window` runs.
+ * Recompute flaky stats for one (project, fingerprint, runner_project) over the last `window` runs.
  */
 export async function recomputeFlakyStats(
   db: Kysely<Database>,
   driver: Driver,
-  input: { projectId: string; fingerprint: string; pwProject: string; window?: number },
+  input: { projectId: string; fingerprint: string; runnerProject: string; window?: number },
 ): Promise<void> {
   const window = input.window ?? 20;
   const rows = await db
@@ -186,7 +186,7 @@ export async function recomputeFlakyStats(
     ])
     .where('scenarios.project_id', '=', input.projectId)
     .where('scenarios.fingerprint', '=', input.fingerprint)
-    .where('scenarios.pw_project', '=', input.pwProject)
+    .where('scenarios.runner_project', '=', input.runnerProject)
     .orderBy(sql`coalesce(runs.started_at, runs.created_at)`, 'desc')
     .limit(window)
     .execute();
@@ -208,7 +208,7 @@ export async function recomputeFlakyStats(
     .select(['id'])
     .where('project_id', '=', input.projectId)
     .where('fingerprint', '=', input.fingerprint)
-    .where('pw_project', '=', input.pwProject)
+    .where('runner_project', '=', input.runnerProject)
     .executeTakeFirst();
   const values = {
     feature_uri: last.feature_uri,
@@ -234,7 +234,7 @@ export async function recomputeFlakyStats(
         id: newId(),
         project_id: input.projectId,
         fingerprint: input.fingerprint,
-        pw_project: input.pwProject,
+        runner_project: input.runnerProject,
         quarantined: enc.bool(driver, false) as number,
         ...values,
       })
@@ -254,7 +254,7 @@ export async function listFlakyStats(db: Kysely<Database>, projectId: string, li
   return rows.map((r) => ({
     id: r.id,
     fingerprint: r.fingerprint,
-    pwProject: r.pw_project,
+    runnerProject: r.runner_project,
     featureUri: r.feature_uri,
     scenarioName: r.scenario_name,
     windowSize: r.window_size,

@@ -54,7 +54,7 @@ The installer is a convenience wrapper; a clone works just as well:
 git clone https://github.com/siri1410/SDODS.git
 cd SDODS
 bun install                # or: pnpm install
-npx playwright install --with-deps
+bun run sdods browsers install --with-deps
 bun run sdods doctor
 ```
 
@@ -76,7 +76,7 @@ The installer checks Node, installs Bun if you do not have it, fetches SDODS int
 | `~/.sdods/app`                                              | the SDODS checkout (shallow clone, upgraded in place)  |
 | `~/.sdods/.bun`                                             | Bun, only when it was not already installed            |
 | `~/.local/bin/sdods`                                        | the command shim (Windows: `%LOCALAPPDATA%\SDODS\bin`) |
-| `~/Library/Caches/ms-playwright` · `~/.cache/ms-playwright` | browsers, in Playwright's shared cache                 |
+| `~/Library/Caches/ms-playwright` · `~/.cache/ms-playwright` | browser engines, in their shared cache                 |
 
 Nothing else on your system is touched. Your shell profile is edited only when you pass `--modify-path`. Budget about 1.5 GB for the checkout and its dependencies, plus roughly 500 MB per browser.
 
@@ -90,7 +90,7 @@ Every flag has an environment-variable equivalent, so the same behaviour works i
 | `--dir <path>`                   | `SDODS_HOME`         | `~/.sdods`             | install root                                              |
 | `--bin-dir <path>`               | `SDODS_BIN_DIR`      | `~/.local/bin`         | where the `sdods` command goes                            |
 | `--pm bun\|pnpm\|npm`            | `SDODS_PM`           | `bun`                  | package manager for the dependency install                |
-| `--browsers all\|chromium\|none` | `SDODS_BROWSERS`     | `chromium`             | which Playwright browsers to download                     |
+| `--browsers all\|chromium\|none` | `SDODS_BROWSERS`     | `chromium`             | which browser engines to download                         |
 | `--workspace <dir>`              | `SDODS_WORKSPACE`    | none                   | also run `sdods init <dir>` when the install finishes     |
 | `--source git\|npm\|auto`        | `SDODS_SOURCE`       | `auto`                 | fetch from a clone or from the npm registry               |
 | `--mcp claude\|codex\|all`       | `SDODS_MCP`          | none                   | register the MCP server with those CLIs                   |
@@ -140,7 +140,7 @@ curl -fsSL https://sdods.com/install.sh | sh -s -- --version v0.2.0   # pin a re
 curl -fsSL https://sdods.com/install.sh | sh -s -- --uninstall --yes  # remove
 ```
 
-Uninstalling removes `~/.sdods` and the command shim. Workspaces you created stay where they are, and Playwright's browser cache is shared with other tools, so remove that yourself if you want the space back.
+Uninstalling removes `~/.sdods` and the command shim. Workspaces you created stay where they are, and the browser engine cache is shared with other tools, so remove that yourself if you want the space back.
 
 ## Docker
 
@@ -156,7 +156,7 @@ docker run --rm -it ghcr.io/siri1410/sdods:latest sdods doctor
 | ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
 | `Node v20 is too old`                       | `nvm use 22`, `fnm use 22`, or re-run with `--install-node`                                                             |
 | `sdods: command not found` after installing | the bin directory is not on PATH; the installer printed the line to add, or re-run with `--modify-path`                 |
-| Browsers fail to start on Linux             | system libraries need root: `cd ~/.sdods/app && sudo npx playwright install-deps`                                       |
+| Browsers fail to start on Linux             | system libraries need root: `cd ~/.sdods/app && sudo bun run sdods browsers install --with-deps`                        |
 | Behind a corporate proxy                    | export `HTTPS_PROXY`; git and npm read it. Add `git config --global http.proxy "$HTTPS_PROXY"` if the clone still fails |
 | Corporate SSL interception                  | point `NODE_EXTRA_CA_CERTS` at your CA bundle before running the installer                                              |
 | macOS quarantine                            | piping to `sh` is not affected; if you saved the file first, run `xattr -d com.apple.quarantine install.sh`             |

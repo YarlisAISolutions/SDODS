@@ -1,8 +1,11 @@
 import type { ProjectConfig } from '@sdods/contracts';
 
 export const LAYER_TAGS = ['@ui', '@api', '@hybrid'] as const;
-export const PLAYWRIGHT_BDD_SPECIAL =
+/** Control tags the runner interprets itself; lint passes them through untouched. */
+export const RUNNER_SPECIAL_TAGS =
   /^@(only|skip|fixme|fail|slow|timeout:\d+|retries:\d+|mode:(parallel|serial|default))$/;
+/** @deprecated Use {@link RUNNER_SPECIAL_TAGS}. Removed in the next minor. */
+export const PLAYWRIGHT_BDD_SPECIAL = RUNNER_SPECIAL_TAGS;
 export const VALUE_TAG = /^@([a-z][a-z0-9-]*):(.+)$/;
 export const KNOWN_VALUE_TAGS = [
   'env',

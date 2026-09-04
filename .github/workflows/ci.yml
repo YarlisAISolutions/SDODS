@@ -136,7 +136,7 @@ jobs:
         run: |
           shopt -s nullglob
           for dir in .sdods/runs/${RUN_ID}-*; do
-            tar -czf "$dir/artifacts.tgz" -C "$dir" --exclude=artifacts.tgz --exclude=playwright-report --exclude=pw-output . || true
+            tar -czf "$dir/artifacts.tgz" -C "$dir" --exclude=artifacts.tgz --exclude=html-report --exclude=runner-output . || true
           done
       - uses: actions/upload-artifact@v4
         if: always()
@@ -250,15 +250,15 @@ jobs:
           pattern: sdods-*
           path: .sdods/runs
           merge-multiple: true
-      - name: Merge blob reports (sharded UI runs)
+      - name: Merge shard reports (sharded UI runs)
         shell: bash
         run: |
           shopt -s nullglob
-          blobs=(.sdods/runs/*/blob-report)
-          if [ ${#blobs[@]} -gt 0 ]; then
-            npx playwright merge-reports --reporter html,junit "${blobs[@]}" || echo "merge-reports failed"
+          shards=(.sdods/runs/*/shard-reports)
+          if [ ${#shards[@]} -gt 0 ]; then
+            bun run sdods report merge --run "$RUN_ID" "${shards[@]}" || echo "merge failed"
           else
-            echo "no blob reports"
+            echo "no shard reports"
           fi
       - name: Ingest into an SDODS server (when SDODS_SERVER_URL + SDODS_TOKEN secrets exist)
         if: always()
@@ -274,7 +274,7 @@ jobs:
           for dir in .sdods/runs/${RUN_ID}-*; do
             id=$(basename "$dir")
             bun run sdods report ingest --run-id "$id" --server "$SDODS_SERVER_URL" --token "$SDODS_TOKEN" \
-              "$dir"/run.json "$dir"/messages*.ndjson "$dir"/pw-results*.json "$dir"/artifacts.tgz || echo "ingest failed for $id"
+              "$dir"/run.json "$dir"/messages*.ndjson "$dir"/runner-results*.json "$dir"/artifacts.tgz || echo "ingest failed for $id"
           done
       - name: Notify GitHub (check runs, PR comment, issues) and Jira
         if: always()
@@ -294,7 +294,7 @@ jobs:
         with:
           name: sdods-report
           path: |
-            playwright-report
+            html-report
             .sdods/runs/**/dashboard
           if-no-files-found: ignore
           retention-days: 30

@@ -3,25 +3,31 @@ import { join } from 'node:path';
 import fp from 'fastify-plugin';
 import type { FastifyInstance } from 'fastify';
 import fastifyStatic from '@fastify/static';
+import { legacyRunFiles, runFiles } from '@sdods/contracts';
 
 /**
- * Serves: the web app (SPA fallback), Playwright HTML reports per run, the trace viewer,
+ * Serves: the web app (SPA fallback), the HTML report per run, the trace viewer,
  * and nothing else. API artifacts go through /api/runs/:id/files and /api/artifacts.
  */
 export default fp(async function staticPlugin(app: FastifyInstance) {
-  // Playwright HTML reports: /reports/<runId>/... → .sdods/runs/<runId>/playwright-report/...
+  // HTML reports: /reports/<runId>/... → .sdods/runs/<runId>/html-report/...
   await app.register(fastifyStatic, {
     root: app.config.artifactsDir,
     prefix: '/reports/',
-    decorateReply: false,
+    decorateReply: true,
     serve: false,
   });
   app.get('/reports/:runId/*', async (req, reply) => {
     const { runId, '*': rest } = req.params as { runId: string; '*': string };
     if (!/^[A-Za-z0-9._-]+$/.test(runId) || rest.includes('..'))
       return reply.code(400).send({ error: { code: 'BAD_REQUEST', message: 'Invalid path' } });
-    const file = join(runId, 'playwright-report', rest || 'index.html');
-    if (!existsSync(join(app.config.artifactsDir, file)))
+    // Run directories outlive releases: fall back to the pre-rename directory name so reports
+    // recorded by an older version keep resolving.
+    const candidates = [runFiles.htmlReport, legacyRunFiles.htmlReport].map((dir) =>
+      join(runId, dir, rest || 'index.html'),
+    );
+    const file = candidates.find((c) => existsSync(join(app.config.artifactsDir, c)));
+    if (!file)
       return reply.code(404).send({ error: { code: 'NOT_FOUND', message: 'Report not found' } });
     return reply.sendFile(file, app.config.artifactsDir);
   });
@@ -37,7 +43,7 @@ export default fp(async function staticPlugin(app: FastifyInstance) {
       reply.code(404).send({
         error: {
           code: 'NOT_FOUND',
-          message: 'Trace viewer assets not found (playwright-core missing).',
+          message: 'Trace viewer assets not found.',
         },
       }),
     );

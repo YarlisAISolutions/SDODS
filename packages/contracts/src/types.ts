@@ -71,7 +71,7 @@ export interface ScenarioMeta {
   project: string;
   layer: Layer;
   browser?: BrowserName;
-  pwProject: string;
+  runnerProject: string;
   featureUri: string;
   featureName: string;
   scenarioName: string;
@@ -98,12 +98,12 @@ export interface ScenarioResult {
   runId: string;
   fingerprint: string;
   naturalKey: string;
-  source: 'gherkin' | 'pw-json';
+  source: 'gherkin' | 'runner-json';
   featureUri: string;
   featureName: string;
   scenarioName: string;
   exampleIndex?: number | null;
-  pwProject: string;
+  runnerProject: string;
   layer: Layer;
   browser?: BrowserName;
   suiteTag?: string;
@@ -261,8 +261,8 @@ export interface RunSummary {
   status: RunStatus;
   totals: RunTotals;
   byProject: Record<string, RunTotals>;
-  failed: Array<{ fingerprint: string; title: string; pwProject: string; error?: string }>;
-  flaky: Array<{ fingerprint: string; title: string; pwProject: string }>;
+  failed: Array<{ fingerprint: string; title: string; runnerProject: string; error?: string }>;
+  flaky: Array<{ fingerprint: string; title: string; runnerProject: string }>;
   reportPaths: { html?: string; dashboard?: string; messages?: string; junit?: string };
 }
 

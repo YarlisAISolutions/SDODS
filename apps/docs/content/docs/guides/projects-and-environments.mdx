@@ -4,8 +4,8 @@ description: How a project directory is laid out and how environments describe w
 ---
 
 <Learn>
-  What lives in a project directory, how environment files describe targets, how Playwright projects
-  are generated from them, and which commands create and inspect both.
+  What lives in a project directory, how environment files describe targets, how run targets are
+  generated from them, and which commands create and inspect both.
 </Learn>
 
 ## A project is a directory
@@ -57,11 +57,11 @@ envs:
   available: [local, staging]
 ```
 
-## From YAML to Playwright projects
+## From YAML to run targets
 
 ```mermaid
 flowchart LR
-  P["sdods.project.yaml<br/>layers: [ui, api, hybrid]<br/>browsers: [chromium, firefox]"] --> G["buildPlaywrightConfig"]
+  P["sdods.project.yaml<br/>layers: [ui, api, hybrid]<br/>browsers: [chromium, firefox]"] --> G["buildRunnerConfig"]
   E["envs/staging.yaml"] --> G
   G --> A["demo-shop--api"]
   G --> U1["demo-shop--ui--chromium"]
@@ -70,7 +70,7 @@ flowchart LR
   G --> H2["demo-shop--hybrid--firefox"]
 ```
 
-For each layer, features are generated once with `bddgen`; each browser is a Playwright project that reuses the generated files. The `api` project has no browser device. Run `sdods run -p demo-shop --list` to print the names.
+For each layer, specs are generated once; each browser is a run target that reuses the generated files. The `api` target has no browser device. Run `sdods run -p demo-shop --list` to print the names.
 
 ## Commands
 

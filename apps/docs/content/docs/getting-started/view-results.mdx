@@ -17,7 +17,7 @@ Every run gets a UUID v7 `runId` and a directory:
   run.json                       # manifest: project, env, tags, browsers, git, command
   summary.json                   # totals and status
   messages.ndjson                # cucumber messages (canonical ingest format)
-  playwright-report/             # Playwright HTML report
+  html-report/                   # HTML report
   dashboard/                     # SDODS dashboard (index.html + metrics.json)
   demo-shop/<fingerprint>/r0/    # one directory per scenario attempt
     meta.json
@@ -68,14 +68,14 @@ The images below are the real output of the scenario "Add a product to the cart"
 ## Reports
 
 ```bash
-bun run sdods report --last --open      # Playwright HTML report and the SDODS dashboard
+bun run sdods report --last --open      # HTML report and the SDODS dashboard
 bun run sdods trace <runId>              # trace viewer for the run's traces
 ```
 
 | Report                     | Always                           | Purpose                                                                  |
 | -------------------------- | -------------------------------- | ------------------------------------------------------------------------ |
 | Cucumber messages (NDJSON) | yes                              | canonical ingest into the database                                       |
-| Playwright HTML            | yes                              | step-level debugging with traces                                         |
+| Runner HTML                | yes                              | step-level debugging with traces                                         |
 | SDODS dashboard            | yes                              | totals, pass rate, flaky list, heals, narrative links; offline, mailable |
 | JUnit                      | in CI or with `--reporter junit` | CI annotations                                                           |
 | Cucumber HTML, Allure      | opt-in in the project YAML       | stakeholder-facing reports                                               |

@@ -1,6 +1,6 @@
 ---
 title: sdods watch
-description: Regenerate BDD specs on change and re-run them in Playwright UI mode.
+description: Regenerate BDD specs on change and re-run them in interactive UI mode.
 ---
 
 ```text
@@ -10,7 +10,7 @@ sdods watch [-p <slug>] [-e <env>] [-t <expr>] [-l <layer>]... [-b <browser>]...
 Two children run with the same `SDODS_*` environment that `sdods run` uses:
 
 1. `bddgen --watch` regenerates `.features-gen/<slug>/<layer>` whenever a feature or step file changes.
-2. `playwright test --ui` (or `--watch` with `--no-ui`) restricted to the generated projects of the selection.
+2. the suite in interactive UI mode (or watch mode with `--no-ui`), restricted to the generated targets of the selection.
 
 | Flag                         | Meaning                                      |
 | ---------------------------- | -------------------------------------------- |
@@ -22,4 +22,4 @@ Two children run with the same `SDODS_*` environment that `sdods run` uses:
 sdods watch -p demo-shop -e staging -l ui -b chromium -t @smoke
 ```
 
-Stop with `Ctrl+C`; both children are terminated together. Exit code `2` when the selection matches no Playwright project.
+Stop with `Ctrl+C`; both children are terminated together. Exit code `2` when the selection matches no run target.

@@ -83,7 +83,7 @@ export const runTools = [
     name: 'run_tests',
     title: 'Run tests',
     description:
-      'Run a project slice through `sdods run` (lint → bddgen → Playwright). Streams progress lines; returns the run id, totals, failed scenarios and report paths. Test failures are returned as data, not as a tool error.',
+      'Run a project slice through `sdods run` (lint → generate specs → run suite). Streams progress lines; returns the run id, totals, failed scenarios and report paths. Test failures are returned as data, not as a tool error.',
     shape: runArgs,
     access: 'run',
     domain: 'runs',
@@ -217,7 +217,7 @@ export const runTools = [
         manifest: run.manifest,
         summary: run.summary,
         reports: {
-          html: join(run.dir, runFiles.pwReport),
+          html: join(run.dir, runFiles.htmlReport),
           dashboard: join(run.dir, runFiles.dashboard),
           messages: join(run.dir, runFiles.messages),
         },

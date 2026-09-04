@@ -1,6 +1,6 @@
 ---
 title: sdods run, test
-description: Generate BDD specs and execute Playwright for a project.
+description: Generate BDD specs and run them for a project.
 ---
 
 ## `run` (alias `test`)
@@ -24,12 +24,12 @@ sdods run [-p <slug>] [-e <env>] [-t <expr>] [-l <layer>]... [-b <browser>]... [
 | `-m, --module <name>`      | restrict to a module; repeatable                                                             |
 | `--process <name>`         | apply a named process from the project or workspace YAML; explicit flags override its fields |
 | `--project-matrix`         | every browser declared in the project YAML                                                   |
-| `--device <name>`          | Playwright device name for mobile emulation                                                  |
+| `--device <name>`          | device name for mobile emulation, e.g. `"iPhone 15"`                                         |
 | `--headed`                 | visible browsers                                                                             |
 | `-w, --workers <n>`        | parallel workers                                                                             |
 | `--shard <i/n>`            | shard, e.g. `1/3`                                                                            |
 | `--retries <n>`            | retries per test (default: `retries.ci` in CI, `retries.local` elsewhere)                    |
-| `--grep <pattern>`         | passed to Playwright `--grep`                                                                |
+| `--grep <pattern>`         | filter tests by title (regular expression)                                                   |
 | `--feature <path>`         | only this feature file (relative to `features/`)                                             |
 | `--scenario <name>`        | only scenarios whose title contains this text                                                |
 | `--run-id <id>`            | run id (default: UUID v7)                                                                    |
@@ -41,13 +41,13 @@ sdods run [-p <slug>] [-e <env>] [-t <expr>] [-l <layer>]... [-b <browser>]... [
 | `--har-replay`             | replay HAR files for `@har` scenarios                                                        |
 | `--strict`                 | with `--har-replay`: abort any request that is not in the HAR (offline run)                  |
 | `--update-snapshots`       | refresh `@visual` baselines                                                                  |
-| `--ui`, `--debug`          | Playwright UI mode, Playwright inspector                                                     |
-| `--list`                   | print the Playwright projects and tests that would run, then stop                            |
+| `--ui`, `--debug`          | interactive UI mode, step debugger                                                           |
+| `--list`                   | print the run targets and tests that would run, then stop                                    |
 | `--repeat-each <n>`        | repeat each test n times                                                                     |
 | `--fail-on-flaky`          | exit `1` when any test is flaky                                                              |
 | `--max-failures <n>`       | stop after n failures                                                                        |
 | `--timeout <ms>`           | per-test timeout override                                                                    |
-| `--reporter <name[=file]>` | Playwright reporter override; repeatable                                                     |
+| `--reporter <name[=file]>` | reporter override; repeatable                                                                |
 | `--reporter-mode <mode>`   | `default`, `server` (line output for the web UI), `quiet`                                    |
 | `--trigger <kind>`         | recorded in `run.json`: `cli`, `ui`, `ci`, `agent`, `mcp`, `schedule` (default `cli`)        |
 
@@ -55,7 +55,7 @@ Lifecycle:
 
 ```mermaid
 flowchart LR
-  A["mint runId · write run.json"] --> B["lint"] --> C["bddgen"] --> D["playwright test --project ..."] --> E["summary.json"] --> F["ingest (optional)"] --> G["integrations notify (optional)"]
+  A["mint runId · write run.json"] --> B["lint"] --> C["bddgen"] --> D["run suite --project ..."] --> E["summary.json"] --> F["ingest (optional)"] --> G["integrations notify (optional)"]
 ```
 
 Generated specs go to `.features-gen/<runId>/<slug>/<layer>/` and are removed after the run, so concurrent runs never race. When a tag expression matches no scenario the run exits `0` with a warning.

@@ -57,7 +57,7 @@ describe('sdods init', () => {
     for (const f of [
       'package.json',
       'sdods.workspace.yaml',
-      'playwright.config.ts',
+      'sdods.runner.config.ts',
       'tsconfig.json',
       '.env.example',
       '.gitignore',

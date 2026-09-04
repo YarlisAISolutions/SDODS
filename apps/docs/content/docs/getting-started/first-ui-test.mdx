@@ -4,8 +4,8 @@ description: Write a UI scenario with a page object and heal-aware locators, the
 ---
 
 <Learn>
-  How a UI scenario maps to a page object with playwright-bdd decorators, how heal-aware locators
-  are declared, and how to run the scenario headless or headed in Chromium.
+  How a UI scenario maps to a page object with step decorators, how heal-aware locators are
+  declared, and how to run the scenario headless or headed in Chromium.
 </Learn>
 
 ## The feature
@@ -69,7 +69,7 @@ The page object is exposed as a fixture in `steps/fixtures.ts`, and `@Fixture('l
 ```bash
 bun run sdods run -p demo-shop -e staging -l ui -b chromium -t @smoke
 bun run sdods run -p demo-shop -e staging -l ui -b chromium -t @smoke --headed
-bun run sdods run -p demo-shop -e staging -l ui -b chromium --ui        # Playwright UI mode
+bun run sdods run -p demo-shop -e staging -l ui -b chromium --ui        # interactive UI mode
 ```
 
 `@smoke` uses the `scenario` screenshot policy by default: one capture at the start and one at the end. Switch to `@regression` and you get before and after captures for every step.

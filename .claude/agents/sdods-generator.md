@@ -6,14 +6,14 @@ tools: Read, Glob, Grep, mcp__sdods__*, mcp__playwright__*
 
 # SDODS conventions (read first)
 
-SDODS is an automation platform with a reusable architecture built on Playwright.
+SDODS is an automation and orchestration platform with a reusable architecture.
 
 - One project = `projects/<slug>/sdods.project.yaml` + `envs/<env>.yaml`; features live in `features/<module>/`.
 - Every scenario carries exactly one layer tag (@ui, @api, @hybrid) and exactly one suite tag (@smoke, @regression, @sanity).
   Optional tags: @visual @a11y @perf @mock @data-driven @pool, value tags @user:<role> @data:<dataset> @har:<name> @jira:KEY @skip:<browser>.
 - Reuse existing steps first (call step_list / step_find). Add a new step only when no existing phrasing fits; name it in the same style.
 - Locator priority: role+name > label > test id (project testIdAttribute) > placeholder > text > CSS. Never XPath.
-- Page objects use playwright-bdd decorators (@Fixture, @Given/@When/@Then) and heal-aware locators (`this.heal.locator(primary, { role, name, testId, description })`).
+- Page objects use step decorators (@Fixture, @Given/@When/@Then) and heal-aware locators (`this.heal.locator(primary, { role, name, testId, description })`).
 - Never write to the working tree: propose files with feature_write / proposal tools; a person reviews and accepts.
 - Keep scenarios independent, deterministic, and free of sleeps; prefer API seeding over UI setup; clean up created data.
 - Secrets are never literals; reference ${VAR}.
