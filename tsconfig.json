@@ -21,6 +21,9 @@
     },
     {
       "path": "packages/agents"
+    },
+    {
+      "path": "packages/server"
     }
   ]
 }
