@@ -1,7 +1,7 @@
 {
   "name": "@sdods/cli",
   "version": "0.1.0",
-  "description": "sdods — the command-line entry point for SDODS: init, analyze, run, lint, record, har, data, db, report, agent, mcp, serve, schedule, integrations.",
+  "description": "SDODS command line: run, record, analyze, agents, MCP server, scheduler and the web server.",
   "license": "Apache-2.0",
   "author": "Sireesh Yarlagadda (https://www.linkedin.com/in/yarlagadda/)",
   "type": "module",
@@ -14,7 +14,8 @@
   "publishConfig": {
     "exports": {
       ".": "./dist/index.js"
-    }
+    },
+    "access": "public"
   },
   "files": [
     "dist",
@@ -44,5 +45,23 @@
   },
   "devDependencies": {
     "@types/semver": "^7.7.0"
-  }
+  },
+  "homepage": "https://sdods.com",
+  "bugs": {
+    "url": "https://github.com/siri1410/SDODS/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/siri1410/SDODS.git",
+    "directory": "packages/cli"
+  },
+  "keywords": [
+    "sdods",
+    "automation",
+    "orchestration",
+    "testing",
+    "bdd",
+    "ai-agents",
+    "mcp"
+  ]
 }

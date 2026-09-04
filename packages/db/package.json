@@ -1,7 +1,7 @@
 {
   "name": "@sdods/db",
   "version": "0.1.0",
-  "description": "SDODS platform database: Kysely schema for SQLite and Postgres, migrations, cucumber NDJSON ingest, driver switch, insights.",
+  "description": "SDODS platform database: one schema on SQLite or Postgres, migrations, result ingest and insights.",
   "license": "Apache-2.0",
   "author": "Sireesh Yarlagadda (https://www.linkedin.com/in/yarlagadda/)",
   "type": "module",
@@ -21,7 +21,8 @@
       "./switch": "./dist/switch/index.js",
       "./insights": "./dist/insights.js",
       "./test-data": "./dist/test-data.js"
-    }
+    },
+    "access": "public"
   },
   "files": [
     "dist"
@@ -39,5 +40,23 @@
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",
     "@types/pg": "^8.15.5"
-  }
+  },
+  "homepage": "https://sdods.com",
+  "bugs": {
+    "url": "https://github.com/siri1410/SDODS/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/siri1410/SDODS.git",
+    "directory": "packages/db"
+  },
+  "keywords": [
+    "sdods",
+    "automation",
+    "orchestration",
+    "testing",
+    "bdd",
+    "ai-agents",
+    "mcp"
+  ]
 }

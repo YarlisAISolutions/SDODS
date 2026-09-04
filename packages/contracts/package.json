@@ -1,7 +1,7 @@
 {
   "name": "@sdods/contracts",
   "version": "0.1.0",
-  "description": "Shared schemas, identifiers, naming conventions and DTO types for SDODS packages.",
+  "description": "Shared schemas, identifiers and DTO types for SDODS.",
   "license": "Apache-2.0",
   "type": "module",
   "exports": {
@@ -20,7 +20,8 @@
       "./scopes": "./dist/scopes.js",
       "./schemas": "./dist/schemas/index.js",
       "./types": "./dist/types.js"
-    }
+    },
+    "access": "public"
   },
   "files": [
     "dist"
@@ -30,5 +31,24 @@
   },
   "dependencies": {
     "zod": "^4.5.4"
-  }
+  },
+  "author": "Sireesh Yarlagadda (https://www.linkedin.com/in/yarlagadda/)",
+  "homepage": "https://sdods.com",
+  "bugs": {
+    "url": "https://github.com/siri1410/SDODS/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/siri1410/SDODS.git",
+    "directory": "packages/contracts"
+  },
+  "keywords": [
+    "sdods",
+    "automation",
+    "orchestration",
+    "testing",
+    "bdd",
+    "ai-agents",
+    "mcp"
+  ]
 }

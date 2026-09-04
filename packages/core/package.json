@@ -1,7 +1,7 @@
 {
   "name": "@sdods/core",
   "version": "0.1.0",
-  "description": "SDODS runtime: config, project registry, merged Playwright/BDD fixtures, step libraries, data providers, screenshots, self-healing, recorder, lint and reporters.",
+  "description": "SDODS runtime: configuration, project registry, fixtures, step libraries, data providers, screenshot narratives and self-healing locators.",
   "license": "Apache-2.0",
   "author": "Sireesh Yarlagadda (https://www.linkedin.com/in/yarlagadda/)",
   "type": "module",
@@ -51,7 +51,8 @@
       "./reporters": "./dist/reporters/index.js",
       "./logger": "./dist/logger.js",
       "./auth/capture": "./dist/auth/capture.js"
-    }
+    },
+    "access": "public"
   },
   "files": [
     "dist"
@@ -86,5 +87,23 @@
   "devDependencies": {
     "@playwright/test": "^1.62.1",
     "playwright-bdd": "^9.2.0"
-  }
+  },
+  "homepage": "https://sdods.com",
+  "bugs": {
+    "url": "https://github.com/siri1410/SDODS/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/siri1410/SDODS.git",
+    "directory": "packages/core"
+  },
+  "keywords": [
+    "sdods",
+    "automation",
+    "orchestration",
+    "testing",
+    "bdd",
+    "ai-agents",
+    "mcp"
+  ]
 }

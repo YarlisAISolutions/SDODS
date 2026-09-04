@@ -1,7 +1,7 @@
 {
   "name": "@sdods/mcp",
   "version": "0.1.0",
-  "description": "SDODS MCP server: one tool registry serving MCP clients (stdio, streamable HTTP) and the SDODS agents.",
+  "description": "SDODS MCP server: project analysis, runs, results and proposals as tools for AI clients.",
   "license": "Apache-2.0",
   "author": "Sireesh Yarlagadda (https://www.linkedin.com/in/yarlagadda/)",
   "type": "module",
@@ -27,7 +27,8 @@
       "./install": "./dist/install/index.js",
       "./transports/stdio": "./dist/transports/stdio.js",
       "./transports/http": "./dist/transports/http.js"
-    }
+    },
+    "access": "public"
   },
   "files": [
     "dist"
@@ -48,5 +49,23 @@
   },
   "devDependencies": {
     "@modelcontextprotocol/client": "^2.0.0"
-  }
+  },
+  "homepage": "https://sdods.com",
+  "bugs": {
+    "url": "https://github.com/siri1410/SDODS/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/siri1410/SDODS.git",
+    "directory": "packages/mcp"
+  },
+  "keywords": [
+    "sdods",
+    "automation",
+    "orchestration",
+    "testing",
+    "bdd",
+    "ai-agents",
+    "mcp"
+  ]
 }
