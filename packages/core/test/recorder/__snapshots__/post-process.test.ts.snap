@@ -1,0 +1,28 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`postProcessRecording > matches the snapshot for the checked-in codegen 1.62 fixture 1`] = `
+"// @automax-recording {"project":"demo-shop","env":"staging","name":"checkout-standard","recordedAt":"2026-09-03T20:00:00.000Z","role":"standard","user":"standard_user","browser":"chromium","playwright":"1.62.1"}
+// Recorded with AutoMax. Re-record with: automax record -p demo-shop -e staging --name checkout-standard --user standard
+// Convert to Gherkin (reviewed proposal): automax record convert projects/demo-shop/recorded/checkout-standard.spec.ts
+import { test, expect } from '@automax/core/test';
+test.describe("checkout-standard", { tag: ['@recorded', '@ui', '@regression'] }, () => {
+  test('test', async ({ page }) => {
+    await page.goto('/');
+    // automax:fragile — prefer getByRole/getByLabel/getByTestId; see docs/guides/self-healing-locators
+    await page.locator('#user-name').fill('standard_user');
+    // automax:fragile — prefer getByRole/getByLabel/getByTestId; see docs/guides/self-healing-locators
+    await page.locator('#password').fill('secret_sauce');
+    await page.getByRole('button', { name: 'Login' }).click();
+    await expect(page).toHaveURL('/inventory.html');
+    // automax:fragile — prefer getByRole/getByLabel/getByTestId; see docs/guides/self-healing-locators
+    await page.locator('[data-test="add-to-cart-sauce-labs-backpack"]').click();
+    await page.getByTestId('shopping-cart-link').click();
+    // automax:fragile — prefer getByRole/getByLabel/getByTestId; see docs/guides/self-healing-locators
+    await expect(page.locator('.cart_item')).toBeVisible();
+    // automax:fragile — prefer getByRole/getByLabel/getByTestId; see docs/guides/self-healing-locators
+    await page.locator('//button[@id="checkout"]').click();
+    await page.goto('https://cdn.example.net/help');
+  });
+});
+"
+`;
