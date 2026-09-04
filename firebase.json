@@ -75,12 +75,12 @@
       ],
       "redirects": [
         {
-          "source": "/SDODS",
+          "source": "/AutoMax",
           "destination": "/",
           "type": 301
         },
         {
-          "source": "/SDODS/**",
+          "source": "/AutoMax/**",
           "destination": "/",
           "type": 301
         }

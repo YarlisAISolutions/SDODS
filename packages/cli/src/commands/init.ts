@@ -300,9 +300,9 @@ proposals/*/files/
     image: postgres:16
     environment: { POSTGRES_USER: sdods, POSTGRES_PASSWORD: sdods, POSTGRES_DB: sdods }
     ports: ['5432:5432']
-    volumes: [automax-pgdata:/var/lib/postgresql/data]
+    volumes: [sdods-pgdata:/var/lib/postgresql/data]
 volumes:
-  automax-pgdata:
+  sdods-pgdata:
 `,
   );
 

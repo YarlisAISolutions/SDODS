@@ -5,7 +5,7 @@ import { DOCS_URL, REPO_URL } from '@/lib/links';
 const WHY: Array<[string, string]> = [
   [
     'UI, API and mixed scenarios in one language',
-    'Gherkin on top of playwright-bdd with one merged fixture set, so a scenario can seed through the API and assert in the browser.',
+    'Gherkin with one merged fixture set, so a scenario can seed through the API and assert in the browser.',
   ],
   [
     'Many apps, many environments',
@@ -66,7 +66,7 @@ function Flow() {
   const nodes = [
     'sdods CLI',
     'Config + registry',
-    'Playwright runs',
+    'Browser runs',
     'NDJSON + screenshots',
     'SQLite / Postgres',
     'Web UI · MCP · agents',
@@ -104,7 +104,7 @@ export default function HomePage() {
         <p className="muted mx-auto mt-6 max-w-2xl text-lg">
           BDD for UI, API and hybrid flows. Multi-project, multi-environment, data-driven and
           self-healing, with before/after screenshot narratives, a database-backed history, an MCP
-          server, AI agents, GitHub and Jira integration and a web UI. Runs on Playwright.
+          server, AI agents, GitHub and Jira integration and a web UI.
         </p>
         <div className="mt-8 flex flex-wrap justify-center gap-3">
           <Link href="/install/" className="btn btn-primary">
@@ -129,9 +129,9 @@ export default function HomePage() {
           Why SDODS
         </h2>
         <p className="muted mt-2 max-w-3xl">
-          Playwright is an excellent engine. Teams still rebuild the same things around it:
-          environment switching, tagging policy, test data, login reuse, reporting, flaky triage, CI
-          wiring, and now AI helpers. SDODS ships those once, with opinions.
+          Every team rebuilds the same scaffolding around their test runner: environment switching,
+          tagging policy, test data, login reuse, reporting, flaky triage, CI wiring, and now AI
+          helpers. SDODS ships those once, with opinions.
         </p>
         <div className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {WHY.map(([title, body]) => (

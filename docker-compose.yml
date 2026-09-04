@@ -9,7 +9,7 @@ services:
     ports:
       - '5432:5432'
     volumes:
-      - automax-pgdata:/var/lib/postgresql/data
+      - sdods-pgdata:/var/lib/postgresql/data
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U sdods -d sdods']
       interval: 5s
@@ -36,5 +36,5 @@ services:
       - sdods-runs:/app/.sdods
 
 volumes:
-  automax-pgdata:
+  sdods-pgdata:
   sdods-runs:

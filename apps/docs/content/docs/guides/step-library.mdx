@@ -21,7 +21,7 @@ Given I set the query parameter "page" to "2"
 Given I authenticate with bearer token from "API_TOKEN"
 Then the response status should be 201
 Then the response JSON path "data.items[0].id" should equal "42"
-Then the response JSON path "title" should match "^Auto"
+Then the response JSON path "title" should match "^SDODS"
 Then the response should match the JSON schema "schemas/post.schema.json"
 Then the response should match the OpenAPI schema for GET "/posts/{id}"
 Then the response should match the zod schema "schemas/post.ts"

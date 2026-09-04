@@ -3,21 +3,19 @@
 </p>
 
 <p align="center">
-  <strong>An automation platform</strong><br>
+  <strong>Automation and orchestration for reliable business workflows</strong><br>
   BDD for UI, API and hybrid flows · multi-project, multi-environment · data-driven · self-healing · before/after screenshot narratives · SQLite ⇄ Postgres · MCP server · AI agents · GitHub &amp; Jira · cron schedules · web UI.
 </p>
 
 <p align="center">
   <a href="LICENSE"><img alt="License: Apache-2.0" src="https://img.shields.io/badge/license-Apache--2.0-blue.svg"></a>
   <img alt="Node 22+" src="https://img.shields.io/badge/node-%E2%89%A522-339933?logo=node.js&logoColor=white">
-  <img alt="Playwright 1.62" src="https://img.shields.io/badge/playwright-1.62-2EAD33?logo=playwright&logoColor=white">
-  <img alt="playwright-bdd 9" src="https://img.shields.io/badge/playwright--bdd-9.x-6366F1">
   <img alt="Bun" src="https://img.shields.io/badge/bun-1.4-000000?logo=bun&logoColor=white">
 </p>
 
 ---
 
-SDODS turns Playwright into a complete test platform you can drive from one CLI, one YAML file per project, and one web UI. It is open source (Apache-2.0) and free to use, including its API keys.
+SDODS is an automation and orchestration platform. You describe behaviour in Gherkin, keep one YAML file per project and one per environment, and drive everything from a single command line. It is open source (Apache-2.0) and free to use, including its API tokens.
 
 Created by **Sireesh Yarlagadda** · [LinkedIn](https://www.linkedin.com/in/yarlagadda/)
 
@@ -45,11 +43,11 @@ Created by **Sireesh Yarlagadda** · [LinkedIn](https://www.linkedin.com/in/yarl
 
 ## Why SDODS
 
-Playwright is an excellent engine. Teams still rebuild the same things around it: environment switching, tagging policy, test data, login reuse, reporting, flaky triage, CI wiring, and now AI helpers. SDODS ships those once, with opinions:
+Every team rebuilds the same scaffolding around their test runner: environment switching, tagging policy, test data, login reuse, reporting, flaky triage, CI wiring, and now AI helpers. SDODS ships all of it once, with opinions:
 
 | Need | What SDODS gives you |
 |---|---|
-| UI, API and mixed scenarios in one language | Gherkin features on top of playwright-bdd with **one merged fixture set**, so a scenario can seed through the API and assert in the browser |
+| UI, API and mixed scenarios in one language | Gherkin features with **one merged fixture set**, so a scenario can seed through the API and assert in the browser |
 | Many apps, many environments | `projects/<slug>/sdods.project.yaml` + `envs/<env>.yaml`; strict, explainable config precedence; secrets only through `${VAR}` |
 | Reusable data | CSV / JSON / YAML / DB tables / faker factories per environment, plus **user pools** leased per worker with login state reuse |
 | Confidence across browsers | chromium, firefox, webkit, mobile emulation, `--project-matrix`, `@skip:<browser>` tags validated by lint |
@@ -90,7 +88,7 @@ Prerequisites: Node 22+, and either Bun 1.4+ (fastest) or pnpm 9+.
 # 1. Get the code
 git clone https://github.com/siri1410/SDODS.git && cd SDODS
 bun install                      # or: pnpm install
-npx playwright install --with-deps
+sdods browsers install --with-deps
 
 # 2. Look around
 bun run sdods project list
@@ -103,7 +101,7 @@ bun run sdods run -p demo-shop -e staging -l ui -b chromium -t @smoke
 bun run sdods run -p demo-shop --project-matrix -t @smoke           # every browser in the project yaml
 
 # 4. Look at results
-bun run sdods report --last --open                                   # Playwright HTML report + SDODS dashboard
+bun run sdods report --last --open                                   # HTML report + SDODS dashboard
 bun run sdods serve                                                  # web UI at http://127.0.0.1:4444
 ```
 
@@ -132,8 +130,8 @@ flowchart LR
   subgraph runtime["Runtime (Node 22)"]
     CFG["Config precedence<br/>defaults → project → env → .env → process → CLI"]
     REG["ProjectRegistry"]
-    PW["playwright.config.ts<br/>project × layer × browser"]
-    BDD["bddgen → Playwright test"]
+    PW["sdods.runner.config.ts<br/>project × layer × browser"]
+    BDD["generate specs → run suite"]
     FIX["Merged fixtures<br/>api · pages · data · user · shots · heal"]
   end
   subgraph out["Outputs"]
@@ -182,7 +180,7 @@ flowchart TB
 
 The dependency graph is acyclic and enforced by TypeScript project references. Details, decisions and trade-offs live in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
-**Runtime split.** Playwright's test workers, vitest and the native database drivers run on **Node 22**. **Bun** is used as the package manager, script runner and bundler because it is measurably faster there; nothing executes tests under Bun. pnpm works too.
+**Runtime split.** The test workers, vitest and the native database drivers run on **Node 22**. **Bun** is used as the package manager, script runner and bundler because it is measurably faster there; nothing executes tests under Bun. pnpm works too.
 
 ## Projects, environments and configuration
 
@@ -197,7 +195,7 @@ projects/demo-shop/
   features/                # Gherkin (ui/, api/, hybrid/)
   steps/fixtures.ts        # extends the SDODS test with your auth strategy and page objects
   steps/*.steps.ts         # project-specific steps (generic ones come from @sdods/core/steps)
-  pages/*.ts               # page objects with playwright-bdd decorators and heal-aware locators
+  pages/*.ts               # page objects with step decorators and heal-aware locators
   data/common/  data/staging/  data/factories.ts
   recorded/  har/  .auth/
 ```
@@ -283,7 +281,7 @@ data:
 | `@user:<role>` `@data:<dataset>` `@har:<name>` `@env:<name>` | values validated against the project yaml |
 | `@jira:PROJ-123` `@github:123` | issue links shown in the run viewer |
 | `@skip:webkit` | per-browser exclusion, never a silent branch in code |
-| `@retries:2` `@timeout:60000` `@slow` `@mode:serial` `@skip` `@fixme` | playwright-bdd special tags, passed through |
+| `@retries:2` `@timeout:60000` `@slow` `@mode:serial` `@skip` `@fixme` | runner control tags, passed through |
 
 Filter with Cucumber expressions: `sdods run -t "@smoke and not @mock"`.
 
@@ -303,7 +301,7 @@ API steps attach request and response JSON instead. The web run viewer pairs bef
 ## Record, playback and HAR
 
 ```bash
-sdods record -p demo-shop -e staging --name checkout --user standard   # Playwright codegen, logged in as a pool user
+sdods record -p demo-shop -e staging --name checkout --user standard   # records a session, logged in as a pool user
 sdods run -p demo-shop -l recorded                                     # recorded specs run as a normal layer
 sdods record convert projects/demo-shop/recorded/checkout.spec.ts      # agent proposal: feature + steps + page object
 sdods har record -p demo-shop -t @har:products                          # capture network into projects/demo-shop/har/<env>/
@@ -327,7 +325,7 @@ One Kysely schema serves both drivers. Runs ingest automatically when a database
 
 ## MCP server
 
-SDODS is itself an MCP server, modeled on Playwright MCP:
+SDODS is itself an MCP server:
 
 ```bash
 claude mcp add sdods -- npx sdods mcp --project demo-shop --env staging     # stdio
@@ -427,7 +425,7 @@ Full reference with examples: the documentation site (`apps/docs`, published on 
 ## Development process
 
 ```bash
-bun install && npx playwright install --with-deps
+bun install && sdods browsers install --with-deps
 bun run typecheck        # tsc -b across packages
 bun run lint             # eslint + prettier
 bun run test             # vitest unit tests
