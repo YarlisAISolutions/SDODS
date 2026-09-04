@@ -254,10 +254,18 @@ export function buildPlaywrightConfig(
   const reporterMode = sel.reporterMode ?? 'default';
 
   const reporter: ReporterDescription[] = [];
-  if (sel.reporters?.length) {
-    for (const r of sel.reporters)
-      reporter.push(r.includes('=') ? [r.split('=')[0]!, { outputFile: r.split('=')[1] }] : [r]);
-  } else {
+  // `--reporter <name[=outputFile]>` ADDS reporters (e.g. `blob` for sharded CI) to the AutoMax
+  // defaults, so the NDJSON, dashboard and HTML report always exist. Path-less `blob`/`json`/`junit`
+  // land inside the run directory.
+  const extra: ReporterDescription[] = (sel.reporters ?? []).map((r) => {
+    const [name, file] = r.split('=') as [string, string | undefined];
+    if (file) return [name, name === 'blob' ? { outputDir: file } : { outputFile: file }];
+    if (name === 'blob') return ['blob', { outputDir: join(runDir, 'blob-report') }];
+    if (name === 'json') return ['json', { outputFile: join(runDir, 'pw-results.extra.json') }];
+    if (name === 'junit') return ['junit', { outputFile: join(runDir, runFiles.junit) }];
+    return [name];
+  });
+  {
     reporter.push(
       reporterMode === 'server' ? ['line'] : reporterMode === 'quiet' ? ['dot'] : ['list'],
     );
@@ -283,6 +291,10 @@ export function buildPlaywrightConfig(
       );
     if (sel.allure || first?.project.reports.allure)
       reporter.push(['allure-playwright', { resultsDir: join(runDir, 'allure-results') }]);
+  }
+  for (const r of extra) {
+    if (reporter.some((d) => d[0] === r[0])) continue; // already emitted by defaults (e.g. junit in CI)
+    reporter.push(r);
   }
 
   return {

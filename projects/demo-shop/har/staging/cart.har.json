@@ -1,0 +1,11 @@
+{
+  "name": "cart",
+  "project": "demo-shop",
+  "env": "staging",
+  "urlGlob": "**/*",
+  "recordedAt": "2026-09-04T00:55:04.163Z",
+  "source": "run",
+  "scenarios": [
+    "A product added on the inventory page appears in the cart"
+  ]
+}

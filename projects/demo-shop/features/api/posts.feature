@@ -1,4 +1,4 @@
-@api @posts
+@api @posts @har:posts
 Feature: Posts API
   JSONPlaceholder CRUD through the shared API step library: status codes, JSON-path assertions,
   schema validation, variable chaining and response-time budgets.

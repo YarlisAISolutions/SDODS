@@ -40,7 +40,8 @@
     "pngjs": "^7.0.0",
     "yaml": "^2.9.0",
     "zod": "^4.5.4",
-    "fastify-plugin": "^5.0.1"
+    "fastify-plugin": "^5.0.1",
+    "tar": "^7.5.3"
   },
   "devDependencies": {
     "@types/pngjs": "^6.0.5",

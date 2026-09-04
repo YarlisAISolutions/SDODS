@@ -23,12 +23,13 @@
     "test:db:pg": "DB_DRIVER=postgres vitest run packages/db --no-file-parallelism",
     "demo:api": "node --import tsx ./packages/cli/src/bin.ts run -p demo-shop -e staging -l api",
     "demo:ui": "node --import tsx ./packages/cli/src/bin.ts run -p demo-shop -e staging -l ui -b chromium -t @smoke",
-    "release:check": "node --import tsx ./packages/cli/src/bin.ts run -p demo-shop --project-matrix --har-replay --strict",
+    "release:check": "node --import tsx ./packages/cli/src/bin.ts run -p demo-shop -e staging --project-matrix -t @smoke --har-replay --strict",
     "docs:dev": "bun run --cwd apps/docs dev",
     "docs:build": "bun run --cwd apps/docs build",
     "docs:verify": "bun run --cwd apps/docs verify",
     "web:dev": "bun run --filter @automax/web dev:mocks",
-    "web:build": "bun run --filter @automax/web build"
+    "web:build": "bun run --filter @automax/web build",
+    "release:check:live": "node --import tsx ./packages/cli/src/bin.ts run -p demo-shop -e staging --project-matrix -t \"@smoke or @sanity or @regression\""
   },
   "devDependencies": {
     "@types/node": "^22.15.0",

@@ -1,0 +1,11 @@
+{
+  "name": "login",
+  "project": "demo-shop",
+  "env": "staging",
+  "urlGlob": "**/*",
+  "recordedAt": "2026-09-04T00:55:01.530Z",
+  "source": "run",
+  "scenarios": [
+    "Successful login shows the products"
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "name": "site",
+  "project": "demo-shop",
+  "env": "staging",
+  "urlGlob": "**/*",
+  "recordedAt": "2026-09-04T00:55:07.403Z",
+  "source": "api",
+  "scenarios": [
+    "The site answers over HTTP"
+  ]
+}

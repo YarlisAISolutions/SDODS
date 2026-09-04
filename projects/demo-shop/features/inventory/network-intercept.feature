@@ -22,7 +22,7 @@ Feature: Network interception
     When I send a GET request to "https://www.saucedemo.com/"
     Then the response status should be 200
 
-  @smoke
+  @smoke @har:site
   Scenario: The site answers over HTTP
     When I send a GET request to "https://www.saucedemo.com/"
     Then the response status should be 200

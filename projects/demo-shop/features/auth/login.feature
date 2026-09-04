@@ -5,7 +5,7 @@ Feature: Login
   Background:
     Given I am on the login page
 
-  @smoke
+  @smoke @har:login
   Scenario: Successful login shows the products
     When I login with "standard_user" and "{{standardPassword}}"
     Then I should be on the inventory page

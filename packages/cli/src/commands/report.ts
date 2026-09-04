@@ -109,8 +109,51 @@ export function register(program: Command) {
     .option('--artifacts-dir <dir>', 'artifacts root (default .automax/runs)')
     .option('--replace', 'delete previously ingested rows of this run first')
     .option('-e, --env <name>', 'environment name when run.json is missing')
+    .option(
+      '--server <url>',
+      'upload to an AutoMax server (POST /api/runs/:id/ingest) instead of writing to a local database',
+    )
+    .option('--token <token>', 'API token for --server (or AUTOMAX_TOKEN)')
     .action(async (files: string[], opts, cmd) => {
       const ctx = createContext(cmd);
+      const serverUrl: string | undefined = opts.server ?? process.env.AUTOMAX_SERVER_URL;
+      if (serverUrl) {
+        // CI path: no DB credentials on the runner; the server ingests with a scoped token.
+        const token: string | undefined = opts.token ?? process.env.AUTOMAX_TOKEN;
+        if (!token)
+          throw new AutomaxError('AUTH_FAILED', '--server needs --token (or AUTOMAX_TOKEN).', {
+            exitCode: 2,
+          });
+        const { readFileSync, existsSync } = await import('node:fs');
+        const { basename } = await import('node:path');
+        const form = new FormData();
+        let count = 0;
+        for (const f of files) {
+          const abs = resolve(ctx.rootDir, f);
+          if (!existsSync(abs)) continue;
+          form.append('files', new Blob([readFileSync(abs)]), basename(abs));
+          count++;
+        }
+        if (!count)
+          throw new AutomaxError('CONFIG_INVALID', 'No existing files to upload.', { exitCode: 2 });
+        const url = `${serverUrl.replace(/\/$/, '')}/api/runs/${encodeURIComponent(opts.runId)}/ingest`;
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { authorization: `Bearer ${token}` },
+          body: form,
+        });
+        const body = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+        if (!res.ok)
+          throw new AutomaxError(
+            'RUN_FAILED',
+            `Server ingest failed (${res.status}): ${JSON.stringify(body)}`,
+            {
+              exitCode: 1,
+            },
+          );
+        if (ctx.opts.json) return json(body);
+        return ok(`Uploaded ${count} file(s) for run ${opts.runId} to ${serverUrl}`);
+      }
       const m = await import('@automax/db');
       const adb = m.createDb();
       try {

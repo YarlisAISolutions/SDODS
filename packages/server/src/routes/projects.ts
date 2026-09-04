@@ -28,7 +28,8 @@ import { runCliJson } from '../services/cli.js';
 import { StepCatalog } from '../services/step-catalog.js';
 
 export async function projectRoutes(app: FastifyInstance) {
-  await app.register(multipart, { limits: { fileSize: app.config.ingestMaxMb * 1024 * 1024 } });
+  if (!app.hasContentTypeParser('multipart/form-data'))
+    await app.register(multipart, { limits: { fileSize: app.config.ingestMaxMb * 1024 * 1024 } });
   const catalog = new StepCatalog(app.config);
 
   const entryOf = (slug: string) => {

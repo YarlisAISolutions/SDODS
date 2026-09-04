@@ -9,6 +9,7 @@ import {
 import { join, relative, resolve, sep } from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import type { FastifyInstance } from 'fastify';
+import multipart from '@fastify/multipart';
 import {
   audit,
   getArtifact,
@@ -27,9 +28,13 @@ import { runFiles } from '@automax/contracts';
 import { CompareQuery, RunListQuery, StartRunBody } from '../schemas/index.js';
 import { badRequest, forbidden, notFound, parse } from '../errors.js';
 import { diffPngs, pngSize } from '../services/image-diff.js';
+import { ArchiveTooLargeError, extractArtifacts } from '../services/artifacts-archive.js';
 import type { Principal, SseEvent } from '../types.js';
 
 export async function runRoutes(app: FastifyInstance) {
+  // multipart is normally registered by the projects routes; in minimal builds register it here
+  if (!app.hasContentTypeParser('multipart/form-data'))
+    await app.register(multipart, { limits: { fileSize: app.config.ingestMaxMb * 1024 * 1024 } });
   const runDirOf = (runId: string) => {
     if (!/^[A-Za-z0-9._-]+$/.test(runId)) throw badRequest('Invalid run id.');
     return join(app.config.artifactsDir, runId);
@@ -259,18 +264,40 @@ export async function runRoutes(app: FastifyInstance) {
     },
   );
 
-  /** CI ingest without DB credentials: multipart files (run.json, messages*.ndjson, pw-results*.json, artifacts.tgz not yet supported). */
+  /**
+   * CI ingest without DB credentials: multipart files (run.json, summary.json, messages*.ndjson,
+   * pw-results*.json) plus an optional `artifacts.tgz` holding the run directory (screenshots,
+   * api snapshots, meta.json …). The archive is extracted under the run dir; entries that would
+   * escape it (absolute paths, `..`, symlinks/links) are dropped; total size is capped by
+   * AUTOMAX_INGEST_MAX_MB (multipart limit) and the extracted bytes by 4× that.
+   */
   app.post(
     '/api/runs/:id/ingest',
     { preHandler: [app.requireScope('runs:ingest')] },
     async (req) => {
       const { id } = req.params as { id: string };
+      if (!/^[A-Za-z0-9._-]+$/.test(id)) throw badRequest('Invalid run id.');
       const dir = runDirOf(id);
       mkdirSync(dir, { recursive: true });
       const saved: string[] = [];
+      let extracted: { files: number; bytes: number; skipped: number } | undefined;
       for await (const part of req.parts()) {
         if (part.type !== 'file') continue;
         const name = part.filename.replace(/[^A-Za-z0-9._-]/g, '_');
+        if (name === 'artifacts.tgz' || name === 'artifacts.tar.gz') {
+          const tmp = join(dir, `.upload-${process.pid}-${Date.now()}.tgz`);
+          await pipeline(part.file, (await import('node:fs')).createWriteStream(tmp));
+          try {
+            extracted = await extractArtifacts(tmp, dir, app.config.ingestMaxMb * 4 * 1024 * 1024);
+          } catch (e) {
+            if (e instanceof ArchiveTooLargeError) throw badRequest(e.message);
+            throw badRequest(`artifacts.tgz could not be extracted: ${(e as Error).message}`);
+          } finally {
+            (await import('node:fs')).rmSync(tmp, { force: true });
+          }
+          saved.push(name);
+          continue;
+        }
         if (
           !/^(run\.json|summary\.json|messages(\.shard-\d+)?\.ndjson|pw-results(\.shard-\d+)?\.json)$/.test(
             name,
@@ -284,16 +311,26 @@ export async function runRoutes(app: FastifyInstance) {
         saved.push(name);
       }
       if (!saved.length)
-        throw badRequest('No accepted files. Send run.json, messages*.ndjson or pw-results*.json.');
+        throw badRequest(
+          'No accepted files. Send run.json, messages*.ndjson, pw-results*.json or artifacts.tgz.',
+        );
       const manifestFile = join(dir, runFiles.manifest);
       const manifest = existsSync(manifestFile)
         ? JSON.parse(await import('node:fs/promises').then((m) => m.readFile(manifestFile, 'utf8')))
         : undefined;
+      // Files may arrive as separate parts or inside artifacts.tgz: ingest whatever is in the dir.
+      const present = (await import('node:fs')).readdirSync(dir);
+      const ndjsonPaths = present
+        .filter((f) => /^messages(\.shard-\d+)?\.ndjson$/.test(f))
+        .map((f) => join(dir, f));
+      const pwJsonPaths = present
+        .filter((f) => /^pw-results(\.shard-\d+)?\.json$/.test(f))
+        .map((f) => join(dir, f));
       const result = await ingestRun(app.adb, {
         runId: id,
         manifest,
-        ndjsonPaths: saved.filter((f) => f.endsWith('.ndjson')).map((f) => join(dir, f)),
-        pwJsonPaths: saved.filter((f) => f.startsWith('pw-results')).map((f) => join(dir, f)),
+        ndjsonPaths,
+        pwJsonPaths,
         artifactsRoot: app.config.artifactsDir,
       } as never);
       await audit(app.adb.db, {
@@ -304,7 +341,7 @@ export async function runRoutes(app: FastifyInstance) {
         targetId: id,
         details: { files: saved },
       });
-      return { runId: id, files: saved, result };
+      return { runId: id, files: saved, extracted, result };
     },
   );
 
