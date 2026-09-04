@@ -1,7 +1,7 @@
 import { z, type ZodRawShape } from 'zod';
 import { hasScope, isScope, scopeForToolAccess, type Scope } from '@automax/contracts';
 
-export const DOCS_BASE_URL = 'https://siri1410.github.io/AutoMax';
+export const DOCS_BASE_URL = 'https://automax.sdods.com';
 
 export type ToolAccess = 'read' | 'run' | 'write';
 export type Capability = 'core' | 'analyze' | 'run' | 'data' | 'agents' | 'issues' | 'schedules';

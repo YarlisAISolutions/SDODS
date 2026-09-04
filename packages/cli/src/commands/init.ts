@@ -321,7 +321,7 @@ ${run} automax workspace tree
 ${withDemo ? `${run} automax run -p demo-shop -e staging -l api` : `${run} automax project create my-app --ui-url http://localhost:3000 --api-url http://localhost:3000/api`}
 \`\`\`
 
-Docs: https://siri1410.github.io/AutoMax
+Docs: https://automax.sdods.com
 `,
   );
 

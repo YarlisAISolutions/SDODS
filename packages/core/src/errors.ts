@@ -18,7 +18,7 @@ export type AutomaxErrorCode =
   | 'NOT_SUPPORTED'
   | 'INTERNAL';
 
-export const DOCS_BASE_URL = 'https://siri1410.github.io/AutoMax';
+export const DOCS_BASE_URL = 'https://automax.sdods.com';
 
 export interface AutomaxErrorOptions {
   hint?: string;
