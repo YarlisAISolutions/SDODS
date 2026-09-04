@@ -1,30 +1,48 @@
-# AutoMax server image.
-# Stage 1 installs with Bun (fast); stage 2 runs on Node 22 (Playwright, native drivers).
-# The web build step is added when packages/web lands; until then the image serves the CLI.
+# AutoMax server image (Cloud Run / any container host).
+#
+# Single runtime base: the official Playwright image (Ubuntu noble, Node 22, browsers) so that
+# UI runs triggered from the web UI work inside the container. Bun is installed only as the
+# package manager and web bundler; everything executes on Node 22 through tsx, and native
+# modules (better-sqlite3, argon2) resolve prebuilt binaries for Node 22 at install time.
 
-FROM oven/bun:1.4 AS deps
-WORKDIR /app
-COPY package.json bun.lock ./
-COPY packages ./packages
-COPY apps ./apps
-COPY projects ./projects
-COPY tsconfig.base.json tsconfig.json playwright.config.ts* ./
-RUN bun install --frozen-lockfile --production=false
-
-FROM mcr.microsoft.com/playwright:v1.62.1-noble AS runtime
+FROM mcr.microsoft.com/playwright:v1.62.1-noble
 ENV NODE_ENV=production \
     DB_DRIVER=sqlite \
     SQLITE_PATH=/data/automax.db \
     AUTOMAX_ARTIFACTS_DIR=/data/runs \
+    AUTOMAX_ROOT=/app \
     HOST=0.0.0.0 \
-    PORT=4444
+    PORT=8080 \
+    BUN_INSTALL=/opt/bun \
+    PATH=/opt/bun/bin:$PATH
 WORKDIR /app
-COPY --from=deps /app /app
-RUN mkdir -p /data && chown -R pwuser:pwuser /data /app
+
+# Bun 1.4 as package manager + bundler (pinned)
+# python3/make/g++ let node-gyp build native modules when no prebuilt binary matches the image's Node ABI
+RUN apt-get update && apt-get install -y --no-install-recommends curl unzip ca-certificates python3 make g++ \
+    && curl -fsSL https://bun.sh/install | bash -s "bun-v1.4.0" \
+    && apt-get purge -y unzip && apt-get autoremove -y && rm -rf /var/lib/apt/lists/*
+
+# Dependencies (native modules: prebuilt binaries when available, otherwise compiled above)
+COPY package.json bun.lock ./
+COPY packages ./packages
+COPY apps/docs/package.json ./apps/docs/package.json
+COPY apps/www/package.json ./apps/www/package.json
+COPY projects ./projects
+COPY tsconfig.base.json tsconfig.json playwright.config.ts automax.workspace.yaml ./
+RUN bun install --frozen-lockfile
+
+# Web UI bundle served by the Fastify server
+RUN bun run --filter @automax/web build
+
+COPY deploy/entrypoint.sh /app/deploy/entrypoint.sh
+RUN chmod +x /app/deploy/entrypoint.sh \
+    && mkdir -p /data /tmp/automax \
+    && chown -R pwuser:pwuser /data /app /tmp/automax
 USER pwuser
 VOLUME ["/data"]
-EXPOSE 4444
-HEALTHCHECK --interval=30s --timeout=5s --start-period=20s CMD node --import tsx packages/cli/src/bin.ts --version || exit 1
-# `automax serve` replaces this entrypoint once packages/server exists.
-ENTRYPOINT ["node", "--import", "tsx", "packages/cli/src/bin.ts"]
-CMD ["--help"]
+EXPOSE 8080
+HEALTHCHECK --interval=30s --timeout=5s --start-period=40s \
+  CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||8080)+'/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+ENTRYPOINT ["/app/deploy/entrypoint.sh"]
+CMD ["serve"]

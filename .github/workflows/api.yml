@@ -1,0 +1,62 @@
+name: api
+
+# Builds the AutoMax server image with Cloud Build and deploys it to Cloud Run (api.sdods.com).
+# Needs the GCP_SA_KEY_AUTOMAX secret (service account github-deploy-api@automax-docs). Without it the
+# workflow only validates the Dockerfile.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/**'
+      - 'projects/**'
+      - 'Dockerfile'
+      - '.dockerignore'
+      - 'deploy/**'
+      - 'package.json'
+      - 'bun.lock'
+      - '.github/workflows/api.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: api-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  GCP_PROJECT: automax-docs
+  GCP_REGION: us-central1
+  IMAGE: us-central1-docker.pkg.dev/automax-docs/automax/automax-api
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - id: creds
+        shell: bash
+        run: |
+          if [[ -n "${{ secrets.GCP_SA_KEY_AUTOMAX }}" ]]; then echo "present=true" >> "$GITHUB_OUTPUT"; else echo "present=false" >> "$GITHUB_OUTPUT"; fi
+      - name: Validate Dockerfile (no credentials)
+        if: steps.creds.outputs.present != 'true'
+        run: docker build -t automax-api:ci . >/dev/null && echo "Dockerfile builds; skipping deploy (no GCP_SA_KEY_AUTOMAX secret)"
+      - uses: google-github-actions/auth@v2
+        if: steps.creds.outputs.present == 'true'
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY_AUTOMAX }}
+      - uses: google-github-actions/setup-gcloud@v2
+        if: steps.creds.outputs.present == 'true'
+      - name: Build image (Cloud Build)
+        if: steps.creds.outputs.present == 'true'
+        run: >
+          gcloud builds submit --project $GCP_PROJECT --region $GCP_REGION
+          --tag $IMAGE:${{ github.sha }} --timeout=40m --machine-type=e2-highcpu-8 .
+      - name: Tag latest
+        if: steps.creds.outputs.present == 'true'
+        run: gcloud artifacts docker tags add $IMAGE:${{ github.sha }} $IMAGE:latest
+      - name: Deploy to Cloud Run
+        if: steps.creds.outputs.present == 'true'
+        run: bash deploy/deploy-cloud-run.sh ${{ github.sha }}
