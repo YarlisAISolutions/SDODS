@@ -38,8 +38,12 @@ jobs:
       - uses: actions/checkout@v4
       - id: creds
         shell: bash
+        # The key is multi-line JSON, so it goes through the environment; interpolating it
+        # directly into the shell breaks the conditional.
+        env:
+          SA_KEY: ${{ secrets.GCP_SA_KEY_AUTOMAX }}
         run: |
-          if [[ -n "${{ secrets.GCP_SA_KEY_AUTOMAX }}" ]]; then echo "present=true" >> "$GITHUB_OUTPUT"; else echo "present=false" >> "$GITHUB_OUTPUT"; fi
+          if [ -n "$SA_KEY" ]; then echo "present=true" >> "$GITHUB_OUTPUT"; else echo "present=false" >> "$GITHUB_OUTPUT"; fi
       - name: Validate Dockerfile (no credentials)
         if: steps.creds.outputs.present != 'true'
         run: docker build -t automax-api:ci . >/dev/null && echo "Dockerfile builds; skipping deploy (no GCP_SA_KEY_AUTOMAX secret)"
