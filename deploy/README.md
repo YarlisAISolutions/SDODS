@@ -21,7 +21,7 @@ image so UI runs triggered from the web UI work inside the container.
 | Artifact Registry | `gcloud artifacts repositories create sdods --repository-format=docker --location=us-central1` |
 | Secrets | `automax-session-secret`, `automax-db-password`, `automax-admin-password` (random, Secret Manager) |
 | Cloud SQL | `gcloud sql instances create automax-pg --database-version=POSTGRES_16 --edition=ENTERPRISE --tier=db-f1-micro --region=us-central1 --storage-size=10 --storage-type=HDD --availability-type=zonal --no-backup` then `gcloud sql databases create automax --instance automax-pg` and `gcloud sql users create automax --instance automax-pg --password "$(gcloud secrets versions access latest --secret automax-db-password)"` |
-| Service accounts | runtime `automax-api-runtime@` (secretAccessor, cloudsql.client); CI `github-deploy-api@` (run.admin, cloudbuild.builds.editor, artifactregistry.writer, iam.serviceAccountUser, storage.admin, serviceUsageConsumer) — its key is the GitHub secret `GCP_SA_KEY_AUTOMAX` |
+| Service accounts | runtime `automax-api-runtime@` (secretAccessor, cloudsql.client); CI `github-deploy-api@` (run.admin, cloudbuild.builds.editor, artifactregistry.writer, iam.serviceAccountUser, storage.admin, serviceUsageConsumer, logging.viewer, plus artifactregistry.repoAdmin on the `sdods` repository so it can move the `latest` tag) — its key is the GitHub secret `GCP_SA_KEY_AUTOMAX` |
 
 ## Deploy
 
