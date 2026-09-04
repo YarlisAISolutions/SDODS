@@ -19,3 +19,4 @@ packages/web/dist/
 .DS_Store
 .idea/
 *.tsbuildinfo
+.firebase/

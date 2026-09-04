@@ -16,7 +16,11 @@ import { getSession, getUserById, resolveApiToken, touchSession } from '@automax
 import { forbidden, unauthorized } from '../errors.js';
 import type { Principal } from '../types.js';
 
-export const SESSION_COOKIE = 'automax_sid';
+/**
+ * Session cookie name. Behind Firebase Hosting rewrites only a cookie named `__session` reaches
+ * Cloud Run, so deployments set AUTOMAX_SESSION_COOKIE=__session.
+ */
+export const SESSION_COOKIE = process.env.AUTOMAX_SESSION_COOKIE || 'automax_sid';
 const ROLE_RANK: Record<WorkspaceRole, number> = { viewer: 0, editor: 1, admin: 2 };
 const PUBLIC_PATHS = new Set([
   '/api/health',
