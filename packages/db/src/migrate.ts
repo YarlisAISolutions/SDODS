@@ -37,27 +37,52 @@ class DriverBoundProvider implements MigrationProvider {
  * name is fully migrated, but the migrator cannot see its ledger, so it would replay every
  * migration and fail on the first CREATE TABLE. Renaming the ledger adopts the database.
  */
-const LEGACY_TABLES: ReadonlyArray<readonly [string, string]> = [
-  ['automax_migrations', MIGRATION_TABLE],
-  ['automax_migrations_lock', MIGRATION_LOCK_TABLE],
-];
+const LEGACY_MIGRATION_TABLE = 'automax_migrations';
+const LEGACY_LOCK_TABLE = 'automax_migrations_lock';
 
 async function tableExists(db: Kysely<any>, name: string): Promise<boolean> {
   const tables = await db.introspection.getTables();
   return tables.some((t) => t.name === name);
 }
 
+async function rowCount(db: Kysely<any>, name: string): Promise<number> {
+  const rows = await sql<{
+    n: number | string;
+  }>`select count(*) as n from ${sql.ref(name)}`.execute(db);
+  return Number(rows.rows[0]?.n ?? 0);
+}
+
 /**
- * Rename a pre-rename ledger into place, once, before the migrator reads it. Skipped when the
- * current ledger already exists, so it is safe to call on every start.
+ * Move a pre-rename ledger into place before the migrator reads it. Safe to call on every
+ * start: it does nothing unless the old ledger exists and actually records migrations.
+ *
+ * A start that already failed this way leaves an empty ledger under the current name behind,
+ * so an empty one is dropped rather than treated as authoritative. An empty ledger records
+ * nothing, so nothing is lost; a non-empty one is left untouched and adoption is declined.
  */
 export async function adoptLegacyLedger({ db }: SdodsDb): Promise<string[]> {
-  const renamed: string[] = [];
-  for (const [legacy, current] of LEGACY_TABLES) {
-    if (await tableExists(db, current)) continue;
-    if (!(await tableExists(db, legacy))) continue;
-    await sql`alter table ${sql.ref(legacy)} rename to ${sql.ref(current)}`.execute(db);
-    renamed.push(`${legacy} -> ${current}`);
+  if (!(await tableExists(db, LEGACY_MIGRATION_TABLE))) return [];
+  if ((await rowCount(db, LEGACY_MIGRATION_TABLE)) === 0) return [];
+
+  if (await tableExists(db, MIGRATION_TABLE)) {
+    if ((await rowCount(db, MIGRATION_TABLE)) > 0) return [];
+    await sql`drop table ${sql.ref(MIGRATION_TABLE)}`.execute(db);
+  }
+  await sql`alter table ${sql.ref(LEGACY_MIGRATION_TABLE)} rename to ${sql.ref(MIGRATION_TABLE)}`.execute(
+    db,
+  );
+  const renamed = [`${LEGACY_MIGRATION_TABLE} -> ${MIGRATION_TABLE}`];
+
+  // The lock table holds no history, so whichever one is in place will do.
+  if (await tableExists(db, LEGACY_LOCK_TABLE)) {
+    if (await tableExists(db, MIGRATION_LOCK_TABLE)) {
+      await sql`drop table ${sql.ref(LEGACY_LOCK_TABLE)}`.execute(db);
+    } else {
+      await sql`alter table ${sql.ref(LEGACY_LOCK_TABLE)} rename to ${sql.ref(MIGRATION_LOCK_TABLE)}`.execute(
+        db,
+      );
+      renamed.push(`${LEGACY_LOCK_TABLE} -> ${MIGRATION_LOCK_TABLE}`);
+    }
   }
   return renamed;
 }
