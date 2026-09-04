@@ -4,13 +4,14 @@ import { col, enc, readBool, readJson } from '../src/col.js';
 import { createMemoryDb } from '../src/create-db.js';
 import {
   MIGRATION_NAMES,
+  adoptLegacyLedger,
   migrateDown,
   migrateTo,
   migrateToLatest,
   migrationStatus,
   resetDatabase,
 } from '../src/migrate.js';
-import { TABLES_IN_FK_ORDER } from '../src/schema.js';
+import { MIGRATION_LOCK_TABLE, MIGRATION_TABLE, TABLES_IN_FK_ORDER } from '../src/schema.js';
 import { resolveDriverConfig } from '../src/driver.js';
 
 describe('driver config', () => {
@@ -187,5 +188,58 @@ describe('0008_runner_naming carries existing rows through the rename', () => {
     }>`select pw_project from flaky_stats`.execute(adb.db);
     expect(flaky.rows[0]?.pw_project).toBe('demo-shop--ui--chromium');
     await migrateToLatest(adb);
+  });
+});
+
+describe('adopting a database created before the rename', () => {
+  it('renames the legacy ledger instead of replaying every migration', async () => {
+    const adb = createMemoryDb();
+    await migrateToLatest(adb);
+    const before = (await migrationStatus(adb)).filter((m) => m.executedAt).length;
+    expect(before).toBe(MIGRATION_NAMES.length);
+
+    // Put the database back into the shape it had under the old name.
+    await sql`alter table ${sql.ref(MIGRATION_TABLE)} rename to ${sql.ref('automax_migrations')}`.execute(
+      adb.db,
+    );
+    await sql`alter table ${sql.ref(MIGRATION_LOCK_TABLE)} rename to ${sql.ref('automax_migrations_lock')}`.execute(
+      adb.db,
+    );
+
+    const renamed = await adoptLegacyLedger(adb);
+    expect(renamed).toEqual([
+      `automax_migrations -> ${MIGRATION_TABLE}`,
+      `automax_migrations_lock -> ${MIGRATION_LOCK_TABLE}`,
+    ]);
+
+    // Every migration is still recorded, so migrating again is a no-op rather than a replay.
+    expect((await migrationStatus(adb)).filter((m) => m.executedAt).length).toBe(before);
+    await expect(migrateToLatest(adb)).resolves.toEqual([]);
+
+    // Calling it again on an adopted database does nothing.
+    expect(await adoptLegacyLedger(adb)).toEqual([]);
+    await adb.db.destroy();
+  });
+
+  it('adopts implicitly, so an existing deployment starts without intervention', async () => {
+    const adb = createMemoryDb();
+    await migrateToLatest(adb);
+    await sql`alter table ${sql.ref(MIGRATION_TABLE)} rename to ${sql.ref('automax_migrations')}`.execute(
+      adb.db,
+    );
+    await sql`alter table ${sql.ref(MIGRATION_LOCK_TABLE)} rename to ${sql.ref('automax_migrations_lock')}`.execute(
+      adb.db,
+    );
+    // Without adoption this throws: the ledger looks empty and migration 0001 recreates `roles`.
+    await expect(migrateToLatest(adb)).resolves.toEqual([]);
+    await adb.db.destroy();
+  });
+
+  it('leaves a fresh database alone', async () => {
+    const adb = createMemoryDb();
+    expect(await adoptLegacyLedger(adb)).toEqual([]);
+    await migrateToLatest(adb);
+    expect(await adoptLegacyLedger(adb)).toEqual([]);
+    await adb.db.destroy();
   });
 });

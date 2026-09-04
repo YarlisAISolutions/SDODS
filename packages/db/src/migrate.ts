@@ -1,4 +1,4 @@
-import type { Kysely } from 'kysely';
+import { sql, type Kysely } from 'kysely';
 import {
   Migrator,
   type Migration,
@@ -32,6 +32,36 @@ class DriverBoundProvider implements MigrationProvider {
   }
 }
 
+/**
+ * Ledger tables the platform used before it was renamed. A database created under the old
+ * name is fully migrated, but the migrator cannot see its ledger, so it would replay every
+ * migration and fail on the first CREATE TABLE. Renaming the ledger adopts the database.
+ */
+const LEGACY_TABLES: ReadonlyArray<readonly [string, string]> = [
+  ['automax_migrations', MIGRATION_TABLE],
+  ['automax_migrations_lock', MIGRATION_LOCK_TABLE],
+];
+
+async function tableExists(db: Kysely<any>, name: string): Promise<boolean> {
+  const tables = await db.introspection.getTables();
+  return tables.some((t) => t.name === name);
+}
+
+/**
+ * Rename a pre-rename ledger into place, once, before the migrator reads it. Skipped when the
+ * current ledger already exists, so it is safe to call on every start.
+ */
+export async function adoptLegacyLedger({ db }: SdodsDb): Promise<string[]> {
+  const renamed: string[] = [];
+  for (const [legacy, current] of LEGACY_TABLES) {
+    if (await tableExists(db, current)) continue;
+    if (!(await tableExists(db, legacy))) continue;
+    await sql`alter table ${sql.ref(legacy)} rename to ${sql.ref(current)}`.execute(db);
+    renamed.push(`${legacy} -> ${current}`);
+  }
+  return renamed;
+}
+
 export function createMigrator({ db, driver }: SdodsDb): Migrator {
   return new Migrator({
     db,
@@ -48,18 +78,22 @@ function assertOk(result: MigrationResultSet) {
 }
 
 export async function migrateToLatest(adb: SdodsDb) {
+  await adoptLegacyLedger(adb);
   return assertOk(await createMigrator(adb).migrateToLatest());
 }
 
 export async function migrateDown(adb: SdodsDb) {
+  await adoptLegacyLedger(adb);
   return assertOk(await createMigrator(adb).migrateDown());
 }
 
 export async function migrateTo(adb: SdodsDb, name: string) {
+  await adoptLegacyLedger(adb);
   return assertOk(await createMigrator(adb).migrateTo(name));
 }
 
 export async function migrationStatus(adb: SdodsDb) {
+  await adoptLegacyLedger(adb);
   const list = await createMigrator(adb).getMigrations();
   return list.map((m) => ({
     name: m.name,
