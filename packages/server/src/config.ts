@@ -63,6 +63,8 @@ export interface ServerConfig {
   ingestMaxMb: number;
   allowedHosts: string[];
   cliBin: string;
+  /** login attempts per IP per minute (AUTOMAX_LOGIN_RATE_LIMIT; test rigs raise it) */
+  loginRateLimit: number;
 }
 
 export function loadServerConfig(
@@ -101,6 +103,7 @@ export function loadServerConfig(
       overrides.allowedHosts ??
       (env.AUTOMAX_ALLOWED_HOSTS ? env.AUTOMAX_ALLOWED_HOSTS.split(',') : ['*']),
     cliBin: overrides.cliBin ?? resolve(rootDir, 'packages/cli/src/bin.ts'),
+    loginRateLimit: overrides.loginRateLimit ?? Number(env.AUTOMAX_LOGIN_RATE_LIMIT ?? 10),
   };
 }
 

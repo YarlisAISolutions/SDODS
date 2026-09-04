@@ -1,0 +1,14 @@
+name: local
+description: An AutoMax server started by `bun run dogfood` on a scratch SQLite database.
+ui:
+  baseUrl: http://127.0.0.1:4477
+api:
+  baseUrl: http://127.0.0.1:4477
+  headers: { Accept: application/json }
+  auth: { type: none } # API scenarios opt in with `I authenticate with bearer token from "AUTOMAX_TOKEN"`
+users:
+  poolSize: 2
+vars:
+  adminPassword: '${AUTOMAX_UI_ADMIN_PASSWORD:-Admin#12345}'
+  memberPassword: '${AUTOMAX_UI_VERA_PASSWORD:-Vera#12345}'
+  orgName: AutoMax

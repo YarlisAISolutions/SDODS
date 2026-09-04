@@ -10,6 +10,7 @@ import {
 import { effectiveWorkspaceRole, type Scope, type WorkspaceRole } from '@automax/contracts/scopes';
 import { api, ApiError, setCsrfToken } from '../api/client';
 import type { Me } from '../api/types';
+import { normalizeMe } from '../api/normalize';
 
 interface AuthState {
   me: Me | null;
@@ -33,7 +34,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const refresh = useCallback(async () => {
     try {
-      const m = await api<Me>('/api/auth/me');
+      const m = normalizeMe(await api<Record<string, unknown>>('/api/auth/me'));
       setCsrfToken(m.csrfToken);
       setMe(m);
       setNeedsSetup(false);

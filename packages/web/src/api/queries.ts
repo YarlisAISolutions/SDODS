@@ -27,6 +27,28 @@ import type {
   Workspace,
   Diagnostic,
 } from './types';
+import {
+  normalizeAgentJob,
+  normalizeDatasets,
+  normalizeEnv,
+  normalizeIntegrations,
+  normalizeMcpInfo,
+  normalizeMember,
+  normalizeOrg,
+  normalizePool,
+  normalizeProcess,
+  normalizeProject,
+  normalizeRunDetail,
+  normalizeRuns,
+  normalizeScenarioDetail,
+  normalizeSchedule,
+  normalizeToken,
+  normalizeTrends,
+  normalizeWorkspace,
+} from './normalize';
+
+type Rec = Record<string, unknown>;
+const list = (v: unknown): Rec[] => (Array.isArray(v) ? (v as Rec[]) : []);
 
 export const keys = {
   orgs: ['orgs'] as const,
@@ -54,76 +76,103 @@ export const keys = {
 };
 
 export const useOrgs = () =>
-  useQuery({ queryKey: keys.orgs, queryFn: () => api<Organization[]>('/api/orgs') });
+  useQuery({
+    queryKey: keys.orgs,
+    queryFn: async () => list(await api<unknown>('/api/orgs')).map(normalizeOrg) as Organization[],
+  });
 export const useWorkspaces = (org?: string) =>
   useQuery({
     queryKey: keys.workspaces(org),
-    queryFn: () => api<Workspace[]>(`/api/workspaces${qs({ org })}`),
+    queryFn: async () =>
+      list(await api<unknown>(`/api/workspaces${qs({ org })}`)).map(
+        normalizeWorkspace,
+      ) as Workspace[],
   });
+/** Member routes are addressed by workspace/org id or slug (the server accepts both). */
 export const useWorkspaceMembers = (ws: string) =>
   useQuery({
     queryKey: ['wsMembers', ws],
-    queryFn: () => api<Member[]>(`/api/workspaces/${ws}/members`),
+    queryFn: async () =>
+      list(await api<unknown>(`/api/workspaces/${ws}/members`)).map(normalizeMember) as Member[],
     enabled: Boolean(ws),
   });
 export const useOrgMembers = (org: string) =>
   useQuery({
     queryKey: ['orgMembers', org],
-    queryFn: () => api<Member[]>(`/api/orgs/${org}/members`),
+    queryFn: async () =>
+      list(await api<unknown>(`/api/orgs/${org}/members`)).map(normalizeMember) as Member[],
     enabled: Boolean(org),
   });
 export const useProjects = (ws?: string) =>
   useQuery({
     queryKey: keys.projects(ws),
-    queryFn: () => api<Project[]>(`/api/projects${qs({ workspace: ws })}`),
+    queryFn: async () => {
+      const rows = list(await api<unknown>(`/api/projects${qs({ workspace: ws })}`)).map(
+        normalizeProject,
+      ) as Project[];
+      return ws ? rows.filter((p) => p.workspace === ws) : rows;
+    },
   });
 export const useProject = (slug: string) =>
   useQuery({
     queryKey: keys.project(slug),
-    queryFn: () => api<Project>(`/api/projects/${slug}`),
+    queryFn: async () => normalizeProject(await api<Rec>(`/api/projects/${slug}`)),
     enabled: Boolean(slug),
   });
 export const useEnvs = (slug: string) =>
   useQuery({
     queryKey: keys.envs(slug),
-    queryFn: () => api<Environment[]>(`/api/projects/${slug}/envs`),
+    queryFn: async () =>
+      list(await api<unknown>(`/api/projects/${slug}/envs`)).map(normalizeEnv) as Environment[],
     enabled: Boolean(slug),
   });
 export const useDatasets = (slug: string) =>
   useQuery({
     queryKey: keys.datasets(slug),
-    queryFn: () => api<Dataset[]>(`/api/projects/${slug}/datasets`),
+    queryFn: async () =>
+      normalizeDatasets(await api<Rec | Rec[]>(`/api/projects/${slug}/datasets`)) as Dataset[],
     enabled: Boolean(slug),
   });
 export const usePool = (slug: string) =>
   useQuery({
     queryKey: keys.pool(slug),
-    queryFn: () => api<PoolUser[]>(`/api/projects/${slug}/users-pool`),
+    queryFn: async () =>
+      normalizePool(await api<Rec | Rec[]>(`/api/projects/${slug}/users-pool`)) as PoolUser[],
     enabled: Boolean(slug),
   });
 export const useProcesses = (slug: string) =>
   useQuery({
     queryKey: keys.processes(slug),
-    queryFn: () => api<ProcessView[]>(`/api/projects/${slug}/processes`),
+    queryFn: async () =>
+      list(await api<unknown>(`/api/projects/${slug}/processes`)).map(
+        normalizeProcess,
+      ) as ProcessView[],
     enabled: Boolean(slug),
   });
 export const useRuns = (filters: Record<string, string | undefined>) =>
   useQuery({
     queryKey: keys.runs(filters),
-    queryFn: () => api<{ items: RunListItem[]; total: number }>(`/api/runs${qs(filters)}`),
+    queryFn: async () =>
+      normalizeRuns(await api<Rec | Rec[]>(`/api/runs${qs(filters)}`)) as {
+        items: RunListItem[];
+        total: number;
+      },
     refetchInterval: 5000,
   });
 export const useRun = (id: string, live = false) =>
   useQuery({
     queryKey: keys.run(id),
-    queryFn: () => api<RunDetail>(`/api/runs/${id}`),
+    queryFn: async () => normalizeRunDetail(await api<Rec>(`/api/runs/${id}`)) as RunDetail,
     enabled: Boolean(id),
     refetchInterval: live ? 3000 : false,
   });
 export const useScenario = (runId: string, sid: string) =>
   useQuery({
     queryKey: keys.scenario(runId, sid),
-    queryFn: () => api<ScenarioDetail>(`/api/runs/${runId}/scenarios/${sid}`),
+    queryFn: async () =>
+      normalizeScenarioDetail(
+        await api<Rec>(`/api/runs/${runId}/scenarios/${sid}`),
+      ) as ScenarioDetail,
     enabled: Boolean(runId && sid),
   });
 export const useCompare = (before?: string, after?: string, enabled = true) =>
@@ -154,42 +203,75 @@ export const useSteps = (slug: string) =>
 export const useAgentJobs = (slug?: string) =>
   useQuery({
     queryKey: keys.agentJobs(slug),
-    queryFn: () => api<AgentJob[]>(`/api/agents/jobs${qs({ project: slug })}`),
+    queryFn: async () =>
+      list(await api<unknown>(`/api/agents/jobs${qs({ project: slug })}`)).map(
+        normalizeAgentJob,
+      ) as AgentJob[],
     refetchInterval: 5000,
   });
 export const useProposals = (slug?: string) =>
   useQuery({
     queryKey: keys.proposals(slug),
-    queryFn: () => api<Proposal[]>(`/api/proposals${qs({ project: slug })}`),
+    queryFn: async () =>
+      list(await api<unknown>(`/api/proposals${qs({ project: slug })}`)) as unknown as Proposal[],
   });
 export const useIntegrations = (slug: string) =>
   useQuery({
     queryKey: keys.integrations(slug),
-    queryFn: () => api<IntegrationView[]>(`/api/projects/${slug}/integrations`),
+    queryFn: async () =>
+      normalizeIntegrations(
+        await api<Rec | Rec[]>(`/api/projects/${slug}/integrations`),
+      ) as IntegrationView[],
     enabled: Boolean(slug),
   });
 export const useSchedules = (slug?: string) =>
   useQuery({
     queryKey: keys.schedules(slug),
-    queryFn: () => api<Schedule[]>(`/api/schedules${qs({ project: slug })}`),
+    queryFn: async () =>
+      list(await api<unknown>(`/api/schedules${qs({ project: slug })}`)).map(
+        normalizeSchedule,
+      ) as Schedule[],
   });
 export const useScheduleHistory = (id: string) =>
   useQuery({
     queryKey: ['scheduleHistory', id],
-    queryFn: () => api<ScheduleRun[]>(`/api/schedules/${id}/history`),
+    queryFn: async () =>
+      list(await api<unknown>(`/api/schedules/${id}/history`)) as unknown as ScheduleRun[],
     enabled: Boolean(id),
   });
 export const useUsers = () =>
-  useQuery({ queryKey: keys.users, queryFn: () => api<UserRow[]>('/api/users') });
+  useQuery({
+    queryKey: keys.users,
+    queryFn: async () => list(await api<unknown>('/api/users')) as unknown as UserRow[],
+  });
 export const useTokens = (all = false) =>
   useQuery({
     queryKey: [...keys.tokens, all],
-    queryFn: () => api<ApiToken[]>(`/api/tokens${qs({ all: all ? 1 : undefined })}`),
+    queryFn: async () =>
+      list(await api<unknown>(`/api/tokens${qs({ all: all ? 1 : undefined })}`)).map(
+        normalizeToken,
+      ) as ApiToken[],
   });
 export const useMcpInfo = () =>
-  useQuery({ queryKey: keys.mcpInfo, queryFn: () => api<McpInfo>('/api/mcp/info') });
+  useQuery({
+    queryKey: keys.mcpInfo,
+    queryFn: async () => normalizeMcpInfo(await api<Rec>('/api/mcp/info')) as McpInfo,
+  });
+/** Dashboard trends: merge trends + flaky + heal (+ insights when a project is selected). */
 export const useTrends = (f: Record<string, string | number | undefined>) =>
-  useQuery({ queryKey: keys.trends(f), queryFn: () => api<Trends>(`/api/stats/trends${qs(f)}`) });
+  useQuery({
+    queryKey: keys.trends(f),
+    queryFn: async () => {
+      const project = f.project ? String(f.project) : undefined;
+      const [trends, flaky, heal, insights] = await Promise.all([
+        api<Rec | Rec[]>(`/api/stats/trends${qs(f)}`),
+        project ? api<Rec | Rec[]>(`/api/stats/flaky${qs({ project })}`).catch(() => []) : [],
+        project ? api<Rec | Rec[]>(`/api/stats/heal${qs({ project })}`).catch(() => ({})) : {},
+        project ? api<Rec | Rec[]>(`/api/stats/insights${qs({ project })}`).catch(() => ({})) : {},
+      ]);
+      return normalizeTrends(trends, flaky, heal, insights) as Trends;
+    },
+  });
 
 export function useInvalidate() {
   const qc = useQueryClient();
@@ -211,12 +293,28 @@ export const useCancelRun = () => {
     onSuccess: () => inv(['runs'], ['run']),
   });
 };
+/** The server answers `{ errors, warnings }` (LintResult); the editor works with flat diagnostics. */
+export function toDiagnostics(r: Rec | null | undefined): Diagnostic[] {
+  if (!r) return [];
+  if (Array.isArray(r.diagnostics)) return r.diagnostics as Diagnostic[];
+  const mk = (severity: Diagnostic['severity']) => (d: Rec) => ({
+    severity,
+    rule: String(d.rule ?? 'lint'),
+    message: String(d.message ?? ''),
+    line: typeof d.line === 'number' ? d.line : undefined,
+    column: typeof d.column === 'number' ? d.column : undefined,
+    fix: d.fix as Diagnostic['fix'],
+  });
+  return [...list(r.errors).map(mk('error')), ...list(r.warnings).map(mk('warning'))];
+}
+
 export const useValidateFeature = (slug: string) =>
   useMutation({
-    mutationFn: (input: { path: string; content: string }) =>
-      api<{ diagnostics: Diagnostic[] }>(`/api/projects/${slug}/features/validate`, {
-        json: input,
-      }),
+    mutationFn: async (input: { path: string; content: string }) => ({
+      diagnostics: toDiagnostics(
+        await api<Rec>(`/api/projects/${slug}/features/validate`, { json: input }),
+      ),
+    }),
   });
 export const useSaveFeature = (slug: string) => {
   const inv = useInvalidate();

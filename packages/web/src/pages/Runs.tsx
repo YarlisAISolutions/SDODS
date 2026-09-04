@@ -50,7 +50,7 @@ export function RunsPage() {
         subtitle={`${q.data?.total ?? 0} runs in ${workspace?.name ?? 'workspace'}`}
         actions={
           canEdit(workspace?.slug) && (
-            <Button variant="primary" onClick={() => setStarting(true)}>
+            <Button variant="primary" data-testid="start-run" onClick={() => setStarting(true)}>
               Start run
             </Button>
           )
