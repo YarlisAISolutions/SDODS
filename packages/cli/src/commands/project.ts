@@ -109,7 +109,7 @@ export function registerProjectCommands(program: Command) {
       const yamlText = toYaml(minimalYaml(config), { lineWidth: 100 });
       writeFileSync(
         join(root, PROJECT_FILE),
-        `# AutoMax project. Reference: ${'https://siri1410.github.io/AutoMax/docs/reference/project-yaml'}\n${yamlText}`,
+        `# AutoMax project. Reference: ${'https://automax.sdods.com/docs/reference/project-yaml'}\n${yamlText}`,
       );
       if (ctx.opts.json) return json({ slug, root, files: [PROJECT_FILE, ...Object.keys(files)] });
       ok(`Created project ${slug} at ${root}`);
