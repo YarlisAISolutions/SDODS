@@ -190,12 +190,26 @@ description: Field-by-field reference for the project file and the workspace fil
       default: '{}',
       description: 'envFrom/headersFrom hold env var NAMES.',
     },
-    'agents.provider': { type: "'claude'|'openai-compatible'|'fake'" },
+    'agents.provider': {
+      type: "'claude'|'claude-code'|'codex'|'openai-compatible'|'ollama'|'fake'",
+    },
     'agents.models': { type: 'Record<role, model>', default: '{}' },
     'agents.maxTurns': { type: 'Record<role, number>', default: '{}' },
     'agents.budgetUsd': { type: 'Record<role, number>', default: '{ default: 2 }' },
     'agents.maxRunsPerJob': { type: 'number', default: '3' },
     'agents.sourceRoots': { type: 'string[]', default: '[]' },
+    'agents.local.baseUrl': {
+      type: 'string',
+      description: 'Model server you run yourself (ollama, vLLM, LM Studio).',
+    },
+    'agents.local.contextTokens': {
+      type: 'number',
+      description:
+        'num_ctx for a local model. Ollama loads at 4096 and truncates longer prompts silently.',
+    },
+    'agents.local.temperature': { type: 'number' },
+    'agents.local.requestTimeoutMs': { type: 'number', default: '300000' },
+    'agents.local.keepAlive': { type: 'string', default: "'10m'" },
     'schedules[]': {
       type: '{ name, cron, timezone, env?, tags?, layers?, browsers?, workers?, harMode?, overlap, jitterSeconds, catchUp, enabled, notify, retentionRuns? }',
     },

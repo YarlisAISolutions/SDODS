@@ -3,6 +3,7 @@ export * from './claude.js';
 export * from './claude-code.js';
 export * from './codex.js';
 export * from './cli-common.js';
+export * from './ollama.js';
 export * from './openai-compat.js';
 export * from './fake.js';
 export * from './factory.js';

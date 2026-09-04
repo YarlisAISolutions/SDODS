@@ -30,17 +30,18 @@ flowchart LR
 
 ## Adapter
 
-Roles do not know which model runs them. `--adapter`, `SDODS_LLM_PROVIDER` or `agents.provider` in the project YAML picks one; when none is set SDODS auto-detects in this order: `ANTHROPIC_API_KEY` → `claude` CLI → `codex` CLI → `OPENAI_API_KEY` → `fake`.
+Roles do not know which model runs them. `--adapter`, `SDODS_LLM_PROVIDER` or `agents.provider` in the project YAML picks one; when none is set SDODS auto-detects in this order: `ANTHROPIC_API_KEY` → `claude` CLI → `codex` CLI → `OPENAI_API_KEY` → a local Ollama → `fake`.
 
-| Adapter             | Runs on                                         | Needs                                  | Notes                                                                          |
-| ------------------- | ----------------------------------------------- | -------------------------------------- | ------------------------------------------------------------------------------ |
-| `claude`            | Claude Agent SDK + bundled Playwright MCP       | `ANTHROPIC_API_KEY`                    | full tool loop, budgets enforced by the SDK                                    |
-| `claude-code`       | your logged-in Claude Code CLI (`claude -p`)    | `claude login`                         | no API key; uses your subscription; tools via the sdods MCP server             |
-| `codex`             | your logged-in OpenAI Codex CLI (`codex exec`)  | `codex login`                          | no API key; ChatGPT account; tools via the sdods MCP server, read-only sandbox |
-| `openai-compatible` | any chat-completions endpoint with tool calling | `OPENAI_API_KEY` (+ `OPENAI_BASE_URL`) | Azure, Ollama, vLLM …                                                          |
-| `fake`              | scripted responses                              | nothing                                | tests and `--dry-run`                                                          |
+| Adapter             | Runs on                                         | Needs                                  | Notes                                                                                       |
+| ------------------- | ----------------------------------------------- | -------------------------------------- | ------------------------------------------------------------------------------------------- |
+| `claude`            | Claude Agent SDK + bundled Playwright MCP       | `ANTHROPIC_API_KEY`                    | full tool loop, budgets enforced by the SDK                                                 |
+| `claude-code`       | your logged-in Claude Code CLI (`claude -p`)    | `claude login`                         | no API key; uses your subscription; tools via the sdods MCP server                          |
+| `codex`             | your logged-in OpenAI Codex CLI (`codex exec`)  | `codex login`                          | no API key; ChatGPT account; tools via the sdods MCP server, read-only sandbox              |
+| `openai-compatible` | any chat-completions endpoint with tool calling | `OPENAI_API_KEY` (+ `OPENAI_BASE_URL`) | Azure, vLLM, LM Studio, llama.cpp                                                           |
+| `ollama`            | a model on your own machine, native API         | nothing                                | no key, no cost, nothing leaves the machine — see [Local models](/docs/guides/local-models) |
+| `fake`              | scripted responses                              | nothing                                | tests and `--dry-run`                                                                       |
 
-LLM keys and logins are yours and billed by the provider; SDODS's own API tokens are free. See [Claude Code and Codex CLI](/docs/guides/claude-code-and-codex) and [Tokens and keys](/docs/reference/tokens-and-keys).
+Hosted keys and logins are yours and billed by the provider; a local model costs nothing per token; SDODS's own API tokens are free. See [Local models](/docs/guides/local-models), [Claude Code and Codex CLI](/docs/guides/claude-code-and-codex) and [Tokens and keys](/docs/reference/tokens-and-keys).
 
 ## Commands
 
@@ -66,7 +67,8 @@ agents:
   maxRunsPerJob: 3
 ```
 
-Every job records model, turns and cost; a job stops at its budget.
+Every job records model, turns and cost; a job stops at its budget. A local model has no per-token
+cost, so `budgetUsd` never fires there and `maxTurns` is the bound that matters.
 
 ## Claude Code
 

@@ -2,9 +2,10 @@ import type { AgentSdkToolDef } from '@sdods/mcp';
 
 /**
  * claude / openai-compatible: API keys. claude-code / codex: shell out to the user's logged-in
- * CLI (no key needed). fake: scripted, for tests and --dry-run.
+ * CLI (no key needed). ollama: a model running on this machine, no key and no cost.
+ * fake: scripted, for tests and --dry-run.
  */
-export type Provider = 'claude' | 'claude-code' | 'codex' | 'openai-compatible' | 'fake';
+export type Provider = 'claude' | 'claude-code' | 'codex' | 'openai-compatible' | 'ollama' | 'fake';
 
 export interface TokenUsage {
   inputTokens?: number;
@@ -43,6 +44,8 @@ export interface CompleteRequest {
   model?: string;
   maxTokens?: number;
   effort?: 'low' | 'medium' | 'high' | 'xhigh' | 'max';
+  /** JSON schema the answer must satisfy, where the provider can enforce one. */
+  responseSchema?: Record<string, unknown>;
   signal?: AbortSignal;
 }
 
@@ -60,6 +63,8 @@ export interface RunAgentOptions {
   mcpServers?: Record<string, ExternalMcpServerConfig>;
   model?: string;
   maxTurns?: number;
+  /** Cap on one assistant turn; local models otherwise ramble until the context ends. */
+  maxTokens?: number;
   maxBudgetUsd?: number;
   cwd?: string;
   signal?: AbortSignal;
@@ -101,5 +106,7 @@ export const DEFAULT_MODELS: Record<Provider, string> = {
   'claude-code': 'default',
   codex: 'default',
   'openai-compatible': 'gpt-4.1',
+  // Small enough to run on a laptop, and the best of that size at tool calls and structured output.
+  ollama: 'qwen2.5-coder:7b',
   fake: 'fake-model',
 };

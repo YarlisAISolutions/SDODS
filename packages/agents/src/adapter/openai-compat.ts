@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import type { AgentSdkToolDef } from '@sdods/mcp';
 import {
   DEFAULT_MODELS,
   AgentsConfigError,
@@ -9,6 +9,16 @@ import {
   type RunAgentResult,
   type TokenUsage,
 } from './types.js';
+import { toolParameters } from './json-schema.js';
+import {
+  readToolArgs,
+  runToolLoop,
+  type NormalizedCall,
+  type ToolLoopTransport,
+} from './tool-loop.js';
+
+/** One entry of a chat-completions conversation, in the provider's own shape. */
+type ChatMessage = Record<string, unknown>;
 
 export interface OpenAiCompatOptions {
   baseUrl?: string;
@@ -17,7 +27,14 @@ export interface OpenAiCompatOptions {
   fetchImpl?: typeof fetch;
   /** USD per 1M tokens, for cost estimates */
   prices?: Record<string, { input: number; output: number }>;
+  /** Per-request ceiling. Local models are minutes, not seconds, so this is generous. */
+  timeoutMs?: number;
+  /** 0 by default: test generation should be reproducible, not creative. */
+  temperature?: number;
 }
+
+/** A hosted endpoint answers in seconds; a local one can take minutes on a first load. */
+const DEFAULT_TIMEOUT_MS = 300_000;
 
 /** Chat-completions tool loop for OpenAI-compatible endpoints (OpenAI, Azure, Ollama, vLLM …). */
 export class OpenAiCompatibleAdapter implements LlmAdapter {
@@ -25,6 +42,8 @@ export class OpenAiCompatibleAdapter implements LlmAdapter {
   readonly defaultModel: string;
   private readonly baseUrl: string;
   private readonly fetchImpl: typeof fetch;
+  private readonly timeoutMs: number;
+  private readonly temperature: number;
 
   constructor(private readonly opts: OpenAiCompatOptions = {}) {
     this.defaultModel =
@@ -35,6 +54,8 @@ export class OpenAiCompatibleAdapter implements LlmAdapter {
       'https://api.openai.com/v1'
     ).replace(/\/$/, '');
     this.fetchImpl = opts.fetchImpl ?? fetch;
+    this.timeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+    this.temperature = opts.temperature ?? 0;
   }
 
   private key(): string {
@@ -47,18 +68,57 @@ export class OpenAiCompatibleAdapter implements LlmAdapter {
     return k ?? 'local';
   }
 
+  /**
+   * One chat-completions call, with a deadline and a single retry.
+   *
+   * The deadline matters most for local servers, which can sit silent for minutes while a model
+   * loads; without it a hung server hangs the job forever. The retry covers the transient half of
+   * the failures (connection reset, 429, 5xx) and nothing else — a 400 or a missing model is the
+   * caller's problem and is reported as such.
+   */
   private async chat(body: Record<string, unknown>, signal?: AbortSignal): Promise<any> {
-    const res = await this.fetchImpl(`${this.baseUrl}/chat/completions`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json', authorization: `Bearer ${this.key()}` },
-      body: JSON.stringify(body),
-      signal,
-    });
-    if (!res.ok)
-      throw new Error(
-        `${this.baseUrl}/chat/completions → ${res.status} ${await res.text().catch(() => '')}`,
-      );
-    return res.json();
+    const url = `${this.baseUrl}/chat/completions`;
+    const send = async () => {
+      const deadline = AbortSignal.timeout(this.timeoutMs);
+      const composed = signal ? AbortSignal.any([signal, deadline]) : deadline;
+      let res: Response;
+      try {
+        res = await this.fetchImpl(url, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json', authorization: `Bearer ${this.key()}` },
+          body: JSON.stringify({ temperature: this.temperature, ...body }),
+          signal: composed,
+        });
+      } catch (err) {
+        if (signal?.aborted) throw err;
+        if (deadline.aborted)
+          throw new Error(
+            `${url} did not answer within ${Math.round(this.timeoutMs / 1000)}s. Raise agents.requestTimeoutMs, or check that the server is running and the model is loaded.`,
+          );
+        throw err;
+      }
+      if (!res.ok) {
+        const text = await res.text().catch(() => '');
+        const error = new Error(`${url} → ${res.status} ${text}`) as Error & {
+          status: number;
+          retryable: boolean;
+        };
+        error.status = res.status;
+        error.retryable = res.status === 429 || res.status >= 500;
+        throw error;
+      }
+      return res.json();
+    };
+    try {
+      return await send();
+    } catch (err) {
+      const retryable =
+        (err as { retryable?: boolean }).retryable ??
+        /ECONNRESET|ECONNREFUSED|EPIPE|fetch failed/i.test(String(err));
+      if (!retryable || signal?.aborted) throw err;
+      await new Promise((r) => setTimeout(r, 1000));
+      return send();
+    }
   }
 
   async complete(req: CompleteRequest): Promise<CompleteResult> {
@@ -97,86 +157,61 @@ export class OpenAiCompatibleAdapter implements LlmAdapter {
       });
     }
     const model = o.model ?? this.defaultModel;
-    const tools = o.tools.map((t) => ({
-      type: 'function',
-      function: {
-        name: t.name,
-        description: t.description,
-        parameters: z.toJSONSchema(z.object(t.inputSchema)),
-      },
-    }));
-    const byName = new Map(o.tools.map((t) => [t.name, t]));
-    const messages: Array<Record<string, unknown>> = [
-      { role: 'system', content: o.system },
-      { role: 'user', content: o.prompt },
-    ];
-    let turns = 0;
-    let toolCalls = 0;
-    let text = '';
-    let cost = 0;
-    const usageTotal: TokenUsage = { inputTokens: 0, outputTokens: 0 };
-    const maxTurns = o.maxTurns ?? 30;
-    while (turns < maxTurns) {
-      if (o.signal?.aborted)
-        return { text, turns, stopReason: 'aborted', toolCalls, costUsd: cost, usage: usageTotal };
-      turns++;
-      const json = await this.chat(
-        {
-          model,
-          messages,
-          tools: tools.length ? tools : undefined,
-          tool_choice: tools.length ? 'auto' : undefined,
-        },
-        o.signal,
-      );
-      const u = usageOf(json.usage);
-      usageTotal.inputTokens! += u?.inputTokens ?? 0;
-      usageTotal.outputTokens! += u?.outputTokens ?? 0;
-      cost += this.cost(model, u) ?? 0;
-      if (o.maxBudgetUsd && cost > o.maxBudgetUsd) return finish('error_max_budget_usd', true);
-      const choice = json.choices?.[0];
-      const msg = choice?.message ?? {};
-      if (msg.content) {
-        text += msg.content;
-        o.onEvent?.({ type: 'text', text: msg.content });
-      }
-      const calls: Array<{ id: string; function: { name: string; arguments: string } }> =
-        msg.tool_calls ?? [];
-      messages.push({
-        role: 'assistant',
-        content: msg.content ?? null,
-        tool_calls: calls.length ? calls : undefined,
-      });
-      if (!calls.length) return finish(choice?.finish_reason ?? 'stop', false);
-      for (const call of calls) {
-        toolCalls++;
-        let args: Record<string, unknown> = {};
-        try {
-          args = JSON.parse(call.function.arguments || '{}');
-        } catch {
-          /* leave empty */
-        }
-        o.onEvent?.({ type: 'tool_call', id: call.id, name: call.function.name, input: args });
-        const tool = byName.get(call.function.name);
-        const result = tool
-          ? await tool.handler(args)
-          : {
-              content: [{ type: 'text' as const, text: `Unknown tool ${call.function.name}` }],
-              isError: true,
-            };
-        const output = result.content
-          .map((c) => (c.type === 'text' ? c.text : `[image ${c.mimeType}]`))
-          .join('\n');
-        o.onEvent?.({ type: 'tool_result', id: call.id, output, isError: result.isError });
-        messages.push({ role: 'tool', tool_call_id: call.id, content: output });
-      }
-    }
-    return finish('error_max_turns', true);
+    return runToolLoop(this.transport(model, o), o);
+  }
 
-    function finish(stopReason: string, isError: boolean): RunAgentResult {
-      o.onEvent?.({ type: 'result', costUsd: cost, usage: usageTotal, turns, stopReason, isError });
-      return { text, costUsd: cost, usage: usageTotal, turns, stopReason, isError, toolCalls };
-    }
+  /** Chat-completions shapes: tool calls carry an id, results are `{role:'tool', tool_call_id}`. */
+  private transport(model: string, o: RunAgentOptions): ToolLoopTransport<ChatMessage> {
+    return {
+      model,
+      start: (system, prompt) => [
+        { role: 'system', content: system },
+        { role: 'user', content: prompt },
+      ],
+      send: async (history, tools, signal) => {
+        const json = await this.chat(
+          {
+            model,
+            messages: history,
+            tools: tools.length ? toolFunctions(tools) : undefined,
+            tool_choice: tools.length ? 'auto' : undefined,
+            max_tokens: o.maxTokens,
+          },
+          signal,
+        );
+        const choice = json.choices?.[0];
+        const msg = choice?.message ?? {};
+        const calls: NormalizedCall[] = (msg.tool_calls ?? []).map(
+          (call: { id?: string; function: { name: string; arguments: unknown } }, i: number) => {
+            const { args, error } = readToolArgs(call.function?.arguments);
+            return { id: call.id ?? `call_${i}`, name: call.function?.name ?? '', args, error };
+          },
+        );
+        return {
+          text: msg.content ?? '',
+          calls,
+          usage: usageOf(json.usage),
+          finishReason: choice?.finish_reason ?? 'stop',
+        };
+      },
+      pushAssistant: (history, turn) => {
+        history.push({
+          role: 'assistant',
+          content: turn.text || null,
+          tool_calls: turn.calls.length
+            ? turn.calls.map((c) => ({
+                id: c.id,
+                type: 'function',
+                function: { name: c.name, arguments: JSON.stringify(c.args) },
+              }))
+            : undefined,
+        });
+      },
+      pushToolResult: (history, call, output) => {
+        history.push({ role: 'tool', tool_call_id: call.id, content: output });
+      },
+      cost: (usage) => this.cost(model, usage),
+    };
   }
 
   private cost(model: string, usage?: TokenUsage): number | undefined {
@@ -187,6 +222,18 @@ export class OpenAiCompatibleAdapter implements LlmAdapter {
       1_000_000
     );
   }
+}
+
+/** Function definitions for the `tools` field of a chat-completions request. */
+function toolFunctions(tools: AgentSdkToolDef[]) {
+  return tools.map((t) => ({
+    type: 'function',
+    function: {
+      name: t.name,
+      description: t.description,
+      parameters: toolParameters(t.inputSchema),
+    },
+  }));
 }
 
 function usageOf(u: Record<string, unknown> | undefined): TokenUsage | undefined {

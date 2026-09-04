@@ -61,6 +61,15 @@ export interface AgentSdkToolDef {
   }>;
 }
 
+/** Upper bound for one structured tool result inside an agent conversation. */
+const STRUCTURED_LIMIT = 4000;
+
+function clip(json: string): string {
+  return json.length <= STRUCTURED_LIMIT
+    ? json
+    : `${json.slice(0, STRUCTURED_LIMIT)}… (${json.length - STRUCTURED_LIMIT} more chars; narrow the query or read the file directly)`;
+}
+
 export function toAgentSdkTools(reg: ToolRegistry, ctx: ToolContext): AgentSdkToolDef[] {
   return reg.list(ctx).map((tool) => ({
     name: tool.name,
@@ -70,8 +79,10 @@ export function toAgentSdkTools(reg: ToolRegistry, ctx: ToolContext): AgentSdkTo
     handler: async (args) => {
       const r = await reg.call(tool.name, args, ctx);
       const content = [...r.content];
+      // The text content is already clipped by `summarize`; appending the whole structured payload
+      // would put it straight back and grow the conversation without bound, so it is clipped too.
       if (r.structuredContent)
-        content.push({ type: 'text', text: JSON.stringify(r.structuredContent) });
+        content.push({ type: 'text', text: clip(JSON.stringify(r.structuredContent)) });
       return { content, isError: r.isError };
     },
   }));

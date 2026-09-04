@@ -172,14 +172,39 @@ export const McpConfigSchema = z.object({
   servers: z.record(z.string(), McpServerSchema).default({}),
 });
 
+/** Settings for a model server you run yourself: Ollama, vLLM, LM Studio, llama.cpp. */
+export const LocalLlmConfigSchema = z
+  .object({
+    /** Ollama's native endpoint, or the OpenAI-compatible base URL of another server. */
+    baseUrl: z.string().url().optional(),
+    /**
+     * `options.num_ctx`. Ollama loads a model at 4096 tokens whatever its weights allow, and
+     * truncates a longer prompt without saying so, so this is the setting that decides whether
+     * an agent job sees its whole prompt.
+     */
+    contextTokens: z.number().int().min(2048).max(1_048_576).optional(),
+    temperature: z.number().min(0).max(2).optional(),
+    /** Local generation is minutes, not seconds. */
+    requestTimeoutMs: z.number().int().positive().default(300_000),
+    /** How long the server keeps the model in memory between turns. */
+    keepAlive: z.string().default('10m'),
+  })
+  .default({ requestTimeoutMs: 300_000, keepAlive: '10m' });
+
 export const AgentsConfigSchema = z.object({
-  /** claude/openai-compatible use API keys; claude-code/codex shell out to the logged-in CLI */
-  provider: z.enum(['claude', 'claude-code', 'codex', 'openai-compatible', 'fake']).optional(),
+  /**
+   * claude/openai-compatible use API keys; claude-code/codex shell out to the logged-in CLI;
+   * ollama runs a model on this machine, with no key and no per-token cost.
+   */
+  provider: z
+    .enum(['claude', 'claude-code', 'codex', 'openai-compatible', 'ollama', 'fake'])
+    .optional(),
   models: z.record(z.string(), z.string()).default({}),
   maxTurns: z.record(z.string(), z.number().int().positive()).default({}),
   budgetUsd: z.record(z.string(), z.number().positive()).default({ default: 2 }),
   maxRunsPerJob: z.number().int().positive().default(3),
   sourceRoots: z.array(z.string()).default([]),
+  local: LocalLlmConfigSchema,
 });
 
 export const ScheduleSchema = z.object({
@@ -347,6 +372,7 @@ export const ProjectConfigSchema = z.object({
     budgetUsd: { default: 2 },
     maxRunsPerJob: 3,
     sourceRoots: [],
+    local: { requestTimeoutMs: 300_000, keepAlive: '10m' },
   }),
   schedules: z.array(ScheduleSchema).default([]),
   reports: z
