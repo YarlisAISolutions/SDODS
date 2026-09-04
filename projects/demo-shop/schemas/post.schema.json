@@ -1,0 +1,13 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Post",
+  "type": "object",
+  "required": ["id", "title", "userId"],
+  "properties": {
+    "id": { "type": "integer", "minimum": 1 },
+    "userId": { "type": "integer", "minimum": 1 },
+    "title": { "type": "string", "minLength": 1 },
+    "body": { "type": "string" }
+  },
+  "additionalProperties": true
+}

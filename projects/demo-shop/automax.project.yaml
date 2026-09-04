@@ -4,9 +4,76 @@ name: Demo Shop
 description: >-
   Reference project: SauceDemo UI, JSONPlaceholder API, hybrid API→UI chaining,
   data-driven CSV logins, a user pool, HAR playback, visual/a11y/perf examples.
+organization: automax
+workspace: default
 layers: [ui, api, hybrid, recorded]
 browsers: [chromium, firefox, webkit]
 testIdAttribute: data-test # SauceDemo uses data-test="..."
+
+# Modules: feature directories with their testing types and the tag every scenario carries.
+modules:
+  - name: auth
+    title: Authentication
+    path: auth
+    layers: [ui]
+    testingTypes: [functional, smoke, regression, data-driven]
+    tags: ['@auth']
+    routes: [login]
+  - name: inventory
+    title: Inventory
+    path: inventory
+    layers: [ui]
+    testingTypes: [functional, regression, visual, accessibility]
+    tags: ['@inventory']
+    routes: [inventory]
+  - name: cart
+    title: Cart
+    path: cart
+    layers: [ui]
+    testingTypes: [functional, regression]
+    tags: ['@cart']
+    routes: [cart, checkout]
+  - name: posts-api
+    title: Posts API
+    path: api
+    layers: [api]
+    testingTypes: [functional, contract, smoke, regression]
+    tags: ['@posts']
+    endpoints: ['/posts', '/posts/{id}', '/posts/{id}/comments']
+  - name: hybrid
+    title: Hybrid flows
+    path: hybrid
+    layers: [hybrid]
+    testingTypes: [integration]
+    tags: ['@hybrid-demo']
+
+# Processes: named run recipes (project ones override workspace defaults with the same name).
+processes:
+  - name: pr-check
+    title: Pull request check
+    trigger: pr
+    tags: '@smoke'
+    browsers: [chromium]
+    harMode: replay
+    gates: { minPassRate: 100 }
+  - name: nightly-regression
+    title: Nightly regression
+    trigger: nightly
+    tags: '@regression'
+    browsers: [chromium, firefox, webkit]
+    notify: [github]
+  - name: release-gate
+    title: Release gate
+    trigger: release
+    tags: '@smoke or @regression'
+    browsers: [chromium, firefox, webkit]
+    failOnFlaky: true
+    gates: { minPassRate: 100, maxFlaky: 0, perfBudgets: true, a11y: true }
+  - name: api-contract
+    title: API contract
+    trigger: merge
+    layers: [api]
+    tags: '@contract or @smoke'
 
 routes:
   login: /
@@ -16,7 +83,7 @@ routes:
 
 tags:
   suites: [smoke, regression, sanity]
-  extra: [mock, visual, a11y, perf, data-driven, pool, hybrid-demo]
+  extra: [mock, visual, a11y, perf, data-driven, pool, hybrid-demo, contract, flaky]
   roles: [standard, problem, performance, locked]
 
 envs:

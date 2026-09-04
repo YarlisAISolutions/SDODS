@@ -23,7 +23,15 @@ export default tseslint.config(
   {
     files: ['projects/**/*.ts', 'packages/core/src/steps/**/*.ts'],
     ...playwright.configs['flat/recommended'],
-    rules: { ...playwright.configs['flat/recommended'].rules, 'playwright/expect-expect': 'off' },
+    rules: {
+      ...playwright.configs["flat/recommended"].rules,
+      // Steps and page objects assert inside step functions / decorated methods, not test blocks.
+      "playwright/expect-expect": "off",
+      "playwright/no-standalone-expect": "off",
+      "playwright/prefer-web-first-assertions": "off",
+      "playwright/no-wait-for-timeout": "off",
+      "playwright/no-conditional-in-test": "off",
+    },
   },
   {
     rules: {
