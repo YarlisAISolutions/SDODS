@@ -80,22 +80,57 @@ export function Film() {
           />
         </video>
 
-        {/* Before the first play: what this is, and one button. */}
+        {/* Before the first play: the film's argument, on the brand's own ground.
+            The poster is a bright interface, so the panel supplies the contrast rather than
+            relying on a scrim over a screenshot — white on pale grey is not a thumbnail. */}
         {!started && (
           <button
             type="button"
             onClick={toggle}
-            className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-gradient-to-t from-black/75 via-black/25 to-black/50 text-white transition hover:from-black/80"
+            aria-label="Play the two-minute SDODS film"
+            className="absolute inset-0 flex items-center text-left"
+            style={{
+              background:
+                'linear-gradient(102deg, #0B1020 0%, rgba(11,16,32,0.94) 34%, rgba(11,16,32,0.72) 56%, rgba(11,16,32,0.18) 100%)',
+            }}
           >
-            <span className="flex size-16 items-center justify-center rounded-full bg-white/95 text-black shadow-xl transition group-hover:scale-105">
-              <svg viewBox="0 0 24 24" className="ml-1 size-7" fill="currentColor" aria-hidden>
-                <path d="M8 5v14l11-7z" />
-              </svg>
-            </span>
-            <span className="text-lg font-semibold">Two minutes on what SDODS is for</span>
-            <span className="text-sm text-white/75">
-              Filmed in the product · 1:59 · captions included
-            </span>
+            <div className="max-w-[30rem] px-6 py-6 sm:px-10 sm:py-8">
+              <span className="flex items-center gap-2.5">
+                <img
+                  src={withBase('/img/favicon.svg')}
+                  alt=""
+                  width={26}
+                  height={26}
+                  className="rounded-md"
+                />
+                <span className="text-sm font-semibold tracking-[0.18em] text-white">SDODS</span>
+                <span className="ml-1 rounded-full border border-white/25 px-2 py-0.5 text-[10px] font-semibold tracking-[0.14em] text-white/70">
+                  PRODUCT FILM
+                </span>
+              </span>
+
+              <span className="mt-4 block text-2xl leading-tight font-bold text-white sm:text-[2rem]">
+                Test automation
+                <br />
+                you can defend.
+              </span>
+
+              <span className="mt-3 hidden text-sm leading-relaxed text-slate-300 sm:block">
+                Two minutes on how one scenario turns a release into evidence the whole team can
+                read.
+              </span>
+
+              <span className="mt-5 inline-flex items-center gap-2.5 rounded-full bg-[#2F5BFF] px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-[#2F5BFF]/30 transition group-hover:bg-[#4470ff]">
+                <svg viewBox="0 0 24 24" className="size-4" fill="currentColor" aria-hidden>
+                  <path d="M8 5v14l11-7z" />
+                </svg>
+                Watch the film
+              </span>
+
+              <span className="mt-3 block font-mono text-[11px] tracking-wide text-white/55">
+                1:59 · Recorded inside the product · Captions included
+              </span>
+            </div>
           </button>
         )}
 
