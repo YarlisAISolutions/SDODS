@@ -70,6 +70,35 @@ service cloud.firestore {
       }
     }
 
+    // Feature requests and bug reports. Unlike questions these are never shown
+    // on the site, so only the moderator can read them back. Name and email are
+    // optional here — the form asks for them but does not insist.
+    match /feedback/{feedbackId} {
+      allow read: if isModerator();
+
+      allow create: if request.resource.data.keys().hasOnly(
+            ['kind', 'title', 'body', 'name', 'email', 'status', 'createdAt']
+          )
+        && request.resource.data.keys().hasAll(
+            ['kind', 'title', 'body', 'name', 'email', 'status', 'createdAt']
+          )
+        && request.resource.data.status == 'new'
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.kind in ['feature', 'bug', 'feedback']
+        && request.resource.data.title is string
+        && request.resource.data.title.size() > 0
+        && request.resource.data.title.size() <= 200
+        && request.resource.data.body is string
+        && request.resource.data.body.size() > 0
+        && request.resource.data.body.size() <= 5000
+        && request.resource.data.name is string
+        && request.resource.data.name.size() <= 100
+        && request.resource.data.email is string
+        && request.resource.data.email.size() <= 254;
+
+      allow update, delete: if isModerator();
+    }
+
     // Nothing else in the database is reachable from a browser.
     match /{document=**} {
       allow read, write: if false;
