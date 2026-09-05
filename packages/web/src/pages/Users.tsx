@@ -1,3 +1,4 @@
+import { MIN_PASSWORD_LENGTH } from '@sdods/contracts/names';
 import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { ROLES, type Role } from '@sdods/contracts/scopes';
@@ -128,7 +129,9 @@ export function UsersPage() {
             <Button
               variant="primary"
               onClick={() => create.mutate()}
-              disabled={!form.username || form.password.length < 10 || create.isPending}
+              disabled={
+                !form.username || form.password.length < MIN_PASSWORD_LENGTH || create.isPending
+              }
             >
               Create
             </Button>
@@ -148,7 +151,7 @@ export function UsersPage() {
               onChange={(e) => setForm({ ...form, email: e.target.value })}
             />
           </Field>
-          <Field label="Password" hint="at least 10 characters">
+          <Field label="Password" hint={`at least ${MIN_PASSWORD_LENGTH} characters`}>
             <Input
               type="password"
               value={form.password}
