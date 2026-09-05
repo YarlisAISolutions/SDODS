@@ -99,6 +99,30 @@ service cloud.firestore {
       allow update, delete: if isModerator();
     }
 
+    // "Was this page helpful?" on the docs site. One row per click, with an
+    // optional note saying what was missing. Private, like feedback.
+    match /pageFeedback/{voteId} {
+      allow read: if isModerator();
+
+      allow create: if request.resource.data.keys().hasOnly(
+            ['path', 'title', 'verdict', 'note', 'status', 'createdAt']
+          )
+        && request.resource.data.keys().hasAll(
+            ['path', 'title', 'verdict', 'note', 'status', 'createdAt']
+          )
+        && request.resource.data.status == 'new'
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.verdict in ['helpful', 'not-helpful']
+        && request.resource.data.path is string
+        && request.resource.data.path.size() <= 300
+        && request.resource.data.title is string
+        && request.resource.data.title.size() <= 200
+        && request.resource.data.note is string
+        && request.resource.data.note.size() <= 2000;
+
+      allow update, delete: if isModerator();
+    }
+
     // Nothing else in the database is reachable from a browser.
     match /{document=**} {
       allow read, write: if false;
