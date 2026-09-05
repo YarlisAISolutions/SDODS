@@ -16,6 +16,19 @@ export function setCsrfToken(token: string | null) {
   csrfToken = token;
 }
 
+/**
+ * Called once whenever the server says the session is gone, so one place can drop the local
+ * session instead of every page rendering its own "AUTH_REQUIRED" box inside a shell that still
+ * looks signed in.
+ */
+let onUnauthorized: (() => void) | null = null;
+export function setUnauthorizedHandler(fn: (() => void) | null) {
+  onUnauthorized = fn;
+}
+
+// A rejected login is a wrong password, not an expired session; it must not sign the user out.
+const AUTH_ENDPOINTS = ['/api/auth/login', '/api/auth/logout', '/api/auth/setup'];
+
 const BASE = import.meta.env.VITE_API_BASE ?? '';
 
 export async function api<T>(
@@ -50,6 +63,7 @@ export async function api<T>(
   }
   if (!res.ok) {
     const err = parsed?.error ?? parsed ?? {};
+    if (res.status === 401 && !AUTH_ENDPOINTS.some((p) => path.startsWith(p))) onUnauthorized?.();
     throw new ApiError(
       res.status,
       err.code ?? `HTTP_${res.status}`,

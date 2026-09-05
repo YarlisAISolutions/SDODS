@@ -57,6 +57,11 @@ export async function authRoutes(app: FastifyInstance) {
     },
   );
 
+  /**
+   * Idempotent by design: succeeds whether or not a session is present, so a client whose cookie
+   * has already expired can still complete a sign-out instead of being told it is unauthenticated.
+   * The cookie is cleared unconditionally; the session row is deleted whenever one is identified.
+   */
   app.post('/api/auth/logout', async (req, reply) => {
     if (req.principal?.sessionToken) await deleteSession(app.adb.db, req.principal.sessionToken);
     reply.clearCookie(SESSION_COOKIE, { path: '/' });

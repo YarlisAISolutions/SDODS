@@ -1,5 +1,5 @@
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from './auth/AuthContext';
 import { WorkspaceProvider, useWorkspace } from './context/WorkspaceContext';
 import { useProjects } from './api/queries';
@@ -25,6 +25,7 @@ export function AppShell() {
 
 function Shell() {
   const { me, logout, isAdmin } = useAuth();
+  const [signingOut, setSigningOut] = useState(false);
   const ws = useWorkspace();
   const projectsQ = useProjects(ws.workspace?.slug);
   const loc = useLocation();
@@ -144,8 +145,19 @@ function Shell() {
           <span className="truncate">
             {me?.user.username} <RoleBadge role={me?.user.role} />
           </span>
-          <button type="button" onClick={() => void logout()} className="muted hover:underline">
-            Sign out
+          <button
+            type="button"
+            onClick={() => {
+              // Guard against a second click while the request is in flight: the first one has
+              // already invalidated the session, and the second would race the redirect.
+              if (signingOut) return;
+              setSigningOut(true);
+              void logout().finally(() => setSigningOut(false));
+            }}
+            disabled={signingOut}
+            className="muted hover:underline disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {signingOut ? 'Signing out…' : 'Sign out'}
           </button>
         </div>
       </aside>
