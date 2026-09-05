@@ -1,4 +1,4 @@
-import type { Checkpoint, RoadmapPhase } from './types.js';
+import type { Checkpoint, RoadmapPhase } from './types';
 
 /** The fourteen phases, each of which ended runnable. Grouped into chapters below. */
 const PHASES: RoadmapPhase[] = [
@@ -47,6 +47,7 @@ export const CHECKPOINTS: Checkpoint[] = [
       'The API step library: requests, JSON-path assertions, schemas, variable chaining',
     ],
     proof: 'sdods run -p demo-shop -e staging -l api goes green with no browser installed.',
+    maxi: 'Everything else stands on this. Configuration that can explain itself sounds dull until the day staging and CI disagree and you need to know which file won.',
     phases: phases(0, 1),
   },
   {
@@ -65,6 +66,7 @@ export const CHECKPOINTS: Checkpoint[] = [
       'Data providers, the leased user pool, captured auth and hybrid scenarios',
     ],
     proof: 'A failed step in the run viewer shows the two screenshots either side of it.',
+    maxi: 'This is the chapter that decides whether people keep the suite. A failure that arrives with the two screenshots either side of it is a bug report; one that arrives as a red line is an argument.',
     phases: phases(2, 3, 4),
   },
   {
@@ -83,13 +85,14 @@ export const CHECKPOINTS: Checkpoint[] = [
       'HAR record and replay for UI and API, so a suite can run offline',
     ],
     proof: 'The same run appears in the dashboard whichever machine produced it.',
+    maxi: "A run that only exists in someone's terminal is a rumour. From here on there is a history you can query, and a recording you can replay when the sandbox is down.",
     phases: phases(5, 6),
   },
   {
     id: 'ch-machine-readable',
     kind: 'chapter',
     order: 4,
-    label: 'Machine-readable',
+    label: 'Agents',
     title: 'The suite becomes something an agent can read',
     state: 'delivered',
     arc: 1,
@@ -101,6 +104,7 @@ export const CHECKPOINTS: Checkpoint[] = [
       'Proposals: an agent writes, a person accepts, nothing edits the tree unasked',
     ],
     proof: 'sdods mcp install claude, then ask an assistant what a project covers.',
+    maxi: 'This is where SDODS stopped being only for people. An agent can now read your project the way you do — and it still cannot write to your tree without someone accepting the proposal.',
     phases: phases(7, 8),
   },
   {
@@ -120,6 +124,7 @@ export const CHECKPOINTS: Checkpoint[] = [
       'This documentation site, packaging and sdods init',
     ],
     proof: 'A second person can open the web UI and read yesterday’s run without asking you.',
+    maxi: 'The last delivered stretch is the unglamorous one: the server, the UI, the integrations. It is what turns a runner into something a team can share.',
     phases: phases(9, 10, 11, 12, 13),
   },
 
@@ -139,6 +144,7 @@ export const CHECKPOINTS: Checkpoint[] = [
       'One source of truth for this roadmap, shared by the docs, the site and the README',
     ],
     proof: 'Every capability the documentation claims has a test that exercises it.',
+    maxi: 'You are here. The most valuable thing this month is subtraction — two features the docs describe do not actually run, and saying so is worth more than shipping a third.',
   },
   {
     id: 'm-2026-11',
@@ -156,6 +162,7 @@ export const CHECKPOINTS: Checkpoint[] = [
       'A server image on GHCR, built from the tag',
     ],
     proof: 'npm view @sdods/cli version answers, and the installer stops falling back to git.',
+    maxi: 'Nothing on this road matters if people cannot install it. Right now the installer quietly falls back to a git checkout, and this is the month that stops being necessary.',
   },
   {
     id: 'm-2026-12',
@@ -172,6 +179,7 @@ export const CHECKPOINTS: Checkpoint[] = [
       'Masking of the regions that will never be stable',
     ],
     proof: 'The @visual suite passes on Linux CI and macOS from the same committed baselines.',
+    maxi: "Visual testing is the first suite teams switch off, and it is almost always because the baseline was made on someone's laptop.",
   },
   {
     id: 'm-2027-01',
@@ -188,6 +196,7 @@ export const CHECKPOINTS: Checkpoint[] = [
       '--har-replay --strict as the default in CI',
     ],
     proof: 'The full demo suite passes with outbound network disabled.',
+    maxi: 'A build that goes red because a public sandbox had a bad afternoon teaches your team to ignore red builds. Recorded traffic fixes that.',
   },
   {
     id: 'm-2027-02',
@@ -204,6 +213,7 @@ export const CHECKPOINTS: Checkpoint[] = [
       'A weekly digest naming what got worse and what recovered',
     ],
     proof: 'The dashboard answers “which tests cost us the most time this week”.',
+    maxi: 'Everyone knows which tests are flaky. Almost nobody can prove it. A budget turns a hallway complaint into a number with an owner.',
   },
   {
     id: 'm-2027-03',
@@ -220,6 +230,7 @@ export const CHECKPOINTS: Checkpoint[] = [
       'An audit line for who looked at what',
     ],
     proof: 'A new joiner opens the dashboard without anyone creating an account for them.',
+    maxi: 'Unglamorous, and the thing that decides whether the run history is actually shared or just technically shareable.',
   },
   {
     id: 'm-2027-04',
@@ -236,6 +247,7 @@ export const CHECKPOINTS: Checkpoint[] = [
       'Comparison across branches and environments',
     ],
     proof: 'Two people looking at the same failure see the same evidence.',
+    maxi: 'This is the rung the whole second level is named after: one history, so two people looking at the same failure see the same evidence.',
   },
   {
     id: 'm-2027-05',
@@ -252,6 +264,7 @@ export const CHECKPOINTS: Checkpoint[] = [
       'A stated rule for when the full matrix runs anyway',
     ],
     proof: 'Pull-request feedback lands in minutes without losing a regression.',
+    maxi: 'Running everything on every push is the honest default, and it stops being affordable at some size. Selection has to be explainable or nobody will trust it.',
   },
   {
     id: 'm-2027-06',
@@ -268,6 +281,7 @@ export const CHECKPOINTS: Checkpoint[] = [
       'The same flow on a model running on your own hardware',
     ],
     proof: 'A renamed test id is fixed and merged without anyone writing a selector.',
+    maxi: 'The first month where the agents do maintenance rather than authoring. A pull request you can reject is a much better gift than an automatic fix.',
   },
   {
     id: 'm-2027-07',
@@ -284,6 +298,7 @@ export const CHECKPOINTS: Checkpoint[] = [
       'Links from the cluster to every scenario inside it',
     ],
     proof: 'A broken login shows as one item with thirty-nine scenarios attached.',
+    maxi: 'One broken login should not read as forty broken features. Clustering is mostly about how a morning feels when you open the report.',
   },
   {
     id: 'm-2027-08',
@@ -300,6 +315,7 @@ export const CHECKPOINTS: Checkpoint[] = [
       'Coverage reported per business capability, not per file',
     ],
     proof: 'The coverage report names a journey nobody had thought to test.',
+    maxi: 'Coverage measured against your own test list is circular. Measured against what real users actually did, it tells you something you did not know.',
   },
   {
     id: 'm-2027-09',
@@ -316,6 +332,7 @@ export const CHECKPOINTS: Checkpoint[] = [
       'A migration path from every 0.x release',
     ],
     proof: 'A suite written today still runs unchanged on the next minor version.',
+    maxi: 'Twelve months of work end in a promise rather than a feature: that what you wrote today still runs tomorrow.',
   },
 
   {
@@ -336,6 +353,7 @@ export const CHECKPOINTS: Checkpoint[] = [
       'Scenarios suggested from a change set, ranked by the risk they cover',
     ],
     proof: 'Most locator drift is fixed and merged without anyone writing a selector.',
+    maxi: 'Direction, not a date. Maintenance is the reason automation dies, so this is where the agents earn their keep.',
   },
   {
     id: 'y-2029',
@@ -355,6 +373,7 @@ export const CHECKPOINTS: Checkpoint[] = [
       'Connectors for the trackers, chat tools and pipelines already in use',
     ],
     proof: 'The release gate becomes the record teams point at when asked why they shipped.',
+    maxi: 'By here the question has changed from “do the tests pass” to “who approved this, and what did they see”.',
   },
   {
     id: 'y-2030',
@@ -374,6 +393,7 @@ export const CHECKPOINTS: Checkpoint[] = [
       'A signed trail from requirement through run to release',
     ],
     proof: 'An auditor follows one requirement to one release without asking a human.',
+    maxi: 'The last rung is for teams who have to prove it to someone outside the room. Complete, tamper-evident, exportable — or it counts for nothing.',
   },
 ];
 

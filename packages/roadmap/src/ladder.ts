@@ -1,4 +1,4 @@
-import type { Arc } from './types.js';
+import type { Arc } from './types';
 
 /**
  * Five rungs, in order, because each one rests on the one below. A team can find itself on
