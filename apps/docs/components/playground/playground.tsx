@@ -23,7 +23,7 @@ import {
   type RunContext,
   type StepLayer,
 } from './steps';
-import { TutorBar, type TutorMood } from './tutor';
+import { TutorBar, type TutorMood } from '../tutor';
 
 type StepStatus = 'pending' | 'running' | 'passed' | 'failed' | 'skipped' | 'unknown';
 

@@ -1,6 +1,14 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { HORIZON, LEVELS, NEXT_UP, ROADMAP, VERIFICATION, type HorizonStatus } from '@/lib/roadmap';
+import {
+  CURRENT_YEAR,
+  HORIZON,
+  LEVELS,
+  NEXT_UP,
+  ROADMAP,
+  VERIFICATION,
+  type CheckpointState,
+} from '@sdods/roadmap';
 import { RailHero, YEAR_ART } from '@/components/roadmap-art';
 import { DOCS_URL, REPO_PUBLIC, REPO_URL } from '@/lib/links';
 
@@ -10,18 +18,16 @@ export const metadata: Metadata = {
     'Five years of SDODS: what shipped, what is being built, and the customer value each year buys.',
 };
 
-const CURRENT_YEAR = 2026;
-
-const STATUS_STYLE: Record<HorizonStatus, string> = {
-  shipped: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200',
-  building: 'bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-100',
+const STATUS_STYLE: Record<CheckpointState, string> = {
+  delivered: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200',
+  now: 'bg-amber-100 text-amber-900 dark:bg-amber-900/40 dark:text-amber-100',
   planned: 'bg-indigo-100 text-indigo-800 dark:bg-indigo-900/40 dark:text-indigo-200',
   direction: 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
 };
 
-const STATUS_WORD: Record<HorizonStatus, string> = {
-  shipped: 'Shipped',
-  building: 'Being built',
+const STATUS_WORD: Record<CheckpointState, string> = {
+  delivered: 'Shipped',
+  now: 'Being built',
   planned: 'Planned',
   direction: 'Direction',
 };
@@ -96,9 +102,9 @@ export default function RoadmapPage() {
                     Level {h.level} · {h.name}
                   </span>
                   <span
-                    className={`rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS_STYLE[h.status]}`}
+                    className={`rounded-full px-2.5 py-1 text-xs font-semibold ${STATUS_STYLE[h.state]}`}
                   >
-                    {STATUS_WORD[h.status]}
+                    {STATUS_WORD[h.state]}
                   </span>
                 </div>
 
@@ -228,7 +234,7 @@ export default function RoadmapPage() {
                   <td className="p-3">{r.scope}</td>
                   <td className="p-3">
                     <span
-                      className={`rounded-full px-2 py-0.5 text-xs font-semibold ${STATUS_STYLE.shipped}`}
+                      className={`rounded-full px-2 py-0.5 text-xs font-semibold ${STATUS_STYLE.delivered}`}
                     >
                       {r.status}
                     </span>
@@ -241,10 +247,10 @@ export default function RoadmapPage() {
 
         <h3 className="mt-10 text-lg font-bold">Verified on the demo project</h3>
         <ul className="mt-3 grid gap-2 sm:grid-cols-2">
-          {VERIFICATION.map(([k, v]) => (
-            <li key={k} className="card flex justify-between gap-4 px-4 py-3 text-sm">
-              <span className="muted">{k}</span>
-              <span className="font-semibold">{v}</span>
+          {VERIFICATION.map((row) => (
+            <li key={row.label} className="card flex justify-between gap-4 px-4 py-3 text-sm">
+              <span className="muted">{row.label}</span>
+              <span className="font-semibold">{row.result}</span>
             </li>
           ))}
         </ul>
