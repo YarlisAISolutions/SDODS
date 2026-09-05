@@ -32,16 +32,30 @@ jobs:
         with:
           node-version: 22
           registry-url: https://registry.npmjs.org
+      # Trusted publishing (OIDC) needs npm >= 11.5.1; node 22 still bundles npm 10. With
+      # `id-token: write` above, npm uses OIDC automatically for packages configured for it on
+      # npmjs.com, and falls back to NPM_TOKEN otherwise.
+      - run: npm install -g npm@latest
       - run: bun install --frozen-lockfile
       - run: npx playwright install --with-deps chromium
       - run: bun run typecheck && bun run test
-      # Publishing needs an NPM_TOKEN secret; without it the workflow still succeeds (nothing to publish).
+      # Publishing needs either an NPM_TOKEN secret or trusted publishing (OIDC) configured for
+      # the packages on npmjs.com — set the repository variable NPM_TRUSTED_PUBLISHING=true once
+      # that is in place. Without either the workflow still succeeds, with nothing to publish.
+      # npm is deprecating direct publishing from 2FA-bypass tokens (~Jan 2027), so OIDC is the
+      # path that lasts: https://github.blog/changelog/2026-07-08-npm-install-time-security-and-gat-bypass2fa-deprecation/
       - name: Check publish credentials
         id: creds
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          TRUSTED: ${{ vars.NPM_TRUSTED_PUBLISHING }}
         run: |
-          if [ -n "$NPM_TOKEN" ]; then echo "present=true" >> "$GITHUB_OUTPUT"; else echo "present=false" >> "$GITHUB_OUTPUT"; echo "NPM_TOKEN not set — skipping changesets publish"; fi
+          if [ -n "$NPM_TOKEN" ] || [ "$TRUSTED" = 'true' ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "no NPM_TOKEN and NPM_TRUSTED_PUBLISHING is not true — skipping publish"
+          fi
       - name: Create release PR or publish
         if: steps.creds.outputs.present == 'true'
         uses: changesets/action@v1
