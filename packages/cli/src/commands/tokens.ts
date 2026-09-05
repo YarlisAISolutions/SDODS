@@ -87,7 +87,7 @@ export function register(program: Command) {
   tokens
     .command('revoke <id>')
     .description('Revoke a token by id')
-    .action(async (id: string, cmd) => {
+    .action(async (id: string, _opts, cmd) => {
       const ctx = createContext(cmd);
       const db = await import('@sdods/db');
       const adb = await db.openDb();

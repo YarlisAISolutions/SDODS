@@ -29,6 +29,13 @@ const PUBLIC_PATHS = new Set([
   '/api/auth/setup-status',
   '/api/mcp/info',
 ]);
+/**
+ * Logging out is idempotent: it is reachable without a session so that a client holding an expired
+ * or already-deleted cookie can still clear its own state. It is deliberately *not* in
+ * PUBLIC_PATHS, because an authenticated logout must still carry a CSRF token — otherwise any
+ * cross-site page could sign a user out.
+ */
+const LOGOUT_PATH = '/api/auth/logout';
 
 export default fp(async function authPlugin(app: FastifyInstance) {
   await app.register(cookie, { secret: app.config.sessionSecret });
@@ -44,6 +51,7 @@ export default fp(async function authPlugin(app: FastifyInstance) {
     const path = req.url.split('?')[0]!;
     if (!path.startsWith('/api/')) return;
     if (PUBLIC_PATHS.has(path)) return;
+    if (path === LOGOUT_PATH && !req.principal) return;
     if (!req.principal) throw unauthorized();
     if (req.principal.via === 'session' && !['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
       const header = req.headers['x-csrf-token'];

@@ -177,6 +177,78 @@ describe('SDODS server', () => {
     expect(noCsrf.statusCode).toBe(403);
   });
 
+  /**
+   * Signing out used to 401 whenever the session had already gone, and the web client discarded
+   * the rejected promise, so the button did nothing at all. Logout is idempotent now, while an
+   * authenticated logout still needs a CSRF token so no cross-site page can force one.
+   */
+  describe('logout', () => {
+    async function freshSession() {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/auth/login',
+        payload: { username: 'admin', password: 'Admin#12345' },
+      });
+      return { cookie: cookieOf(res), csrf: res.json().csrfToken as string };
+    }
+
+    it('destroys the session and clears the cookie', async () => {
+      const { cookie, csrf } = await freshSession();
+      const out = await app.inject({
+        method: 'POST',
+        url: '/api/auth/logout',
+        headers: { cookie, 'x-csrf-token': csrf },
+      });
+      expect(out.statusCode).toBe(200);
+      expect(String(out.headers['set-cookie'])).toMatch(/sdods_sid=;|Expires=Thu, 01 Jan 1970/);
+      const after = await app.inject({
+        method: 'GET',
+        url: '/api/auth/me',
+        headers: { cookie },
+      });
+      expect(after.statusCode).toBe(401);
+    });
+
+    it('succeeds when there is no session at all', async () => {
+      const out = await app.inject({ method: 'POST', url: '/api/auth/logout' });
+      expect(out.statusCode).toBe(200);
+      expect(out.json().ok).toBe(true);
+    });
+
+    it('is idempotent: a second logout with a dead cookie still succeeds', async () => {
+      const { cookie, csrf } = await freshSession();
+      expect(
+        (
+          await app.inject({
+            method: 'POST',
+            url: '/api/auth/logout',
+            headers: { cookie, 'x-csrf-token': csrf },
+          })
+        ).statusCode,
+      ).toBe(200);
+      const second = await app.inject({
+        method: 'POST',
+        url: '/api/auth/logout',
+        headers: { cookie, 'x-csrf-token': csrf },
+      });
+      expect(second.statusCode).toBe(200);
+    });
+
+    it('still refuses an authenticated logout without a CSRF token', async () => {
+      const { cookie } = await freshSession();
+      const out = await app.inject({
+        method: 'POST',
+        url: '/api/auth/logout',
+        headers: { cookie },
+      });
+      expect(out.statusCode).toBe(403);
+      // and the session survives, so a forced logout is not possible
+      expect(
+        (await app.inject({ method: 'GET', url: '/api/auth/me', headers: { cookie } })).statusCode,
+      ).toBe(200);
+    });
+  });
+
   let viewerCookie = '';
   let viewerCsrf = '';
   it('creates a viewer, grants workspace membership and filters projects by workspace role', async () => {
