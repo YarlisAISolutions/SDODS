@@ -62,7 +62,10 @@ export async function projectRoutes(app: FastifyInstance) {
           testingTypes: m.testingTypes,
           tags: m.tags,
         })),
-        processes: app.registry.processesOf(e.slug).map((x) => x.name),
+        // Full objects, like `modules` above and like the project detail route: the client type
+        // is ProcessConfig[], and flattening to names here made the projects list render
+        // "processes: , , ," because every `.name` came back undefined.
+        processes: app.registry.processesOf(e.slug),
         role,
         id: row?.id ?? null,
       });
