@@ -110,7 +110,15 @@ function Have([string] $Name) { $null -ne (Get-Command $Name -ErrorAction Silent
 
 # Where the sdods command lives: the generated shim for source installs, PATH for npm installs.
 function Get-SdodsCmd {
-  if ($SourceUsed -eq 'npm') { return 'sdods' }
+  if ($SourceUsed -eq 'npm') {
+    # Resolve-GlobalBin has pointed BinDirPath at the package manager's global directory, which
+    # may not be on PATH in this process yet.
+    $exe = Join-Path $BinDirPath 'sdods.cmd'
+    if (Test-Path $exe) { return $exe }
+    $exe = Join-Path $BinDirPath 'sdods'
+    if (Test-Path $exe) { return $exe }
+    return 'sdods'
+  }
   return (Join-Path $BinDirPath 'sdods.cmd')
 }
 
@@ -268,6 +276,34 @@ function Install-FromNpm {
   Ok 'Installed @sdods/cli from the npm registry'
 }
 
+# Where the package manager puts global bins. No shim is written on the npm path -- the package's
+# own bin provides sdods -- so this is how we find it before it is on PATH.
+function Resolve-GlobalBin {
+  $dir = ''
+  try {
+    switch ($PmName) {
+      'bun' { $dir = (& bun pm bin -g 2>$null | Select-Object -First 1) }
+      'pnpm' { $dir = (& pnpm bin -g 2>$null | Select-Object -First 1) }
+      default {
+        $prefix = (& npm prefix -g 2>$null | Select-Object -First 1)
+        if ($prefix) { $dir = $prefix }
+      }
+    }
+  } catch { $dir = '' }
+  if ((-not $dir) -or (-not (Test-Path $dir))) {
+    $resolved = (Get-Command sdods -ErrorAction SilentlyContinue)
+    if ($resolved) { $dir = Split-Path -Parent $resolved.Source }
+  }
+  if (-not $dir) {
+    Die 7 'Installed @sdods/cli but could not find the directory it put sdods in.' @("Run '$PmName bin -g' and add that directory to your PATH.")
+  }
+  # No shim is written on this path, so -BinDir has nothing to write to.
+  if ($BinDirPath -and ($BinDirPath -ne $dir)) {
+    Warn "-BinDir is ignored when installing from npm; sdods comes from $dir"
+  }
+  $script:BinDirPath = "$dir".Trim()
+}
+
 function Install-FromGit([string] $ResolvedRef) {
   Step "Fetching SDODS ($ResolvedRef) into $AppDir"
   if ($DryRun) {
@@ -309,7 +345,14 @@ function Install-Browsers {
   $list = if ($BrowsersOpt -eq 'all') { @('chromium', 'firefox', 'webkit') } else { @('chromium') }
   Step "Installing browser engines: $($list -join ' ')"
   if ($DryRun) { Say "   would install browser engines: $($list -join ' ')"; return }
-  try { Invoke-Step 'npx' (@('--yes', 'playwright', 'install') + $list) $AppDir }
+  # Playwright downloads into a shared cache, so the working directory only has to exist. On the
+  # npm path there is no checkout, so fall back to the SDODS home.
+  $work = $AppDir
+  if (-not $work -or -not (Test-Path $work)) {
+    try { New-Item -ItemType Directory -Force -Path $SdodsHome | Out-Null } catch { }
+    $work = if (Test-Path $SdodsHome) { $SdodsHome } else { $env:USERPROFILE }
+  }
+  try { Invoke-Step 'npx' (@('--yes', 'playwright', 'install') + $list) $work }
   catch { Warn 'Browser download failed. Re-run later with: sdods browsers install' }
 }
 
@@ -432,7 +475,15 @@ function Show-NextSteps {
   Say ''
   Bold 'SDODS is ready.'
   Say ''
-  Say '  Run the demo suite'
+  Say '  Run the demo suite (projects come from the current directory)'
+  if ($WorkspacePath) {
+    Say "    cd $WorkspacePath"
+  } elseif ($AppDir -and (Test-Path $AppDir)) {
+    Say "    cd $AppDir"
+  } else {
+    Say '    sdods init C:\my-tests        # scaffolds a workspace with the demo'
+    Say '    cd C:\my-tests'
+  }
   Say '    sdods run -p demo-shop -e staging -l api'
   Say '    sdods run -p demo-shop -e staging -l ui -b chromium -t @smoke'
   Say ''
@@ -466,15 +517,29 @@ if ($DryRun) { Warn 'Dry run: nothing will be written.' }
 Test-Prerequisites
 Resolve-PackageManager
 
-if ($SourceOpt -eq 'npm') {
-  if (-not (Test-NpmPublished)) { Die 7 '@sdods/cli is not on the npm registry yet.' @('Install from source instead: -Source git') }
-  $SourceUsed = 'npm'
-} elseif ($SourceOpt -eq 'auto' -and (Test-NpmPublished)) {
-  $SourceUsed = 'npm'
+# npm is the expected path: it installs a few MB of compiled packages. The git path clones the
+# whole monorepo and installs every workspace's dependencies (~1.5 GB), so `auto` no longer falls
+# back to it silently -- a registry outage should say so rather than hand someone a source tree.
+$SourceUsed = 'npm'
+if ($SourceOpt -eq 'git') {
+  $SourceUsed = 'git'
+} elseif (-not (Test-NpmPublished)) {
+  if ($SourceOpt -eq 'npm') {
+    Die 7 '@sdods/cli is not available on the npm registry.' @('Check your registry and network, or install from source with: -Source git')
+  }
+  Die 7 '@sdods/cli could not be found on the npm registry.' @(
+    'If the registry is reachable this is usually temporary -- retry shortly.',
+    'To build from source instead (clones the repo, needs ~1.5 GB): -Source git')
 }
 
 if ($SourceUsed -eq 'npm') {
+  # No checkout on this path. AppDir stays empty; everything downstream must tolerate that
+  # rather than treat it as a directory.
+  $AppDir = ''
   Install-FromNpm
+  Resolve-GlobalBin
+  Install-Browsers
+  Add-ToPath
 } else {
   Install-FromGit (Resolve-Ref)
   Install-Browsers
@@ -487,7 +552,12 @@ Register-Mcp
 if (-not $DryRun) {
   Say ''
   Step 'Checking the installation'
-  try { Invoke-Step (Get-SdodsCmd) @('doctor') }
+  # SDODS discovers projects from the current directory, so check from the workspace when we made
+  # one -- otherwise doctor reports "projects none" on a perfectly good install.
+  $doctorDir = $WorkspacePath
+  if ((-not $doctorDir) -or (-not (Test-Path $doctorDir))) { $doctorDir = $AppDir }
+  if ((-not $doctorDir) -or (-not (Test-Path $doctorDir))) { $doctorDir = (Get-Location).Path }
+  try { Invoke-Step (Get-SdodsCmd) @('doctor') $doctorDir }
   catch { Warn 'doctor reported problems; the items above tell you what to fix.' }
 }
 Show-NextSteps

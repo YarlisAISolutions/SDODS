@@ -38,6 +38,8 @@
     "api:deploy": "bash deploy/deploy-cloud-run.sh",
     "api:deploy-hosting": "firebase deploy --only hosting:api --project automax-docs",
     "api:bootstrap": "bash deploy/bootstrap-admin.sh",
+    "publish:assets": "node --import tsx ./scripts/build-publish-assets.ts",
+    "publish:stage": "node --import tsx ./scripts/stage-npm-packages.ts",
     "installer:sync": "node --import tsx ./scripts/sync-installer.ts",
     "roadmap:sync": "node --import tsx ./scripts/sync-roadmap.ts"
   },
