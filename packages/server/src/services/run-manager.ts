@@ -38,6 +38,8 @@ export interface RunJob {
   log: LogBuffer;
   child?: ChildProcess;
   startedBy?: string | null;
+  /** Why the run ended badly, when the CLI never got far enough to record totals itself. */
+  errorText?: string;
 }
 
 export interface RunnerHooks {
@@ -185,9 +187,21 @@ export class RunManager {
       };
     };
     child.stdout?.on('data', onLine('out'));
+    // Keep the tail of stderr: a run that dies before the CLI can ingest totals leaves the
+    // database with status failed and nothing to explain it, which is what the UI then shows.
+    const stderrTail: string[] = [];
+    child.stderr?.on('data', (chunk: Buffer) => {
+      for (const line of chunk.toString().split('\n')) {
+        if (!line.trim()) continue;
+        stderrTail.push(line);
+        if (stderrTail.length > 20) stderrTail.shift();
+      }
+      job.errorText = stderrTail.join('\n').slice(-2000);
+    });
     child.stderr?.on('data', onLine('err'));
     child.on('error', (e) => {
       job.log.push('sys', `spawn error: ${e.message}`);
+      job.errorText = `could not start ${this.config.cliBin}: ${e.message}`;
       this.finish(job, 'error', 1);
     });
     child.on('exit', (code, signal) => {
@@ -240,7 +254,12 @@ export class RunManager {
         startedAt: job.startedAt ? new Date(job.startedAt).toISOString() : undefined,
         finishedAt: job.finishedAt ? new Date(job.finishedAt).toISOString() : undefined,
         durationMs: job.startedAt && job.finishedAt ? job.finishedAt - job.startedAt : undefined,
-        errorText: status === 'error' ? 'run process failed' : undefined,
+        // Only reached when the CLI did not finalise the run itself (see cliFinal above), so this
+        // is exactly the case where the operator has nothing else to go on.
+        errorText:
+          status === 'error' || status === 'failed'
+            ? (job.errorText ?? 'run process failed')
+            : undefined,
       });
     } catch {
       /* db unavailable */

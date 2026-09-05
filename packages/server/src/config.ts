@@ -68,6 +68,33 @@ export interface ServerConfig {
   loginRateLimit: number;
 }
 
+/**
+ * The CLI the server spawns to execute a run.
+ *
+ * This used to be hard-coded to `<rootDir>/packages/cli/src/bin.ts`, a path that exists only
+ * inside the SDODS checkout. In a scaffolded workspace it does not, so every run started from the
+ * web UI died in ~100ms with exit 1 — and because exit 1 is how a normal test failure looks, it
+ * was recorded as a failed run rather than an error.
+ *
+ * Prefers real .js entry points over `node_modules/.bin` shims, which are .cmd files on Windows
+ * and cannot be handed to `node`.
+ */
+export function resolveCliBin(rootDir: string): string {
+  const here = dirname(fileURLToPath(import.meta.url));
+  return (
+    firstExisting([
+      // the workspace's own dependency — the same CLI `sdods` on the command line would use
+      resolve(rootDir, 'node_modules/@sdods/cli/bin/sdods.js'),
+      // published install: node_modules/@sdods/server/dist -> node_modules/@sdods/cli
+      resolve(here, '..', '..', 'cli', 'bin', 'sdods.js'),
+      // source checkout: packages/server/{src,dist} -> packages/cli
+      resolve(here, '..', '..', '..', 'cli', 'bin', 'sdods.js'),
+      resolve(rootDir, 'packages/cli/bin/sdods.js'),
+      resolve(rootDir, 'packages/cli/src/bin.ts'),
+    ]) ?? 'sdods'
+  );
+}
+
 export function loadServerConfig(
   overrides: Partial<ServerConfig> = {},
   env = process.env,
@@ -112,7 +139,7 @@ export function loadServerConfig(
     allowedHosts:
       overrides.allowedHosts ??
       (env.SDODS_ALLOWED_HOSTS ? env.SDODS_ALLOWED_HOSTS.split(',') : ['*']),
-    cliBin: overrides.cliBin ?? resolve(rootDir, 'packages/cli/src/bin.ts'),
+    cliBin: overrides.cliBin ?? resolveCliBin(rootDir),
     loginRateLimit: overrides.loginRateLimit ?? Number(env.SDODS_LOGIN_RATE_LIMIT ?? 10),
   };
 }
