@@ -2,6 +2,7 @@ import { withBase } from '@/lib/base-path';
 import Link from 'next/link';
 import { HomeLayout } from 'fumadocs-ui/layouts/home';
 import { baseOptions } from '@/lib/layout.shared';
+import { Film } from '@/components/film/film';
 
 const features: Array<{ title: string; body: string; href: string }> = [
   {
@@ -60,7 +61,11 @@ export default function HomePage() {
             CLI reference
           </Link>
         </div>
-        <p className="mt-10 text-sm text-fd-muted-foreground">
+        <div className="mt-12 w-full">
+          <Film />
+        </div>
+
+        <p className="mt-12 text-sm text-fd-muted-foreground">
           One command. It checks Node, installs Bun if you need it, fetches SDODS and Chromium, and
           puts <code>sdods</code> on your PATH.
         </p>
