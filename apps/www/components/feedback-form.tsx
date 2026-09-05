@@ -2,10 +2,13 @@
 
 import { useState } from 'react';
 import { REPO_PUBLIC, issueUrl, mailtoUrl, type FeedbackKind } from '@/lib/links';
+import { submitFeedback } from '@/lib/questions';
 
 /**
- * Client-only form: builds a prefilled URL and opens it. Nothing is sent to us; the browser hands
- * the text to GitHub, or — while the repository is private — to the visitor's own mail client.
+ * Client-only form. While the repository is public it hands the text to GitHub. While it is
+ * private the message is stored directly, because `mailto:` is not a delivery mechanism: a
+ * visitor with no mail client configured gets nothing at all, silently, and never finds out.
+ * The mailto link stays as a secondary route for people who prefer their own mail.
  */
 export function FeedbackForm() {
   const [kind, setKind] = useState<FeedbackKind>('feature');
@@ -14,6 +17,9 @@ export function FeedbackForm() {
   const [title, setTitle] = useState('');
   const [message, setMessage] = useState('');
   const [opened, setOpened] = useState<string | null>(null);
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [failed, setFailed] = useState(false);
 
   const body = [
     message.trim(),
@@ -22,14 +28,53 @@ export function FeedbackForm() {
     .join('')
     .trim();
 
-  function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent) {
     e.preventDefault();
-    const fields: Record<string, string> = { title };
-    if (kind === 'bug') fields.actual = body;
-    else fields.problem = body;
-    const url = REPO_PUBLIC ? issueUrl(kind, fields) : mailtoUrl(kind, title, body);
-    window.open(url, '_blank', 'noopener');
-    setOpened(url);
+    if (REPO_PUBLIC) {
+      const fields: Record<string, string> = { title };
+      if (kind === 'bug') fields.actual = body;
+      else fields.problem = body;
+      const url = issueUrl(kind, fields);
+      window.open(url, '_blank', 'noopener');
+      setOpened(url);
+      return;
+    }
+    setSending(true);
+    setFailed(false);
+    try {
+      await submitFeedback({ kind, title, body: message.trim(), name, email });
+      setSent(true);
+    } catch {
+      setFailed(true);
+    } finally {
+      setSending(false);
+    }
+  }
+
+  if (sent) {
+    return (
+      <div className="card p-6" aria-live="polite">
+        <h3 className="font-semibold">Thanks — that reached us.</h3>
+        <p className="muted mt-2 text-sm">
+          Your {kind === 'bug' ? 'bug report' : kind === 'feature' ? 'feature request' : 'note'} is
+          stored and a maintainer will read it.{' '}
+          {email
+            ? 'We\u2019ll reply to you by email if we need more detail.'
+            : 'Add an email next time if you\u2019d like a reply.'}
+        </p>
+        <button
+          type="button"
+          className="btn btn-secondary mt-4"
+          onClick={() => {
+            setTitle('');
+            setMessage('');
+            setSent(false);
+          }}
+        >
+          Send another
+        </button>
+      </div>
+    );
   }
 
   return (
@@ -88,20 +133,27 @@ export function FeedbackForm() {
         />
       </label>
       <div className="flex flex-wrap items-center gap-3">
-        <button type="submit" className="btn btn-primary">
-          {REPO_PUBLIC ? 'Open on GitHub' : 'Send by email'}
+        <button type="submit" className="btn btn-primary" disabled={sending}>
+          {REPO_PUBLIC ? 'Open on GitHub' : sending ? 'Sending\u2026' : 'Send'}
         </button>
-        {REPO_PUBLIC && (
-          <a href={mailtoUrl(kind, title, body)} className="btn btn-secondary">
-            Send by email instead
-          </a>
-        )}
+        <a href={mailtoUrl(kind, title, body)} className="btn btn-secondary">
+          Send by email instead
+        </a>
         <span className="muted text-xs">
           {REPO_PUBLIC
             ? 'Opens a prefilled GitHub issue in a new tab.'
-            : 'Opens a prefilled email in your own mail client.'}
+            : 'Sent straight to the maintainers. No mail client needed.'}
         </span>
       </div>
+      {failed && (
+        <p className="text-sm" role="alert">
+          That didn&rsquo;t go through. Try again, or email{' '}
+          <a href={mailtoUrl(kind, title, body)} className="underline">
+            admin@sdods.com
+          </a>{' '}
+          directly.
+        </p>
+      )}
       {opened && (
         <p className="text-sm">
           If nothing opened,{' '}

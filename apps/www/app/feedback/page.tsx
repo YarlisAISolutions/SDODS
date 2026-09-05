@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { FeedbackForm } from '@/components/feedback-form';
-import { DISCUSSIONS_URL, IDEAS_URL, REPO_PUBLIC, issueUrl, mailtoUrl } from '@/lib/links';
+import { DISCUSSIONS_URL, IDEAS_URL, REPO_PUBLIC, issueUrl } from '@/lib/links';
 
 export const metadata: Metadata = {
   title: 'Feedback and feature requests',
@@ -37,29 +37,21 @@ const CARDS: Card[] = REPO_PUBLIC
   : [
       {
         title: 'Request a feature',
-        body: 'Tell us the problem, the workflow it blocks and what a good solution looks like. Opens a prefilled email.',
-        href: mailtoUrl(
-          'feature',
-          '',
-          'The problem you are trying to solve, the workflow it blocks, and what a good solution looks like.\n\n',
-        ),
-        cta: 'Compose a feature request',
+        body: 'Tell us the problem, the workflow it blocks and what a good solution looks like. Use the form below.',
+        href: '#write',
+        cta: 'Write a feature request',
       },
       {
         title: 'Report a bug',
-        body: 'Command, expected vs actual, run id and logs. Attach `sdods doctor --json` output if you have it.',
-        href: mailtoUrl(
-          'bug',
-          '',
-          'Command you ran:\n\nExpected:\n\nActual:\n\nRun id:\n\nsdods doctor --json output:\n\n',
-        ),
-        cta: 'Compose a bug report',
+        body: 'Command, expected vs actual, run id and logs. Paste `sdods doctor --json` output if you have it.',
+        href: '#write',
+        cta: 'Write a bug report',
       },
       {
         title: 'General feedback',
         body: 'Not sure it is a feature yet? Ideas, questions and what confused you are all welcome.',
-        href: mailtoUrl('feedback', '', 'What works, what does not, what confused you.\n\n'),
-        cta: 'Compose a message',
+        href: '#write',
+        cta: 'Write a message',
       },
     ];
 
@@ -72,19 +64,14 @@ export default function FeedbackPage() {
       <p className="muted mt-3 max-w-2xl">
         {REPO_PUBLIC
           ? 'SDODS is built in the open. Every request lands as a GitHub issue or discussion where the maintainers triage it, label it and reply. No login with us, no tracking.'
-          : 'Every request goes straight to the maintainers by email, where they triage it and reply. No login with us, no tracking.'}
+          : 'Every request goes straight to the maintainers, who triage it and reply. No login with us, no tracking.'}
       </p>
       <div className="mt-8 grid gap-4 md:grid-cols-3">
         {CARDS.map((c) => (
           <article key={c.title} className="card flex flex-col p-5">
             <h2 className="font-semibold">{c.title}</h2>
             <p className="muted mt-2 flex-1 text-sm">{c.body}</p>
-            <a
-              href={c.href}
-              className="btn btn-secondary mt-4 text-sm"
-              target="_blank"
-              rel="noreferrer"
-            >
+            <a href={c.href} className="btn btn-secondary mt-4 text-sm">
               {c.cta}
             </a>
           </article>
@@ -98,11 +85,13 @@ export default function FeedbackPage() {
         — answers stay public so the next person finds them.
       </p>
 
-      <h2 className="mt-14 text-xl font-bold">Or write it here</h2>
+      <h2 id="write" className="mt-14 scroll-mt-20 text-xl font-bold">
+        Or write it here
+      </h2>
       <p className="muted mb-4 mt-1 text-sm">
         {REPO_PUBLIC
           ? 'The form composes the issue for you and opens GitHub with everything filled in.'
-          : 'The form composes the message for you and opens your mail client with everything filled in.'}
+          : 'Type it here and press Send. It goes straight to the maintainers \u2014 no mail client, no account.'}
       </p>
       <FeedbackForm />
       <h2 className="mt-14 text-xl font-bold">What happens next</h2>

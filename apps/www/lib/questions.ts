@@ -124,3 +124,31 @@ export async function submitAnswer(
     createdAt: serverTimestamp(),
   });
 }
+
+export type FeedbackKindStored = 'feature' | 'bug' | 'feedback';
+
+/**
+ * Store a feature request or bug report. Feedback is never shown on the site —
+ * the rules let anyone create one but only the moderator read it back — so
+ * there is no pending/published dance here, just a `new` row.
+ *
+ * This exists because `mailto:` is not a delivery mechanism: a visitor with no
+ * mail client configured clicks the button and nothing happens, silently.
+ */
+export async function submitFeedback(input: {
+  kind: FeedbackKindStored;
+  title: string;
+  body: string;
+  name: string;
+  email: string;
+}): Promise<void> {
+  await addDoc(collection(db(), 'feedback'), {
+    kind: input.kind,
+    title: input.title.trim(),
+    body: input.body.trim(),
+    name: input.name.trim(),
+    email: input.email.trim(),
+    status: 'new',
+    createdAt: serverTimestamp(),
+  });
+}
