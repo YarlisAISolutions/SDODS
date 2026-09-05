@@ -92,7 +92,7 @@ export function register(program: Command) {
   users
     .command('set-role <username> <role>')
     .description('Change a platform role (viewer | editor | admin)')
-    .action(async (username: string, role: string, cmd) => {
+    .action(async (username: string, role: string, _opts, cmd) => {
       const ctx = createContext(cmd);
       const adb = await openDb();
       try {
@@ -115,7 +115,7 @@ export function register(program: Command) {
   users
     .command('deactivate <username>')
     .description('Deactivate a user (sessions and tokens stop working)')
-    .action(async (username: string, cmd) => {
+    .action(async (username: string, _opts, cmd) => {
       const ctx = createContext(cmd);
       const adb = await openDb();
       try {
