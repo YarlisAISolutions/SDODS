@@ -217,6 +217,7 @@ export async function captureAuth(opts: CaptureOptions): Promise<CaptureResult[]
         const token = await strategy.token({ config, user });
         if (token) {
           const file = tokenFileFor(config, user);
+          // Owner-only: this holds a usable API token for the application under test.
           writeFileSync(
             file,
             JSON.stringify(
@@ -224,6 +225,7 @@ export async function captureAuth(opts: CaptureOptions): Promise<CaptureResult[]
               null,
               2,
             ),
+            { mode: 0o600 },
           );
           result.tokenFile = file;
         }
