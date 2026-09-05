@@ -309,6 +309,9 @@ function Write-NpmShim {
 }
 
 function Resolve-GlobalBin {
+  # A dry run never installed anything, so there is no global bin to find. Report the path the
+  # package manager would use and carry on; dying here would fail -DryRun on a clean machine.
+  if ($DryRun) { $script:GlobalSdods = '(global bin)\sdods'; return }
   $dir = ''
   try {
     switch ($PmName) {

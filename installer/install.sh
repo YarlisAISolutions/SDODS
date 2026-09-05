@@ -58,6 +58,9 @@ SDODS_BIN=''
 GLOBAL_SDODS=''
 # Where a previous source install put its checkout, remembered across the npm path.
 APP_DIR_LEGACY=''
+# Set when --dir/--bin-dir name a specific tree: an uninstall scoped that way must not reach
+# outside it and remove a globally installed package that belongs to a different install.
+SCOPED=0
 
 # ── output ──────────────────────────────────────────────────────────────────────────────────
 if [ -t 1 ] && [ -z "${NO_COLOR:-}" ] && [ "${TERM:-dumb}" != dumb ]; then
@@ -188,10 +191,10 @@ while [ $# -gt 0 ]; do
   case "$1" in
     --version) need_value "$1" "${2:-}"; REF=$2; shift 2 ;;
     --version=*) REF=${1#*=}; shift ;;
-    --dir) need_value "$1" "${2:-}"; SDODS_HOME=$2; shift 2 ;;
-    --dir=*) SDODS_HOME=${1#*=}; shift ;;
-    --bin-dir) need_value "$1" "${2:-}"; BIN_DIR=$2; shift 2 ;;
-    --bin-dir=*) BIN_DIR=${1#*=}; shift ;;
+    --dir) need_value "$1" "${2:-}"; SDODS_HOME=$2; SCOPED=1; shift 2 ;;
+    --dir=*) SDODS_HOME=${1#*=}; SCOPED=1; shift ;;
+    --bin-dir) need_value "$1" "${2:-}"; BIN_DIR=$2; SCOPED=1; shift 2 ;;
+    --bin-dir=*) BIN_DIR=${1#*=}; SCOPED=1; shift ;;
     --pm) need_value "$1" "${2:-}"; PM=$2; shift 2 ;;
     --pm=*) PM=${1#*=}; shift ;;
     --browsers) need_value "$1" "${2:-}"; BROWSERS=$2; shift 2 ;;
@@ -471,6 +474,12 @@ install_from_npm() {
 # Where the package manager puts global bins. No shim is written on the npm path -- the package's
 # own `bin` provides `sdods` -- so this is how we find it before it is on PATH.
 resolve_global_bin() {
+  # A dry run never installed anything, so there is no global bin to find. Report the path the
+  # package manager would use and carry on; dying here would fail --dry-run on a clean machine.
+  if [ "$DRY_RUN" = 1 ]; then
+    GLOBAL_SDODS="(global bin)/sdods"
+    return 0
+  fi
   dir=''
   case "$PM" in
     bun) dir=$(bun pm bin -g 2>/dev/null || true) ;;
@@ -717,7 +726,9 @@ uninstall_global_pkg() {
 
 do_uninstall() {
   say ''
-  GLOBAL_PM=$(global_pkg_pm)
+  # A scoped uninstall (--dir/--bin-dir) belongs to one sandbox; the globally installed package
+  # is someone else's and must be left alone.
+  if [ "$SCOPED" = 1 ]; then GLOBAL_PM=''; else GLOBAL_PM=$(global_pkg_pm); fi
   say "This removes:"
   if [ -n "$GLOBAL_PM" ]; then say "  the global @sdods/cli package ($GLOBAL_PM)"; fi
   say "  $SDODS_HOME"
