@@ -16,6 +16,9 @@ export function cliCommand(config: ServerConfig, args: string[]): { cmd: string;
   const bin = config.cliBin;
   if (bin.endsWith('.ts'))
     return { cmd: process.execPath, args: ['--import', 'tsx', bin, ...args] };
+  // The last-resort value is the bare command name, which has to be executed rather than handed
+  // to node as a script path.
+  if (!bin.includes('/') && !bin.includes('\\')) return { cmd: bin, args };
   return { cmd: process.execPath, args: [bin, ...args] };
 }
 
