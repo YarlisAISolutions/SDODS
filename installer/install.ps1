@@ -74,6 +74,8 @@ $AssumeYes = $Yes.IsPresent -or $env:SDODS_YES -eq '1' -or [bool]$env:CI
 $YesExplicit = $Yes.IsPresent -or $env:SDODS_YES -eq '1'
 $AppDir = Join-Path $SdodsHome 'app'
 $SourceUsed = 'git'
+$GlobalSdods = ''
+$AppDirLegacy = ''
 
 if ($BrowsersOpt -notin @('all', 'chromium', 'none')) {
   Write-Host "ERROR -Browsers must be all, chromium or none (got '$BrowsersOpt')." -ForegroundColor Red; exit 2
@@ -110,16 +112,10 @@ function Have([string] $Name) { $null -ne (Get-Command $Name -ErrorAction Silent
 
 # Where the sdods command lives: the generated shim for source installs, PATH for npm installs.
 function Get-SdodsCmd {
-  if ($SourceUsed -eq 'npm') {
-    # Resolve-GlobalBin has pointed BinDirPath at the package manager's global directory, which
-    # may not be on PATH in this process yet.
-    $exe = Join-Path $BinDirPath 'sdods.cmd'
-    if (Test-Path $exe) { return $exe }
-    $exe = Join-Path $BinDirPath 'sdods'
-    if (Test-Path $exe) { return $exe }
-    return 'sdods'
-  }
-  return (Join-Path $BinDirPath 'sdods.cmd')
+  $shim = Join-Path $BinDirPath 'sdods.cmd'
+  if (Test-Path $shim) { return $shim }
+  if ($SourceUsed -eq 'npm' -and $GlobalSdods) { return $GlobalSdods }
+  return $shim
 }
 
 function Probe([string] $Name, [string[]] $ProbeArgs = @('--version')) {
@@ -278,6 +274,40 @@ function Install-FromNpm {
 
 # Where the package manager puts global bins. No shim is written on the npm path -- the package's
 # own bin provides sdods -- so this is how we find it before it is on PATH.
+# A previous source install leaves a shim pointing into the checkout, which shadows the packaged
+# command, plus ~1.5 GB of checkout that nothing uses any more.
+function Invoke-SourceMigration {
+  $shim = Join-Path $BinDirPath 'sdods.cmd'
+  $hadSource = (Test-Path $AppDirLegacy) -or
+    ((Test-Path $shim) -and ((Get-Content $shim -Raw -ErrorAction SilentlyContinue) -match 'packages\\cli\\bin\\sdods\.js'))
+  if (-not $hadSource) { return }
+  Step 'Migrating from a source install'
+  if ($DryRun) { Say "   would remove the source shim and $AppDirLegacy"; return }
+  foreach ($f in @('sdods.cmd', 'sdods.ps1')) {
+    $x = Join-Path $BinDirPath $f
+    if ((Test-Path $x) -and ((Get-Content $x -Raw -ErrorAction SilentlyContinue) -match 'packages')) {
+      Remove-Item $x -Force -ErrorAction SilentlyContinue
+      Ok "Removed the old source shim at $x"
+    }
+  }
+  if (Test-Path $AppDirLegacy) {
+    try { Remove-Item $AppDirLegacy -Recurse -Force -ErrorAction Stop; Ok "Removed the old checkout at $AppDirLegacy" }
+    catch { Warn "Could not fully remove $AppDirLegacy - remove it yourself once nothing is open on it." }
+  }
+}
+
+# Points at the globally installed package. Written for the same reason the source path writes
+# one: BinDirPath is put on PATH, while a package manager's global bin frequently is not.
+function Write-NpmShim {
+  Step "Writing the sdods command to $BinDirPath\sdods.cmd"
+  if ($DryRun) { Say "   would write: $BinDirPath\sdods.cmd -> $GlobalSdods"; return }
+  try { New-Item -ItemType Directory -Force -Path $BinDirPath | Out-Null }
+  catch { Die 8 "Cannot create $BinDirPath." @('Pass -BinDir <writable path>.') }
+  "@echo off`r`n`"$GlobalSdods`" %*" | Set-Content -Path (Join-Path $BinDirPath 'sdods.cmd') -Encoding ascii
+  "& `"$GlobalSdods`" @args" | Set-Content -Path (Join-Path $BinDirPath 'sdods.ps1') -Encoding ascii
+  Ok "Command installed: $BinDirPath\sdods.cmd"
+}
+
 function Resolve-GlobalBin {
   $dir = ''
   try {
@@ -297,11 +327,9 @@ function Resolve-GlobalBin {
   if (-not $dir) {
     Die 7 'Installed @sdods/cli but could not find the directory it put sdods in.' @("Run '$PmName bin -g' and add that directory to your PATH.")
   }
-  # No shim is written on this path, so -BinDir has nothing to write to.
-  if ($BinDirPath -and ($BinDirPath -ne $dir)) {
-    Warn "-BinDir is ignored when installing from npm; sdods comes from $dir"
-  }
-  $script:BinDirPath = "$dir".Trim()
+  $exe = Join-Path "$dir".Trim() 'sdods.cmd'
+  if (-not (Test-Path $exe)) { $exe = Join-Path "$dir".Trim() 'sdods' }
+  $script:GlobalSdods = $exe
 }
 
 function Install-FromGit([string] $ResolvedRef) {
@@ -535,9 +563,12 @@ if ($SourceOpt -eq 'git') {
 if ($SourceUsed -eq 'npm') {
   # No checkout on this path. AppDir stays empty; everything downstream must tolerate that
   # rather than treat it as a directory.
+  $AppDirLegacy = $AppDir
   $AppDir = ''
+  Invoke-SourceMigration
   Install-FromNpm
   Resolve-GlobalBin
+  Write-NpmShim
   Install-Browsers
   Add-ToPath
 } else {
