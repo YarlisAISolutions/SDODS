@@ -70,8 +70,13 @@ for p in "${PKGS[@]}"; do
     skipped=$((skipped + 1))
     continue
   fi
+  # Print only after the publish lands: announcing it first made a failed publish read as a
+  # success line immediately followed by an unrelated-looking error.
+  ( cd "$dir" && npm publish "${npm_args[@]}" >/dev/null ) || {
+    printf '  ! %-26s %s failed to publish\n' "$name" "$version" >&2
+    exit 1
+  }
   printf '  + %-26s %s\n' "$name" "$version"
-  ( cd "$dir" && npm publish "${npm_args[@]}" >/dev/null )
   published=$((published + 1))
 done
 
