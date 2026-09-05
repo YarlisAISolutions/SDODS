@@ -80,6 +80,11 @@ export function loadServerConfig(
     firstExisting([
       resolve(rootDir, 'packages/web/dist'),
       resolve(rootDir, 'node_modules/@sdods/web/dist'),
+      // The sibling package in a source checkout. Ahead of the vendored copy on purpose: running
+      // the repo's CLI against a workspace elsewhere sets rootDir to that workspace, so the two
+      // rootDir candidates above miss, and a stale vendored copy would otherwise shadow the build
+      // you just made.
+      resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', 'web', 'dist'),
       // Vendored into this package at pack time by scripts/build-publish-assets.ts. Resolved
       // relative to this module, not rootDir: on a registry install the dashboard travels with
       // @sdods/server, because nothing depends on the private, unpublished @sdods/web.

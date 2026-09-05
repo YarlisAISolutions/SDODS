@@ -16,6 +16,15 @@ export interface CliContext {
 }
 
 export function globalOptions(cmd: Command): GlobalOptions {
+  // Commander calls an action with (...positionalArgs, options, command). A callback that forgets
+  // the options parameter receives the options object here instead of the Command, and the failure
+  // surfaced as an unhelpful "root.opts is not a function".
+  if (typeof cmd?.opts !== 'function' || !('parent' in cmd)) {
+    throw new Error(
+      'createContext expected the Commander Command. An action callback takes ' +
+        '(...args, options, command) — the options parameter is probably missing.',
+    );
+  }
   let root: Command = cmd;
   while (root.parent) root = root.parent;
   return root.opts() as GlobalOptions;

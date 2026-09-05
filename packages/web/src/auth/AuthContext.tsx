@@ -9,7 +9,7 @@ import {
 } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { effectiveWorkspaceRole, type Scope, type WorkspaceRole } from '@sdods/contracts/scopes';
-import { api, ApiError, setCsrfToken } from '../api/client';
+import { api, ApiError, setCsrfToken, setUnauthorizedHandler } from '../api/client';
 import type { Me } from '../api/types';
 import { normalizeMe } from '../api/normalize';
 
@@ -52,6 +52,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  /**
+   * A session can end while the app is open — it expires, an admin deactivates the user, or the
+   * server restarts. Without this, the next request just rendered "AUTH_REQUIRED: Authentication
+   * required" inside a shell that still showed the user signed in, with no way back to the login
+   * form. Dropping the local session sends the router to /login instead.
+   */
+  useEffect(() => {
+    setUnauthorizedHandler(() => {
+      setCsrfToken(null);
+      setMe(null);
+      queryClient.clear();
+    });
+    return () => setUnauthorizedHandler(null);
+  }, [queryClient]);
 
   const value = useMemo<AuthState>(() => {
     const hasScope = (s: Scope) => Boolean(me?.scopes.includes(s));
