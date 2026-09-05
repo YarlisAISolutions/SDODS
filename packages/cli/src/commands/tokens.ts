@@ -92,15 +92,20 @@ export function register(program: Command) {
       const db = await import('@sdods/db');
       const adb = await db.openDb();
       try {
-        await db.revokeApiToken(adb.db, id);
-        await db.audit(adb.db, {
-          actorType: 'cli',
-          action: 'token.revoke',
-          targetType: 'api_token',
-          targetId: id,
-        });
-        if (ctx.opts.json) return json({ id, revoked: true });
-        ok(`Revoked ${id}`);
+        // Reporting success for an id that does not exist reads as "the token is gone" when
+        // nothing was checked at all — an operator revoking a leaked token needs the difference.
+        const revoked = await db.revokeApiToken(adb.db, id);
+        if (revoked) {
+          await db.audit(adb.db, {
+            actorType: 'cli',
+            action: 'token.revoke',
+            targetType: 'api_token',
+            targetId: id,
+          });
+        }
+        if (ctx.opts.json) return json({ id, revoked });
+        if (revoked) ok(`Revoked ${id}`);
+        else warn(`No live token with id ${id}; nothing to revoke.`);
       } finally {
         await adb.close();
       }

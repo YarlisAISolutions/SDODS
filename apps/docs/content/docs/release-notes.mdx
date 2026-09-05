@@ -5,6 +5,27 @@ description: Changes per version, generated from changesets.
 
 Releases are versioned with changesets and published to npm as `@sdods/*`.
 
+## 0.2.1
+
+Fixes found by driving the web UI and sweeping every CLI command.
+
+- **Sign out works.** It could do nothing at all: logging out without a live session returned 401,
+  and the client discarded the rejection, so the button had no visible effect. Logout is now
+  idempotent and always clears the cookie, while an authenticated logout still requires a CSRF
+  token so no cross-site page can force one. Signing out also clears every cached query, so no data
+  crosses a session boundary on a shared machine.
+- **An expired session returns you to the sign-in form** instead of rendering
+  "AUTH_REQUIRED: Authentication required" inside a shell that still looked signed in.
+- **`users deactivate`, `users set-role` and `tokens revoke` no longer crash** with
+  "root.opts is not a function". `users deactivate` is how access is revoked, so this was not
+  cosmetic.
+- **`tokens revoke` tells the truth**: an unknown or already-revoked id now warns instead of
+  reporting success.
+- **The platform database is resolved from the workspace root.** Running a command from a
+  subdirectory used to open a different, empty database — `sdods serve` started inside a run's
+  artifacts folder rejected every login because the users lived in the workspace database.
+- **The projects list shows its processes** rather than `processes: , , ,`.
+
 ## 0.2.0
 
 First published release: `npm i -g @sdods/cli` installs SDODS as compiled packages, so there is no
