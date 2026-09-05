@@ -17,6 +17,12 @@ DB_DRIVER=postgres DATABASE_URL=postgres://sdods:sdods@localhost:5432/sdods bun 
 bun run sdods db status
 ```
 
+The SQLite file lives at `<workspace>/.sdods/sdods.db`. The path is resolved against the workspace
+root — the nearest directory above you holding `sdods.workspace.yaml` — not against the directory
+you happen to be in, so `sdods users`, `sdods serve` and `sdods run` open the same database from
+anywhere inside the workspace. Set `SQLITE_PATH` to put it somewhere else; an explicit value is
+used exactly as given.
+
 Kysely serves one schema on both drivers; primary keys are application-generated UUID v7 strings, timestamps are ISO text on SQLite and `timestamptz` on Postgres, JSON is text or `jsonb`.
 
 ## What is stored

@@ -11,9 +11,17 @@ description: What the SDODS web application offers and how it relates to the CLI
 ## Start it
 
 ```bash
-bun run sdods users create --admin
+bun run sdods users create --admin --username admin --password '<at least 8 chars>'
 bun run sdods serve                 # http://127.0.0.1:4444
 ```
+
+`--admin` makes a platform admin and owner of every organization without one. Add more people with
+`--role viewer|editor|admin`, and scope them with
+`sdods users grant <username> --workspace <slug> --role editor`.
+
+Run both commands from the workspace root, or anywhere inside it: the platform database lives at
+`<workspace>/.sdods/sdods.db`, and every command walks up to the workspace to find it, so
+`users create` and `serve` always agree on one database.
 
 The server is a Fastify application. It spawns the same `sdods` commands you run by hand and streams their logs over Server-Sent Events, so a run started from a browser looks exactly like one started from a terminal.
 

@@ -95,7 +95,7 @@ export function register(program: Command) {
 
   browsers
     .command('list')
-    .description('Show which browsers are installed and where')
+    .description('Show which browsers are installed and where; exits 1 if any is missing')
     .option('-p, --project <slug>', 'limit to the browsers declared by a project')
     .action(async (opts, cmd) => {
       const ctx = createContext(cmd);

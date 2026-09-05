@@ -7,7 +7,9 @@ import { heading, json, out, table } from '../ui.js';
 export function register(program: Command) {
   program
     .command('coverage')
-    .description('Route, endpoint and role coverage by scenarios, split by suite tag')
+    .description(
+      'Route, endpoint and role coverage by scenarios, split by suite tag; exits 1 if any module has no scenarios',
+    )
     .requiredOption('-p, --project <slug>', 'project slug')
     .option('-e, --env <name>', 'environment (for the OpenAPI spec and API base URL)')
     .option(
