@@ -28,6 +28,7 @@
       "name": "@sdods/docs",
       "version": "0.1.0",
       "dependencies": {
+        "firebase": "^12.18.0",
         "fumadocs-core": "^16.15.5",
         "fumadocs-mdx": "^15.4.0",
         "fumadocs-ui": "^16.15.5",
@@ -194,6 +195,10 @@
       "devDependencies": {
         "@modelcontextprotocol/client": "^2.0.0",
       },
+    },
+    "packages/roadmap": {
+      "name": "@sdods/roadmap",
+      "version": "0.1.0",
     },
     "packages/server": {
       "name": "@sdods/server",
@@ -968,6 +973,8 @@
     "@sdods/integrations": ["@sdods/integrations@workspace:packages/integrations"],
 
     "@sdods/mcp": ["@sdods/mcp@workspace:packages/mcp"],
+
+    "@sdods/roadmap": ["@sdods/roadmap@workspace:packages/roadmap"],
 
     "@sdods/server": ["@sdods/server@workspace:packages/server"],
 

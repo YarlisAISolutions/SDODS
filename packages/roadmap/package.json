@@ -1,0 +1,14 @@
+{
+  "name": "@sdods/roadmap",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The SDODS roadmap as data: delivered chapters, the next twelve months, the five-year horizon.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
