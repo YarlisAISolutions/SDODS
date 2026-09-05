@@ -7,6 +7,7 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { effectiveWorkspaceRole, type Scope, type WorkspaceRole } from '@sdods/contracts/scopes';
 import { api, ApiError, setCsrfToken } from '../api/client';
 import type { Me } from '../api/types';
@@ -28,6 +29,7 @@ interface AuthState {
 const Ctx = createContext<AuthState | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const queryClient = useQueryClient();
   const [me, setMe] = useState<Me | null>(null);
   const [loading, setLoading] = useState(true);
   const [needsSetup, setNeedsSetup] = useState(false);
@@ -80,13 +82,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await api('/api/auth/login', { json: { username, password } });
         await refresh();
       },
+      /**
+       * Never rejects. The button that calls this discards the promise, so a thrown error used to
+       * leave the user signed in with no feedback at all -- the sign-out did nothing.
+       *
+       * Local state is cleared in `finally` so the UI cannot be left showing an authenticated
+       * shell, and the query cache is dropped with it: cached projects, runs and users must not
+       * survive into the next session on a shared machine.
+       */
       logout: async () => {
-        await api('/api/auth/logout', { method: 'POST' });
-        setMe(null);
-        setCsrfToken(null);
+        try {
+          await api('/api/auth/logout', { method: 'POST' });
+        } catch (e) {
+          // The server session may still be alive (for example a rejected CSRF token). Say so
+          // rather than silently pretending the sign-out worked.
+          console.error('Sign out did not reach the server; clearing this browser anyway.', e);
+        } finally {
+          setCsrfToken(null);
+          setMe(null);
+          queryClient.clear();
+        }
       },
     };
-  }, [me, loading, needsSetup, refresh]);
+  }, [me, loading, needsSetup, refresh, queryClient]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
