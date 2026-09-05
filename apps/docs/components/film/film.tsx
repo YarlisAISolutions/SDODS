@@ -64,7 +64,9 @@ export function Film() {
         <video
           ref={video}
           className="block w-full"
-          poster={withBase('/film/sdods-film.jpg')}
+          // Versioned name on purpose: posters are cached for a week, so a redesign needs a new
+          // URL or returning readers keep the old one.
+          poster={withBase('/film/sdods-film-poster.jpg')}
           preload="metadata"
           playsInline
           controls={started}
