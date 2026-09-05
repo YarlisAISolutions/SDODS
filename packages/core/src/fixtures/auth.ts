@@ -125,12 +125,20 @@ export class AuthStateCache {
     });
   }
 
-  /** Atomic save: temp file + rename, sidecar written last. */
+  /**
+   * Atomic save: temp file + rename, sidecar written last.
+   *
+   * Written owner-only. This file is a live session for the application under test — cookies and
+   * localStorage, replayable as-is — and it used to land world-readable (0644 in a 0755
+   * directory), so any other account on the machine could lift it. Encryption is not the control
+   * here: the state has to be decryptable to be replayed, so a key would have to sit on the same
+   * disk. Restricting access is what actually protects it.
+   */
   save(user: PoolUserLike, state: Record<string, unknown>): string {
-    mkdirSync(this.dir, { recursive: true });
+    mkdirSync(this.dir, { recursive: true, mode: 0o700 });
     const file = this.fileFor(user);
     const tmp = `${file}.${process.pid}.${Math.random().toString(36).slice(2, 8)}.tmp`;
-    writeFileSync(tmp, JSON.stringify(state, null, 2));
+    writeFileSync(tmp, JSON.stringify(state, null, 2), { mode: 0o600 });
     renameSync(tmp, file);
     const sideTmp = `${this.sidecarFor(user)}.${process.pid}.tmp`;
     writeFileSync(
@@ -140,6 +148,7 @@ export class AuthStateCache {
         null,
         2,
       ),
+      { mode: 0o600 },
     );
     renameSync(sideTmp, this.sidecarFor(user));
     return file;
@@ -186,7 +195,7 @@ export class AuthStateCache {
    * LOCK_STALE_MS is treated as abandoned by a crashed worker.
    */
   private async withLock<T>(user: PoolUserLike, fn: () => Promise<T>): Promise<T> {
-    mkdirSync(this.dir, { recursive: true });
+    mkdirSync(this.dir, { recursive: true, mode: 0o700 });
     const lock = this.lockFor(user);
     const deadline = Date.now() + LOCK_STALE_MS * 2;
     for (;;) {
