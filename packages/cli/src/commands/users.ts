@@ -1,5 +1,6 @@
 import type { Command } from 'commander';
 import { SdodsError } from '@sdods/core';
+import { MIN_PASSWORD_LENGTH } from '@sdods/contracts/names';
 import { createContext } from '../context.js';
 import { json, ok, table } from '../ui.js';
 
@@ -17,7 +18,7 @@ export function register(program: Command) {
     .command('create')
     .description('Create a user; --admin makes a platform admin and organization owner')
     .requiredOption('--username <name>', 'login name')
-    .requiredOption('--password <password>', 'password (min 8 chars)')
+    .requiredOption('--password <password>', `password (min ${MIN_PASSWORD_LENGTH} chars)`)
     .option('--admin', 'platform admin + owner of every organization without an owner')
     .option('--role <role>', 'viewer | editor | admin', 'viewer')
     .option('--email <email>', 'email')

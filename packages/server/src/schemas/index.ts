@@ -1,3 +1,4 @@
+import { MIN_PASSWORD_LENGTH } from '@sdods/contracts/names';
 import { z } from 'zod';
 import {
   BrowserSchema,
@@ -15,7 +16,7 @@ export const LoginBody = z.object({ username: z.string().min(1), password: z.str
 export const SetupBody = z.object({
   token: z.string().min(1),
   username: z.string().min(3),
-  password: z.string().min(8),
+  password: z.string().min(MIN_PASSWORD_LENGTH),
   email: z.string().email().optional(),
 });
 
@@ -24,13 +25,13 @@ export const CreateUserBody = z.object({
     .string()
     .min(3)
     .regex(/^[a-zA-Z0-9._-]+$/),
-  password: z.string().min(8),
+  password: z.string().min(MIN_PASSWORD_LENGTH),
   role: z.enum(ROLES).default('viewer'),
   email: z.string().email().optional(),
   orgOwner: z.boolean().optional(),
 });
 export const PatchUserBody = z.object({
-  password: z.string().min(8).optional(),
+  password: z.string().min(MIN_PASSWORD_LENGTH).optional(),
   role: z.enum(ROLES).optional(),
   active: z.boolean().optional(),
   email: z.string().email().nullable().optional(),
