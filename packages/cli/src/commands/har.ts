@@ -1,4 +1,5 @@
-import { relative } from 'node:path';
+import { existsSync, readdirSync } from 'node:fs';
+import { join, relative } from 'node:path';
 import type { Command } from 'commander';
 import pc from 'picocolors';
 import { SdodsError } from '@sdods/core';
@@ -90,6 +91,10 @@ export function register(program: Command) {
         }),
         cmd,
       );
+      // Playwright writes the browser HAR itself, verbatim, including the Cookie, Set-Cookie and
+      // Authorization headers of the application under test. HARs are meant to be committed, so
+      // strip the credentials before anyone can commit a live session.
+      await scrubRecordedHars(ctx, opts.project, opts.env);
     });
 
   har
@@ -143,4 +148,33 @@ export function register(program: Command) {
       if (ctx.opts.json) return json(rows);
       table(rows, ['env', 'name', 'tag', 'size', 'api', 'glob', 'recorded', 'scenarios']);
     });
+}
+
+/**
+ * Replace credential values in every HAR under the project's har/<env> directory after a
+ * recording run. Reports what it touched: a silent rewrite of a file the user is about to commit
+ * would be worse than the leak it prevents.
+ */
+async function scrubRecordedHars(
+  ctx: ReturnType<typeof createContext>,
+  project?: string,
+  env?: string,
+): Promise<void> {
+  if (!project) return;
+  const { scrubHarFile } = await import('@sdods/core/har');
+  const entry = ctx.registry.entriesList().find((e) => e.slug === project);
+  if (!entry) return;
+  const dir = join(entry.root, 'har', env ?? '');
+  if (!existsSync(dir)) return;
+  let files = 0;
+  let values = 0;
+  for (const name of readdirSync(dir)) {
+    if (!name.endsWith('.har')) continue;
+    const n = scrubHarFile(join(dir, name));
+    if (n > 0) {
+      files++;
+      values += n;
+    }
+  }
+  if (files > 0) out(pc.dim(`scrubbed ${values} credential value(s) from ${files} HAR file(s)`));
 }
