@@ -7,7 +7,7 @@ import {
   statSync,
   writeFileSync,
 } from 'node:fs';
-import { basename, dirname, join, resolve as resolvePath } from 'node:path';
+import { basename, dirname, join, relative, resolve as resolvePath } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { Command } from 'commander';
 import { execa } from 'execa';
@@ -17,10 +17,25 @@ import { SdodsError, VERSION, WORKSPACE_FILE } from '@sdods/core';
 import { globalOptions } from '../context.js';
 import { json, ok, out, warn } from '../ui.js';
 
-/** Root of the SDODS monorepo this CLI runs from (used by --link and to copy the demo). */
+/** Root of the SDODS monorepo this CLI runs from (used by --link, which needs a real checkout). */
 export function sourceRepoRoot(): string {
-  // packages/cli/src/commands/init.ts → repo root
+  // packages/cli/{src,dist}/commands/init.{ts,js} → repo root (same depth either way)
   return resolvePath(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', '..');
+}
+
+/**
+ * Where `init` reads the assets it copies into a new workspace. A real checkout wins, so working
+ * on SDODS scaffolds from the live `projects/demo-shop` rather than a staged copy. A published
+ * install has no checkout above it and falls back to `templates/`, put into the tarball at pack
+ * time by scripts/build-publish-assets.ts. The staged layout mirrors the repo root, so the callers
+ * below resolve the same relative paths either way.
+ */
+export function templateRoot(): string {
+  const repo = sourceRepoRoot();
+  if (existsSync(join(repo, 'projects', 'demo-shop'))) return repo;
+  // packages/cli/{src,dist}/commands → packages/cli
+  const packaged = resolvePath(dirname(fileURLToPath(import.meta.url)), '..', '..', 'templates');
+  return existsSync(packaged) ? packaged : repo;
 }
 
 export interface InitFlags {
@@ -124,7 +139,7 @@ export async function initWorkspace(target: string, flags: InitFlags): Promise<I
     });
   }
 
-  const src = sourceRepoRoot();
+  const src = templateRoot();
   const files: string[] = [];
   const write = (rel: string, content: string) => {
     const file = join(target, rel);
@@ -143,7 +158,7 @@ export async function initWorkspace(target: string, flags: InitFlags): Promise<I
     flags.link
       ? flags.pm === 'bun'
         ? `link:${pkg}`
-        : `link:${join(src, 'packages', pkg.replace('@sdods/', ''))}`
+        : `link:${join(sourceRepoRoot(), 'packages', pkg.replace('@sdods/', ''))}`
       : `^${VERSION}`;
   const run = flags.pm === 'bun' ? 'bun run' : 'pnpm';
 
@@ -327,9 +342,17 @@ Docs: https://docs.sdods.com
   if (withDemo) {
     cpSync(demoSrc, join(target, 'projects', 'demo-shop'), {
       recursive: true,
-      filter: (p) =>
-        !/\/(\.auth|node_modules|\.features-gen)(\/|$)/.test(p) &&
-        !/\/\.env\.(?!example)[^/]*$/.test(p),
+      // Match on the path *within* the demo project, never the absolute path: on a published
+      // install the template source itself lives under node_modules, and an absolute-path test
+      // would reject its own root and copy nothing.
+      filter: (p) => {
+        const rel = relative(demoSrc, p).replace(/\\/g, '/');
+        if (!rel) return true;
+        return (
+          !/(^|\/)(\.auth|node_modules|\.features-gen)(\/|$)/.test(rel) &&
+          !/(^|\/)\.env\.(?!example)[^/]*$/.test(rel)
+        );
+      },
     });
     // the demo declares the SDODS org/workspace; re-home it into the new workspace file
     const demoYaml = join(target, 'projects', 'demo-shop', 'sdods.project.yaml');
@@ -378,9 +401,10 @@ Docs: https://docs.sdods.com
     // Register the local packages so `link:@sdods/*` resolves. Playwright and playwright-bdd are
     // linked from the monorepo too: a second @playwright/test copy in the consumer would make
     // Playwright throw "Requiring @playwright/test second time".
+    const repo = sourceRepoRoot();
     const linkDirs = [
-      ...['contracts', 'core', 'cli'].map((pkg) => join(src, 'packages', pkg)),
-      ...['@playwright/test', 'playwright-bdd'].map((pkg) => join(src, 'node_modules', pkg)),
+      ...['contracts', 'core', 'cli'].map((pkg) => join(repo, 'packages', pkg)),
+      ...['@playwright/test', 'playwright-bdd'].map((pkg) => join(repo, 'node_modules', pkg)),
     ];
     for (const dir of linkDirs) {
       if (!existsSync(dir)) continue;

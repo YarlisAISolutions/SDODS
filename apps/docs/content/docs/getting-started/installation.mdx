@@ -113,41 +113,57 @@ sh install.sh --version-check
 
 <Art
   scene="install-where-things-land"
-  caption="Four places, and nothing else. The browser cache is shared with any other Playwright tool you already have."
+  caption="A global package and a browser cache. The cache is shared with any other Playwright tool you already have."
 />
+
+By default the installer installs the published `@sdods/cli` package globally with your package
+manager. There is no SDODS source tree on your machine — the packages ship compiled.
 
 | Path                                                        | What                                                   |
 | ----------------------------------------------------------- | ------------------------------------------------------ |
-| `~/.sdods/app`                                              | the SDODS checkout (shallow clone, upgraded in place)  |
+| your package manager's global directory                     | `@sdods/cli` and the `@sdods/*` packages it depends on |
 | `~/.sdods/.bun`                                             | Bun, only when it was not already installed            |
-| `~/.local/bin/sdods`                                        | the command shim (Windows: `%LOCALAPPDATA%\SDODS\bin`) |
 | `~/Library/Caches/ms-playwright` · `~/.cache/ms-playwright` | browser engines, in their shared cache                 |
 
-Your shell profile is edited only when you pass `--modify-path`. Budget about 1.5 GB for the
-checkout and its dependencies, plus roughly 500 MB per browser.
+Your shell profile is edited only when you pass `--modify-path`. The `@sdods/*` packages are about
+9 MB; with their dependencies the global install comes to roughly 400 MB, and each browser adds
+another 500 MB or so. Nothing is written to `~/.sdods` at all on this path.
+
+Your tests live wherever you put them: `sdods init ~/my-tests` scaffolds a workspace, demo project
+included, and nothing outside that directory is yours to manage.
+
+### Installing from source instead
+
+`--source git` clones the repository into `~/.sdods/app` and installs every workspace's
+dependencies there, then writes a shim to `~/.local/bin/sdods` (Windows:
+`%LOCALAPPDATA%\SDODS\bin`). That is the path for working _on_ SDODS rather than with it, and it
+needs about 1.5 GB. `--install-node` additionally puts fnm in `~/.sdods/.fnm`.
+
+The default never falls back to a clone on its own: if the registry cannot be reached the
+installer says so, rather than quietly downloading a source tree you did not ask for.
 
 ## Options
 
 Every flag has an environment-variable equivalent, so the same behaviour works in a Dockerfile or a CI step.
 
-| Flag                             | Environment          | Default                | Meaning                                                   |
-| -------------------------------- | -------------------- | ---------------------- | --------------------------------------------------------- |
-| `--version <ref>`                | `SDODS_VERSION`      | latest release or main | git tag, branch or commit to install                      |
-| `--dir <path>`                   | `SDODS_HOME`         | `~/.sdods`             | install root                                              |
-| `--bin-dir <path>`               | `SDODS_BIN_DIR`      | `~/.local/bin`         | where the `sdods` command goes                            |
-| `--pm bun\|pnpm\|npm`            | `SDODS_PM`           | `bun`                  | package manager for the dependency install                |
-| `--browsers all\|chromium\|none` | `SDODS_BROWSERS`     | `chromium`             | which browser engines to download                         |
-| `--workspace <dir>`              | `SDODS_WORKSPACE`    | none                   | also run `sdods init <dir>` when the install finishes     |
-| `--source git\|npm\|auto`        | `SDODS_SOURCE`       | `auto`                 | fetch from a clone or from the npm registry               |
-| `--mcp claude\|codex\|all`       | `SDODS_MCP`          | none                   | register the MCP server with those CLIs                   |
-| `--install-node`                 | `SDODS_INSTALL_NODE` | off                    | install Node 22 through fnm when it is missing or too old |
-| `--modify-path`                  | `SDODS_MODIFY_PATH`  | off                    | append the PATH line to your shell profile                |
-| `--yes`                          | `SDODS_YES`          | off                    | never prompt (also implied when `CI` is set)              |
-| `--uninstall`                    |                      |                        | remove the command and the install root                   |
-| `--dry-run`                      |                      |                        | print every step, change nothing                          |
-| `--verbose`                      | `SDODS_VERBOSE`      | off                    | show the output of every command                          |
-| `--version-check`                |                      |                        | print the versions and paths it resolved, then exit       |
-| `--help`                         |                      |                        | the option list                                           |
+| Flag                             | Environment          | Default                | Meaning                                                            |
+| -------------------------------- | -------------------- | ---------------------- | ------------------------------------------------------------------ |
+| `--version <ref>`                | `SDODS_VERSION`      | latest release or main | git tag, branch or commit to install                               |
+| `--dir <path>`                   | `SDODS_HOME`         | `~/.sdods`             | install root                                                       |
+| `--bin-dir <path>`               | `SDODS_BIN_DIR`      | `~/.local/bin`         | where the `sdods` command goes                                     |
+| `--pm bun\|pnpm\|npm`            | `SDODS_PM`           | `bun`                  | package manager for the dependency install                         |
+| `--browsers all\|chromium\|none` | `SDODS_BROWSERS`     | `chromium`             | which browser engines to download                                  |
+| `--workspace <dir>`              | `SDODS_WORKSPACE`    | none                   | also run `sdods init <dir>` when the install finishes              |
+| `--source git\|npm\|auto`        | `SDODS_SOURCE`       | `auto`                 | `auto`/`npm` install published packages; `git` builds from a clone |
+| `--mcp claude\|codex\|all`       | `SDODS_MCP`          | none                   | register the MCP server with those CLIs                            |
+| `--install-node`                 | `SDODS_INSTALL_NODE` | off                    | install Node 22 through fnm when it is missing or too old          |
+| `--modify-path`                  | `SDODS_MODIFY_PATH`  | off                    | append the PATH line to your shell profile                         |
+| `--yes`                          | `SDODS_YES`          | off                    | never prompt (also implied when `CI` is set)                       |
+| `--uninstall`                    |                      |                        | remove the command and the install root                            |
+| `--dry-run`                      |                      |                        | print every step, change nothing                                   |
+| `--verbose`                      | `SDODS_VERBOSE`      | off                    | show the output of every command                                   |
+| `--version-check`                |                      |                        | print the versions and paths it resolved, then exit                |
+| `--help`                         |                      |                        | the option list                                                    |
 
 Windows takes the same names as PowerShell parameters: `-Version`, `-Dir`, `-BinDir`, `-Pm`, `-Browsers`, `-Workspace`, `-Source`, `-Mcp`, `-ModifyPath`, `-Yes`, `-Uninstall`, `-DryRun`, `-Verbose`, `-VersionCheck`, `-Help`.
 

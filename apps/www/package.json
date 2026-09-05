@@ -4,7 +4,7 @@
   "private": true,
   "description": "SDODS landing site (sdods.com / www.sdods.com): Next.js static export on Firebase Hosting.",
   "license": "Apache-2.0",
-  "author": "Sireesh Yarlagadda (https://www.linkedin.com/in/yarlagadda/)",
+  "author": "SDODS <admin@sdods.com>",
   "scripts": {
     "dev": "next dev --port 3100",
     "build": "node --import tsx ../../scripts/sync-installer.ts && next build",

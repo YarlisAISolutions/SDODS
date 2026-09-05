@@ -47,7 +47,11 @@ jobs:
         uses: changesets/action@v1
         with:
           version: bunx changeset version
-          publish: bunx changeset publish
+          # Not `changeset publish`: it packs each package directory as-is, and npm does not apply
+          # `publishConfig` field overrides (a pnpm/yarn feature), so the tarballs would ship
+          # `exports` pointing at src/*.ts that `files: ["dist"]` excludes. scripts/publish-npm.sh
+          # stages the manifests and the init/dashboard assets first — same path a human uses.
+          publish: bash scripts/publish-npm.sh
           commit: 'chore(release): version packages'
           title: 'chore(release): version packages'
         env:

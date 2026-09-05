@@ -52,6 +52,9 @@ NODE_BIN='node'
 NPM_BIN='npm'
 RESOLVED_REF=''
 APP_DIR=''
+# The sdods executable to invoke. Distinct from BIN_DIR: on the npm path no shim is written and
+# the command lives in the package manager's global directory.
+SDODS_BIN=''
 
 # ── output ──────────────────────────────────────────────────────────────────────────────────
 if [ -t 1 ] && [ -z "${NO_COLOR:-}" ] && [ "${TERM:-dumb}" != dumb ]; then
@@ -153,7 +156,8 @@ Options (environment equivalent in parentheses):
   --browsers all|chromium|none
                         browser engines to install, default chromium (SDODS_BROWSERS)
   --workspace <dir>     also scaffold a workspace there with 'sdods init' (SDODS_WORKSPACE)
-  --source git|npm|auto how to fetch SDODS, default auto (SDODS_SOURCE)
+  --source git|npm|auto how to fetch SDODS, default auto: npm packages, never a silent
+                        fallback to cloning. 'git' builds from a source checkout (SDODS_SOURCE)
   --mcp claude|codex|all
                         register the SDODS MCP server with those CLIs (SDODS_MCP)
   --install-node        install Node ${NODE_MIN_MAJOR} via fnm when missing or too old (SDODS_INSTALL_NODE=1)
@@ -403,6 +407,31 @@ install_from_npm() {
   ok "Installed @sdods/cli from the npm registry"
 }
 
+# Where the package manager puts global bins. No shim is written on the npm path -- the package's
+# own `bin` provides `sdods` -- so this is how we find it before it is on PATH.
+resolve_global_bin() {
+  dir=''
+  case "$PM" in
+    bun) dir=$(bun pm bin -g 2>/dev/null || true) ;;
+    pnpm) dir=$(pnpm bin -g 2>/dev/null || true) ;;
+    npm) dir=$("$NPM_BIN" prefix -g 2>/dev/null || true); [ -n "$dir" ] && dir="$dir/bin" ;;
+  esac
+  if [ -z "$dir" ] || [ ! -d "$dir" ]; then
+    resolved=$(command -v sdods 2>/dev/null || true)
+    [ -n "$resolved" ] && dir=$(dirname "$resolved")
+  fi
+  [ -n "$dir" ] || die 7 "Installed @sdods/cli but could not find the directory it put 'sdods' in." \
+    "Run '$PM bin -g' and add that directory to your PATH."
+  # No shim is written on this path, so --bin-dir has nothing to write to: the command lives in the
+  # package manager's global directory, and that is what has to go on PATH.
+  if [ -n "$BIN_DIR" ] && [ "$BIN_DIR" != "$dir" ]; then
+    warn "--bin-dir is ignored when installing from npm; 'sdods' comes from $dir"
+  fi
+  BIN_DIR=$dir
+  SDODS_BIN="$dir/sdods"
+  debug "global bin dir: $BIN_DIR"
+}
+
 install_from_git() {
   step "Fetching SDODS ($RESOLVED_REF) into $APP_DIR"
   if [ "$DRY_RUN" = 1 ]; then
@@ -460,11 +489,21 @@ install_browsers() {
       with_deps='--with-deps'
     else
       warn "Skipping system libraries (needs root). If browsers fail to start, run:"
-      say "  cd \"$APP_DIR\" && sudo ./node_modules/.bin/sdods browsers install --with-deps"
+      if [ -n "$APP_DIR" ] && [ -d "$APP_DIR" ]; then
+        say "  cd \"$APP_DIR\" && sudo ./node_modules/.bin/sdods browsers install --with-deps"
+      else
+        say "  sudo sdods browsers install --with-deps"
+      fi
     fi
   fi
+  # Playwright downloads into a shared cache, so the working directory only has to exist.
+  work=$APP_DIR
+  if [ -z "$work" ] || [ ! -d "$work" ]; then
+    mkdir -p "$SDODS_HOME" 2>/dev/null || true
+    if [ -d "$SDODS_HOME" ]; then work=$SDODS_HOME; else work=${HOME:-/tmp}; fi
+  fi
   # shellcheck disable=SC2086
-  ( cd "$APP_DIR" 2>/dev/null || cd "$SDODS_HOME"
+  ( cd "$work" &&
     run_loud npx --yes playwright install $with_deps $list ) ||
     warn "Browser download failed. Re-run later with: sdods browsers install"
 }
@@ -491,6 +530,7 @@ export SDODS_HOME
 exec node "$APP_DIR/packages/cli/bin/sdods.js" "\$@"
 EOF
   chmod +x "$BIN_DIR/sdods"
+  SDODS_BIN="$BIN_DIR/sdods"
   ok "Command installed: $BIN_DIR/sdods"
 }
 
@@ -540,7 +580,7 @@ scaffold_workspace() {
   set -- init "$WORKSPACE" --no-browsers
   if [ "$PM" = pnpm ]; then set -- "$@" --pm pnpm; fi
   if [ "$SOURCE_USED" = git ] && [ "$PM" = bun ]; then set -- "$@" --link; fi
-  run_loud "$BIN_DIR/sdods" "$@" || warn "sdods init did not finish; run it yourself: sdods init $WORKSPACE"
+  run_loud "$SDODS_BIN" "$@" || warn "sdods init did not finish; run it yourself: sdods init $WORKSPACE"
 }
 
 register_mcp() {
@@ -553,16 +593,50 @@ register_mcp() {
         printf '%s   would run: sdods mcp install %s%s\n' "$C_DIM" "$client" "$C_RESET"
         continue
       fi
-      run_loud "$BIN_DIR/sdods" mcp install "$client" || warn "MCP registration for $client failed; run: sdods mcp install $client"
+      run_loud "$SDODS_BIN" mcp install "$client" || warn "MCP registration for $client failed; run: sdods mcp install $client"
     else
       warn "$client CLI not found; skipping MCP registration. Later: sdods mcp install $client"
     fi
   done
 }
 
+# A default install puts @sdods/cli in the package manager's global directory, not in SDODS_HOME,
+# so removing SDODS_HOME alone would leave a working `sdods` behind. Checks every package manager
+# present, because the install may have used a different one than is default today.
+global_pkg_pm() {
+  for pm in bun pnpm npm; do
+    has "$pm" || continue
+    case "$pm" in
+      bun) if bun pm ls -g 2>/dev/null | grep -q '@sdods/cli'; then echo "$pm"; return 0; fi ;;
+      pnpm) if pnpm list -g --depth 0 2>/dev/null | grep -q '@sdods/cli'; then echo "$pm"; return 0; fi ;;
+      npm) if npm ls -g --depth 0 2>/dev/null | grep -q '@sdods/cli'; then echo "$pm"; return 0; fi ;;
+    esac
+  done
+  return 0
+}
+
+# The exact removal command for a package manager, so the dry run prints what actually runs.
+global_pkg_cmd() {
+  case "$1" in
+    bun) echo 'bun remove -g @sdods/cli' ;;
+    pnpm) echo 'pnpm remove -g @sdods/cli' ;;
+    npm) echo 'npm uninstall -g @sdods/cli' ;;
+  esac
+}
+
+uninstall_global_pkg() {
+  pm=$1
+  [ -n "$pm" ] || return 0
+  # shellcheck disable=SC2091
+  $(global_pkg_cmd "$pm") >/dev/null 2>&1 || true
+  ok "Removed the global @sdods/cli package ($pm)"
+}
+
 do_uninstall() {
   say ''
+  GLOBAL_PM=$(global_pkg_pm)
   say "This removes:"
+  if [ -n "$GLOBAL_PM" ]; then say "  the global @sdods/cli package ($GLOBAL_PM)"; fi
   say "  $SDODS_HOME"
   if [ -z "$BIN_DIR" ]; then BIN_DIR="${HOME:-/tmp}/.local/bin"; fi
   say "  $BIN_DIR/sdods"
@@ -572,9 +646,13 @@ do_uninstall() {
   if [ "$YES_EXPLICIT" != 1 ]; then ASSUME_YES=0; fi
   confirm "Remove SDODS?" || { say 'Cancelled.'; exit 0; }
   if [ "$DRY_RUN" = 1 ]; then
+    if [ -n "$GLOBAL_PM" ]; then
+      printf '%s   would run: %s%s\n' "$C_DIM" "$(global_pkg_cmd "$GLOBAL_PM")" "$C_RESET"
+    fi
     printf '%s   would remove %s and %s/sdods%s\n' "$C_DIM" "$SDODS_HOME" "$BIN_DIR" "$C_RESET"
     exit 0
   fi
+  uninstall_global_pkg "$GLOBAL_PM"
   if [ -f "$BIN_DIR/sdods" ]; then
     rm -f "$BIN_DIR/sdods"
     ok "Removed $BIN_DIR/sdods"
@@ -618,14 +696,21 @@ version_check() {
 }
 
 next_steps() {
-  # SDODS discovers projects from the current directory, so the demo needs a cd first.
-  demo_dir=$APP_DIR
-  if [ -n "$WORKSPACE" ]; then demo_dir=$WORKSPACE; fi
+  # SDODS discovers projects from the current directory, so the demo needs a workspace to run in.
+  # On the npm path there is no checkout to cd into: `sdods init` scaffolds one, demo included.
+  demo_dir=''
+  if [ -n "$WORKSPACE" ]; then demo_dir=$WORKSPACE
+  elif [ -n "$APP_DIR" ] && [ -d "$APP_DIR" ]; then demo_dir=$APP_DIR; fi
   say ''
   say "${C_BOLD}SDODS is ready.${C_RESET}"
   say ''
   say "  ${C_BOLD}Run the demo suite${C_RESET} ${C_DIM}(projects come from the current directory)${C_RESET}"
-  say "    cd $demo_dir"
+  if [ -n "$demo_dir" ]; then
+    say "    cd $demo_dir"
+  else
+    say "    sdods init ~/my-tests                               ${C_DIM}# scaffolds a workspace with the demo${C_RESET}"
+    say "    cd ~/my-tests"
+  fi
   say "    sdods run -p demo-shop -e staging -l api            ${C_DIM}# API layer, no browser${C_RESET}"
   say "    sdods run -p demo-shop -e staging -l ui -b chromium -t @smoke"
   say ''
@@ -661,29 +746,35 @@ if [ "$DRY_RUN" = 1 ]; then warn 'Dry run: nothing will be written.'; fi
 check_prerequisites
 resolve_pm
 
-SOURCE_USED=git
-if [ "$SOURCE" = npm ]; then
-  npm_package_published || die 7 "@sdods/cli is not on the npm registry yet." \
-    "Install from source instead: --source git"
-  SOURCE_USED=npm
-elif [ "$SOURCE" = auto ] && npm_package_published; then
-  SOURCE_USED=npm
+# npm is the expected path: it installs a few MB of compiled packages. The git path clones the
+# whole monorepo and installs every workspace's dependencies (~1.5 GB), so `auto` no longer falls
+# back to it silently -- a registry outage should say so rather than hand someone a source tree.
+SOURCE_USED=npm
+if [ "$SOURCE" = git ]; then
+  SOURCE_USED=git
+elif ! npm_package_published; then
+  if [ "$SOURCE" = npm ]; then
+    die 7 "@sdods/cli is not available on the npm registry." \
+      "Check your registry and network, or install from source with: --source git"
+  fi
+  die 7 "@sdods/cli could not be found on the npm registry." \
+    "If the registry is reachable this is usually temporary -- retry shortly." \
+    "To build from source instead (clones the repo, needs ~1.5 GB): --source git"
 fi
 
 if [ "$SOURCE_USED" = npm ]; then
   install_from_npm
-  APP_DIR="(npm global)"
+  # No checkout on this path. APP_DIR stays empty; everything downstream must tolerate that
+  # rather than treat it as a directory.
+  APP_DIR=''
+  resolve_global_bin
 else
   resolve_ref
   install_from_git
 fi
 
 install_browsers
-if [ "$SOURCE_USED" = git ]; then
-  write_shim
-else
-  BIN_DIR=${BIN_DIR:-$(dirname "$(command -v sdods 2>/dev/null || echo /usr/local/bin/sdods)")}
-fi
+if [ "$SOURCE_USED" = git ]; then write_shim; fi
 ensure_path
 scaffold_workspace
 register_mcp
@@ -691,7 +782,13 @@ register_mcp
 if [ "$DRY_RUN" != 1 ]; then
   say ''
   step 'Checking the installation'
-  "$BIN_DIR/sdods" doctor || warn 'doctor reported problems; the items above tell you what to fix.'
+  # SDODS discovers projects from the current directory, so check from the workspace when we made
+  # one -- otherwise doctor reports "projects none" on a perfectly good install.
+  doctor_dir=$WORKSPACE
+  if [ -z "$doctor_dir" ] || [ ! -d "$doctor_dir" ]; then doctor_dir=$APP_DIR; fi
+  if [ -z "$doctor_dir" ] || [ ! -d "$doctor_dir" ]; then doctor_dir=$PWD; fi
+  ( cd "$doctor_dir" && "$SDODS_BIN" doctor ) ||
+    warn 'doctor reported problems; the items above tell you what to fix.'
 fi
 next_steps
 

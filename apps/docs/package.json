@@ -4,7 +4,7 @@
   "private": true,
   "description": "SDODS documentation site (Fumadocs on Next.js, static export on Firebase Hosting).",
   "license": "Apache-2.0",
-  "author": "Sireesh Yarlagadda (https://www.linkedin.com/in/yarlagadda/)",
+  "author": "SDODS <admin@sdods.com>",
   "scripts": {
     "dev": "next dev",
     "build": "node --import tsx ../../scripts/sync-installer.ts && node --import tsx scripts/collect-screenshots.ts && next build && node --import tsx scripts/check-links.ts",

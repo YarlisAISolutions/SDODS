@@ -6,6 +6,9 @@ node_modules
 bun.lock
 apps/docs/build
 packages/web/dist
+packages/server/web
+packages/cli/templates
+.publish-stage
 apps/docs/out
 apps/docs/.next
 apps/docs/.source

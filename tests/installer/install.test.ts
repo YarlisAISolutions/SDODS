@@ -120,10 +120,13 @@ describe('install.sh', () => {
     }
   });
 
-  it('--dry-run prints the plan and writes nothing', () => {
+  // `--source git` explicitly: the default is npm, and probing the registry needs the network.
+  it('--dry-run --source git prints the source plan and writes nothing', () => {
     const dir = join(tmpdir(), `sdods-dry-${Date.now()}`);
     const out = sh([
       '--dry-run',
+      '--source',
+      'git',
       '--dir',
       dir,
       '--bin-dir',
@@ -141,6 +144,13 @@ describe('install.sh', () => {
     expect(out).toMatch(/would run: sdods init/);
     expect(existsSync(dir)).toBe(false);
     expect(existsSync(`${dir}-bin`)).toBe(false);
+  });
+
+  // The 1.6 GB source clone must never be something a user gets without asking for it.
+  it('documents npm as the default source and the clone as opt-in', () => {
+    const out = sh(['--help']);
+    expect(out).toMatch(/--source git\|npm\|auto/);
+    expect(out).toMatch(/never a silent/);
   });
 
   it('refuses a destructive uninstall with no terminal and no --yes', () => {

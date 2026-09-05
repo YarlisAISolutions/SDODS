@@ -1,9 +1,9 @@
 {
   "name": "@sdods/core",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "SDODS runtime: configuration, project registry, fixtures, step libraries, data providers, screenshot narratives and self-healing locators.",
   "license": "Apache-2.0",
-  "author": "Sireesh Yarlagadda (https://www.linkedin.com/in/yarlagadda/)",
+  "author": "SDODS <admin@sdods.com>",
   "type": "module",
   "exports": {
     ".": "./src/index.ts",

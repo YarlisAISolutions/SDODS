@@ -69,7 +69,7 @@ export default fp(async function staticPlugin(app: FastifyInstance) {
       reply
         .type('text/html; charset=utf-8')
         .send(
-          `<!doctype html><title>SDODS</title><body style="font-family:system-ui;padding:2rem"><h1>SDODS server</h1><p>The web UI is not built yet. API is live at <code>/api/health</code>. Build it with <code>bun run --filter @sdods/web build</code>.</p></body>`,
+          `<!doctype html><title>SDODS</title><body style="font-family:system-ui;padding:2rem"><h1>SDODS server</h1><p>The web UI is not available in this install. The API is live at <code>/api/health</code>.</p><p>From a source checkout, build it with <code>bun run web:build</code>.</p></body>`,
         ),
     );
   }
