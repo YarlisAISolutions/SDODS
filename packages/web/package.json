@@ -4,7 +4,7 @@
   "private": true,
   "description": "SDODS web UI: organizations, workspaces, projects, runs with before/after narratives, editor, agents, schedules.",
   "license": "Apache-2.0",
-  "author": "Sireesh Yarlagadda (https://www.linkedin.com/in/yarlagadda/)",
+  "author": "SDODS <admin@sdods.com>",
   "type": "module",
   "scripts": {
     "dev": "vite",

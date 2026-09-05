@@ -63,7 +63,7 @@ Both are served as `text/plain` with `Cache-Control: no-store`, and both come fr
       type: "'git' | 'npm' | 'auto'",
       default: 'auto',
       description:
-        'SDODS_SOURCE. auto uses npm when @sdods/cli is published, otherwise a shallow clone.',
+        'SDODS_SOURCE. auto and npm install the published packages; git builds from a shallow clone. auto never falls back to a clone on its own.',
     },
     '--mcp / -Mcp': {
       type: "'claude' | 'codex' | 'all'",
@@ -118,7 +118,8 @@ Both are served as `text/plain` with `Cache-Control: no-store`, and both come fr
 
 | Path                                | Written when                                          |
 | ----------------------------------- | ----------------------------------------------------- |
-| `$SDODS_HOME/app`                   | always (source install)                               |
+| package manager's global directory  | default: the published `@sdods/*` packages            |
+| `$SDODS_HOME/app`                   | only with `--source git`                              |
 | `$SDODS_HOME/.bun`                  | Bun was not already on PATH                           |
 | `$SDODS_HOME/.fnm`                  | `--install-node` and neither fnm nor nvm was present  |
 | `$BIN_DIR/sdods`                    | source install (Windows: `sdods.cmd` and `sdods.ps1`) |
@@ -127,14 +128,17 @@ Both are served as `text/plain` with `Cache-Control: no-store`, and both come fr
 | the workspace you named             | only with `--workspace`                               |
 | `~/.claude.json`, `~/.codex/config` | only with `--mcp`, through `sdods mcp install`        |
 
-Re-running is safe: the checkout is fetched and checked out again, the shim is rewritten, and the PATH line is added only once.
+On the default path no shim is written: the global package provides the `sdods` command itself.
+
+Re-running is safe: the package is upgraded in place (or, on a source install, the checkout is
+fetched and checked out again and the shim rewritten), and the PATH line is added only once.
 
 ## Safety
 
 - It refuses to run as root unless `SDODS_ALLOW_ROOT=1`, so browsers and caches stay owned by you.
 - `--uninstall` removes only `$SDODS_HOME` and the shim, and refuses paths such as `$HOME` or `/`.
 - With no terminal available it will not guess an answer to a destructive prompt; pass `--yes` explicitly.
-- The clone is verified with `git rev-parse HEAD` and a check that `packages/cli` arrived.
+- On a source install the clone is verified with `git rev-parse HEAD` and a check that `packages/cli` arrived.
 - Read it before you run it: `curl -fsSLO …/install.sh && sha256sum -c install.sh.sha256 && less install.sh`.
 
 ## Automation examples

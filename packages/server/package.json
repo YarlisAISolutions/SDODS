@@ -1,9 +1,9 @@
 {
   "name": "@sdods/server",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "SDODS server: REST API, live run streaming, MCP over HTTP, scheduler and the web UI.",
   "license": "Apache-2.0",
-  "author": "Sireesh Yarlagadda (https://www.linkedin.com/in/yarlagadda/)",
+  "author": "SDODS <admin@sdods.com>",
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
@@ -17,7 +17,8 @@
     "access": "public"
   },
   "files": [
-    "dist"
+    "dist",
+    "web"
   ],
   "engines": {
     "node": ">=22"

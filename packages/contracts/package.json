@@ -1,6 +1,6 @@
 {
   "name": "@sdods/contracts",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Shared schemas, identifiers and DTO types for SDODS.",
   "license": "Apache-2.0",
   "type": "module",
@@ -32,7 +32,7 @@
   "dependencies": {
     "zod": "^4.5.4"
   },
-  "author": "Sireesh Yarlagadda (https://www.linkedin.com/in/yarlagadda/)",
+  "author": "SDODS <admin@sdods.com>",
   "homepage": "https://sdods.com",
   "bugs": {
     "url": "https://github.com/siri1410/SDODS/issues"

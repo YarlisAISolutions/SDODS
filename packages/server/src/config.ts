@@ -1,6 +1,7 @@
 import { existsSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { ProjectRegistry } from '@sdods/core/config';
 
 /**
@@ -79,6 +80,10 @@ export function loadServerConfig(
     firstExisting([
       resolve(rootDir, 'packages/web/dist'),
       resolve(rootDir, 'node_modules/@sdods/web/dist'),
+      // Vendored into this package at pack time by scripts/build-publish-assets.ts. Resolved
+      // relative to this module, not rootDir: on a registry install the dashboard travels with
+      // @sdods/server, because nothing depends on the private, unpublished @sdods/web.
+      resolve(dirname(fileURLToPath(import.meta.url)), '..', 'web'),
     ]);
   const traceViewerDir = overrides.traceViewerDir ?? resolveTraceViewerDir(rootDir);
   return {
