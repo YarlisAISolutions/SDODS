@@ -25,6 +25,9 @@ export function SiteHeader() {
           <Link href="/roadmap/" className="hover:underline">
             Roadmap
           </Link>
+          <Link href="/questions/" className="hover:underline">
+            Questions
+          </Link>
           <Link href="/feedback/" className="hover:underline">
             Feedback
           </Link>
