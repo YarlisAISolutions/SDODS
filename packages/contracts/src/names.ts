@@ -7,6 +7,13 @@ export type StepShotPhase = 'before' | 'after';
 
 export const ATTACHMENT_PREFIX = 'sdods/';
 
+/**
+ * Minimum length of a web UI password, enforced by the server. Shared so the CLI's help text and
+ * the new-user form describe the same rule: they used to say 8, 8 and 10, and the form silently
+ * disabled its own Create button for a password the server would have accepted.
+ */
+export const MIN_PASSWORD_LENGTH = 8;
+
 export function pad2(n: number): string {
   return String(n).padStart(2, '0');
 }
