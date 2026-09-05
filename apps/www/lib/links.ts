@@ -4,7 +4,7 @@ export const REPO_URL = 'https://github.com/siri1410/SDODS';
 export const DISCUSSIONS_URL = `${REPO_URL}/discussions`;
 export const IDEAS_URL = `${REPO_URL}/discussions/categories/ideas`;
 export const GENERAL_URL = `${REPO_URL}/discussions/categories/general`;
-export const FEEDBACK_EMAIL = 'sireesh.yarlagadda@gmail.com';
+export const FEEDBACK_EMAIL = 'feedback@sdods.com';
 export const LICENSE_URL = 'https://www.apache.org/licenses/LICENSE-2.0';
 
 /**

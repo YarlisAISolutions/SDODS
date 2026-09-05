@@ -1,6 +1,6 @@
 export const REPO_URL = 'https://github.com/siri1410/SDODS';
 export const FEEDBACK_URL = 'https://sdods.com/feedback/';
-export const FEEDBACK_EMAIL = 'sireesh.yarlagadda@gmail.com';
+export const FEEDBACK_EMAIL = 'feedback@sdods.com';
 
 /**
  * The repository is private. Everything that links to it — the nav icon, the `git clone` line,
