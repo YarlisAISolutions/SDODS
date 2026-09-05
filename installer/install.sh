@@ -55,6 +55,9 @@ APP_DIR=''
 # The sdods executable to invoke. Distinct from BIN_DIR: on the npm path no shim is written and
 # the command lives in the package manager's global directory.
 SDODS_BIN=''
+GLOBAL_SDODS=''
+# Where a previous source install put its checkout, remembered across the npm path.
+APP_DIR_LEGACY=''
 
 # ── output ──────────────────────────────────────────────────────────────────────────────────
 if [ -t 1 ] && [ -z "${NO_COLOR:-}" ] && [ "${TERM:-dumb}" != dumb ]; then
@@ -397,6 +400,64 @@ resolve_ref() {
   debug "resolved ref: $RESOLVED_REF"
 }
 
+# A previous source install leaves three things that break a packaged install, all invisible
+# until something crashes:
+#   * $BIN_DIR/sdods -- a shim pointing into the checkout, which shadows the packaged command
+#   * global `bun link` registrations for @playwright/test and playwright-bdd, created by
+#     `sdods init --link`, which make the packaged install resolve Playwright out of the old
+#     checkout and then fail with "Requiring @playwright/test second time"
+#   * $SDODS_HOME/app itself, ~1.5 GB that nothing uses any more
+migrate_from_source_install() {
+  had_source=0
+  if [ -n "$APP_DIR_LEGACY" ] && [ -d "$APP_DIR_LEGACY" ]; then had_source=1; fi
+  shim=${BIN_DIR:-${HOME:-/tmp}/.local/bin}/sdods
+  # Match the source shim specifically: it execs node against a checkout. The npm shim written
+  # below also carries the "SDODS CLI shim" marker, and must not be mistaken for one.
+  if [ -f "$shim" ] && grep -q 'packages/cli/bin/sdods.js' "$shim" 2>/dev/null; then had_source=1; fi
+  [ "$had_source" = 1 ] || return 0
+
+  step 'Migrating from a source install'
+  if [ "$DRY_RUN" = 1 ]; then
+    printf '%s   would remove the source shim, stale global links and %s%s\n' \
+      "$C_DIM" "$APP_DIR_LEGACY" "$C_RESET"
+    return 0
+  fi
+
+  # Stale links first: they redirect dependencies into the checkout we are about to delete.
+  if has bun; then
+    gdir=$(bun pm bin -g 2>/dev/null || true)
+    if [ -n "$gdir" ]; then
+      for pkg in playwright-bdd @playwright/test; do
+        link="$gdir/../install/global/node_modules/$pkg"
+        if [ -L "$link" ]; then rm -f "$link"; debug "unlinked $pkg"; fi
+      done
+    fi
+  fi
+
+  if [ -f "$shim" ] && grep -q 'packages/cli/bin/sdods.js' "$shim" 2>/dev/null; then
+    rm -f "$shim"
+    ok "Removed the old source shim at $shim"
+  fi
+
+  if [ -d "$APP_DIR_LEGACY" ]; then
+    case "$APP_DIR_LEGACY" in
+      "$HOME" | "$HOME/" | / | '' | /usr | /usr/* | /etc | /etc/*)
+        warn "Refusing to remove $APP_DIR_LEGACY" ;;
+      *)
+        size=$(du -sh "$APP_DIR_LEGACY" 2>/dev/null | cut -f1)
+        # Twice: a Finder window open on the tree recreates .DS_Store behind rm as it walks,
+        # which leaves "Directory not empty". Never fatal -- a leftover directory is untidy, not
+        # a reason to abandon an otherwise good install.
+        rm -rf "$APP_DIR_LEGACY" 2>/dev/null || rm -rf "$APP_DIR_LEGACY" 2>/dev/null || true
+        if [ -d "$APP_DIR_LEGACY" ]; then
+          warn "Could not fully remove $APP_DIR_LEGACY (close any window open on it, then: rm -rf \"$APP_DIR_LEGACY\")"
+        else
+          ok "Removed the old checkout at $APP_DIR_LEGACY (${size:-unknown} reclaimed)"
+        fi ;;
+    esac
+  fi
+}
+
 install_from_npm() {
   step "Installing @sdods/cli from npm"
   case "$PM" in
@@ -422,14 +483,10 @@ resolve_global_bin() {
   fi
   [ -n "$dir" ] || die 7 "Installed @sdods/cli but could not find the directory it put 'sdods' in." \
     "Run '$PM bin -g' and add that directory to your PATH."
-  # No shim is written on this path, so --bin-dir has nothing to write to: the command lives in the
-  # package manager's global directory, and that is what has to go on PATH.
-  if [ -n "$BIN_DIR" ] && [ "$BIN_DIR" != "$dir" ]; then
-    warn "--bin-dir is ignored when installing from npm; 'sdods' comes from $dir"
-  fi
-  BIN_DIR=$dir
-  SDODS_BIN="$dir/sdods"
-  debug "global bin dir: $BIN_DIR"
+  GLOBAL_SDODS="$dir/sdods"
+  [ -x "$GLOBAL_SDODS" ] || die 7 "Installed @sdods/cli but $GLOBAL_SDODS is not executable." \
+    "Run '$PM bin -g' and check the install."
+  debug "global sdods: $GLOBAL_SDODS"
 }
 
 install_from_git() {
@@ -506,6 +563,32 @@ install_browsers() {
   ( cd "$work" &&
     run_loud npx --yes playwright install $with_deps $list ) ||
     warn "Browser download failed. Re-run later with: sdods browsers install"
+}
+
+# Points at the globally installed package rather than a checkout. Written for the same reason
+# the source path writes one: $BIN_DIR (default ~/.local/bin) is conventionally on PATH, while a
+# package manager's global bin frequently is not.
+write_npm_shim() {
+  if [ -z "$BIN_DIR" ]; then
+    BIN_DIR="${HOME:-/tmp}/.local/bin"
+    if [ ! -d "$BIN_DIR" ] && [ -w /usr/local/bin ] 2>/dev/null; then BIN_DIR=/usr/local/bin; fi
+  fi
+  step "Writing the sdods command to $BIN_DIR/sdods"
+  if [ "$DRY_RUN" = 1 ]; then
+    printf '%s   would write: %s/sdods -> %s%s\n' "$C_DIM" "$BIN_DIR" "$GLOBAL_SDODS" "$C_RESET"
+    return 0
+  fi
+  mkdir -p "$BIN_DIR" 2>/dev/null ||
+    die 8 "Cannot create $BIN_DIR." "Pass --bin-dir <writable path>."
+  [ -w "$BIN_DIR" ] || die 8 "$BIN_DIR is not writable." "Pass --bin-dir <writable path>."
+  cat >"$BIN_DIR/sdods" <<EOF
+#!/bin/sh
+# SDODS CLI shim (npm install) — generated by install.sh, safe to delete.
+exec "$GLOBAL_SDODS" "\$@"
+EOF
+  chmod +x "$BIN_DIR/sdods"
+  SDODS_BIN="$BIN_DIR/sdods"
+  ok "Command installed: $BIN_DIR/sdods"
 }
 
 write_shim() {
@@ -763,11 +846,15 @@ elif ! npm_package_published; then
 fi
 
 if [ "$SOURCE_USED" = npm ]; then
-  install_from_npm
   # No checkout on this path. APP_DIR stays empty; everything downstream must tolerate that
-  # rather than treat it as a directory.
+  # rather than treat it as a directory -- but remember where a previous source install put one,
+  # and clear it before installing so stale links cannot capture the new dependency tree.
+  APP_DIR_LEGACY=$APP_DIR
   APP_DIR=''
+  migrate_from_source_install
+  install_from_npm
   resolve_global_bin
+  write_npm_shim
 else
   resolve_ref
   install_from_git
