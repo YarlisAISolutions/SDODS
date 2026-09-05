@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Link from 'next/link';
 import { FeedbackForm } from '@/components/feedback-form';
 import { DISCUSSIONS_URL, IDEAS_URL, REPO_PUBLIC, issueUrl, mailtoUrl } from '@/lib/links';
 
@@ -89,6 +90,14 @@ export default function FeedbackPage() {
           </article>
         ))}
       </div>
+      <p className="muted mt-6 text-sm">
+        Got a question rather than a request?{' '}
+        <Link href="/questions/" className="underline">
+          Ask it on the questions page
+        </Link>{' '}
+        — answers stay public so the next person finds them.
+      </p>
+
       <h2 className="mt-14 text-xl font-bold">Or write it here</h2>
       <p className="muted mb-4 mt-1 text-sm">
         {REPO_PUBLIC

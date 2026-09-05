@@ -61,6 +61,11 @@ export function SiteFooter() {
               </>
             )}
             <li>
+              <Link href="/questions/" className="hover:underline">
+                Questions
+              </Link>
+            </li>
+            <li>
               <Link href="/feedback/" className="hover:underline">
                 Feedback and feature requests
               </Link>

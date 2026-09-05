@@ -1,0 +1,78 @@
+rules_version = '2';
+
+// Q&A for sdods.com. The sites are static exports, so the browser talks to
+// Firestore directly and these rules are the only thing standing between a
+// stranger and the database. Two invariants carry the whole model:
+//
+//   1. Anyone may submit a question or answer, but only ever as 'pending'.
+//      Nothing a stranger writes is readable by anyone else until a moderator
+//      publishes it, so spam never reaches the page.
+//   2. Only the moderator may publish, edit or delete anything.
+//
+// Every incoming field is size-capped: an unbounded public create is a free
+// storage-fill endpoint.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isModerator() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.email == 'admin@sdods.com';
+    }
+
+    // Fields every submission shares. `createdAt` must be the server's clock,
+    // not a timestamp the client chose.
+    function validCommon(d) {
+      return d.status == 'pending'
+        && d.createdAt == request.time
+        && d.name is string && d.name.size() > 0 && d.name.size() <= 100
+        && d.email is string && d.email.size() <= 254 && d.email.matches('.+@.+[.].+')
+        && d.body is string && d.body.size() > 0 && d.body.size() <= 5000;
+    }
+
+    match /questions/{questionId} {
+      // `read` covers both get and list, so a pending question is invisible
+      // to everyone but the moderator — it cannot even be enumerated.
+      allow read: if resource.data.status == 'published' || isModerator();
+
+      allow create: if request.resource.data.keys().hasOnly(
+            ['name', 'email', 'title', 'body', 'category', 'status', 'createdAt']
+          )
+        && request.resource.data.keys().hasAll(
+            ['name', 'email', 'title', 'body', 'category', 'status', 'createdAt']
+          )
+        && validCommon(request.resource.data)
+        && request.resource.data.title is string
+        && request.resource.data.title.size() > 0
+        && request.resource.data.title.size() <= 200
+        && request.resource.data.category in ['ui', 'api', 'hybrid', 'other'];
+
+      allow update, delete: if isModerator();
+
+      // Answers hang off a question. A stranger may answer, but the answer is
+      // pending too, so an unmoderated reply is invisible even on a published
+      // question.
+      match /answers/{answerId} {
+        allow read: if resource.data.status == 'published' || isModerator();
+
+        allow create: if request.resource.data.keys().hasOnly(
+              ['name', 'email', 'body', 'status', 'createdAt']
+            )
+          && request.resource.data.keys().hasAll(
+              ['name', 'email', 'body', 'status', 'createdAt']
+            )
+          && validCommon(request.resource.data)
+          // Only answer a question that exists and is already public.
+          && get(/databases/$(database)/documents/questions/$(questionId))
+               .data.status == 'published';
+
+        allow update, delete: if isModerator();
+      }
+    }
+
+    // Nothing else in the database is reachable from a browser.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
