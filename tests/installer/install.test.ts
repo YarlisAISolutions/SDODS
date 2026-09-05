@@ -35,13 +35,19 @@ function has(bin: string): boolean {
   }
 }
 
-/** Network + git are needed for the real install; skip cleanly on an offline machine. */
+/**
+ * Network, git and a publicly cloneable repository are all needed for the real install; skip
+ * cleanly without any of them. Probe from a temp directory, never the checkout: CI writes an
+ * auth header into the repo-local git config, which would make a private repo look reachable
+ * here and then fail inside install.sh, where the clone runs with no credentials.
+ */
 function online(): boolean {
   try {
     execFileSync(
       'git',
       ['ls-remote', '--exit-code', 'https://github.com/siri1410/SDODS.git', 'HEAD'],
       {
+        cwd: tmpdir(),
         stdio: 'ignore',
         timeout: 20_000,
       },

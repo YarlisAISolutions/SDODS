@@ -2,7 +2,6 @@ import { withBase } from '@/lib/base-path';
 import Link from 'next/link';
 import { HomeLayout } from 'fumadocs-ui/layouts/home';
 import { baseOptions } from '@/lib/layout.shared';
-import { REPO_PUBLIC } from '@/lib/links';
 
 const features: Array<{ title: string; body: string; href: string }> = [
   {
@@ -61,15 +60,20 @@ export default function HomePage() {
             CLI reference
           </Link>
         </div>
-        <pre className="mt-8 w-full max-w-2xl overflow-x-auto rounded-lg border border-fd-border bg-fd-card p-4 text-left text-sm">
-          {REPO_PUBLIC
-            ? `git clone https://github.com/siri1410/SDODS.git && cd SDODS
-bun install && bun run sdods browsers install --with-deps
-bun run sdods run -p demo-shop -e staging -l api`
-            : `curl -fsSL https://sdods.com/install.sh | sh
-bun run sdods browsers install --with-deps
-bun run sdods run -p demo-shop -e staging -l api`}
+        <p className="mt-10 text-sm text-fd-muted-foreground">
+          One command. It checks Node, installs Bun if you need it, fetches SDODS and Chromium, and
+          puts <code>sdods</code> on your PATH.
+        </p>
+        <pre className="mt-3 w-full max-w-2xl overflow-x-auto rounded-lg border border-fd-border bg-fd-card p-4 text-left text-sm">
+          curl -fsSL https://sdods.com/install.sh | sh
         </pre>
+        <p className="mt-3 text-sm text-fd-muted-foreground">
+          Windows, pinned versions and air-gapped machines:{' '}
+          <Link className="underline" href="/docs/getting-started/installation">
+            all the install paths
+          </Link>
+          .
+        </p>
         <section className="mt-12 grid w-full grid-cols-1 gap-4 text-left md:grid-cols-2 lg:grid-cols-3">
           {features.map((f) => (
             <Link

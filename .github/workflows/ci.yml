@@ -198,7 +198,20 @@ jobs:
           shellcheck --shell=sh --severity=warning installer/install.sh
       - name: Contract checks (help, version-check, dry run, uninstall guard)
         run: sh installer/install.sh --help && sh installer/install.sh --version-check
+      # install.sh clones the repository over plain HTTPS. actions/checkout leaves an auth
+      # header in the repo-local git config, so probe from a tmpdir to see what a stranger sees.
+      - name: Is the repository publicly cloneable?
+        id: reach
+        run: |
+          if (cd "${RUNNER_TEMP}" && git ls-remote --exit-code \
+              "https://github.com/${{ github.repository }}.git" HEAD >/dev/null 2>&1); then
+            echo 'public=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'public=false' >> "$GITHUB_OUTPUT"
+            echo "::notice::Repository is private, so install.sh cannot clone it. Skipping the real install."
+          fi
       - name: Install for real into a sandbox, then remove it
+        if: steps.reach.outputs.public == 'true'
         run: |
           set -eu
           HOME_DIR="${RUNNER_TEMP}/sdods-home"
