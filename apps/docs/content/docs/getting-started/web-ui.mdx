@@ -23,6 +23,11 @@ Run both commands from the workspace root, or anywhere inside it: the platform d
 `<workspace>/.sdods/sdods.db`, and every command walks up to the workspace to find it, so
 `users create` and `serve` always agree on one database.
 
+Signing out clears the session on the server and every cached query in the browser, so nothing
+from one session is readable in the next on a shared machine. If a session ends while the app is
+open — it expires, an admin runs `sdods users deactivate`, or a token is revoked — the next request
+returns you to the sign-in form rather than leaving a half-loaded page behind.
+
 The server is a Fastify application. It spawns the same `sdods` commands you run by hand and streams their logs over Server-Sent Events, so a run started from a browser looks exactly like one started from a terminal.
 
 <Screenshot

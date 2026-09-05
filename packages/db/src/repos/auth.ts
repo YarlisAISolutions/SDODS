@@ -304,11 +304,13 @@ export async function listApiTokens(db: Kysely<Database>, userId?: string) {
   }));
 }
 
-export async function revokeApiToken(db: Kysely<Database>, id: string) {
-  await db
+/** True when a live token was revoked; false when the id is unknown or already revoked. */
+export async function revokeApiToken(db: Kysely<Database>, id: string): Promise<boolean> {
+  const res = await db
     .updateTable('api_tokens')
     .set({ revoked_at: nowIso() })
     .where('id', '=', id)
     .where('revoked_at', 'is', null)
-    .execute();
+    .executeTakeFirst();
+  return Number(res?.numUpdatedRows ?? 0) > 0;
 }

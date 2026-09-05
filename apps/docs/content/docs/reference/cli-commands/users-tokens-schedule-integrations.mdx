@@ -16,6 +16,10 @@ sdods users deactivate <username>
 
 `--admin` creates a platform admin who also becomes owner of every organization without an owner. `grant` manages membership roles; a user's effective role in a workspace is the stronger of the explicit workspace role and the one implied by the organization role (`member` → viewer, `admin`/`owner` → admin).
 
+`deactivate` takes effect immediately: the account can no longer sign in, and **sessions and API tokens it already holds stop working on the next request** — a browser with the app open is returned to the login screen rather than left on a stale page. There is no delete: deactivated accounts stay in `users list` with `active` false, so the audit trail keeps pointing at a real user.
+
+Every one of these commands resolves the platform database from the workspace root, so they can be run from any directory inside the workspace and always reach the same database the server uses.
+
 ## `tokens`
 
 ```text
@@ -24,7 +28,7 @@ sdods tokens list [--user <username>]
 sdods tokens revoke <id>
 ```
 
-Tokens are free, unlimited, scoped and revocable. `create` prints the value once; scopes default to every scope of the owner's role and may only be a subset of it. Tokens authenticate MCP over HTTP and CI ingest.
+Tokens are free, unlimited, scoped and revocable. `create` prints the value once; scopes default to every scope of the owner's role and may only be a subset of it. Tokens authenticate MCP over HTTP and CI ingest. `revoke` reports whether it actually revoked anything: an unknown id, or one already revoked, is a warning rather than a success, so revoking a leaked token cannot be silently mistaken for done.
 
 ## `schedule`
 
