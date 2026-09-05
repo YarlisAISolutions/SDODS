@@ -56,7 +56,7 @@ export interface HarFile {
   };
 }
 
-const SECRET_HEADER = /^(authorization|cookie|set-cookie|x-api-key|proxy-authorization)$/i;
+export const SECRET_HEADER = /^(authorization|cookie|set-cookie|x-api-key|proxy-authorization)$/i;
 const VOLATILE_QUERY = /^(_|t|ts|timestamp|nonce|cb|cache)$/i;
 
 export function normalizeUrl(url: string): string {
