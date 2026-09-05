@@ -16,10 +16,11 @@ import { resolveDriverConfig } from '../src/driver.js';
 
 describe('driver config', () => {
   it('defaults to sqlite and validates postgres', () => {
-    expect(resolveDriverConfig({} as any)).toEqual({
-      driver: 'sqlite',
-      sqlitePath: '.sdods/sdods.db',
-    });
+    // The default is anchored to the workspace root, so it is absolute whenever one is found
+    // above the current directory (see packages/db/test/driver-root.test.ts).
+    const dflt = resolveDriverConfig({} as any);
+    expect(dflt.driver).toBe('sqlite');
+    expect(dflt.sqlitePath?.endsWith('.sdods/sdods.db')).toBe(true);
     expect(
       resolveDriverConfig({ DB_DRIVER: 'sqlite', SQLITE_PATH: '/tmp/x.db' } as any).sqlitePath,
     ).toBe('/tmp/x.db');
