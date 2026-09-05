@@ -19,6 +19,8 @@ const config = {
   trailingSlash: true,
   images: { unoptimized: true },
   reactStrictMode: true,
+  // The roadmap data is a workspace package of raw TypeScript.
+  transpilePackages: ['@sdods/roadmap'],
   env: {
     NEXT_PUBLIC_BASE_PATH: basePath,
     NEXT_PUBLIC_SITE_URL: siteUrl,

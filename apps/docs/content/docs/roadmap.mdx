@@ -1,59 +1,43 @@
 ---
 title: Roadmap
-description: Five years of direction, the phases already delivered, and how they were verified.
+description: 'One road: the chapters already delivered, the next twelve months, and the horizon beyond them.'
 ---
 
-## The five-year horizon
+<Learn>
+  Where SDODS stands today, what the delivered work bought you, what lands month by month over the
+  next year, and which of it is a promise rather than a direction.
+</Learn>
 
-SDODS climbs one ladder, and each year buys a level of confidence the year before could not.
-2026 is delivered and verifiable today. 2027 is being built. The years after it are direction
-rather than dated commitment, and feature requests move them.
+## The road
 
-| Year | Level              | What you get                                                      | Proof it landed                                             |
-| ---- | ------------------ | ----------------------------------------------------------------- | ----------------------------------------------------------- |
-| 2026 | 1 Evidence         | A release you can defend without being the person who remembers   | Fourteen phases delivered, published to npm                 |
-| 2027 | 2 Shared truth     | One history the whole team reads, so no one relitigates a failure | A stable 1.0 with a compatibility promise                   |
-| 2028 | 3 Self-maintaining | A suite that repairs itself and says what it changed              | Most locator drift merged without anyone writing a selector |
-| 2029 | 4 Orchestrated     | Checks, approvals and the release in one place                    | The release gate becomes the record teams point at          |
-| 2030 | 5 Governed         | An audit trail the people who sign off actually trust             | An auditor follows a requirement to a release unaided       |
+Every stop on this road has a goal, the things that land there, and the one fact that tells you it
+landed. Click a checkpoint to stand at it — Maxi will say why it is on the road at all. The stretch
+behind the traveller is delivered, the twelve amber and indigo stops are the next year, and the
+faint ones at the end are direction rather than dated commitment.
 
-Each year is written out with its customer value, the features that deliver it and its
-milestone on the [roadmap page](https://sdods.com/roadmap/).
+<Roadmap />
 
-## Phases delivered
+## Why the delivered stretch has no dates
 
-Every phase ends runnable. All fourteen phases are implemented; the numbers below come from the verification run on 2026-09-04 against the demo project.
+The five chapters behind the traveller are real: the code is in the repository and the commands in
+these pages run against it. They carry no month labels because this repository has no release
+history to date them against — no tags, no published versions — and a date nobody can check is
+worth less than an honest gap. When the first release lands (it is the November stop), the
+chapters get the only date that means anything: the version they shipped in.
 
-| Phase | Scope                                                          | Status |
-| ----- | -------------------------------------------------------------- | ------ |
-| 0     | Monorepo, config precedence, registry, CLI skeleton            | done   |
-| 1     | API layer end to end (no browser), `run`, `lint`, step library | done   |
-| 2     | UI layer, page objects, self-healing, dashboard                | done   |
-| 3     | Data providers, user pool, auth capture, hybrid                | done   |
-| 4     | Screenshot narratives, NDJSON                                  | done   |
-| 5     | Database (SQLite ⇄ Postgres), ingest, switch                   | done   |
-| 6     | Recorder and HAR                                               | done   |
-| 7     | MCP server                                                     | done   |
-| 8     | Agents and insights                                            | done   |
-| 9     | Server, scheduler                                              | done   |
-| 10    | Web UI                                                         | done   |
-| 11    | GitHub, Jira, CI workflows                                     | done   |
-| 12    | Onboarding analysis, processes, cross-browser matrix           | done   |
-| 13    | Documentation site, packaging, `sdods init`                    | done   |
+## Every checkpoint, in order
 
-## Verification
+<RoadmapChecklist />
 
-| Check                                                                                     | Result                                  |
-| ----------------------------------------------------------------------------------------- | --------------------------------------- |
-| Unit and CLI end-to-end tests (vitest)                                                    | 146 passed                              |
-| Web UI component tests                                                                    | 9 passed                                |
-| Demo `@smoke or @sanity` on chromium, firefox and webkit                                  | 23 passed, 0 failed                     |
-| Demo `@regression` on chromium (before/after screenshots)                                 | 27 passed, 0 failed                     |
-| Demo API layer (no browser)                                                               | 10 passed                               |
-| `tsc -b`, ESLint, Prettier                                                                | clean                                   |
-| Documentation build                                                                       | 75 pages, 2873 internal links, 0 broken |
-| Server smoke: migrate, sync hierarchy, login, workspaces with roles, `/mcp` without token | ok, 401 as expected                     |
+## How the delivered work is verified
 
-## What comes next
+<RoadmapVerification />
 
-Open items are tracked on the [Known limitations](/docs/reference/known-limitations) page and in the repository's issues. Details for every phase, including the verification commands, live in `docs/ARCHITECTURE.md`.
+## Moving the road
+
+The twelve months are shaped by what people ask for. The [feature request
+link](mailto:admin@sdods.com?subject=%5BSDODS%20feature%5D%20) on any page moves an item up, and
+the open gaps are listed on [Known limitations](/docs/reference/known-limitations). The phase-level
+detail behind the delivered chapters, including the verification commands, lives in
+`docs/ARCHITECTURE.md`; the same five-year ladder is told for a non-technical reader on the
+[roadmap page](https://sdods.com/roadmap/).

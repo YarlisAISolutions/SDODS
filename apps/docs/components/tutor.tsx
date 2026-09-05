@@ -1,11 +1,12 @@
 /**
- * Maxi, the tutor who sits under every playground.
+ * Maxi, the tutor.
  *
- * The avatar is drawn from the same palette as the page illustrations so the playground looks
- * like part of the book rather than a widget dropped into it. Maxi only ever says something the
- * run actually shows — the line changes with the step that just ran and its outcome.
+ * Maxi narrates the runnable scenarios in the getting-started pages and the checkpoints on the
+ * roadmap. The avatar is drawn from the same palette as the page illustrations so both read as
+ * part of the book rather than widgets dropped into it, and Maxi only ever says something the
+ * page actually shows.
  */
-import { C } from '../art/kit';
+import { C } from './art/kit';
 
 export type TutorMood = 'idle' | 'talking' | 'thinking' | 'happy' | 'concerned';
 
@@ -18,7 +19,16 @@ const EYES: Record<TutorMood, { left: string; right: string; mouth: string }> = 
 };
 
 /** A 76 × 96 tutor. Antenna colour carries the mood so it reads at a glance. */
-export function TutorAvatar({ mood = 'idle', size = 76 }: { mood?: TutorMood; size?: number }) {
+export function TutorAvatar({
+  mood = 'idle',
+  size = 76,
+  decorative = false,
+}: {
+  mood?: TutorMood;
+  size?: number;
+  /** Set when the name and the line are already beside the drawing, so it adds nothing to read. */
+  decorative?: boolean;
+}) {
   const face = EYES[mood];
   const antenna = mood === 'concerned' ? C.coral : mood === 'happy' ? C.green : C.amber;
   return (
@@ -26,8 +36,9 @@ export function TutorAvatar({ mood = 'idle', size = 76 }: { mood?: TutorMood; si
       viewBox="0 0 76 96"
       width={size}
       height={(size * 96) / 76}
-      role="img"
-      aria-label={`Maxi the tutor, looking ${mood}`}
+      role={decorative ? undefined : 'img'}
+      aria-hidden={decorative || undefined}
+      aria-label={decorative ? undefined : `Maxi the tutor, looking ${mood}`}
       className="shrink-0"
     >
       <ellipse cx="38" cy="92" rx="22" ry="4" fill={C.line} opacity="0.5" />
@@ -53,10 +64,19 @@ export function TutorAvatar({ mood = 'idle', size = 76 }: { mood?: TutorMood; si
 }
 
 /** The tutor strip: avatar on the left, one sentence in a speech bubble beside it. */
-export function TutorBar({ mood, text }: { mood: TutorMood; text: string }) {
+export function TutorBar({
+  mood,
+  text,
+  className = 'border-t border-fd-border bg-fd-muted/40 px-4 py-3',
+}: {
+  mood: TutorMood;
+  text: string;
+  /** The framing around the bubble; the roadmap wants a free-standing card, not a bottom strip. */
+  className?: string;
+}) {
   return (
-    <div className="flex items-end gap-3 border-t border-fd-border bg-fd-muted/40 px-4 py-3">
-      <TutorAvatar mood={mood} size={56} />
+    <div className={`flex items-end gap-3 ${className}`}>
+      <TutorAvatar mood={mood} size={56} decorative />
       <div className="relative flex-1 rounded-xl rounded-bl-none border border-fd-border bg-fd-card px-4 py-3 text-sm leading-relaxed">
         <span className="mb-0.5 block text-xs font-semibold tracking-wide text-fd-muted-foreground uppercase">
           Maxi

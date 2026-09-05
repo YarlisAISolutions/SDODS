@@ -12,6 +12,7 @@ import { Learn } from '@/components/learn';
 import { Screenshot } from '@/components/screenshot';
 import { Art, ArtRow } from '@/components/art';
 import { Playground } from '@/components/playground';
+import { Roadmap, RoadmapChecklist, RoadmapVerification } from '@/components/roadmap';
 import { RepoOnly } from '@/components/repo-only';
 
 export function getMDXComponents(components?: MDXComponents): MDXComponents {
@@ -33,6 +34,9 @@ export function getMDXComponents(components?: MDXComponents): MDXComponents {
     Art,
     ArtRow,
     Playground,
+    Roadmap,
+    RoadmapChecklist,
+    RoadmapVerification,
     RepoOnly,
     ...components,
   };

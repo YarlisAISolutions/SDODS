@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "SDODS — an automation platform: BDD UI + API + hybrid testing, multi-project, data-driven, self-healing, MCP, agents.",
+  "description": "SDODS \u2014 an automation platform: BDD UI + API + hybrid testing, multi-project, data-driven, self-healing, MCP, agents.",
   "license": "Apache-2.0",
   "engines": {
     "node": ">=22"
@@ -38,26 +38,28 @@
     "api:deploy": "bash deploy/deploy-cloud-run.sh",
     "api:deploy-hosting": "firebase deploy --only hosting:api --project automax-docs",
     "api:bootstrap": "bash deploy/bootstrap-admin.sh",
-    "installer:sync": "node --import tsx ./scripts/sync-installer.ts"
+    "installer:sync": "node --import tsx ./scripts/sync-installer.ts",
+    "roadmap:sync": "node --import tsx ./scripts/sync-roadmap.ts"
   },
   "devDependencies": {
+    "@changesets/cli": "^3.0.1",
+    "@eslint/js": "^9.39.0",
+    "@playwright/test": "^1.62.1",
+    "@sdods/cli": "workspace:*",
+    "@sdods/contracts": "workspace:*",
+    "@sdods/core": "workspace:*",
+    "@sdods/roadmap": "workspace:*",
     "@types/node": "^22.15.0",
     "eslint": "^9.39.0",
     "eslint-config-prettier": "^10.1.0",
     "eslint-plugin-playwright": "^2.11.0",
+    "execa": "^10.0.1",
+    "playwright-bdd": "^9.2.0",
     "prettier": "^3.9.0",
     "tsx": "^4.23.0",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.69.0",
-    "vitest": "^5.0.0",
-    "@eslint/js": "^9.39.0",
-    "@playwright/test": "^1.62.1",
-    "playwright-bdd": "^9.2.0",
-    "@sdods/contracts": "workspace:*",
-    "@sdods/core": "workspace:*",
-    "@sdods/cli": "workspace:*",
-    "@changesets/cli": "^3.0.1",
-    "execa": "^10.0.1"
+    "vitest": "^5.0.0"
   },
   "trustedDependencies": [
     "better-sqlite3",

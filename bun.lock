@@ -11,6 +11,7 @@
         "@sdods/cli": "workspace:*",
         "@sdods/contracts": "workspace:*",
         "@sdods/core": "workspace:*",
+        "@sdods/roadmap": "workspace:*",
         "@types/node": "^22.15.0",
         "eslint": "^9.39.0",
         "eslint-config-prettier": "^10.1.0",
@@ -28,6 +29,7 @@
       "name": "@sdods/docs",
       "version": "0.1.0",
       "dependencies": {
+        "@sdods/roadmap": "workspace:*",
         "firebase": "^12.18.0",
         "fumadocs-core": "^16.15.5",
         "fumadocs-mdx": "^15.4.0",
@@ -55,6 +57,7 @@
       "name": "@sdods/www",
       "version": "0.1.0",
       "dependencies": {
+        "@sdods/roadmap": "workspace:*",
         "firebase": "^12.18.0",
         "next": "^16.3.4",
         "next-themes": "^0.4.6",

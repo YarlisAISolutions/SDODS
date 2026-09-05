@@ -34,6 +34,8 @@ interface CheckpointBase {
   ships: string[];
   /** The single fact that proves it landed. */
   proof: string;
+  /** What the tutor says when a reader stops here. One sentence, in Maxi's voice. */
+  maxi: string;
 }
 
 /**

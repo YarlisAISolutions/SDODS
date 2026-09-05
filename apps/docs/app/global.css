@@ -39,3 +39,35 @@
   max-width: 100%;
   height: auto;
 }
+/* The only motion in the documentation: the marker for today, breathing on the roadmap. */
+.sdods-road-today {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: sdods-road-pulse 3.4s ease-in-out infinite;
+}
+@keyframes sdods-road-pulse {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.3;
+    transform: scale(1.26);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sdods-road-today {
+    animation: none;
+  }
+}
+/* A printed page has no container to query, so pick the layout rather than let the cascade guess. */
+@media print {
+  .sdods-road-narrow {
+    display: none !important;
+  }
+  .sdods-road-wide {
+    display: block !important;
+    break-inside: avoid;
+  }
+}
