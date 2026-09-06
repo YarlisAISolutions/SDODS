@@ -1,3 +1,5 @@
+import { mkdirSync } from 'node:fs';
+import { join } from 'node:path';
 import type { Browser, BrowserContext, Page } from '@playwright/test';
 import type { ResolvedConfig } from '../config/resolve.js';
 
@@ -117,14 +119,56 @@ export async function formLogin(
       'auth.strategy is "form" but auth.form selectors are missing in sdods.project.yaml.',
     );
   }
-  await page.goto(form.loginPath);
-  await page.locator(form.usernameSelector).fill(user.username);
-  await page.locator(form.passwordSelector).fill(user.password);
-  await page.locator(form.submitSelector).click();
-  if (form.readySelector)
-    await page.locator(form.readySelector).first().waitFor({ state: 'visible' });
-  else if (form.readyUrl) await page.waitForURL(`**${form.readyUrl}*`);
-  else await page.waitForLoadState('domcontentloaded');
+  try {
+    await page.goto(form.loginPath);
+    await page.locator(form.usernameSelector).fill(user.username);
+    await page.locator(form.passwordSelector).fill(user.password);
+    await page.locator(form.submitSelector).click();
+    if (form.readySelector)
+      await page.locator(form.readySelector).first().waitFor({ state: 'visible' });
+    else if (form.readyUrl) await page.waitForURL(`**${form.readyUrl}*`);
+    else await page.waitForLoadState('domcontentloaded');
+  } catch (cause) {
+    throw await describeLoginFailure(page, config, user, cause);
+  }
+}
+
+/**
+ * The form login runs in its own context (see `defineAuth`), so Playwright's video/trace/screenshot
+ * settings never attach to it — a failure here would otherwise surface as a bare locator timeout
+ * with no artifact. Name the page we actually landed on, and leave a screenshot behind.
+ */
+async function describeLoginFailure(
+  page: Page,
+  config: ResolvedConfig,
+  user: PoolUserLike,
+  cause: unknown,
+): Promise<Error> {
+  let where = '';
+  let shot = '';
+  try {
+    const url = page.url();
+    const title = await page.title();
+    where = ` at ${url}${title ? ` (title: ${JSON.stringify(title)})` : ''}`;
+  } catch {
+    // page already closed or crashed — the original error is still worth reporting
+  }
+  try {
+    const dir = join(config.runtime.runDir, 'auth');
+    mkdirSync(dir, { recursive: true });
+    const file = join(dir, `login-failed-${user.role}-${user.username}.png`.replace(/\s+/g, '_'));
+    await page.screenshot({ path: file, fullPage: true });
+    shot = `\nScreenshot: ${file}`;
+  } catch {
+    // screenshotting is best effort
+  }
+  const reason = cause instanceof Error ? cause.message : String(cause);
+  return new Error(
+    `Form login for ${user.username} (${user.role}) failed${where}.\n${reason}` +
+      `\nIs the application under test running at ${config.env.ui.baseUrl}, and does that page ` +
+      `use the auth.form selectors in sdods.project.yaml?${shot}`,
+    { cause },
+  );
 }
 
 export const noopAuth: AuthStrategy = defineAuth({ strategy: 'none' });

@@ -33,7 +33,7 @@ export function AskForm() {
 
   if (state === 'sent') {
     return (
-      <div className="card p-6">
+      <div className="card p-6" role="status">
         <h2 className="font-semibold">Thanks — that&rsquo;s in.</h2>
         <p className="muted mt-2 text-sm">
           Your question is waiting to be reviewed. Once it is published it appears on the questions
@@ -61,7 +61,12 @@ export function AskForm() {
   }
 
   return (
-    <form onSubmit={submit} className="card grid gap-4 p-6" aria-label="Ask a question">
+    <form
+      onSubmit={submit}
+      className="card grid gap-4 p-6"
+      aria-label="Ask a question"
+      aria-busy={state === 'sending'}
+    >
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="text-sm">
           <span className="mb-1 block font-medium">Your name</span>

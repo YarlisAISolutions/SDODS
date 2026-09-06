@@ -1,13 +1,18 @@
+'use client';
+
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
+import { MobileNav } from '@/components/mobile-nav';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { DOCS_URL, REPO_PUBLIC, REPO_URL } from '@/lib/links';
+import { NAV_LINKS } from '@/lib/nav';
 
 export function SiteHeader() {
+  const pathname = usePathname();
   return (
     <header className="sticky top-0 z-40 border-b border-[var(--line)] bg-[var(--bg)]/85 backdrop-blur">
       <nav
         aria-label="Primary"
-        className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3"
+        className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3"
       >
         <Link href="/" className="flex items-center gap-2 font-semibold">
           <img src="/img/favicon.svg" alt="" width={26} height={26} />
@@ -15,33 +20,33 @@ export function SiteHeader() {
             SD<span className="text-[var(--brand)]">ODS</span>
           </span>
         </Link>
-        <div className="hidden items-center gap-6 text-sm md:flex">
-          <Link href="/install/" className="hover:underline">
-            Install
-          </Link>
-          <a href={DOCS_URL} className="hover:underline">
-            Docs
-          </a>
-          <Link href="/roadmap/" className="hover:underline">
-            Roadmap
-          </Link>
-          <Link href="/questions/" className="hover:underline">
-            Questions
-          </Link>
-          <Link href="/feedback/" className="hover:underline">
-            Feedback
-          </Link>
-          {REPO_PUBLIC && (
-            <a href={REPO_URL} className="hover:underline" rel="noreferrer">
-              GitHub
-            </a>
-          )}
-        </div>
-        <div className="flex items-center gap-3">
-          <Link href="/install/" className="btn btn-primary hidden text-sm sm:inline-flex">
+        <ul className="hidden items-center gap-6 text-sm md:flex">
+          {NAV_LINKS.map((link) => (
+            <li key={link.label}>
+              {link.external ? (
+                <a href={link.href} className="hover:underline" rel="noreferrer">
+                  {link.label}
+                </a>
+              ) : (
+                <Link
+                  href={link.href}
+                  aria-current={pathname === link.href ? 'page' : undefined}
+                  className="hover:underline aria-[current=page]:font-semibold aria-[current=page]:text-[var(--brand)]"
+                >
+                  {link.label}
+                </Link>
+              )}
+            </li>
+          ))}
+        </ul>
+        <div className="flex items-center gap-2 sm:gap-3">
+          {/* The primary call to action stays at every width; `.btn` sets its own display, so
+              it is never given a responsive display utility. */}
+          <Link href="/install/" className="btn btn-primary px-3 text-sm sm:px-4">
             Install
           </Link>
           <ThemeToggle />
+          <MobileNav />
         </div>
       </nav>
     </header>

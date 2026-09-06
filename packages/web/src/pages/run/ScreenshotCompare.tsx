@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import type { ArtifactRef } from '../../api/types';
 import { useCompare } from '../../api/queries';
-import { Badge, Button } from '../../components/ui';
+import { Badge, Button, Spinner } from '../../components/ui';
 import { cn, readPref, writePref } from '../../lib/utils';
 
 export type CompareMode = 'slider' | 'overlay' | 'side-by-side' | 'diff';
@@ -212,7 +212,7 @@ export function ScreenshotCompare({
 
       {mode === 'diff' && (
         <div className="grid gap-2 md:grid-cols-3">
-          {compare.isLoading && <div className="muted text-xs">Computing diff…</div>}
+          {compare.isLoading && <Spinner label="Computing diff…" />}
           {compare.error && (
             <div className="text-xs text-red-500">{(compare.error as Error).message}</div>
           )}

@@ -15,6 +15,8 @@ import {
   Input,
   PageHeader,
   Select,
+  SkeletonList,
+  Spinner,
   StatusPill,
   Textarea,
 } from '../components/ui';
@@ -135,8 +137,10 @@ export function AgentsPage() {
             <Field label="Project">
               <Select
                 value={form.project || projects.data?.[0]?.slug || ''}
+                disabled={projects.isLoading}
                 onChange={(e) => setForm({ ...form, project: e.target.value })}
               >
+                {projects.isLoading && <option>Loading projects…</option>}
                 {(projects.data ?? []).map((p) => (
                   <option key={p.slug} value={p.slug}>
                     {p.name}
@@ -215,11 +219,14 @@ export function AgentsPage() {
         <div className="space-y-3">
           <Card title="Live output">
             <div className="mono max-h-64 space-y-1 overflow-auto text-[12px]">
-              {stream.length === 0 && (
-                <div className="muted">
-                  Start a job to stream its reasoning, tool calls and diff here.
-                </div>
-              )}
+              {stream.length === 0 &&
+                (start.isPending || activeJob ? (
+                  <Spinner label={start.isPending ? 'Starting the job…' : 'Waiting for output…'} />
+                ) : (
+                  <div className="muted">
+                    Start a job to stream its reasoning, tool calls and diff here.
+                  </div>
+                ))}
               {stream.map((s, i) =>
                 s.kind === 'diff' ? (
                   <DiffView key={i} text={s.text} />
@@ -242,6 +249,10 @@ export function AgentsPage() {
             </div>
           </Card>
           <Card title="Jobs">
+            {jobs.isLoading && <SkeletonList rows={3} className="px-0" />}
+            {!jobs.isLoading && (jobs.data ?? []).length === 0 && (
+              <div className="muted text-xs">No agent jobs yet.</div>
+            )}
             <ul className="divide-y divide-[var(--border)] text-sm">
               {(jobs.data ?? []).map((j) => (
                 <li key={j.id} className="flex flex-wrap items-center gap-2 py-1.5">
@@ -274,6 +285,10 @@ export function AgentsPage() {
       <Card title="Proposals">
         <div className="grid gap-3 lg:grid-cols-[320px_minmax(0,1fr)]">
           <ul className="divide-y divide-[var(--border)] text-sm">
+            {proposals.isLoading && <SkeletonList rows={3} className="px-0" />}
+            {!proposals.isLoading && (proposals.data ?? []).length === 0 && (
+              <li className="muted py-1.5 text-xs">No proposals yet.</li>
+            )}
             {(proposals.data ?? []).map((p) => (
               <li key={p.id}>
                 <button

@@ -75,6 +75,16 @@ const STATUS_MARK: Record<StepStatus, string> = {
   unknown: '?',
 };
 
+/** The glyph and the colour are the same fact twice; neither survives being read aloud. */
+const STATUS_WORD: Record<StepStatus, string> = {
+  pending: 'not run',
+  running: 'running',
+  passed: 'passed',
+  failed: 'failed',
+  skipped: 'skipped',
+  unknown: 'undefined step',
+};
+
 export function Playground({ preset: presetId }: { preset: PresetId }) {
   const preset = getPreset(presetId);
   const [source, setSource] = useState(preset.gherkin);
@@ -344,6 +354,11 @@ export function Playground({ preset: presetId }: { preset: PresetId }) {
   // The layer tag decides which panels exist, so an edited tag can leave the open tab behind.
   const activeTab =
     (tab === 'browser' && !showBrowser) || (tab === 'network' && !showNetwork) ? 'report' : tab;
+  const openTabs: StageTab[] = [
+    ...(showBrowser ? (['browser'] as const) : []),
+    ...(showNetwork ? (['network'] as const) : []),
+    'report',
+  ];
 
   return (
     <div className="not-prose my-8 overflow-hidden rounded-xl border border-fd-border bg-fd-card text-fd-foreground">
@@ -354,11 +369,16 @@ export function Playground({ preset: presetId }: { preset: PresetId }) {
         </span>
         <span className="flex-1 text-sm font-semibold">{preset.title}</span>
         {showNetwork ? (
-          <span className="inline-flex overflow-hidden rounded-md border border-fd-border text-xs">
+          <span
+            role="group"
+            aria-label="Where the API steps send their requests"
+            className="inline-flex overflow-hidden rounded-md border border-fd-border text-xs"
+          >
             {(['live', 'replay'] as const).map((value) => (
               <button
                 key={value}
                 type="button"
+                aria-pressed={mode === value}
                 onClick={() => {
                   setMode(value);
                   reset();
@@ -455,29 +475,58 @@ export function Playground({ preset: presetId }: { preset: PresetId }) {
         >
           Reset
         </button>
-        <span className="ml-auto font-mono text-xs text-fd-muted-foreground">
+        <span className="ml-auto font-mono text-xs text-fd-muted-foreground" aria-hidden="true">
           {Math.min(cursor, steps.length)} / {steps.length} steps · {elapsed} ms
+        </span>
+        {/* Running a scenario changes a dozen glyphs and no text. This is the one line that
+            says what happened, and it only speaks when the run settles. */}
+        <span role="status" className="sr-only">
+          {verdict === 'idle'
+            ? ''
+            : verdict === 'running'
+              ? `Running step ${Math.min(cursor, steps.length)} of ${steps.length}.`
+              : `Scenario ${verdict}. ${counts.passed ?? 0} passed, ${(counts.failed ?? 0) + (counts.unknown ?? 0)} failed, ${counts.skipped ?? 0} skipped, in ${elapsed} milliseconds.`}
         </span>
       </div>
 
       {/* ── the stage ── */}
       <div className="border-y border-fd-border bg-fd-muted/30">
-        <div className="flex gap-1 px-4 pt-3 text-xs">
+        <div
+          role="tablist"
+          aria-label="The stage"
+          className="flex flex-wrap gap-1 px-4 pt-3 text-xs"
+        >
           {showBrowser ? (
-            <TabButton active={activeTab === 'browser'} onClick={() => setTab('browser')}>
+            <TabButton
+              id="browser"
+              active={activeTab === 'browser'}
+              onSelect={setTab}
+              tabs={openTabs}
+            >
               Browser
             </TabButton>
           ) : null}
           {showNetwork ? (
-            <TabButton active={activeTab === 'network'} onClick={() => setTab('network')}>
+            <TabButton
+              id="network"
+              active={activeTab === 'network'}
+              onSelect={setTab}
+              tabs={openTabs}
+            >
               Request &amp; response {exchanges.length ? `(${exchanges.length})` : ''}
             </TabButton>
           ) : null}
-          <TabButton active={activeTab === 'report'} onClick={() => setTab('report')}>
+          <TabButton id="report" active={activeTab === 'report'} onSelect={setTab} tabs={openTabs}>
             Run report
           </TabButton>
         </div>
-        <div className="p-4">
+        <div
+          role="tabpanel"
+          id={`stage-panel-${activeTab}`}
+          aria-labelledby={`stage-tab-${activeTab}`}
+          tabIndex={0}
+          className="p-4"
+        >
           {activeTab === 'browser' ? <BrowserPanel app={app} /> : null}
           {activeTab === 'network' ? <NetworkView exchanges={exchanges} /> : null}
           {activeTab === 'report' ? (
@@ -506,7 +555,8 @@ export function Playground({ preset: presetId }: { preset: PresetId }) {
             <li key={`${step.line}-${step.text}`} className="px-4 py-2 text-sm">
               <div className="flex items-start gap-2">
                 <span className={`mt-0.5 w-4 font-mono ${STATUS_STYLE[run.status]}`}>
-                  {STATUS_MARK[run.status]}
+                  <span aria-hidden="true">{STATUS_MARK[run.status]}</span>
+                  <span className="sr-only">{STATUS_WORD[run.status]}: </span>
                 </span>
                 <span className="flex-1">
                   <span className="font-semibold text-fd-muted-foreground">{step.keyword} </span>
@@ -533,13 +583,16 @@ export function Playground({ preset: presetId }: { preset: PresetId }) {
                           key={item.label}
                           className="rounded bg-fd-muted px-1.5 py-0.5 font-mono text-[10.5px] text-fd-muted-foreground"
                         >
-                          {item.kind === 'screenshot'
-                            ? '📸'
-                            : item.kind === 'request'
-                              ? '📎'
-                              : item.kind === 'locator'
-                                ? '🎯'
-                                : '𝑥'}{' '}
+                          <span aria-hidden="true">
+                            {item.kind === 'screenshot'
+                              ? '📸'
+                              : item.kind === 'request'
+                                ? '📎'
+                                : item.kind === 'locator'
+                                  ? '🎯'
+                                  : '𝑥'}
+                          </span>{' '}
+                          <span className="sr-only">{item.kind}: </span>
                           {item.label}
                         </span>
                       ))}
@@ -560,18 +613,25 @@ export function Playground({ preset: presetId }: { preset: PresetId }) {
       {/* ── what to run for real, and what else you can say ── */}
       <div className="border-t border-fd-border px-4 py-3">
         <p className="text-xs text-fd-muted-foreground">Run the same scenario on your machine:</p>
-        <pre className="mt-1 overflow-x-auto rounded-md bg-fd-muted p-2 font-mono text-xs">
+        <pre
+          tabIndex={0}
+          role="region"
+          aria-label="The same scenario as a command"
+          className="mt-1 overflow-x-auto rounded-md bg-fd-muted p-2 font-mono text-xs"
+        >
           {preset.command}
         </pre>
         <button
           type="button"
           onClick={() => setCatalogOpen((open) => !open)}
+          aria-expanded={catalogOpen}
+          aria-controls="playground-step-catalog"
           className="mt-3 text-xs font-medium text-fd-primary underline underline-offset-2"
         >
           {catalogOpen ? 'Hide' : 'Show'} the steps you can use here
         </button>
         {catalogOpen ? (
-          <ul className="mt-2 space-y-1">
+          <ul id="playground-step-catalog" className="mt-2 space-y-1">
             {stepsByLayer(layer).map((definition) => (
               <li key={definition.pattern}>
                 <button
@@ -592,19 +652,54 @@ export function Playground({ preset: presetId }: { preset: PresetId }) {
   );
 }
 
+type StageTab = 'browser' | 'network' | 'report';
+
+/**
+ * One tab of the stage. The selected tab is the only one in the tab order and the arrows walk
+ * between them, which is what a tablist promises the moment it claims the role.
+ */
 function TabButton({
+  id,
   active,
-  onClick,
+  onSelect,
+  tabs,
   children,
 }: {
+  id: StageTab;
   active: boolean;
-  onClick: () => void;
+  onSelect: (tab: StageTab) => void;
+  /** The tabs actually on screen — the layer tag decides which of the three exist. */
+  tabs: StageTab[];
   children: React.ReactNode;
 }) {
+  function onKeyDown(event: React.KeyboardEvent) {
+    const at = tabs.indexOf(id);
+    const next =
+      event.key === 'ArrowRight' || event.key === 'ArrowDown'
+        ? tabs[(at + 1) % tabs.length]
+        : event.key === 'ArrowLeft' || event.key === 'ArrowUp'
+          ? tabs[(at - 1 + tabs.length) % tabs.length]
+          : event.key === 'Home'
+            ? tabs[0]
+            : event.key === 'End'
+              ? tabs[tabs.length - 1]
+              : undefined;
+    if (!next || next === id) return;
+    event.preventDefault();
+    onSelect(next);
+    document.getElementById(`stage-tab-${next}`)?.focus();
+  }
+
   return (
     <button
       type="button"
-      onClick={onClick}
+      role="tab"
+      id={`stage-tab-${id}`}
+      aria-selected={active}
+      aria-controls={`stage-panel-${id}`}
+      tabIndex={active ? 0 : -1}
+      onKeyDown={onKeyDown}
+      onClick={() => onSelect(id)}
       className={`rounded-t-md border border-b-0 px-3 py-1.5 font-medium ${
         active
           ? 'border-fd-border bg-fd-card text-fd-foreground'
@@ -727,7 +822,10 @@ function ReportView({
               key={`${step.line}-report`}
               className="flex items-baseline gap-2 px-4 py-1.5 font-mono text-[11.5px]"
             >
-              <span className={STATUS_STYLE[run.status]}>{STATUS_MARK[run.status]}</span>
+              <span className={STATUS_STYLE[run.status]}>
+                <span aria-hidden="true">{STATUS_MARK[run.status]}</span>
+                <span className="sr-only">{STATUS_WORD[run.status]}: </span>
+              </span>
               <span className="flex-1 truncate">
                 {step.keyword} {step.text}
               </span>

@@ -46,7 +46,9 @@ export function PageFeedback({ path, title }: { path: string; title: string }) {
     >
       <div className="flex flex-wrap items-center gap-3">
         {done ? (
-          <span className="font-medium">Thanks — noted.</span>
+          <span role="status" className="font-medium">
+            Thanks — noted.
+          </span>
         ) : (
           <>
             <span className="font-medium">Was this page helpful?</span>
