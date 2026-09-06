@@ -82,7 +82,11 @@ Given(
 );
 
 Given('I use no authentication', async ({ apiContext }) => {
-  apiContext.auth = undefined;
+  // `null`, not `undefined`: undefined means "unset, fall back to env.api.auth",
+  // which made this step a no-op on every environment that declares a
+  // credential — exactly the environments where asserting an unauthenticated
+  // refusal matters.
+  apiContext.auth = null;
 });
 
 /* ── assertions ───────────────────────────────────────────────────────── */
