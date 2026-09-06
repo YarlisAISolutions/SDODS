@@ -41,7 +41,15 @@ export class CompositeDataProvider implements DataProvider {
         },
       );
     }
-    return (await loadFileSource(this.config, spec, this.opts.vars ?? process.env)) as T[];
+    // `config.vars` is the dotenv layer merged under process.env — the same
+    // scope the yaml was interpolated with. Falling back to bare `process.env`
+    // here meant a `${VAR}` in a dataset could only ever resolve from the
+    // shell, never from the `.env.<env>` file SDODS itself loaded.
+    return (await loadFileSource(
+      this.config,
+      spec,
+      this.opts.vars ?? this.config.vars ?? process.env,
+    )) as T[];
   }
 
   async row<T extends Row = Row>(dataset: string, index: number): Promise<T> {
