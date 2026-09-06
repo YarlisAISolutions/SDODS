@@ -199,12 +199,30 @@ changed at GA — preview-era pages saying individuals cannot sign up are out of
 
 ---
 
-## Free option that does not apply here
+## Is there a free option?
 
-**SignPath Foundation** offers free OV-level signing to qualifying **open-source** projects. SDODS
-is Apache-2.0 but its repository is **private**, so it does not currently qualify. If the source
-repo is ever made public, this becomes a genuine free path for Windows signing —
-<https://signpath.io>.
+**Windows: yes, but only for open source.** [SignPath Foundation](https://signpath.org/terms)
+gives qualifying projects free OV-level signing through a managed pipeline. Their conditions:
+
+- an **OSI-approved licence with no commercial dual-licensing** — Apache-2.0 qualifies;
+- **no proprietary or non-open-source components**, including code from the maintainer;
+- actively maintained, already released in the form to be signed, and functionality described on
+  the download page.
+
+SDODS is Apache-2.0, so the licence is fine — but the repository is **private**, and the programme
+is for open-source projects. Today it does not qualify. Making the source public would unlock it,
+and would also remove the need for the separate public releases repo and let the
+`NEXT_PUBLIC_REPO_PUBLIC` flags across both sites switch on. Applications take days to weeks.
+
+**macOS: no.** There is no free path to a Developer ID certificate or to notarization. A free Apple
+ID signs for local development only; the result still fails Gatekeeper on anyone else's Mac. The
+$99/year membership is unavoidable for direct distribution.
+
+**Linux: already free** — nothing to sign.
+
+So the realistic floors are **$99/year** (Apple, plus SignPath for Windows if the source goes
+public) or **~$219/year** (Apple plus Azure Artifact Signing at $9.99/month) with the source
+staying private.
 
 ---
 
