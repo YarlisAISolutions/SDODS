@@ -311,6 +311,9 @@ export function buildRunnerConfig(
       trace: 'on-first-retry',
       actionTimeout: timeouts.action,
       navigationTimeout: timeouts.navigation,
+      // Playwright's own `--headed` flag still wins on the CLI; this is what makes the documented
+      // SDODS_HEADED env var and the --headed CliOverride reach the browser at all.
+      headless: !first?.runtime.headed,
     },
     projects,
     metadata: {
