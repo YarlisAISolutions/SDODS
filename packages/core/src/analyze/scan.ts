@@ -36,6 +36,11 @@ export const IGNORED_DIRS = new Set([
   'obj',
 ]);
 
+/** A directory that contains `.git` (a dir for a clone, a file for a worktree). */
+function isRepositoryRoot(dir: string): boolean {
+  return existsSync(join(dir, '.git'));
+}
+
 export const TEXT_EXTENSIONS = new Set([
   '.ts',
   '.tsx',
@@ -112,6 +117,14 @@ export class Scan {
           return;
         }
         const abs = join(dir, name);
+        // A directory holding its own `.git` is a different repository — a
+        // submodule, a vendored checkout, or a git worktree. Descending into
+        // one attributes another project's routes to this one, and a worktree
+        // is usually a STALE copy of this very repo, so every route gets
+        // reported twice with the wrong path. Observed on a real monorepo: all
+        // 157 routes were cited inside `.claude/worktrees/<branch>/`, a path
+        // that repo's own .gitignore excludes.
+        if (dir !== this.root && isRepositoryRoot(dir)) return;
         let st;
         try {
           st = statSync(abs);
