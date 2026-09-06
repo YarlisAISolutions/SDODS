@@ -1,0 +1,170 @@
+---
+name: sdods-desktop-release
+description: Build, test, release and publish the SDODS desktop app (apps/desktop) for macOS, Windows and Linux, and update the download page on sdods.com. Use when asked to build the desktop app, cut a desktop release, tag desktop-v*, publish installers, refresh the download page, or debug a packaged build that will not start.
+---
+
+# Releasing the SDODS desktop app
+
+The desktop app is an Electron **supervisor**: it owns a private SDODS workspace, installs
+`@sdods/cli` from npm into it, and runs `sdods serve` as a child of a **bundled Node runtime**. It
+does not reimplement SDODS and it does not host the server in-process.
+
+Read this before changing anything in `apps/desktop` — most of it is here because something failed
+in a way that produced no error message.
+
+## The loop
+
+```bash
+# 1. Prove the runtime contract (no Electron involved). Catches npm/init/native-module problems.
+bun run --cwd apps/desktop probe
+
+# 2. Develop
+bun run desktop:dev
+
+# 3. Package for this machine
+bun run --cwd apps/desktop dist:mac      # dist:win · dist:linux
+
+# 4. Release
+git tag desktop-v0.1.0 && git push origin desktop-v0.1.0   # triggers .github/workflows/desktop.yml
+#    ... workflow drafts a release in the PUBLIC releases repo; publish it by hand ...
+bun run desktop:sync-release desktop-v0.1.0                # writes apps/www/lib/desktop-release.ts
+git commit -am 'chore(www): desktop 0.1.0 downloads' && merge to main   # www workflow deploys
+```
+
+**Order matters.** Sync the manifest only after the release is *published*, not while it is a
+draft — the download page links straight at the asset URLs, and draft assets are not downloadable.
+The sync script refuses to run against a draft for exactly this reason.
+
+## Where the binaries live, and why not in this repo
+
+`siri1410/SDODS` is **private**, and **release assets on a private repo are private too** — a
+GitHub download link would 404 for every visitor. So installers are published to a separate
+**public** repository that holds nothing but releases:
+
+```bash
+gh repo create siri1410/sdods-releases --public -d 'SDODS desktop installers'
+```
+
+Then, on the source repo: a `DESKTOP_RELEASE_TOKEN` secret (a fine-grained PAT with
+`Contents: read+write` on the releases repo **only** — `GITHUB_TOKEN` cannot write across
+repositories), and optionally a `DESKTOP_RELEASE_REPO` variable to point somewhere else.
+
+Source stays closed; only the built installers are public. This also keeps `electron-updater`
+straightforward later, since it reads GitHub releases natively.
+
+**Beware:** `git ls-remote https://github.com/siri1410/SDODS.git` **succeeds** on a machine with
+`gh auth` configured, because its credential helper is global. That is not an anonymous probe and
+it has produced the wrong conclusion here twice. Check visibility with
+`gh api repos/<slug> --jq .private`.
+
+## Naming and versioning
+
+- **SemVer** on `apps/desktop/package.json`; the tag is `desktop-v<version>`, kept separate from
+  the `@sdods/*` npm versions because the app ships on its own cadence.
+- **Every artifact says what it is**: `<product>-<version>-<platform>-<arch>.<ext>` —
+  `SDODS-0.1.0-mac-arm64.dmg`, `SDODS-Setup-0.1.0-win-x64.exe`,
+  `SDODS-0.1.0-linux-x64.AppImage`. electron-builder's defaults omit the platform on macOS, so
+  `SDODS-0.1.0-arm64.dmg` could equally be a Linux build in a listing of six files.
+- **`SHA256SUMS.txt`** ships with every release. It matters more than usual while builds are
+  unsigned: it is the only way a user can verify what they downloaded.
+  `sha256sum -c SHA256SUMS.txt --ignore-missing`
+
+## Verifying a build actually works
+
+A packaged build that starts is not the same as one that works. The real test is a run started
+from the app's own Runs page — that exercises `process.execPath`, the workspace layout and the
+browser cache at once.
+
+```bash
+# Install like a user, then launch with NOTHING on PATH. This is the zero-prerequisite promise.
+env -i HOME="$HOME" USER="$USER" TMPDIR="$TMPDIR" PATH="/usr/bin:/bin:/usr/sbin:/sbin" \
+  SDODS_DESKTOP_WORKSPACE=/tmp/sdods-test \
+  /Applications/SDODS.app/Contents/MacOS/SDODS
+```
+
+Then: Runs → Start run → layer `ui`, browser `chromium`, tags `@smoke` → Run. It should pass 4/0/0.
+
+Useful env vars:
+
+| Variable | Purpose |
+|---|---|
+| `SDODS_DESKTOP_WORKSPACE` | Override the `~/SDODS` default. Always set this when testing, or you litter the real home directory. |
+| `SDODS_DESKTOP_NODE` | Point at a specific `node` binary instead of the staged/system one. |
+
+Logs: `~/Library/Application Support/SDODS/logs/desktop.log` (menu → Open Logs Folder). App state
+lives beside it; `rm -rf` that directory for a clean first-run test.
+
+## Traps — each one cost a debugging session
+
+**Never spawn `process.execPath`.** Under Electron that is the Electron binary, so spawning it
+launches a second copy of the app, which hits the single-instance lock and dies **silently**. Use
+`nodeBin()` from `src/main/runtime.ts`. Same reason the server is a child process rather than
+in-process: `packages/server/src/services/cli.ts` builds every child argv from `process.execPath`.
+
+**Never spawn `npm` by bare name.** Windows has `npm.cmd`, not `npm`, and a GUI app launched from
+the Dock inherits a minimal PATH. Use `npmCli()`, which resolves npm's own entry point.
+
+**A missing `extraResources` source is only a warning.** It once produced an x64 `.dmg` with no
+Node runtime and a zero exit code. `scripts/before-pack.mjs` stages the runtime per arch and fails
+hard; `desktop.yml` re-checks every packaged app. Do not remove either.
+
+**Signals do not fire in the packaged app.** A SIGTERM runs none of `before-quit`, `will-quit`,
+`exit`, or `process.on('SIGTERM')` — Electron terminates natively — so the detached server child
+outlives the app. The guarantee is the pidfile: the server's pid is recorded and the next launch
+reaps it. Test it with `kill -9` on the app, not `kill`.
+
+**Browsers are needed for every layer, not just UI.** SDODS merges one BDD fixture set across
+layers, so an api-layer run against an empty `PLAYWRIGHT_BROWSERS_PATH` fails with
+`browserType.launch: Executable doesn't exist`. Chromium is fetched after the dashboard loads.
+
+**`sdods init` needs `--force --no-install --no-browsers`.** It refuses a non-empty directory,
+its `--pm` accepts only `bun|pnpm` (neither is on a user machine), and it would pull browsers. It
+overwrites `package.json` on purpose — its manifest declares `@playwright/test` and
+`playwright-bdd`, which `sdods run` needs — so npm install runs again afterwards.
+
+**`@sdods/server@0.2.1` hardcodes `cliBin: resolve(rootDir, 'packages/cli/src/bin.ts')`**, a
+monorepo-only path, so UI-triggered runs die with ERR_MODULE_NOT_FOUND. `bootstrap.ts` writes a
+bridge at that path, but only while the installed server still contains that string. **Publishing a
+server newer than 0.2.1 removes the need for it** and fixes `sdods serve` for every npm user.
+
+**Do not build the macOS `universal` target.** It lipo-merges two packs that each want a different
+`node` binary at one path. `before-pack.mjs` rejects it. Ship separate arm64 and x64 artifacts.
+
+**`apps/desktop` must declare no production dependencies.** electron-builder's dependency collector
+has no handling for bun's `node_modules/.bun` symlink layout. Everything is bundled by rollup and
+`files` excludes `node_modules` outright. Adding a runtime dependency will break packaging.
+
+## Browser architecture detection on the download page
+
+An Apple silicon Mac reports `Intel Mac OS X` in its user agent. Parsing the UA alone recommends
+the Intel build to nearly every modern Mac. `detectArch()` uses
+`navigator.userAgentData.getHighEntropyValues(['architecture'])`, which is truthful on Chromium;
+Safari and Firefox return nothing, so macOS defaults to Apple silicon deliberately. Every other
+build is listed underneath, and the full list is server-rendered so no-JS visitors lose nothing.
+
+## Signing
+
+Builds are unsigned today, so macOS shows "damaged / unidentified developer" and Windows shows
+SmartScreen. The download page prints the per-OS workaround automatically while
+`DESKTOP_RELEASE.signed` is false.
+
+Everything is wired behind CI secrets already — supply them and signing turns on with no code
+change: `CSC_LINK`, `CSC_KEY_PASSWORD`, `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID`
+for macOS; `WIN_CSC_LINK`, `WIN_CSC_KEY_PASSWORD` for Windows. Obtaining the certificates requires
+a person: Apple Developer Program ($99/yr), and for Windows **Azure Trusted Signing** (~$10/month)
+rather than a traditional OV certificate, which has required an FIPS hardware token since June 2023
+and does not fit CI. After signing lands, pass `--signed` to `desktop:sync-release`.
+
+## Files
+
+| Path | What it is |
+|---|---|
+| `apps/desktop/src/main/index.ts` | Lifecycle: bootstrap → serve → authenticate → load. Pidfile and orphan reaping. |
+| `apps/desktop/src/main/runtime.ts` | Bundled Node resolution and the child environment. |
+| `apps/desktop/src/main/bootstrap.ts` | The five-step first-run install, and the 0.2.1 CLI bridge. |
+| `apps/desktop/src/main/server.ts` | Port choice, `sdods serve` child, health poll, setup-token capture. |
+| `apps/desktop/src/main/auth.ts` | Admin creation, safeStorage vault, cookie injection. |
+| `apps/desktop/scripts/probe.ts` | The runtime contract, provable without Electron. |
+| `apps/desktop/scripts/fetch-node-runtime.ts` | Downloads + SHASUMS-verifies + prunes Node. |
+| `scripts/sync-desktop-release.ts` | GitHub release → `apps/www/lib/desktop-release.ts`. |
+| `.github/workflows/desktop.yml` | Tag-gated matrix build, artifact verification, draft release. |

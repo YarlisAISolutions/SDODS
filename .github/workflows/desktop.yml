@@ -136,15 +136,41 @@ jobs:
           path: artifacts
           merge-multiple: true
 
-      - name: Attach the installers to the release
+      # Unsigned builds make this more than a formality: a checksum is the only way a user can
+      # confirm the installer they downloaded is the one that was built.
+      - name: Generate SHA256SUMS.txt
+        working-directory: artifacts
+        run: |
+          set -euo pipefail
+          rm -f SHA256SUMS.txt
+          # Only user-facing installers; blockmaps and latest*.yml are updater plumbing.
+          sha256sum *.dmg *.zip *.exe *.AppImage *.deb 2>/dev/null | sort -k2 > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      # Published to a PUBLIC releases-only repository, because siri1410/SDODS is private and
+      # release assets on a private repo are private too -- a download link would 404 for every
+      # visitor. Source stays private; only the built installers are public.
+      #
+      # Requires a DESKTOP_RELEASE_TOKEN secret: a fine-grained PAT with Contents: read+write on
+      # the releases repo only. GITHUB_TOKEN cannot write to another repository.
+      - name: Attach the installers to the public release
         uses: softprops/action-gh-release@v2
         with:
+          repository: ${{ vars.DESKTOP_RELEASE_REPO || 'siri1410/sdods-releases' }}
+          token: ${{ secrets.DESKTOP_RELEASE_TOKEN }}
+          tag_name: ${{ github.ref_name }}
           draft: true
-          # A draft first: the download page on sdods.com points at these filenames, so the
-          # release is checked by a person before anyone can download a broken installer.
+          # A draft first: the download page on sdods.com points at these filenames, so a person
+          # checks the release before anyone can download a broken installer.
           files: artifacts/*
           body: |
             SDODS desktop — installs, launches and upgrades SDODS in one click.
+
+            Verify your download against `SHA256SUMS.txt`:
+
+            ```
+            sha256sum -c SHA256SUMS.txt --ignore-missing
+            ```
 
             **These builds are unsigned.** Until certificates are in place:
             - macOS: right-click the app → Open (Gatekeeper blocks a plain double-click)

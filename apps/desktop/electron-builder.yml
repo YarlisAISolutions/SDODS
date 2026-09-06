@@ -52,9 +52,16 @@ mac:
     # zip is what electron-updater consumes on macOS; dmg alone cannot auto-update.
     - target: zip
       arch: [arm64, x64]
+  artifactName: ${productName}-${version}-mac-${arch}.${ext}
+
+# One naming scheme for every artifact: <product>-<version>-<platform>-<arch>.<ext>.
+# electron-builder's defaults omit the platform on macOS ("SDODS-0.1.0-arm64.dmg" could be a Linux
+# build) and the arch on the mac zip. In a release listing that mixes six files, every one has to
+# say what it is without the surrounding context.
+artifactName: ${productName}-${version}-${platform}-${arch}.${ext}
 
 dmg:
-  artifactName: ${productName}-${version}-${arch}.${ext}
+  artifactName: ${productName}-${version}-mac-${arch}.${ext}
   contents:
     - x: 130
       y: 220
@@ -84,7 +91,7 @@ nsis:
   # The workspace and its SQLite database live outside the install dir, but be explicit: an
   # uninstall must never take the user's tests with it.
   deleteAppDataOnUninstall: false
-  artifactName: ${productName}-Setup-${version}-${arch}.${ext}
+  artifactName: ${productName}-Setup-${version}-win-${arch}.${ext}
 
 linux:
   category: Development
@@ -101,6 +108,7 @@ linux:
     - from: resources/node/linux-${arch}
       to: node
       filter: ['**/*']
+  artifactName: ${productName}-${version}-linux-${arch}.${ext}
   target:
     - target: AppImage
       arch: [x64, arm64]
