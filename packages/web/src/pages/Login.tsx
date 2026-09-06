@@ -81,7 +81,7 @@ export function SetupPage() {
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     try {
-      await api('/api/setup', {
+      await api('/api/auth/setup', {
         json: { token: params.get('token'), username, password, organization: orgName },
       });
       await refresh();
