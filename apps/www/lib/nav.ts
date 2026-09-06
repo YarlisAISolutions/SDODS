@@ -12,6 +12,7 @@ export interface NavLink {
  * disclosure below that, and neither copy can drift from the other.
  */
 export const NAV_LINKS: NavLink[] = [
+  { label: 'Download', href: '/download/' },
   { label: 'Install', href: '/install/' },
   { label: 'Docs', href: DOCS_URL, external: true },
   { label: 'Roadmap', href: '/roadmap/' },

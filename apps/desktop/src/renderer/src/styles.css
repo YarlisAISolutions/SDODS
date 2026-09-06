@@ -1,0 +1,281 @@
+/* Dark by default: this window is only ever on screen while the app boots, and matching the
+   BrowserWindow backgroundColor avoids a white flash before first paint. */
+:root {
+  --bg: #0b0d10;
+  --panel: #14181d;
+  --fg: #e6e9ee;
+  --muted: #8b95a3;
+  --faint: #5b6572;
+  --line: #232a33;
+  --accent: #4c9aff;
+  --ok: #3fb950;
+  --danger: #ff6b6b;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font:
+    14px/1.5 ui-sans-serif,
+    -apple-system,
+    'Segoe UI',
+    system-ui,
+    sans-serif;
+}
+
+.shell {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 56px 32px 24px;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  gap: 24px;
+}
+
+h1 {
+  margin: 0;
+  font-size: 28px;
+  letter-spacing: -0.02em;
+}
+.tagline {
+  margin: 6px 0 0;
+  color: var(--muted);
+}
+
+/* ── progress bar ───────────────────────────────────────────────────────────────────────── */
+
+.progress-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+.progress-message {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.progress-percent {
+  /* Tabular figures stop the percentage jittering as the number changes width. */
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  flex: none;
+}
+
+.bar {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--line);
+  overflow: hidden;
+}
+.bar-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: inherit;
+  /* npm progress arrives in bursts; easing turns them into movement rather than jumps. */
+  transition: width 400ms ease-out;
+}
+.bar-failed .bar-fill {
+  background: var(--danger);
+}
+@media (prefers-reduced-motion: reduce) {
+  .bar-fill {
+    transition: none;
+  }
+}
+
+/* ── stages and steps ───────────────────────────────────────────────────────────────────── */
+
+.stages {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 14px;
+}
+.stages > li {
+  display: grid;
+  grid-template-columns: 20px 1fr;
+  gap: 10px;
+  align-items: start;
+  color: var(--faint);
+}
+.stages > li.done,
+.stages > li.active {
+  color: var(--fg);
+}
+.stages > li.failed {
+  color: var(--danger);
+}
+
+.stage-title {
+  margin: 0;
+  font-weight: 500;
+}
+.stages > li.active .stage-title {
+  font-weight: 600;
+}
+
+.marker {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  font-size: 11px;
+  line-height: 1;
+  flex: none;
+}
+.stages > li.done .marker {
+  border-color: var(--ok);
+  color: var(--ok);
+}
+.stages > li.failed .marker {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+.stages > li.active .marker {
+  border-color: var(--accent);
+  /* Motion here is load-bearing: it is the signal that a multi-minute install is still alive. */
+  animation: pulse 1.6s ease-out infinite;
+}
+@keyframes pulse {
+  from {
+    box-shadow: 0 0 0 0 rgba(76, 154, 255, 0.5);
+  }
+  to {
+    box-shadow: 0 0 0 8px rgba(76, 154, 255, 0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .stages > li.active .marker {
+    animation: none;
+    background: rgba(76, 154, 255, 0.18);
+  }
+}
+
+.steps {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--faint);
+}
+.steps li::before {
+  content: '· ';
+}
+.steps li.done {
+  color: var(--muted);
+}
+.steps li.done::before {
+  content: '✓ ';
+  color: var(--ok);
+}
+.steps li.current {
+  color: var(--fg);
+}
+.steps li.current::before {
+  content: '› ';
+  color: var(--accent);
+}
+
+/* ── details and errors ─────────────────────────────────────────────────────────────────── */
+
+.log-details {
+  margin-top: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+}
+.log-details > summary {
+  cursor: pointer;
+  padding: 10px 12px;
+  color: var(--muted);
+  font-size: 13px;
+  user-select: none;
+}
+.log-details > summary:hover {
+  color: var(--fg);
+}
+
+.log {
+  margin: 0;
+  max-height: 220px;
+  overflow: auto;
+  padding: 0 12px 12px;
+  font:
+    12px/1.45 ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    monospace;
+  color: var(--muted);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.error {
+  display: grid;
+  gap: 12px;
+}
+.what {
+  margin: 0;
+  color: var(--danger);
+  font-weight: 600;
+}
+.detail {
+  margin: 0;
+  max-height: 200px;
+  overflow: auto;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  font:
+    12px/1.45 ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    monospace;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+button {
+  justify-self: start;
+  background: var(--accent);
+  color: #06101f;
+  border: 0;
+  border-radius: 6px;
+  padding: 9px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+button:hover {
+  filter: brightness(1.08);
+}
+
+footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  color: var(--faint);
+  font-size: 12px;
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+footer span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
