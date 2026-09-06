@@ -109,7 +109,43 @@ What a module gives you:
 - **Lint** warns when a scenario under `features/<module>/` lacks one of the module's expected `tags`.
 - **Coverage** joins `routes` and `endpoints` with scenarios per suite tag.
 - **Run selection**: `sdods run -p demo-shop --module cart` runs one module; processes may list `modules:`.
-- **Reporting**: the dashboard, insights and issues group by module; `jiraComponent` and `owner` flow into created issues.
+- **Reporting**: runs, scenario trees and insights group by module, in the CLI and the web UI.
+
+<Callout type="info">
+  `owner` and `jiraComponent` are stored and synced to the database, but nothing consumes them yet —
+  they do not appear on created GitHub or Jira issues today. Set them if you want the metadata in
+  place; do not expect them to route anything.
+</Callout>
+
+## How modules are detected
+
+`sdods analyze` proposes the `modules:` block for you. It does not group by URL, because a URL often
+says nothing about the domain: in the workshop application `POST /` is the bank-account endpoint and
+`/contacts` plus `/personal` are both transaction screens. Instead several signals vote, and the
+strongest one wins each route:
+
+| Signal          | Weight | What it reads                                                                                    |
+| --------------- | ------ | ------------------------------------------------------------------------------------------------ |
+| `openapi-tag`   | 1.00   | the `tags` on an OpenAPI operation                                                               |
+| `workspace`     | 0.90   | the monorepo package owning the file (`pnpm-workspace.yaml`, `turbo.json`, `nx.json`)            |
+| `domain-dir`    | 0.80   | `src/modules/<x>/`, `src/features/<x>/`, `src/domains/<x>/`, `services/<x>/`                     |
+| `source-file`   | 0.70   | the file that defines the route — `auth.ts`, `user-routes.ts`, `UserController.java`             |
+| `route-segment` | 0.30   | the first URL segment, as a floor so nothing is left unassigned                                  |
+| `alias`         | 0.20   | folds `login`, `signin`, `logout`, `session` and friends onto `auth`; merges only, never creates |
+
+Role suffixes are stripped (`bankaccount-routes.ts` → `bankaccount`), PascalCase is split
+(`TransactionsContainer.tsx` → `transactions`), and file-router parameters are skipped so
+`app/products/[id]/page.tsx` becomes `products`, not `id`. A file that names a role rather than a
+domain (`app.ts`, `index.ts`, `page.tsx`) yields nothing and lets a weaker signal decide.
+
+Routes that cannot name anything — catch-alls (`/*`), optional groups (`/(public)?`) and a bare
+root in a generic file — are skipped and listed, rather than collected into a `home` bucket. A path
+that is uninformative on its own is still kept when its file names a domain: `GET /{username}` in
+`contact-routes.ts` is the `contact` module.
+
+The proposal prints the winning signal, the confidence and the file behind every module, so you can
+judge it before writing anything. See
+[the workshop's first chapter](/docs/workshop/analyze-and-apply#how-modules-are-decided).
 
 <Callout type="info">
   A module is metadata over a folder. Nothing stops you from starting with the plain `features/ui`,

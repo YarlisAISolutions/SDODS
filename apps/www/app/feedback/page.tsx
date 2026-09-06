@@ -66,7 +66,7 @@ export default function FeedbackPage() {
           ? 'SDODS is built in the open. Every request lands as a GitHub issue or discussion where the maintainers triage it, label it and reply. No login with us, no tracking.'
           : 'Every request goes straight to the maintainers, who triage it and reply. No login with us, no tracking.'}
       </p>
-      <div className="mt-8 grid gap-4 md:grid-cols-3">
+      <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {CARDS.map((c) => (
           <article key={c.title} className="card flex flex-col p-5">
             <h2 className="font-semibold">{c.title}</h2>

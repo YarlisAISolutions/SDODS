@@ -10,6 +10,10 @@
   --line: #e2e8f0;
   --brand: #4f46e5;
   --brand-2: #2dd4bf;
+  /* The gradient that carries white text, or is read as text itself, needs its own stops:
+     teal-400 against white is 1.7:1, which is unreadable however pretty it looks. */
+  --grad-from: #0f766e;
+  --grad-to: #4f46e5;
   color-scheme: light;
 }
 .dark {
@@ -20,6 +24,8 @@
   --line: #1e293b;
   --brand: #818cf8;
   --brand-2: #5eead4;
+  --grad-from: #5eead4;
+  --grad-to: #a5b4fc;
   color-scheme: dark;
 }
 
@@ -38,6 +44,13 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* One focus ring for the whole site, in the brand colour, visible on both grounds. The
+   default ring is drawn in the platform's own colour, which disappears on the dark card. */
+:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
 .muted {
   color: var(--muted);
 }
@@ -47,7 +60,7 @@ body {
   border-radius: 14px;
 }
 .brand-gradient {
-  background: linear-gradient(120deg, var(--brand-2), var(--brand));
+  background: linear-gradient(120deg, var(--grad-from), var(--grad-to));
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
@@ -55,22 +68,31 @@ body {
 .btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.5rem;
   border-radius: 10px;
   padding: 0.7rem 1.1rem;
+  /* 44px, so a thumb hits it as reliably as a mouse does. */
+  min-height: 2.75rem;
   font-weight: 600;
   border: 1px solid transparent;
   transition:
     transform 0.1s ease,
     box-shadow 0.15s ease;
 }
+/* `.btn` is unlayered and Tailwind's utilities are not, so `display` here beats a `hidden` or
+   `md:flex` on the same element. Show and hide a button from a wrapper, never from the button. */
 .btn:hover {
   transform: translateY(-1px);
 }
 .btn-primary {
   color: #fff;
-  background: linear-gradient(120deg, #2dd4bf, #6366f1);
-  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.25);
+  background: linear-gradient(120deg, var(--grad-from), var(--grad-to));
+  box-shadow: 0 8px 24px rgba(79, 70, 229, 0.25);
+}
+.dark .btn-primary {
+  /* The dark stops are pale on purpose — they carry dark text, not white. */
+  color: #0b1220;
 }
 .btn-secondary {
   background: var(--card);
@@ -139,5 +161,12 @@ textarea:focus {
 @media (prefers-reduced-motion: reduce) {
   .pulse-today {
     animation: none;
+  }
+  /* The lift on a button is motion too, however small. */
+  .btn {
+    transition: none;
+  }
+  .btn:hover {
+    transform: none;
   }
 }

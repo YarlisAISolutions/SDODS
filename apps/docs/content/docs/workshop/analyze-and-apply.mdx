@@ -46,6 +46,42 @@ this repository will cost you:
   spreadsheet at the end.
 </Callout>
 
+## How modules are decided
+
+The part of the proposal worth reading closely is the module list. A module is the unit you will
+later lint, run and report on (`sdods run --module auth`), so a bad split costs you for the life of
+the project.
+
+Modules are **not** grouped by URL. On this repository that would give you fourteen of them, with
+`/login`, `/signin`, `/logout` and `/checkAuth` as four separate modules and `POST /` filed under
+`home`. Instead several signals vote and the strongest wins each route — the file that _defines_ the
+route outranks the path it serves:
+
+<Screenshot
+  src="/screenshots/cli/analyze-modules.png"
+  width={877}
+  height={342}
+  alt="Module table listing testdata, transactions, user, app-okta, bankaccount, contact and auth with confidence scores, the winning signal and the source file behind each, followed by three skipped routes"
+  caption="Seven modules, each with the confidence, the signal that won it and the file it came from. Three routes were skipped rather than guessed at."
+/>
+
+Three lines explain the whole design:
+
+- **`auth`** collected `/login`, `/logout` and `/checkAuth` because they share `backend/auth.ts` —
+  one file, one module, no synonym list required. The `+alias` on that row is the _second_ signal
+  pulling the React sign-in screens (`/signin`, `/signup`) into the same module, which is why it is
+  the only row spanning both a UI and an API layer.
+- **`bankaccount`** exists even though its route is literally `POST /`. The URL carries nothing; the
+  filename carries everything.
+- **`transactions`** is a name that appears in neither of its URLs (`/contacts`, `/personal`). It
+  comes from `TransactionsContainer.tsx` — which is the domain name a person would have chosen.
+
+<Callout type="info">
+  The confidence column is the mean weight of the winning votes. `0.70` is the source-file signal on
+  its own; `auth` scores lower at `0.54` precisely because it merged a weaker alias vote in. A low
+  score is a prompt to look, not a defect.
+</Callout>
+
 ## Write the project
 
 ```bash
@@ -113,9 +149,13 @@ auth:
 <Step>
 ### The routes that are not addresses
 
-React Router patterns (`/*`, `/(public)?`) and the Okta-only `/implicit/callback` are not pages you
-can open. Delete them from `routes:`, delete the modules that referenced them, and add the real
-home page.
+React Router patterns (`/*`, `/(public)?`) and the bare root are not pages you can open, and the
+analyzer now skips them itself — they are the three lines under `skipped` in the module table above,
+and no module is created for them.
+
+One is left for you. The Okta-only `/implicit/callback` _is_ a real path, so it survives detection
+and brings an `app-okta` module with it. This application is not configured for Okta, so delete that
+module and its route, and add the real home page.
 
 ```yaml title="projects/rwa-bank/sdods.project.yaml"
 routes:

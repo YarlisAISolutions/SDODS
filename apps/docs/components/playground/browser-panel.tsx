@@ -91,7 +91,7 @@ function LoginScreen({ app }: { app: AppState }) {
         className={`mb-3 w-full rounded border border-slate-300 px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400${ring(app, '#password')}`}
       />
       <span
-        className={`block w-full rounded bg-emerald-600 py-2 text-sm font-semibold text-white${ring(app, '#login-button')}`}
+        className={`block w-full rounded bg-emerald-700 py-2 text-sm font-semibold text-white${ring(app, '#login-button')}`}
       >
         Login
       </span>
