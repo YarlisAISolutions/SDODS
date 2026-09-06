@@ -1,0 +1,136 @@
+appId: com.sdods.desktop
+productName: SDODS
+copyright: Copyright © 2026 SDODS
+
+directories:
+  output: release
+  buildResources: build
+
+asar: true
+
+# Guarantees the bundled Node exists for the arch being packed. A missing extraResources source is
+# only a warning, which once produced an x64 .dmg with no runtime in it and a zero exit code.
+beforePack: scripts/before-pack.mjs
+
+files:
+  - out/**
+  - package.json
+  - '!**/*.map'
+  # apps/desktop declares no production dependencies -- everything is bundled by rollup -- because
+  # electron-builder's dependency collector has no handling for bun's node_modules/.bun symlink
+  # layout. Excluding node_modules outright makes that explicit rather than accidental.
+  - '!node_modules/**'
+
+# Nothing native runs inside the Electron process: the server is a child of the bundled Node, so
+# better-sqlite3 and argon2 load against Node's ABI and never need an Electron rebuild.
+npmRebuild: false
+nodeGypRebuild: false
+
+# `extraResources` does NOT merge between the top level and a platform block -- a platform array
+# replaces it. So each platform repeats its own entry, using ${arch} to pick the matching runtime.
+mac:
+  category: public.app-category.developer-tools
+  darkModeSupport: true
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
+  # The staged Node is a second executable inside the bundle and must be signed explicitly.
+  binaries:
+    - Contents/Resources/node/bin/node
+  extendInfo:
+    # The child processes download browsers and npm packages; quarantining them would make every
+    # spawned binary trip Gatekeeper.
+    LSFileQuarantineEnabled: false
+  extraResources:
+    - from: resources/node/darwin-${arch}
+      to: node
+      filter: ['**/*']
+  target:
+    - target: dmg
+      arch: [arm64, x64]
+    # zip is what electron-updater consumes on macOS; dmg alone cannot auto-update.
+    - target: zip
+      arch: [arm64, x64]
+  artifactName: ${productName}-${version}-mac-${arch}.${ext}
+
+# One naming scheme for every artifact: <product>-<version>-<platform>-<arch>.<ext>.
+# electron-builder's defaults omit the platform on macOS ("SDODS-0.1.0-arm64.dmg" could be a Linux
+# build) and the arch on the mac zip. In a release listing that mixes six files, every one has to
+# say what it is without the surrounding context.
+artifactName: ${productName}-${version}-${platform}-${arch}.${ext}
+
+dmg:
+  artifactName: ${productName}-${version}-mac-${arch}.${ext}
+  contents:
+    - x: 130
+      y: 220
+      type: file
+    - x: 410
+      y: 220
+      type: link
+      path: /Applications
+
+win:
+  extraResources:
+    - from: resources/node/win32-${arch}
+      to: node
+      filter: ['**/*']
+  target:
+    - target: nsis
+      arch: [x64, arm64]
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowElevation: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: SDODS
+  # The workspace and its SQLite database live outside the install dir, but be explicit: an
+  # uninstall must never take the user's tests with it.
+  deleteAppDataOnUninstall: false
+  artifactName: ${productName}-Setup-${version}-win-${arch}.${ext}
+
+linux:
+  category: Development
+  maintainer: SDODS <admin@sdods.com>
+  synopsis: BDD test automation for UI, API and hybrid flows
+  description: >-
+    SDODS runs BDD test suites across UI, API and hybrid layers, with self-healing locators,
+    data-driven scenarios and a local results dashboard. The desktop app bundles a Node runtime
+    and manages the SDODS workspace, server and Playwright browsers for you.
+  desktop:
+    entry:
+      StartupWMClass: SDODS
+  extraResources:
+    - from: resources/node/linux-${arch}
+      to: node
+      filter: ['**/*']
+  artifactName: ${productName}-${version}-linux-${arch}.${ext}
+  target:
+    - target: AppImage
+      arch: [x64, arm64]
+    - target: deb
+      arch: [x64, arm64]
+
+deb:
+  depends:
+    - libgtk-3-0
+    - libnotify4
+    - libnss3
+    - libxss1
+    - libxtst6
+    - xdg-utils
+    - libatspi2.0-0
+    # Electron safeStorage encrypts the stored credentials through libsecret.
+    - libsecret-1-0
+
+# Emitting latest*.yml costs nothing and is what electron-updater reads later. The updater itself
+# stays disabled until the app is signed: Squirrel.Mac refuses to install an unsigned update.
+publish:
+  provider: github
+  owner: siri1410
+  repo: SDODS
+  releaseType: release

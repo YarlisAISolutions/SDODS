@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { MobileNav } from '@/components/mobile-nav';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { NAV_LINKS } from '@/lib/nav';
+import { DESKTOP_RELEASE } from '@/lib/desktop-release';
 
 export function SiteHeader() {
   const pathname = usePathname();
@@ -41,10 +42,21 @@ export function SiteHeader() {
         </ul>
         <div className="flex items-center gap-2 sm:gap-3">
           {/* The primary call to action stays at every width; `.btn` sets its own display, so
-              it is never given a responsive display utility. */}
-          <Link href="/install/" className="btn btn-primary px-3 text-sm sm:px-4">
-            Install
-          </Link>
+              it is never given a responsive display utility.
+
+              It points at the download page only once installers actually exist. Before the first
+              desktop release, sending people to a page that says "not released yet" is worse than
+              sending them to the installer that works — so this flips itself when the release
+              manifest is filled in. */}
+          {DESKTOP_RELEASE.tag ? (
+            <Link href="/download/" className="btn btn-primary px-3 text-sm sm:px-4">
+              Download
+            </Link>
+          ) : (
+            <Link href="/install/" className="btn btn-primary px-3 text-sm sm:px-4">
+              Install
+            </Link>
+          )}
           <ThemeToggle />
           <MobileNav />
         </div>

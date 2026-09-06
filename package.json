@@ -15,7 +15,7 @@
   ],
   "scripts": {
     "sdods": "node --import tsx ./packages/cli/src/bin.ts",
-    "typecheck": "tsc -b && bun run --filter @sdods/web typecheck",
+    "typecheck": "tsc -b && bun run --filter @sdods/web typecheck && bun run --filter @sdods/desktop typecheck",
     "lint": "eslint . && prettier --check .",
     "format": "prettier --write .",
     "test": "vitest run",
@@ -41,7 +41,10 @@
     "publish:assets": "node --import tsx ./scripts/build-publish-assets.ts",
     "publish:stage": "node --import tsx ./scripts/stage-npm-packages.ts",
     "installer:sync": "node --import tsx ./scripts/sync-installer.ts",
-    "roadmap:sync": "node --import tsx ./scripts/sync-roadmap.ts"
+    "roadmap:sync": "node --import tsx ./scripts/sync-roadmap.ts",
+    "desktop:sync-release": "node --import tsx ./scripts/sync-desktop-release.ts",
+    "desktop:dev": "bun run --filter @sdods/desktop dev",
+    "desktop:dist": "bun run --filter @sdods/desktop build && bun run --cwd apps/desktop dist:mac"
   },
   "devDependencies": {
     "@changesets/cli": "^3.0.1",
@@ -68,6 +71,11 @@
     "argon2",
     "@playwright/test",
     "playwright",
-    "esbuild"
+    "esbuild",
+    "electron",
+    "electron-builder",
+    "app-builder-bin",
+    "7zip-bin",
+    "dmg-license"
   ]
 }

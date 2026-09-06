@@ -23,3 +23,8 @@ apps/www/.next
 apps/www/screenshots
 .mcp.json
 proposals/
+
+# electron-vite build output and the staged Node runtime
+apps/desktop/out
+apps/desktop/release
+apps/desktop/resources/node

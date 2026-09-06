@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 128 128" role="img" aria-label="SDODS">
+  <!-- The SDODS mark from apps/www/public/img/sdods-logo.svg, scaled to app-icon size.
+       ●—( ◯ )—● reads identically left-to-right and right-to-left, like the name. -->
+  <rect x="0" y="0" width="128" height="128" rx="30" fill="#0B1020"/>
+  <g transform="translate(64,64)" fill="none">
+    <line x1="-40" y1="0" x2="40" y2="0" stroke="#2F5BFF" stroke-width="6" stroke-linecap="round" opacity="0.5"/>
+    <circle cx="-40" cy="0" r="5.5" fill="#2F5BFF"/>
+    <circle cx="40" cy="0" r="5.5" fill="#2F5BFF"/>
+    <path d="M-20 -13 A 13 13 0 0 0 -20 13" stroke="#FFFFFF" stroke-width="7" stroke-linecap="round"/>
+    <path d="M20 -13 A 13 13 0 0 1 20 13" stroke="#FFFFFF" stroke-width="7" stroke-linecap="round"/>
+    <circle cx="0" cy="0" r="12" stroke="#FFFFFF" stroke-width="7"/>
+    <circle cx="0" cy="0" r="4" fill="#FFB020"/>
+  </g>
+</svg>

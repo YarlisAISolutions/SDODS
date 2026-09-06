@@ -1,0 +1,185 @@
+name: desktop
+
+# Builds the SDODS desktop app for macOS, Windows and Linux and attaches the installers to a
+# GitHub Release.
+#
+# Tag-gated on purpose: six Electron builds, each bundling a ~120 MB Node runtime, is not a cost to
+# pay on every pull request. Use workflow_dispatch to produce artifacts without cutting a release.
+#
+#   git tag desktop-v0.1.0 && git push origin desktop-v0.1.0
+
+on:
+  push:
+    tags: ['desktop-v*']
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: 'Attach the artifacts to a GitHub Release'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: desktop-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  BUN_VERSION: '1.4.0'
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Each platform builds on its own runner. Cross-building is not an option: the Node
+          # tarball's bin/npm and bin/npx are symlinks with shebangs and the node binary needs mode
+          # 0755, both of which a foreign host loses.
+          - { name: macos · arm64 + x64, os: macos-14, flags: --mac }
+          - { name: windows · x64 + arm64, os: windows-latest, flags: --win }
+          - { name: linux · x64 + arm64, os: ubuntu-latest, flags: --linux }
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - run: bun install --frozen-lockfile
+
+      # The staged runtimes are large and version-pinned, so a cache hit skips ~250 MB of
+      # downloads per runner. Keyed on the pinned version in fetch-node-runtime.ts.
+      - name: Cache the bundled Node runtimes
+        uses: actions/cache@v4
+        with:
+          path: apps/desktop/resources/node
+          key: node-runtime-${{ runner.os }}-${{ hashFiles('apps/desktop/scripts/fetch-node-runtime.ts') }}
+
+      - run: bun run --filter @sdods/desktop typecheck
+
+      # Signing is wired behind these; every one is optional, so an unsigned build still succeeds.
+      # See .claude/skills/code-signing/SKILL.md for how to obtain them, and for the
+      # geographic restriction that decides which Windows route is even available to you.
+      - name: Build installers
+        working-directory: apps/desktop
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # macOS: Developer ID Application certificate + notarization
+          CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          # Windows, route A: Azure Artifact Signing (formerly Trusted Signing). No hardware
+          # token, so it is the only option that works on a hosted runner without a self-hosted
+          # box. Needs azureSignOptions in electron-builder.yml as well as these.
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          # Windows, route B: a traditional OV certificate.
+          WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
+          WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
+        shell: bash
+        run: |
+          bun run build
+          # --publish never: releasing is a separate, explicit step below.
+          npx electron-builder ${{ matrix.flags }} --publish never
+
+      # Prove the artifact is not hollow. A missing extraResources source is only a warning in
+      # electron-builder, and it once produced a .dmg with no Node runtime and a zero exit code.
+      - name: Verify each app bundles its Node runtime
+        working-directory: apps/desktop
+        shell: bash
+        run: |
+          set -euo pipefail
+          found=0
+          for dir in release/*/; do
+            case "$dir" in
+              *mac*) exe="$dir"SDODS.app/Contents/Resources/node/bin/node ;;
+              *win*) exe="$dir"resources/node/node.exe ;;
+              *linux*) exe="$dir"resources/node/bin/node ;;
+              *) continue ;;
+            esac
+            if [ -f "$exe" ]; then
+              echo "ok   $dir"
+              found=$((found + 1))
+            else
+              echo "FAIL $dir has no bundled Node at $exe"
+              exit 1
+            fi
+          done
+          [ "$found" -gt 0 ] || { echo 'no packaged app directories found'; exit 1; }
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sdods-desktop-${{ runner.os }}
+          path: |
+            apps/desktop/release/*.dmg
+            apps/desktop/release/*.zip
+            apps/desktop/release/*.exe
+            apps/desktop/release/*.AppImage
+            apps/desktop/release/*.deb
+            apps/desktop/release/latest*.yml
+          if-no-files-found: error
+          retention-days: 14
+
+  release:
+    name: publish release
+    needs: [build]
+    if: startsWith(github.ref, 'refs/tags/desktop-v') || inputs.publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: sdods-desktop-*
+          path: artifacts
+          merge-multiple: true
+
+      # Unsigned builds make this more than a formality: a checksum is the only way a user can
+      # confirm the installer they downloaded is the one that was built.
+      - name: Generate SHA256SUMS.txt
+        working-directory: artifacts
+        run: |
+          set -euo pipefail
+          rm -f SHA256SUMS.txt
+          # Only user-facing installers; blockmaps and latest*.yml are updater plumbing.
+          sha256sum *.dmg *.zip *.exe *.AppImage *.deb 2>/dev/null | sort -k2 > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      # Published to a PUBLIC releases-only repository, because siri1410/SDODS is private and
+      # release assets on a private repo are private too -- a download link would 404 for every
+      # visitor. Source stays private; only the built installers are public.
+      #
+      # Requires a DESKTOP_RELEASE_TOKEN secret: a fine-grained PAT with Contents: read+write on
+      # the releases repo only. GITHUB_TOKEN cannot write to another repository.
+      - name: Attach the installers to the public release
+        uses: softprops/action-gh-release@v2
+        with:
+          repository: ${{ vars.DESKTOP_RELEASE_REPO || 'siri1410/sdods-releases' }}
+          token: ${{ secrets.DESKTOP_RELEASE_TOKEN }}
+          tag_name: ${{ github.ref_name }}
+          draft: true
+          # A draft first: the download page on sdods.com points at these filenames, so a person
+          # checks the release before anyone can download a broken installer.
+          files: artifacts/*
+          body: |
+            SDODS desktop — installs, launches and upgrades SDODS in one click.
+
+            Verify your download against `SHA256SUMS.txt`:
+
+            ```
+            sha256sum -c SHA256SUMS.txt --ignore-missing
+            ```
+
+            **These builds are unsigned.** Until certificates are in place:
+            - macOS: right-click the app → Open (Gatekeeper blocks a plain double-click)
+            - Windows: More info → Run anyway (SmartScreen)
+            - Linux: AppImage and .deb install normally

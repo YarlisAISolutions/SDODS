@@ -1,5 +1,4 @@
 import type { FastifyInstance } from 'fastify';
-import argon2 from 'argon2';
 import {
   audit,
   countUsers,
@@ -13,9 +12,11 @@ import { LoginBody, SetupBody } from '../schemas/index.js';
 import { badRequest, forbidden, parse, unauthorized } from '../errors.js';
 import { SESSION_COOKIE } from '../plugins/auth.js';
 
-export async function hashPassword(password: string): Promise<string> {
-  return argon2.hash(password, { type: argon2.argon2id });
-}
+import { hashPassword, verifyPassword } from '../services/password.js';
+
+// Re-exported so existing consumers keep importing it from here (index.ts, routes/hierarchy.ts,
+// and the CLI's `users create` via @sdods/server).
+export { hashPassword, verifyPassword };
 
 export async function authRoutes(app: FastifyInstance) {
   app.post(
@@ -25,10 +26,7 @@ export async function authRoutes(app: FastifyInstance) {
     async (req, reply) => {
       const body = parse(LoginBody, req.body);
       const user = await getUserByUsername(app.adb.db, body.username);
-      const ok =
-        user &&
-        user.active &&
-        (await argon2.verify(user.passwordHash, body.password).catch(() => false));
+      const ok = user && user.active && (await verifyPassword(user.passwordHash, body.password));
       if (!ok || !user) throw unauthorized('Invalid username or password.');
       const session = await createSession(app.adb.db, {
         userId: user.id,
