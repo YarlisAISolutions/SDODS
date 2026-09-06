@@ -139,12 +139,12 @@ export function Bootstrap() {
         </section>
       )}
 
+      {/* Uncontrolled on purpose. Driving `open` from state rendered it expanded on first paint,
+          burying the stage list under npm output — the exact thing this screen exists to stop.
+          Native <details> defaults to closed; onToggle only says whether to keep the log pinned
+          to its tail. */}
       {lines.length > 0 && (
-        <details
-          className="log-details"
-          open={showLog}
-          onToggle={(e) => setShowLog(e.currentTarget.open)}
-        >
+        <details className="log-details" onToggle={(e) => setShowLog(e.currentTarget.open)}>
           <summary>Details ({lines.length} lines)</summary>
           <pre className="log" ref={logRef}>
             {lines.join('\n')}
