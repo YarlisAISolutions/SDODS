@@ -1,0 +1,178 @@
+/* Dark by default: this window is only ever on screen while the app boots, and matching the
+   BrowserWindow backgroundColor avoids a white flash before first paint. */
+:root {
+  --bg: #0b0d10;
+  --panel: #14181d;
+  --fg: #e6e9ee;
+  --muted: #8b95a3;
+  --line: #232a33;
+  --accent: #4c9aff;
+  --danger: #ff6b6b;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font:
+    14px/1.5 ui-sans-serif,
+    -apple-system,
+    'Segoe UI',
+    system-ui,
+    sans-serif;
+}
+
+.shell {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 56px 32px 32px;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  gap: 24px;
+}
+
+h1 {
+  margin: 0;
+  font-size: 28px;
+  letter-spacing: -0.02em;
+}
+.tagline {
+  margin: 6px 0 0;
+  color: var(--muted);
+}
+
+.steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+.steps li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--muted);
+}
+.steps li.done {
+  color: var(--fg);
+}
+.steps li.active {
+  color: var(--fg);
+  font-weight: 600;
+}
+
+.dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--line);
+  flex: none;
+}
+.steps li.done .dot {
+  background: var(--accent);
+}
+.steps li.active .dot {
+  background: var(--accent);
+  box-shadow: 0 0 0 0 rgba(76, 154, 255, 0.6);
+  animation: pulse 1.6s ease-out infinite;
+}
+
+/* Motion here is load-bearing: it is the signal that a multi-minute install is still alive. */
+@keyframes pulse {
+  to {
+    box-shadow: 0 0 0 10px rgba(76, 154, 255, 0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .steps li.active .dot {
+    animation: none;
+  }
+}
+
+.status {
+  margin: 0;
+  color: var(--muted);
+}
+
+.log {
+  margin: 0;
+  flex: 1;
+  min-height: 120px;
+  max-height: 320px;
+  overflow: auto;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  font:
+    12px/1.45 ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    monospace;
+  color: var(--muted);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.error {
+  display: grid;
+  gap: 12px;
+}
+.what {
+  margin: 0;
+  color: var(--danger);
+  font-weight: 600;
+}
+.detail {
+  margin: 0;
+  max-height: 240px;
+  overflow: auto;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  font:
+    12px/1.45 ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    monospace;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+button {
+  justify-self: start;
+  background: var(--accent);
+  color: #06101f;
+  border: 0;
+  border-radius: 6px;
+  padding: 9px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+button:hover {
+  filter: brightness(1.08);
+}
+
+footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  color: var(--muted);
+  font-size: 12px;
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+footer span:first-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

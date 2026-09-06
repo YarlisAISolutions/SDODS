@@ -15,7 +15,7 @@
   ],
   "scripts": {
     "sdods": "node --import tsx ./packages/cli/src/bin.ts",
-    "typecheck": "tsc -b && bun run --filter @sdods/web typecheck",
+    "typecheck": "tsc -b && bun run --filter @sdods/web typecheck && bun run --filter @sdods/desktop typecheck",
     "lint": "eslint . && prettier --check .",
     "format": "prettier --write .",
     "test": "vitest run",
@@ -68,6 +68,11 @@
     "argon2",
     "@playwright/test",
     "playwright",
-    "esbuild"
+    "esbuild",
+    "electron",
+    "electron-builder",
+    "app-builder-bin",
+    "7zip-bin",
+    "dmg-license"
   ]
 }
