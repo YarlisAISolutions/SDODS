@@ -6,7 +6,17 @@ import { api } from '../api/client';
 import { useInvalidate, useMcpInfo, useTokens } from '../api/queries';
 import type { ApiToken } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
-import { Badge, Button, Card, Field, Input, PageHeader, Select, Spinner } from '../components/ui';
+import {
+  Badge,
+  Button,
+  Card,
+  Field,
+  Input,
+  PageHeader,
+  Select,
+  Skeleton,
+  Spinner,
+} from '../components/ui';
 import { DataTable } from '../components/ui/DataTable';
 import { Dialog } from '../components/ui/Dialog';
 import { Tabs } from '../components/ui/Tabs';
@@ -342,6 +352,7 @@ function McpTab() {
           driving stays with the bundled Playwright MCP (`npx playwright mcp`), installed alongside.
         </div>
         <div className="mt-2 flex flex-wrap gap-1">
+          {info.isLoading && <Skeleton className="h-5 w-64" />}
           {(info.data?.tools ?? []).map((t) => (
             <Badge key={t.name} className="mono" title={`${t.description} (${t.scope})`}>
               {t.name}

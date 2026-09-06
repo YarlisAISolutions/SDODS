@@ -137,7 +137,7 @@ export default function HomePage() {
           every run reproducible from one command, every regression explained by the screenshots and
           requests that produced it.
         </p>
-        <div className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {WHY.map(([title, body]) => (
             <article key={title} className="card p-5">
               <h3 className="font-semibold">{title}</h3>
@@ -219,7 +219,7 @@ export default function HomePage() {
         <h2 id="quickstart" className="text-2xl font-bold">
           Quickstart
         </h2>
-        <pre className="mt-6">
+        <pre tabIndex={0} role="region" aria-label="Quickstart commands" className="mt-6">
           <code>{`curl -fsSL https://sdods.com/install.sh | sh   # or on Windows: irm .../install.ps1 | iex
 
 cd ~/.sdods/app

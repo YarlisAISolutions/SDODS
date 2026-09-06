@@ -136,6 +136,16 @@ const SHOTS: Shot[] = [
     wrap: true,
   },
   {
+    name: 'analyze-modules',
+    group: 'onboard',
+    display: 'sdods analyze ../cypress-realworld-app | sed -n "/^--- modules/,/^--- sdods/p"',
+    argv: sdods('analyze ../cypress-realworld-app'),
+    needs: workshopApp,
+    from: /^--- modules/,
+    until: /^--- sdods\.project\.yaml/,
+    columns: 112,
+  },
+  {
     name: 'analyze-tests',
     group: 'onboard',
     display: 'sdods analyze ../cypress-realworld-app | sed -n "/^Existing tests/,/^$/p"',

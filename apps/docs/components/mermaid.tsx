@@ -39,6 +39,11 @@ export function Mermaid({ chart }: { chart: string }) {
 
   return (
     <div
+      // A wide diagram scrolls sideways, and a scroll container is only usable from the
+      // keyboard if it can be focused.
+      tabIndex={0}
+      role="region"
+      aria-label="Diagram"
       className="sdods-mermaid my-6 overflow-x-auto"
       ref={containerRef}
       dangerouslySetInnerHTML={{ __html: svg }}

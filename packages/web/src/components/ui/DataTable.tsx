@@ -8,6 +8,7 @@ import {
 } from '@tanstack/react-table';
 import { useState } from 'react';
 import { cn } from '../../lib/utils';
+import { Skeleton } from './index';
 
 export function DataTable<T>({
   columns,
@@ -15,12 +16,17 @@ export function DataTable<T>({
   onRowClick,
   emptyText = 'Nothing here yet.',
   dense,
+  isLoading,
+  skeletonRows = 3,
 }: {
   columns: ColumnDef<T, any>[];
   data: T[];
   onRowClick?: (row: T) => void;
   emptyText?: string;
   dense?: boolean;
+  /** While true the table shows placeholder rows instead of `emptyText`, which would read as "no results". */
+  isLoading?: boolean;
+  skeletonRows?: number;
 }) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const table = useReactTable({
@@ -54,7 +60,17 @@ export function DataTable<T>({
           ))}
         </thead>
         <tbody>
-          {table.getRowModel().rows.length === 0 && (
+          {isLoading &&
+            Array.from({ length: skeletonRows }, (_, i) => (
+              <tr key={`skeleton-${i}`} className="border-t border-line" aria-hidden>
+                {columns.map((_c, ci) => (
+                  <td key={ci} className={cn('px-3 align-middle', dense ? 'py-1.5' : 'py-2')}>
+                    <Skeleton className="h-3.5 w-full" />
+                  </td>
+                ))}
+              </tr>
+            ))}
+          {!isLoading && table.getRowModel().rows.length === 0 && (
             <tr>
               <td colSpan={columns.length} className="px-3 py-6 text-center text-xs muted">
                 {emptyText}

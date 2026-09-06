@@ -72,8 +72,10 @@ export function RecorderPage() {
             <Field label="Environment">
               <Select
                 value={form.env || project.data?.envs.default || ''}
+                disabled={envs.isLoading}
                 onChange={(e) => setForm({ ...form, env: e.target.value })}
               >
+                {envs.isLoading && <option>Loading environments…</option>}
                 {(envs.data ?? []).map((e) => (
                   <option key={e.name}>{e.name}</option>
                 ))}
@@ -92,9 +94,14 @@ export function RecorderPage() {
             <Field label="Log in as pool role" hint="storage state is captured once and reused">
               <Select
                 value={form.user}
+                disabled={pool.isLoading}
                 onChange={(e) => setForm({ ...form, user: e.target.value })}
               >
-                <option value="">— anonymous —</option>
+                {pool.isLoading ? (
+                  <option>Loading roles…</option>
+                ) : (
+                  <option value="">— anonymous —</option>
+                )}
                 {roles.map((r) => (
                   <option key={r}>{r}</option>
                 ))}

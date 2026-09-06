@@ -13,6 +13,7 @@ import {
   PageHeader,
   RoleBadge,
   Select,
+  SkeletonList,
   Textarea,
 } from '../components/ui';
 import { Dialog } from '../components/ui/Dialog';
@@ -93,6 +94,7 @@ export function WorkspacesPage() {
           Organization roles: owner and admin manage every workspace; member gets viewer access to
           all workspaces unless a workspace grants more.
         </div>
+        {orgMembers.isLoading && <SkeletonList rows={3} className="px-0" />}
         <ul className="divide-y divide-[var(--border)] text-sm">
           {(orgMembers.data ?? []).map((m) => (
             <li key={m.userId} className="flex items-center justify-between py-1.5">
@@ -176,6 +178,7 @@ function MembersEditor({ workspace, canManage }: { workspace: string; canManage:
     <div className="mt-3 border-t border-line pt-2">
       <div className="mb-1 text-[11px] font-medium muted">Members</div>
       <ul className="space-y-1 text-xs">
+        {members.isLoading && <SkeletonList rows={2} className="p-0" />}
         {(members.data ?? []).map((m) => (
           <li key={m.userId} className="flex items-center justify-between">
             <span>{m.username}</span>

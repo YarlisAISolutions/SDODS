@@ -8,6 +8,8 @@ export default tseslint.config(
   {
     ignores: [
       '**/test/fixtures/apps/**',
+      // Python virtualenvs (e.g. media/film/tts/.venv) ship vendored JS that is not ours to lint.
+      '**/.venv/**',
       '**/dist/**',
       '**/node_modules/**',
       '**/.features-gen/**',

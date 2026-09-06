@@ -84,7 +84,7 @@ export default function InstallPage() {
         <h2 id="what" className="text-2xl font-bold">
           What the installer does
         </h2>
-        <ol className="mt-6 grid gap-4 md:grid-cols-2">
+        <ol className="mt-6 grid gap-4 sm:grid-cols-2">
           {STEPS.map(([title, body], i) => (
             <li key={title} className="card p-5">
               <h3 className="font-semibold">
@@ -103,10 +103,12 @@ export default function InstallPage() {
         </h2>
         <dl className="mt-6 grid gap-4">
           {AFTER.map(([title, cmd]) => (
-            <div key={title} className="card p-5">
+            // min-w-0: a grid item will not shrink below its content either, so without it the
+            // command inside runs off the page instead of scrolling in its own box.
+            <div key={title} className="card min-w-0 p-5">
               <dt className="font-semibold">{title}</dt>
               <dd className="mt-2">
-                <pre className="overflow-x-auto">
+                <pre tabIndex={0} role="region" aria-label={title} className="overflow-x-auto">
                   <code>{cmd}</code>
                 </pre>
               </dd>
@@ -119,7 +121,12 @@ export default function InstallPage() {
         <h2 id="options" className="text-2xl font-bold">
           Common options
         </h2>
-        <pre className="mt-6 overflow-x-auto">
+        <pre
+          tabIndex={0}
+          role="region"
+          aria-label="Common installer options"
+          className="mt-6 overflow-x-auto"
+        >
           <code>{`# scaffold a workspace and wire up Claude Code in one go
 curl -fsSL https://sdods.com/install.sh | sh -s -- --workspace ~/my-tests --mcp claude
 

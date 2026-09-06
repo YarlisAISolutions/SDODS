@@ -7,16 +7,17 @@ export function ThemeToggle() {
   const { resolvedTheme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
-  if (!mounted) return <span className="inline-block h-9 w-9" aria-hidden="true" />;
+  // The placeholder is the button's size so the bar does not jump when the theme resolves.
+  if (!mounted) return <span className="inline-block size-11" aria-hidden="true" />;
   const dark = resolvedTheme === 'dark';
   return (
     <button
       type="button"
       aria-label={dark ? 'Switch to light theme' : 'Switch to dark theme'}
       onClick={() => setTheme(dark ? 'light' : 'dark')}
-      className="card inline-flex h-9 w-9 items-center justify-center text-base"
+      className="card inline-flex size-11 items-center justify-center text-base"
     >
-      {dark ? '☀' : '☾'}
+      <span aria-hidden="true">{dark ? '☀' : '☾'}</span>
     </button>
   );
 }

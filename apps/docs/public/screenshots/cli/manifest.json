@@ -93,5 +93,10 @@
     "command": "sdods run -p rwa-bank -e local -t @regression",
     "width": 783,
     "height": 342
+  },
+  "analyze-modules": {
+    "command": "sdods analyze ../cypress-realworld-app | sed -n \"/^--- modules/,/^--- sdods/p\"",
+    "width": 877,
+    "height": 342
   }
 }
