@@ -200,6 +200,7 @@ export function SchedulesPage() {
           onClose={() => setEditing(null)}
           onSave={() => save.mutate(editing)}
           projects={(projects.data ?? []).map((p) => p.slug)}
+          projectsLoading={projects.isLoading}
         />
       )}
       {historyFor && <HistoryDialog schedule={historyFor} onClose={() => setHistoryFor(null)} />}
@@ -213,12 +214,14 @@ function ScheduleDialog({
   onClose,
   onSave,
   projects,
+  projectsLoading,
 }: {
   value: Partial<Schedule>;
   onChange: (v: Partial<Schedule>) => void;
   onClose: () => void;
   onSave: () => void;
   projects: string[];
+  projectsLoading?: boolean;
 }) {
   const next = useMemo(
     () => nextFireTimes(value.cron ?? '', value.timezone ?? 'UTC', 5),
@@ -249,8 +252,10 @@ function ScheduleDialog({
         <Field label="Project">
           <Select
             value={value.projectSlug ?? ''}
+            disabled={projectsLoading}
             onChange={(e) => onChange({ ...value, projectSlug: e.target.value })}
           >
+            {projectsLoading && <option>Loading projects…</option>}
             {projects.map((p) => (
               <option key={p}>{p}</option>
             ))}

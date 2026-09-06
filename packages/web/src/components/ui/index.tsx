@@ -220,6 +220,31 @@ export function Spinner({ label = 'Loading…' }: { label?: string }) {
   );
 }
 
+/** Placeholder block for content whose shape is known before its data arrives. */
+export function Skeleton({ className }: { className?: string }) {
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        'block animate-pulse rounded-md bg-[var(--panel-2)]',
+        className ?? 'h-4 w-full',
+      )}
+    />
+  );
+}
+
+/** A stack of skeleton lines, for lists and cards that render rows. */
+export function SkeletonList({ rows = 3, className }: { rows?: number; className?: string }) {
+  return (
+    <div className={cn('flex flex-col gap-2 p-4', className)} role="status" aria-busy="true">
+      <span className="sr-only">Loading…</span>
+      {Array.from({ length: rows }, (_, i) => (
+        <Skeleton key={i} className={cn('h-4', i === rows - 1 ? 'w-2/3' : 'w-full')} />
+      ))}
+    </div>
+  );
+}
+
 export function ErrorBox({ error, retry }: { error: unknown; retry?: () => void }) {
   const e = error as { message?: string; hint?: string; code?: string };
   return (

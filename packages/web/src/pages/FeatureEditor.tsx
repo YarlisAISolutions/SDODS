@@ -263,7 +263,11 @@ export function FeatureEditorPage() {
               projects/{slug}/features/{path}
             </span>
             {dirty && <Badge tone="amber">unsaved</Badge>}
-            {steps.data && <Badge>{steps.data.length} steps in catalog</Badge>}
+            {steps.isLoading ? (
+              <Badge>loading steps…</Badge>
+            ) : (
+              steps.data && <Badge>{steps.data.length} steps in catalog</Badge>
+            )}
           </span>
         }
         actions={
@@ -348,7 +352,14 @@ export function FeatureEditorPage() {
             </div>
           ))}
         </aside>
-        <div className="panel min-h-0 overflow-hidden" ref={host} />
+        <div className="panel relative min-h-0 overflow-hidden">
+          <div className="h-full min-h-0 overflow-hidden" ref={host} />
+          {file.isLoading && (
+            <div className="absolute inset-0 flex items-start justify-center bg-[var(--panel)]">
+              <Spinner label="Loading feature…" />
+            </div>
+          )}
+        </div>
         <aside className="panel min-h-0 space-y-3 overflow-auto p-3 text-xs scrollbar-thin">
           <section>
             <div className="mb-1 font-medium">
