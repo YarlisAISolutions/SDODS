@@ -6,10 +6,24 @@ export class ApiContext {
   readonly headers = new Map<string, string>();
   readonly query = new Map<string, string>();
   readonly history: ApiSnapshot[] = [];
+  /**
+   * Scenario-level auth override.
+   *
+   * Three states, and the difference between the last two is load-bearing:
+   *   a value   use this credential
+   *   undefined UNSET — fall back to the environment's `api.auth`
+   *   null      explicitly NONE — send the request unauthenticated
+   *
+   * Before this distinction existed, `I use no authentication` assigned
+   * `undefined` and therefore fell straight back to the environment credential,
+   * silently authenticating the very request the scenario was asserting is
+   * refused. Any suite whose env declared `api.auth` had a no-op step.
+   */
   auth:
     | { type: 'bearer'; token: string }
     | { type: 'basic'; username: string; password: string }
     | { type: 'header'; name: string; value: string }
+    | null
     | undefined;
   /** step index → number of calls made during that step (for attachment numbering) */
   readonly callsByStep = new Map<number, number>();

@@ -1,8 +1,15 @@
+import { existsSync, readFileSync } from 'node:fs';
 import './params.js';
 import { Given, When } from '../fixtures/test.js';
 import type { HttpMethod } from '../api/client.js';
+import { tokenFileFor } from '../auth/capture.js';
+import type { PoolUserLike } from '../auth/index.js';
+import type { ResolvedConfig } from '../config/resolve.js';
 import { render } from '../api/template.js';
 import { SdodsError } from '../errors.js';
+import { Logger } from '../logger.js';
+
+const log = new Logger('data');
 
 /* ── datasets ─────────────────────────────────────────────────────────── */
 
@@ -69,10 +76,33 @@ Given(
   },
 );
 
-/** API-layer variant: leases the account and exposes its credentials without touching a browser. */
+/**
+ * API-layer variant: leases the account, exposes its credentials as variables,
+ * AND authenticates the API client as that user.
+ *
+ * The authentication half used to be missing, which left the whole role-based
+ * API story unwired. Three seams were dead at once:
+ *
+ *   1. `storageState` is forced to undefined when `sdods.layer === 'api'`
+ *      (fixtures/test.ts) — correct in itself, an API test should not need a
+ *      browser, but it means the `@user:<role>` tag applies no credential here.
+ *   2. This step set variables and performed no authentication.
+ *   3. The strategy's `token()` result was written to
+ *      `<role>-<n>.token.json` by `sdods auth capture` and never read back.
+ *
+ * The net effect was that every API request in a role-tagged scenario went out
+ * anonymous. Against an app that answers 401 the scenario failed loudly, which
+ * is survivable — but against one that answers 200 to anonymous reads, an
+ * authorization scenario passed while proving nothing at all.
+ *
+ * Resolution order: the cached token file (so `sdods auth capture` is
+ * meaningful and one mint is reused across a sharded run), then a live
+ * `token()` call. A strategy with no `token()` leaves auth unset and says so,
+ * rather than silently continuing anonymous.
+ */
 Given(
   'I use a leased user with role {string} for API calls',
-  async ({ userPool, apiContext, $testInfo }, role: string) => {
+  async ({ userPool, apiContext, auth, config, $testInfo }, role: string) => {
     const user = await userPool.lease(role, $testInfo.parallelIndex);
     apiContext.vars.setAll({
       username: user.username,
@@ -81,8 +111,30 @@ Given(
       role: user.role,
       ...user.extra,
     });
+
+    const token = readCachedToken(config, user) ?? (await auth?.token?.({ config, user }));
+    if (token) apiContext.auth = { type: 'bearer', token };
+    else if (auth?.strategy && auth.strategy !== 'none') {
+      log.debug(
+        `auth strategy "${auth.strategy}" provides no token() — API calls for ` +
+          `${user.username} (${role}) use the environment credential.`,
+      );
+    }
   },
 );
+
+/** The token `sdods auth capture` wrote for this user, when it is still there. */
+function readCachedToken(config: ResolvedConfig, user: PoolUserLike): string | undefined {
+  const file = tokenFileFor(config, user);
+  if (!existsSync(file)) return undefined;
+  try {
+    const parsed = JSON.parse(readFileSync(file, 'utf8')) as { token?: string };
+    return parsed.token;
+  } catch {
+    // A corrupt cache must not fail the scenario — fall through to a live mint.
+    return undefined;
+  }
+}
 
 /* ── cleanup ──────────────────────────────────────────────────────────── */
 
