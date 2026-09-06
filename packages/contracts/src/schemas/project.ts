@@ -31,6 +31,27 @@ export const UserPoolSchema = z.object({
     .int()
     .positive()
     .default(10 * 60_000),
+  /**
+   * How a role's accounts are handed to concurrent workers.
+   *
+   * `exclusive` (default) — one worker holds an account at a time. Correct when
+   * scenarios mutate user-scoped state, because two workers sharing an identity
+   * would see each other's writes.
+   *
+   * `shared` — workers may use the same account concurrently. Correct for a
+   * read-only suite, and the difference is not marginal: with one account per
+   * role, `exclusive` serialises every scenario of that role behind a single
+   * lease, so a suite with four workers and a dozen `@user:viewer` scenarios
+   * spends its time waiting and then fails them on the lease timeout. That is
+   * not a capacity problem the suite can fix by retrying — it is the pool model
+   * being wrong for the work.
+   *
+   * Choose per role where they differ: a mutating scenario should carry an
+   * explicit exclusive lease even in a shared pool.
+   */
+  mode: z.enum(['exclusive', 'shared']).default('exclusive'),
+  /** How long to wait for a free account before failing. Was hard-coded at 30s. */
+  waitMs: z.number().int().positive().default(30_000),
 });
 
 export const AuthStrategySchema = z.enum([
