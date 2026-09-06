@@ -1,5 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { createRequire } from 'node:module';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type {
   FullConfig,
@@ -118,10 +117,40 @@ export default class DashboardReporter implements Reporter {
         if (r.outcome === 'unexpected') g.failed++;
       }
     }
+    // Group failures by error SIGNATURE. Twelve scenarios failing on one broken
+    // selector is ONE problem, and a list of twelve reads like twelve. The
+    // signature is the first line of the error with volatile parts stripped, so
+    // "expected 204, got 403" and "expected 201, got 403" stay distinct while
+    // two runs of the same defect collapse.
+    const failedRows = rows.filter((r) => r.outcome === 'unexpected');
+    const clusters: Record<string, { signature: string; count: number; titles: string[] }> = {};
+    for (const r of failedRows) {
+      const sig = errorSignature(r.error);
+      const c = (clusters[sig] ??= { signature: sig, count: 0, titles: [] });
+      c.count++;
+      if (c.titles.length < 25) c.titles.push(r.title);
+    }
+
+    // Outcome per role tag. A suite where @user:viewer fails and @user:admin
+    // passes has a permissions regression, and that is invisible in a total.
+    const byRole: Record<string, { total: number; passed: number; failed: number }> = {};
+    for (const r of rows) {
+      for (const t of r.tags) {
+        if (!t.startsWith('@user:')) continue;
+        const g = (byRole[t.slice(6)] ??= { total: 0, passed: 0, failed: 0 });
+        g.total++;
+        if (r.outcome === 'unexpected') g.failed++;
+        else if (r.outcome !== 'skipped') g.passed++;
+      }
+    }
+
     const metrics = {
       title: this.title,
       generatedAt: new Date().toISOString(),
       summary,
+      clusters: Object.values(clusters).sort((a, b) => b.count - a.count),
+      byRole,
+      slowest: [...rows].sort((a, b) => b.duration - a.duration).slice(0, 15),
       byProject: group('projectName'),
       byLayer: group('layer'),
       byBrowser: group('browser'),
@@ -153,21 +182,36 @@ export default class DashboardReporter implements Reporter {
   }
 }
 
+/**
+ * Collapse an error to a stable signature so one root cause reads as one problem.
+ * Numbers, ids, timings, quoted literals and paths are the parts that differ
+ * between two instances of the SAME defect, so they go; the assertion shape stays.
+ */
+/** ANSI SGR sequences, built by code point so the source carries no control character. */
+const ANSI = new RegExp(`${String.fromCharCode(27)}\\[[0-9;]*m`, 'g');
+
+export function errorSignature(error: string | undefined): string {
+  if (!error) return 'no error message';
+  const firstLine =
+    error
+      .replace(ANSI, '')
+      .split('\n')
+      .find((l) => l.trim()) ?? error;
+  return firstLine
+    .replace(/\b[0-9a-f]{8,}\b/gi, '<id>')
+    .replace(/\b\d+(?:\.\d+)?\s?ms\b/g, '<time>')
+    .replace(/\b\d+\b/g, '<n>')
+    .replace(/(["'`])(?:[^"'`\\]|\\.)*\1/g, '<str>')
+    .replace(/\/[^\s:]+/g, '<path>')
+    .trim()
+    .slice(0, 200);
+}
+
 function esc(s: unknown): string {
   return String(s ?? '').replace(
     /[&<>"']/g,
     (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!,
   );
-}
-
-function chartJs(): string {
-  try {
-    const require = createRequire(import.meta.url);
-    const file = require.resolve('chart.js/dist/chart.umd.js');
-    return existsSync(file) ? readFileSync(file, 'utf8') : '';
-  } catch {
-    return '';
-  }
 }
 
 function fmt(ms: number): string {
@@ -178,83 +222,15 @@ function fmt(ms: number): string {
       : `${Math.floor(ms / 60_000)}m ${Math.round((ms % 60_000) / 1000)}s`;
 }
 
-function renderHtml(m: Metrics): string {
-  const s = m.summary;
-  const passRate = s.total ? Math.round(((s.passed + s.flaky) / s.total) * 100) : 0;
-  const card = (label: string, value: string | number, cls = '') =>
-    `<div class="card ${cls}"><div class="v">${esc(value)}</div><div class="l">${esc(label)}</div></div>`;
-  const projectRows = Object.entries(m.byProject)
-    .map(
-      ([name, g]) =>
-        `<tr><td>${esc(name)}</td><td>${g.total}</td><td class="ok">${g.passed}</td><td class="bad">${g.failed}</td><td>${g.skipped}</td><td class="warn">${g.flaky}</td></tr>`,
-    )
-    .join('');
-  const testRows = m.tests
-    .map(
-      (t) =>
-        `<tr class="${esc(t.outcome)}"><td>${esc(t.fullTitle)}</td><td>${esc(t.projectName)}</td><td><span class="pill ${esc(t.outcome)}">${esc(t.outcome === 'expected' ? 'passed' : t.outcome === 'unexpected' ? 'failed' : t.outcome)}</span></td><td>${fmt(t.duration)}</td><td>${t.retries}</td><td>${t.heals}</td><td class="tags">${t.tags.map((x) => `<code>${esc(x)}</code>`).join(' ')}</td></tr>`,
-    )
-    .join('');
-  const failedCards = m.failed
-    .map(
-      (f) =>
-        `<div class="fail"><div class="t">${esc(f.title)} <small>${esc(f.runnerProject)}</small></div><pre>${esc(f.error ?? '')}</pre></div>`,
-    )
-    .join('');
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>${esc(m.title)} · SDODS dashboard</title>
-<style>
-:root{--bg:#0f172a;--panel:#1e293b;--text:#e2e8f0;--dim:#94a3b8;--ok:#22c55e;--bad:#ef4444;--warn:#f59e0b;--skip:#64748b;--accent:#6366f1}
-*{box-sizing:border-box}body{margin:0;font:14px/1.5 -apple-system,Segoe UI,Inter,Roboto,sans-serif;background:var(--bg);color:var(--text)}
-header{padding:20px 28px;border-bottom:1px solid #334155;display:flex;justify-content:space-between;align-items:center}
-h1{margin:0;font-size:20px}h1 span{color:var(--accent)}header small{color:var(--dim)}
-main{padding:24px 28px;display:grid;gap:20px}
-.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px}
-.card{background:var(--panel);border-radius:10px;padding:14px 16px}.card .v{font-size:26px;font-weight:700}.card .l{color:var(--dim);font-size:12px;text-transform:uppercase;letter-spacing:.06em}
-.card.ok .v{color:var(--ok)}.card.bad .v{color:var(--bad)}.card.warn .v{color:var(--warn)}
-.bar{height:10px;background:#334155;border-radius:6px;overflow:hidden}.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--ok),#10b981)}
-.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px}.panel{background:var(--panel);border-radius:10px;padding:16px}.panel h2{margin:0 0 10px;font-size:14px;color:var(--dim);text-transform:uppercase;letter-spacing:.06em}
-table{width:100%;border-collapse:collapse;font-size:13px}th,td{text-align:left;padding:6px 8px;border-bottom:1px solid #334155;vertical-align:top}th{color:var(--dim);font-weight:600}
-.ok{color:var(--ok)}.bad{color:var(--bad)}.warn{color:var(--warn)}
-.pill{padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600;background:#334155}.pill.expected{background:#14532d;color:#86efac}.pill.unexpected{background:#7f1d1d;color:#fecaca}.pill.flaky{background:#78350f;color:#fde68a}.pill.skipped{background:#334155;color:#cbd5e1}
-code{background:#0f172a;padding:1px 6px;border-radius:4px;font-size:11px;color:#c7d2fe}.tags{max-width:340px}
-.fail{background:#1f1523;border:1px solid #7f1d1d;border-radius:8px;padding:12px;margin-bottom:10px}.fail .t{font-weight:600}.fail small{color:var(--dim);margin-left:6px}.fail pre{white-space:pre-wrap;color:#fecaca;font-size:12px;margin:8px 0 0}
-canvas{max-height:260px}
-</style></head><body>
-<header><h1><span>SDODS</span> · ${esc(m.title)}</h1><small>${esc(m.generatedAt)} · ${s.workers} workers · ${fmt(s.durationMs)}</small></header>
-<main>
-<div class="cards">${card('Total', s.total)}${card('Passed', s.passed, 'ok')}${card('Failed', s.failed, 'bad')}${card('Flaky', s.flaky, 'warn')}${card('Skipped', s.skipped)}${card('Healed', s.healed, 'warn')}${card('Pass rate', passRate + '%', passRate === 100 ? 'ok' : passRate < 80 ? 'bad' : 'warn')}</div>
-<div class="bar"><i style="width:${passRate}%"></i></div>
-<div class="grid">
-<div class="panel"><h2>Status</h2><canvas id="status"></canvas></div>
-<div class="panel"><h2>By project</h2><canvas id="project"></canvas></div>
-<div class="panel"><h2>By tag</h2><canvas id="tag"></canvas></div>
-<div class="panel"><h2>Duration (top 20)</h2><canvas id="duration"></canvas></div>
-</div>
-<div class="panel"><h2>Projects</h2><table><thead><tr><th>Project</th><th>Total</th><th>Passed</th><th>Failed</th><th>Skipped</th><th>Flaky</th></tr></thead><tbody>${projectRows}</tbody></table></div>
-${m.failed.length ? `<div class="panel"><h2>Failures</h2>${failedCards}</div>` : ''}
-<div class="panel"><h2>All tests</h2><table><thead><tr><th>Test</th><th>Project</th><th>Status</th><th>Duration</th><th>Retries</th><th>Heals</th><th>Tags</th></tr></thead><tbody>${testRows}</tbody></table></div>
-</main>
-<script>${chartJs()}</script>
-<script>
-(function(){if(typeof Chart==='undefined')return;const M=${JSON.stringify({ summary: s, byProject: m.byProject, byTag: m.byTag, durations: m.tests.slice(0, 20).map((t) => ({ t: t.title.slice(0, 40), d: t.duration })) })};
-Chart.defaults.color='#94a3b8';
-new Chart(document.getElementById('status'),{type:'doughnut',data:{labels:['Passed','Failed','Flaky','Skipped'],datasets:[{data:[M.summary.passed,M.summary.failed,M.summary.flaky,M.summary.skipped],backgroundColor:['#22c55e','#ef4444','#f59e0b','#64748b']}]},options:{plugins:{legend:{position:'bottom'}}}});
-const P=Object.keys(M.byProject);new Chart(document.getElementById('project'),{type:'bar',data:{labels:P,datasets:[{label:'Passed',data:P.map(k=>M.byProject[k].passed),backgroundColor:'#22c55e'},{label:'Failed',data:P.map(k=>M.byProject[k].failed),backgroundColor:'#ef4444'},{label:'Flaky',data:P.map(k=>M.byProject[k].flaky),backgroundColor:'#f59e0b'}]},options:{scales:{x:{stacked:true},y:{stacked:true}}}});
-const T=Object.keys(M.byTag);new Chart(document.getElementById('tag'),{type:'bar',data:{labels:T,datasets:[{label:'Passed',data:T.map(k=>M.byTag[k].passed),backgroundColor:'#22c55e'},{label:'Failed',data:T.map(k=>M.byTag[k].failed),backgroundColor:'#ef4444'}]},options:{indexAxis:'y',scales:{x:{stacked:true},y:{stacked:true}}}});
-new Chart(document.getElementById('duration'),{type:'bar',data:{labels:M.durations.map(x=>x.t),datasets:[{label:'ms',data:M.durations.map(x=>x.d),backgroundColor:'#6366f1'}]},options:{plugins:{legend:{display:false}}}});
-})();
-</script></body></html>`;
-}
-
 interface Group {
   total: number;
   passed: number;
   failed: number;
-  skipped: number;
-  flaky: number;
+  skipped?: number;
+  flaky?: number;
 }
-interface Metrics {
+
+export interface Metrics {
   title: string;
   generatedAt: string;
   summary: {
@@ -268,11 +244,325 @@ interface Metrics {
     durationMs: number;
     workers: number;
   };
+  clusters: { signature: string; count: number; titles: string[] }[];
+  byRole: Record<string, Group>;
+  slowest: Entry[];
   byProject: Record<string, Group>;
   byLayer: Record<string, Group>;
   byBrowser: Record<string, Group>;
-  byTag: Record<string, { total: number; passed: number; failed: number }>;
-  failed: Array<{ fingerprint?: string; title: string; runnerProject: string; error?: string }>;
-  flaky: Array<{ fingerprint?: string; title: string; runnerProject: string }>;
+  byTag: Record<string, Group>;
+  failed: { fingerprint?: string; title: string; runnerProject: string; error?: string }[];
+  flaky: { fingerprint?: string; title: string; runnerProject: string }[];
   tests: Entry[];
+}
+
+function pct(n: number, d: number): number {
+  return d ? Math.round((n / d) * 100) : 0;
+}
+
+/**
+ * The dashboard is a DECISION surface, not a report.
+ *
+ * Every run ends with someone asking one of four questions, and the layout answers
+ * them in the order they get asked:
+ *
+ *   1. Can I ship?            -> the verdict line, in words, before any number
+ *   2. What do I fix first?   -> failures CLUSTERED by error signature, because
+ *                                twelve scenarios failing on one broken selector
+ *                                is one problem and a list of twelve reads as twelve
+ *   3. Is it real or flaky?   -> flake, retry and heal counts sit beside the verdict,
+ *                                not in a footer
+ *   4. Do I believe this run? -> skipped and healed are shown as WARNINGS, never
+ *                                folded into a pass rate. A suite that skipped a
+ *                                third of itself is not 100% green, and a healed
+ *                                locator means the application's DOM moved under us
+ *
+ * The role matrix is the one view a general-purpose reporter never has: when
+ * `@user:viewer` fails and `@user:admin` passes, that is a permissions regression,
+ * and it is invisible in any total.
+ */
+export function renderHtml(m: Metrics): string {
+  const s = m.summary;
+  const executed = s.total - s.skipped;
+  const passRate = pct(s.passed + s.flaky, executed);
+  const skipRate = pct(s.skipped, s.total);
+  const blocking = s.failed + s.timedOut;
+
+  const verdict = blocking
+    ? {
+        word: 'Failing',
+        cls: 'bad',
+        line: `${blocking} scenario${blocking === 1 ? '' : 's'} failed across ${m.clusters.length} distinct cause${m.clusters.length === 1 ? '' : 's'}.`,
+      }
+    : s.total === 0
+      ? {
+          word: 'Nothing ran',
+          cls: 'bad',
+          line: 'No scenario was executed. A run that registers nothing exits 0 and looks identical to a green run — it is not.',
+        }
+      : executed === 0
+        ? {
+            word: 'Nothing ran',
+            cls: 'bad',
+            line: `All ${s.total} scenarios were skipped. Skipped is not passed.`,
+          }
+        : s.flaky
+          ? {
+              word: 'Passing, with flake',
+              cls: 'warn',
+              line: `${s.flaky} scenario${s.flaky === 1 ? '' : 's'} only passed on retry. Treat as unproven until the cause is known.`,
+            }
+          : {
+              word: 'Passing',
+              cls: 'ok',
+              line: `${executed} scenario${executed === 1 ? '' : 's'} executed, all green.`,
+            };
+
+  // Warnings are things that make a green run untrustworthy. They are deliberately
+  // NOT folded into the pass rate, because averaging them away is how a suite stops
+  // measuring anything without anyone noticing.
+  const warnings: string[] = [];
+  if (skipRate > 5)
+    warnings.push(
+      `${s.skipped} of ${s.total} scenarios (${skipRate}%) were skipped. A skip is an untested path, not a pass.`,
+    );
+  if (s.healed)
+    warnings.push(
+      `${s.healed} scenario${s.healed === 1 ? '' : 's'} needed a healed locator. The application's DOM moved — the test passed, but the selector it was written against no longer matches.`,
+    );
+  if (s.flaky)
+    warnings.push(`${s.flaky} scenario${s.flaky === 1 ? '' : 's'} passed only on retry.`);
+
+  const stat = (label: string, value: string | number, sub = '', cls = '') =>
+    `<div class="stat ${cls}"><div class="v">${esc(value)}</div><div class="l">${esc(label)}</div>${sub ? `<div class="s">${esc(sub)}</div>` : ''}</div>`;
+
+  const clusterCards = m.clusters
+    .map(
+      (c, i) => `<details class="cluster"${i === 0 ? ' open' : ''}>
+      <summary><span class="count">${c.count}&times;</span><code>${esc(c.signature)}</code></summary>
+      <ul>${c.titles.map((t) => `<li>${esc(t)}</li>`).join('')}</ul>
+    </details>`,
+    )
+    .join('');
+
+  const roleRows = Object.entries(m.byRole)
+    .sort((a, b) => b[1].failed - a[1].failed || a[0].localeCompare(b[0]))
+    .map(
+      ([role, g]) => `<tr class="${g.failed ? 'row-bad' : ''}">
+        <td><span class="tag">@user:${esc(role)}</span></td>
+        <td class="num">${g.total}</td>
+        <td class="num ok">${g.passed}</td>
+        <td class="num ${g.failed ? 'bad' : 'muted'}">${g.failed}</td>
+        <td class="barcell">${bar(g.passed, g.failed, g.total)}</td>
+      </tr>`,
+    )
+    .join('');
+
+  const groupTable = (
+    title: string,
+    data: Record<
+      string,
+      { total: number; passed: number; failed: number; skipped?: number; flaky?: number }
+    >,
+    label: string,
+  ) => {
+    const rows = Object.entries(data)
+      .sort((a, b) => b[1].failed - a[1].failed || b[1].total - a[1].total)
+      .slice(0, 40);
+    if (!rows.length) return '';
+    return `<section><h2>${esc(title)}</h2><table>
+      <thead><tr><th>${esc(label)}</th><th class="num">Total</th><th class="num">Passed</th><th class="num">Failed</th><th></th></tr></thead>
+      <tbody>${rows
+        .map(
+          ([k, g]) => `<tr class="${g.failed ? 'row-bad' : ''}">
+          <td>${esc(k)}</td><td class="num">${g.total}</td>
+          <td class="num ok">${g.passed}</td>
+          <td class="num ${g.failed ? 'bad' : 'muted'}">${g.failed}</td>
+          <td class="barcell">${bar(g.passed, g.failed, g.total)}</td>
+        </tr>`,
+        )
+        .join('')}</tbody></table></section>`;
+  };
+
+  const slowRows = m.slowest
+    .filter((t: Entry) => t.duration > 0)
+    .map(
+      (t: Entry) =>
+        `<tr><td>${esc(t.title)}</td><td class="num">${esc(fmt(t.duration))}</td><td>${t.tags
+          .map((x: string) => `<span class="tag">${esc(x)}</span>`)
+          .join(' ')}</td></tr>`,
+    )
+    .join('');
+
+  const testRows = m.tests
+    .map(
+      (t: Entry) => `<tr data-status="${esc(t.outcome)}" data-text="${esc(
+        `${t.title} ${t.tags.join(' ')} ${t.projectName}`.toLowerCase(),
+      )}">
+      <td><span class="pill ${esc(t.outcome)}">${esc(t.outcome)}</span></td>
+      <td>${esc(t.title)}</td>
+      <td>${t.tags.map((x: string) => `<span class="tag">${esc(x)}</span>`).join(' ')}</td>
+      <td class="num">${esc(fmt(t.duration))}</td>
+      <td class="num">${t.retries || ''}</td>
+      <td class="num">${t.heals || ''}</td>
+    </tr>`,
+    )
+    .join('');
+
+  return `<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>${esc(m.title)}</title>
+<style>
+:root{
+  --bg:#fbfbfd; --panel:#fff; --ink:#16181d; --muted:#6b7280; --line:#e6e8ec;
+  --ok:#0f9d58; --bad:#d93025; --warn:#e37400; --accent:#3b5bdb;
+  --ok-bg:#e8f5ec; --bad-bg:#fdecea; --warn-bg:#fff4e5;
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#0e1014; --panel:#171a21; --ink:#e8eaed; --muted:#9aa0a6; --line:#2a2f39;
+  --ok:#4ade80; --bad:#f87171; --warn:#fbbf24; --accent:#8ea2ff;
+  --ok-bg:#12291c; --bad-bg:#2c1618; --warn-bg:#2b2110;
+}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font:15px/1.55 ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:1180px;margin:0 auto;padding:32px 20px 80px}
+h1{font-size:20px;margin:0 0 2px;font-weight:650}
+h2{font-size:14px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);
+  margin:34px 0 10px;font-weight:650}
+.sub{color:var(--muted);font-size:13px;margin-bottom:22px}
+.verdict{border-radius:14px;padding:20px 22px;margin-bottom:22px;border:1px solid var(--line);background:var(--panel)}
+.verdict.ok{background:var(--ok-bg);border-color:var(--ok)}
+.verdict.bad{background:var(--bad-bg);border-color:var(--bad)}
+.verdict.warn{background:var(--warn-bg);border-color:var(--warn)}
+.verdict .word{font-size:26px;font-weight:680;letter-spacing:-.02em}
+.verdict.ok .word{color:var(--ok)} .verdict.bad .word{color:var(--bad)} .verdict.warn .word{color:var(--warn)}
+.verdict .line{margin-top:4px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(132px,1fr));gap:10px;margin-bottom:8px}
+.stat{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.stat .v{font-size:24px;font-weight:650;letter-spacing:-.02em}
+.stat .l{color:var(--muted);font-size:12px;margin-top:2px}
+.stat .s{color:var(--muted);font-size:11px;margin-top:3px}
+.stat.bad .v{color:var(--bad)} .stat.ok .v{color:var(--ok)} .stat.warn .v{color:var(--warn)}
+.warnings{margin:18px 0 0;padding:0;list-style:none}
+.warnings li{background:var(--warn-bg);border:1px solid var(--warn);border-radius:10px;
+  padding:10px 14px;margin-bottom:8px;font-size:13.5px}
+table{width:100%;border-collapse:collapse;background:var(--panel);
+  border:1px solid var(--line);border-radius:12px;overflow:hidden;font-size:13.5px}
+th,td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--muted);font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;font-weight:650}
+tbody tr:last-child td{border-bottom:0}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+td.ok{color:var(--ok)} td.bad{color:var(--bad);font-weight:650} td.muted{color:var(--muted)}
+tr.row-bad td:first-child{box-shadow:inset 3px 0 0 var(--bad)}
+.barcell{width:150px}
+.bar{display:flex;height:7px;border-radius:4px;overflow:hidden;background:var(--line);min-width:110px}
+.bar i{display:block;height:100%}
+.bar .p{background:var(--ok)} .bar .f{background:var(--bad)}
+.tag{display:inline-block;background:var(--line);color:var(--muted);border-radius:5px;
+  padding:1px 6px;font-size:11px;margin:1px 2px 1px 0;font-family:ui-monospace,SFMono-Regular,Menlo,monospace}
+.pill{display:inline-block;border-radius:5px;padding:1px 8px;font-size:11px;font-weight:650;text-transform:uppercase}
+.pill.expected{background:var(--ok-bg);color:var(--ok)}
+.pill.unexpected{background:var(--bad-bg);color:var(--bad)}
+.pill.flaky{background:var(--warn-bg);color:var(--warn)}
+.pill.skipped{background:var(--line);color:var(--muted)}
+.cluster{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--bad);
+  border-radius:10px;margin-bottom:10px;padding:12px 16px}
+.cluster summary{cursor:pointer;display:flex;gap:10px;align-items:baseline}
+.cluster summary::marker{color:var(--muted)}
+.cluster .count{color:var(--bad);font-weight:680;white-space:nowrap}
+.cluster code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;word-break:break-word}
+.cluster ul{margin:10px 0 2px 4px;padding-left:16px;color:var(--muted);font-size:13px}
+.cluster li{margin:3px 0}
+.controls{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.controls input,.controls select{background:var(--panel);border:1px solid var(--line);color:var(--ink);
+  border-radius:8px;padding:7px 11px;font:inherit;font-size:13px}
+.controls input{flex:1;min-width:220px}
+.controls input:focus-visible,.controls select:focus-visible,.cluster summary:focus-visible{
+  outline:2px solid var(--accent);outline-offset:2px}
+.empty{color:var(--muted);font-style:italic;padding:14px 0}
+footer{margin-top:44px;color:var(--muted);font-size:12px;border-top:1px solid var(--line);padding-top:14px}
+</style></head><body><div class="wrap">
+
+<h1>${esc(m.title)}</h1>
+<div class="sub">${esc(new Date(m.generatedAt).toUTCString())} &middot; ${esc(fmt(s.durationMs))} wall clock &middot; ${s.workers} worker${s.workers === 1 ? '' : 's'}</div>
+
+<div class="verdict ${verdict.cls}">
+  <div class="word">${esc(verdict.word)}</div>
+  <div class="line">${esc(verdict.line)}</div>
+</div>
+
+<div class="stats">
+  ${stat('Pass rate', `${passRate}%`, `${s.passed + s.flaky} of ${executed} executed`, blocking ? 'bad' : 'ok')}
+  ${stat('Failed', blocking, blocking ? `${m.clusters.length} distinct cause${m.clusters.length === 1 ? '' : 's'}` : 'none', blocking ? 'bad' : '')}
+  ${stat('Skipped', s.skipped, `${skipRate}% of the suite`, skipRate > 5 ? 'warn' : '')}
+  ${stat('Flaky', s.flaky, s.flaky ? 'passed only on retry' : 'none', s.flaky ? 'warn' : '')}
+  ${stat('Healed', s.healed, s.healed ? 'the DOM moved' : 'none', s.healed ? 'warn' : '')}
+  ${stat('Executed', executed, `of ${s.total} registered`)}
+</div>
+
+${warnings.length ? `<ul class="warnings">${warnings.map((w) => `<li>${esc(w)}</li>`).join('')}</ul>` : ''}
+
+<h2>What to fix first</h2>
+${m.clusters.length ? clusterCards : '<div class="empty">Nothing failed.</div>'}
+
+${
+  roleRows
+    ? `<section><h2>By role &mdash; a role that fails alone is a permissions regression</h2>
+<table><thead><tr><th>Role</th><th class="num">Total</th><th class="num">Passed</th><th class="num">Failed</th><th></th></tr></thead>
+<tbody>${roleRows}</tbody></table></section>`
+    : ''
+}
+
+${groupTable('By module tag', m.byTag, 'Tag')}
+${groupTable('By layer', m.byLayer, 'Layer')}
+${groupTable('By browser', m.byBrowser, 'Browser')}
+${groupTable('By runner project', m.byProject, 'Project')}
+
+${
+  slowRows
+    ? `<section><h2>Slowest scenarios</h2><table>
+<thead><tr><th>Scenario</th><th class="num">Duration</th><th>Tags</th></tr></thead>
+<tbody>${slowRows}</tbody></table></section>`
+    : ''
+}
+
+<h2>All scenarios</h2>
+<div class="controls">
+  <input id="q" type="search" placeholder="Filter by title, tag or project&hellip;" aria-label="Filter scenarios">
+  <select id="st" aria-label="Filter by status">
+    <option value="">All statuses</option>
+    <option value="unexpected">Failed</option>
+    <option value="flaky">Flaky</option>
+    <option value="expected">Passed</option>
+    <option value="skipped">Skipped</option>
+  </select>
+</div>
+<table id="all"><thead><tr><th>Status</th><th>Scenario</th><th>Tags</th><th class="num">Time</th><th class="num">Retries</th><th class="num">Heals</th></tr></thead>
+<tbody>${testRows}</tbody></table>
+<div class="empty" id="none" hidden>No scenario matches that filter.</div>
+
+<footer>Generated by SDODS &middot; metrics.json sits beside this file for scripting.</footer>
+</div>
+<script>
+(function(){
+  var q=document.getElementById('q'),st=document.getElementById('st'),
+      rows=[].slice.call(document.querySelectorAll('#all tbody tr')),none=document.getElementById('none');
+  function apply(){
+    var t=q.value.trim().toLowerCase(), s=st.value, shown=0;
+    rows.forEach(function(r){
+      var ok=(!t||r.dataset.text.indexOf(t)>-1)&&(!s||r.dataset.status===s);
+      r.hidden=!ok; if(ok)shown++;
+    });
+    none.hidden=shown>0;
+  }
+  q.addEventListener('input',apply); st.addEventListener('change',apply);
+})();
+</script>
+</body></html>`;
+}
+
+function bar(passed: number, failed: number, total: number): string {
+  if (!total) return '';
+  return `<div class="bar" role="img" aria-label="${passed} passed, ${failed} failed of ${total}"><i class="p" style="width:${pct(passed, total)}%"></i><i class="f" style="width:${pct(failed, total)}%"></i></div>`;
 }
