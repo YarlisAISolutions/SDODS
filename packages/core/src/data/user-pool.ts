@@ -163,8 +163,31 @@ export class FileUserPool implements UserPool {
         },
       );
     }
+    // A shared pool hands out an account without acquiring a lease at all.
+    // Deterministic by worker index, so two workers on the same role get
+    // different accounts when the pool has them and the same one when it does
+    // not — which is the point: sharing is what makes a single-account role
+    // usable by a parallel read-only suite.
+    if (pool.mode === 'shared') {
+      const picked = candidates[_parallelIndex % candidates.length]!;
+      const id = String(picked.r.id ?? picked.r.username ?? picked.index);
+      const user: LeasedUser = {
+        id,
+        username: String(picked.r.username ?? id),
+        password: String(picked.r.password ?? ''),
+        role,
+        index: picked.index,
+        extra: picked.r,
+        leaseKey: '',
+        owner: this.opts.owner,
+      };
+      this.leased.set(role, user);
+      this.log.debug(`shared ${user.username} (${role}) for ${this.opts.owner}`);
+      return user;
+    }
+
     const ttl = pool.leaseTtlMs;
-    const waitMs = this.opts.waitMs ?? 30_000;
+    const waitMs = this.opts.waitMs ?? pool.waitMs;
     const started = Date.now();
     while (true) {
       for (const { r, index } of candidates) {
@@ -191,7 +214,15 @@ export class FileUserPool implements UserPool {
           'USER_POOL_EXHAUSTED',
           `All ${candidates.length} user(s) with role "${role}" are leased.`,
           {
-            hint: `Owners: ${JSON.stringify(owners)}. Increase env.users.poolSize, add users, or lower --workers.`,
+            hint:
+              `Owners: ${JSON.stringify(owners)}. Waited ${Math.round(waitMs / 1000)}s. ` +
+              `Four ways out, in the order worth trying: (1) if these scenarios do not ` +
+              `mutate user-scoped state, set data.userPool.mode: shared — one account ` +
+              `then serves every worker, which is what a read-only suite needs; ` +
+              `(2) add more accounts with role "${role}" to dataset "${pool.dataset}"; ` +
+              `(3) raise data.userPool.waitMs (currently ${waitMs}ms); (4) lower --workers. ` +
+              `Note env.users.poolSize slices the dataset BEFORE role filtering, so a ` +
+              `small value can starve a role on its own.`,
           },
         );
       }
@@ -200,7 +231,9 @@ export class FileUserPool implements UserPool {
   }
 
   async release(user: LeasedUser) {
-    await this.store.release(user.leaseKey, this.opts.owner);
+    // A shared user holds no lease (leaseKey is empty). Releasing it would be at
+    // best a no-op and at worst a release of another worker's row.
+    if (user.leaseKey) await this.store.release(user.leaseKey, this.opts.owner);
     this.leased.delete(user.role);
   }
 
