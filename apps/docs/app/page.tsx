@@ -40,8 +40,18 @@ const features: Array<{ title: string; body: string; href: string }> = [
 export default function HomePage() {
   return (
     <HomeLayout {...baseOptions()}>
-      <main className="mx-auto flex max-w-5xl flex-col items-center px-4 py-16 text-center">
-        <img src={withBase('/img/sdods-logo.svg')} alt="SDODS" className="w-full max-w-lg" />
+      {/* w-full: without it the column is sized by its widest child, and the install command —
+          one unbreakable line — pushes the whole page past a 320px screen instead of scrolling
+          inside its own box. */}
+      <main className="mx-auto flex w-full max-w-5xl flex-col items-center px-4 py-16 text-center">
+        {/* The wordmark is the title. It is an image, so the heading is spelled out for
+            anything that cannot see it — and the image itself becomes decorative. */}
+        <h1 className="w-full max-w-lg">
+          <span className="sr-only">
+            SDODS — an automation platform with a reusable architecture
+          </span>
+          <img src={withBase('/img/sdods-logo.svg')} alt="" className="w-full max-w-lg" />
+        </h1>
         <p className="mt-6 max-w-2xl text-lg text-fd-muted-foreground">
           An automation platform with a reusable architecture. BDD for UI, API and hybrid flows,
           multi-project and multi-environment, data-driven, self-healing, with a web UI, an MCP
@@ -69,7 +79,12 @@ export default function HomePage() {
           One command. It checks Node, installs Bun if you need it, fetches SDODS and Chromium, and
           puts <code>sdods</code> on your PATH.
         </p>
-        <pre className="mt-3 w-full max-w-2xl overflow-x-auto rounded-lg border border-fd-border bg-fd-card p-4 text-left text-sm">
+        <pre
+          tabIndex={0}
+          role="region"
+          aria-label="Install command"
+          className="mt-3 w-full max-w-2xl overflow-x-auto rounded-lg border border-fd-border bg-fd-card p-4 text-left text-sm"
+        >
           curl -fsSL https://sdods.com/install.sh | sh
         </pre>
         <p className="mt-3 text-sm text-fd-muted-foreground">

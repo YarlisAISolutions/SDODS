@@ -45,7 +45,12 @@ export default function RoadmapPage() {
 
       {/* The rail cannot fit five years on a phone, so it scrolls and says so with a fade. */}
       <div className="relative mt-10">
-        <div className="overflow-x-auto">
+        <div
+          tabIndex={0}
+          role="region"
+          aria-label="Five-year rail, scrolls sideways"
+          className="overflow-x-auto"
+        >
           <div className="min-w-[720px]">
             <RailHero years={HORIZON.map((h) => h.year)} current={CURRENT_YEAR} />
           </div>
@@ -176,7 +181,12 @@ export default function RoadmapPage() {
         <p className="muted mt-2 max-w-3xl">
           The same five years, if you would rather read them as a table than scroll them.
         </p>
-        <div className="card mt-6 overflow-x-auto">
+        <div
+          tabIndex={0}
+          role="region"
+          aria-label="Value at a glance, scrolls sideways"
+          className="card mt-6 overflow-x-auto"
+        >
           <table className="w-full min-w-[680px] text-sm">
             <thead className="text-left">
               <tr className="border-b border-[var(--line)]">
@@ -218,7 +228,12 @@ export default function RoadmapPage() {
           Fourteen phases, each ending runnable and verified. The same table appears in the
           repository and the documentation.
         </p>
-        <div className="card mt-6 overflow-x-auto">
+        <div
+          tabIndex={0}
+          role="region"
+          aria-label="How level 1 was built, scrolls sideways"
+          className="card mt-6 overflow-x-auto"
+        >
           <table className="w-full text-sm">
             <thead className="text-left">
               <tr className="border-b border-[var(--line)]">

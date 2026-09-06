@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from './auth/AuthContext';
 import { WorkspaceProvider, useWorkspace } from './context/WorkspaceContext';
 import { useProjects } from './api/queries';
-import { Badge, RoleBadge, Select, Spinner } from './components/ui';
+import { Badge, RoleBadge, Select, Skeleton, Spinner } from './components/ui';
 import { cn } from './lib/utils';
 
 export function AppShell() {
@@ -63,7 +63,9 @@ function Shell() {
               value={ws.org?.slug ?? ''}
               onChange={(e) => ws.setOrg(e.target.value)}
               aria-label="Organization"
+              disabled={ws.loading}
             >
+              {ws.loading && <option>Loading…</option>}
               {ws.orgs.map((o) => (
                 <option key={o.slug} value={o.slug}>
                   {o.name}
@@ -79,6 +81,12 @@ function Shell() {
               </NavLink>
             </div>
             <ul className="mt-1 space-y-0.5" aria-label="Workspaces">
+              {ws.loading && (
+                <li className="space-y-1 py-1">
+                  <Skeleton className="h-6 w-full" />
+                  <Skeleton className="h-6 w-4/5" />
+                </li>
+              )}
               {ws.workspaces.map((w) => (
                 <li key={w.slug}>
                   <button

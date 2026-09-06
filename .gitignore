@@ -32,3 +32,6 @@ apps/www/public/install.ps1*
 packages/cli/templates/
 packages/server/web/
 .publish-stage/
+
+# Python virtualenvs (media/film/tts tooling)
+.venv/

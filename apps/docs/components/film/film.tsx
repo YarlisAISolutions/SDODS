@@ -45,12 +45,14 @@ export function Film() {
       setStarted(true);
       setEnded(false);
     };
+    const onEnded = () => setEnded(true);
     el.addEventListener('timeupdate', tick);
     el.addEventListener('play', onPlay);
-    el.addEventListener('ended', () => setEnded(true));
+    el.addEventListener('ended', onEnded);
     return () => {
       el.removeEventListener('timeupdate', tick);
       el.removeEventListener('play', onPlay);
+      el.removeEventListener('ended', onEnded);
     };
   }, []);
 
@@ -96,7 +98,7 @@ export function Film() {
                 'linear-gradient(102deg, #0B1020 0%, rgba(11,16,32,0.94) 34%, rgba(11,16,32,0.72) 56%, rgba(11,16,32,0.18) 100%)',
             }}
           >
-            <div className="max-w-[30rem] px-6 py-6 sm:px-10 sm:py-8">
+            <div className="max-w-[30rem] px-5 py-3 sm:px-10 sm:py-8">
               <span className="flex items-center gap-2.5">
                 <img
                   src={withBase('/img/favicon.svg')}
@@ -106,12 +108,12 @@ export function Film() {
                   className="rounded-md"
                 />
                 <span className="text-sm font-semibold tracking-[0.18em] text-white">SDODS</span>
-                <span className="ml-1 rounded-full border border-white/25 px-2 py-0.5 text-[10px] font-semibold tracking-[0.14em] text-white/70">
+                <span className="ml-1 hidden rounded-full border border-white/25 px-2 py-0.5 text-[10px] font-semibold tracking-[0.14em] text-white/70 sm:inline">
                   PRODUCT FILM
                 </span>
               </span>
 
-              <span className="mt-4 block text-2xl leading-tight font-bold text-white sm:text-[2rem]">
+              <span className="mt-3 block text-lg leading-tight font-bold text-white sm:mt-4 sm:text-[2rem]">
                 Test automation
                 <br />
                 you can defend.
@@ -122,23 +124,30 @@ export function Film() {
                 read.
               </span>
 
-              <span className="mt-5 inline-flex items-center gap-2.5 rounded-full bg-[#2F5BFF] px-5 py-2.5 text-sm font-semibold text-white shadow-lg shadow-[#2F5BFF]/30 transition group-hover:bg-[#4470ff]">
+              <span className="mt-3 inline-flex items-center gap-2.5 rounded-full bg-[#2F5BFF] px-4 py-2 sm:mt-5 sm:px-5 sm:py-2.5 text-sm font-semibold text-white shadow-lg shadow-[#2F5BFF]/30 transition group-hover:bg-[#4470ff]">
                 <svg viewBox="0 0 24 24" className="size-4" fill="currentColor" aria-hidden>
                   <path d="M8 5v14l11-7z" />
                 </svg>
                 Watch the film
               </span>
 
-              <span className="mt-3 block font-mono text-[11px] tracking-wide text-white/55">
+              {/* Below sm the poster is barely 160px tall; this line and the description are
+                  the two the panel can lose without losing its argument. */}
+              <span className="mt-3 hidden font-mono text-[11px] tracking-wide text-white/70 sm:block">
                 1:59 · Recorded inside the product · Captions included
               </span>
             </div>
           </button>
         )}
 
-        {/* While it plays: the chapter, small, out of the way. */}
+        {/* While it plays: the chapter, small, out of the way. Hidden from assistive technology
+            rather than announced: the clock beside it ticks every frame, and a live region on a
+            clock is a screen reader talking over the film it is meant to describe. */}
         {started && !ended && (
-          <div className="pointer-events-none absolute top-0 right-0 left-0 flex items-start justify-between p-3 opacity-0 transition group-hover:opacity-100">
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute top-0 right-0 left-0 flex items-start justify-between p-3 opacity-0 transition group-hover:opacity-100"
+          >
             <span className="rounded-md bg-black/65 px-2.5 py-1 text-xs font-medium text-white backdrop-blur">
               {chapter.title}
             </span>
@@ -206,11 +215,15 @@ export function Film() {
           onClick={() => setTranscriptOpen((open) => !open)}
           className="text-sm text-fd-primary underline underline-offset-2"
           aria-expanded={transcriptOpen}
+          aria-controls="film-transcript"
         >
           {transcriptOpen ? 'Hide the transcript' : 'Read the transcript instead'}
         </button>
         {transcriptOpen && (
-          <ol className="mt-3 space-y-2 rounded-lg border border-fd-border p-4 text-sm text-fd-muted-foreground">
+          <ol
+            id="film-transcript"
+            className="mt-3 space-y-2 rounded-lg border border-fd-border p-4 text-sm text-fd-muted-foreground"
+          >
             {TRANSCRIPT.map((line, i) => (
               <li key={line} className="flex gap-3">
                 <span className="shrink-0 font-mono text-xs text-fd-muted-foreground/70">

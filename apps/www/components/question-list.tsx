@@ -32,12 +32,16 @@ export function QuestionList() {
   }, []);
 
   if (state.kind === 'loading') {
-    return <p className="muted mt-8 text-sm">Loading questions…</p>;
+    return (
+      <p role="status" className="muted mt-8 text-sm">
+        Loading questions…
+      </p>
+    );
   }
 
   if (state.kind === 'error') {
     return (
-      <p className="muted mt-8 text-sm">
+      <p role="status" className="muted mt-8 text-sm">
         Questions could not be loaded right now. You can still{' '}
         <Link href="/questions/ask/" className="underline">
           ask one

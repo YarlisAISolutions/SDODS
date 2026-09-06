@@ -5,9 +5,22 @@
 
 :root {
   --color-fd-primary: #4f46e5;
+  /* The preset's muted grey is 4.2:1 against the card — under AA, and it carries most of the
+     secondary prose on the site. One shade darker clears 6:1 and looks the same. */
+  --color-fd-muted-foreground: #525252;
 }
 .dark {
   --color-fd-primary: #818cf8;
+  --color-fd-muted-foreground: #a1a1aa;
+}
+/* The comment token is the last thing in a code block under AA: 4.46:1 on the light ground and
+   3.65:1 on the dark one. Shiki writes the colour into a custom property inline, so the override
+   has to be marked to reach it. Both replacements are one step of the same grey. */
+[style*='--shiki-light:#66707B'] {
+  --shiki-light: #5b646e !important;
+}
+[style*='--shiki-dark:#6A737D'] {
+  --shiki-dark: #8b949e !important;
 }
 .sdods-planned {
   display: inline-block;

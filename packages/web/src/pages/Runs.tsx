@@ -63,7 +63,7 @@ export function RunsPage() {
           onChange={(e) => setF('project', e.target.value)}
           aria-label="project filter"
         >
-          <option value="">All projects</option>
+          <option value="">{projects.isLoading ? 'Loading projects…' : 'All projects'}</option>
           {(projects.data ?? []).map((p) => (
             <option key={p.slug} value={p.slug}>
               {p.name}
@@ -252,8 +252,10 @@ export function StartRunDialog({
         <Field label="Project">
           <Select
             value={form.project || defaultProject || ''}
+            disabled={projects.isLoading}
             onChange={(e) => setForm({ ...form, project: e.target.value, process: undefined })}
           >
+            {projects.isLoading && <option>Loading projects…</option>}
             {(projects.data ?? []).map((pr) => (
               <option key={pr.slug} value={pr.slug}>
                 {pr.name}
@@ -264,8 +266,10 @@ export function StartRunDialog({
         <Field label="Environment">
           <Select
             value={form.env || p?.envs.default || ''}
+            disabled={project.isLoading}
             onChange={(e) => setForm({ ...form, env: e.target.value })}
           >
+            {project.isLoading && <option>Loading environments…</option>}
             {(p?.envs.available ?? []).map((n) => (
               <option key={n}>{n}</option>
             ))}
@@ -274,9 +278,14 @@ export function StartRunDialog({
         <Field label="Process (optional)">
           <Select
             value={form.process ?? ''}
+            disabled={processes.isLoading}
             onChange={(e) => setForm({ ...form, process: e.target.value || undefined })}
           >
-            <option value="">— manual —</option>
+            {processes.isLoading ? (
+              <option>Loading processes…</option>
+            ) : (
+              <option value="">— manual —</option>
+            )}
             {(processes.data ?? []).map((pr) => (
               <option key={pr.name} value={pr.name}>
                 {pr.name} ({pr.trigger})

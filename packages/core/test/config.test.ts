@@ -7,6 +7,7 @@ import { assertNoSecretLiterals, collectVarRefs, interpolate } from '../src/conf
 import { combineTagExpr, normalizeTagExpr, parseTagValue } from '../src/config/tags.js';
 import { resolveConfig, serializeCliOverrides } from '../src/config/resolve.js';
 import { ProjectRegistry } from '../src/config/registry.js';
+import { buildRunnerConfig } from '../src/config/runner.js';
 
 function scaffold(
   opts: { projectYaml?: string; envYaml?: string; dotenv?: Record<string, string> } = {},
@@ -186,5 +187,29 @@ describe('ProjectRegistry', () => {
     const b = reg.resolve('shop', 'local');
     expect(a).toBe(b);
     expect(ProjectRegistry.findRepoRoot(join(root, 'projects', 'shop'))).toBe(root);
+  });
+});
+
+describe('buildRunnerConfig headed', () => {
+  // SDODS_HEADED and --headed used to resolve onto runtime.headed and then be dropped on the
+  // floor: nothing emitted `headless`, so a "headed" run still opened no window.
+  it('emits headless from runtime.headed', () => {
+    const { root, proj } = scaffold();
+    mkdirSync(join(proj, 'features'), { recursive: true }); // defineBddConfig validates featuresRoot
+    const prev = process.env.SDODS_HEADED;
+    try {
+      delete process.env.SDODS_HEADED;
+      expect(
+        buildRunnerConfig(ProjectRegistry.discover(root), { env: 'local' }).use?.headless,
+      ).toBe(true);
+
+      process.env.SDODS_HEADED = '1';
+      expect(
+        buildRunnerConfig(ProjectRegistry.discover(root), { env: 'local' }).use?.headless,
+      ).toBe(false);
+    } finally {
+      if (prev === undefined) delete process.env.SDODS_HEADED;
+      else process.env.SDODS_HEADED = prev;
+    }
   });
 });

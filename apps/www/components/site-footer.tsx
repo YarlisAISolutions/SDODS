@@ -17,27 +17,27 @@ export function SiteFooter() {
         </div>
         <div>
           <h2 className="mb-2 font-semibold">Product</h2>
-          <ul className="space-y-1">
+          <ul>
             <li>
-              <Link href="/install/" className="hover:underline">
+              <Link href="/install/" className="inline-block py-1 hover:underline">
                 Install
               </Link>
             </li>
             <li>
-              <a href={DOCS_URL} className="hover:underline">
+              <a href={DOCS_URL} className="inline-block py-1 hover:underline">
                 Documentation
               </a>
             </li>
             <li>
               <a
                 href={`${DOCS_URL}/docs/getting-started/installation/`}
-                className="hover:underline"
+                className="inline-block py-1 hover:underline"
               >
                 Quickstart
               </a>
             </li>
             <li>
-              <Link href="/roadmap/" className="hover:underline">
+              <Link href="/roadmap/" className="inline-block py-1 hover:underline">
                 Roadmap
               </Link>
             </li>
@@ -45,28 +45,32 @@ export function SiteFooter() {
         </div>
         <div>
           <h2 className="mb-2 font-semibold">Community</h2>
-          <ul className="space-y-1">
+          <ul>
             {REPO_PUBLIC && (
               <>
                 <li>
-                  <a href={REPO_URL} className="hover:underline" rel="noreferrer">
+                  <a href={REPO_URL} className="inline-block py-1 hover:underline" rel="noreferrer">
                     GitHub
                   </a>
                 </li>
                 <li>
-                  <a href={DISCUSSIONS_URL} className="hover:underline" rel="noreferrer">
+                  <a
+                    href={DISCUSSIONS_URL}
+                    className="inline-block py-1 hover:underline"
+                    rel="noreferrer"
+                  >
                     Discussions
                   </a>
                 </li>
               </>
             )}
             <li>
-              <Link href="/questions/" className="hover:underline">
+              <Link href="/questions/" className="inline-block py-1 hover:underline">
                 Questions
               </Link>
             </li>
             <li>
-              <Link href="/feedback/" className="hover:underline">
+              <Link href="/feedback/" className="inline-block py-1 hover:underline">
                 Feedback and feature requests
               </Link>
             </li>
@@ -74,16 +78,16 @@ export function SiteFooter() {
         </div>
         <div>
           <h2 className="mb-2 font-semibold">Legal</h2>
-          <ul className="space-y-1">
+          <ul>
             <li>
-              <Link href="/privacy/" className="hover:underline">
+              <Link href="/privacy/" className="inline-block py-1 hover:underline">
                 Privacy
               </Link>
             </li>
             <li>
               <a
                 href={REPO_PUBLIC ? `${REPO_URL}/blob/main/LICENSE` : LICENSE_URL}
-                className="hover:underline"
+                className="inline-block py-1 hover:underline"
                 rel="noreferrer"
               >
                 Apache-2.0 license
@@ -93,7 +97,7 @@ export function SiteFooter() {
               <li>
                 <a
                   href={`${REPO_URL}/blob/main/SECURITY.md`}
-                  className="hover:underline"
+                  className="inline-block py-1 hover:underline"
                   rel="noreferrer"
                 >
                   Security policy

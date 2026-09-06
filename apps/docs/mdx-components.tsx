@@ -15,9 +15,27 @@ import { Playground } from '@/components/playground';
 import { Roadmap, RoadmapChecklist, RoadmapVerification } from '@/components/roadmap';
 import { RepoOnly } from '@/components/repo-only';
 
+/**
+ * A markdown table that is wider than the column scrolls sideways, and the wrapper Fumadocs
+ * gives it cannot be focused — so a keyboard has no way to scroll it. Same wrapper, reachable.
+ */
+function Table(props: React.HTMLAttributes<HTMLTableElement>) {
+  return (
+    <div
+      tabIndex={0}
+      role="region"
+      aria-label="Table, scrolls sideways"
+      className="prose-no-margin relative my-6 overflow-auto"
+    >
+      <table {...props} />
+    </div>
+  );
+}
+
 export function getMDXComponents(components?: MDXComponents): MDXComponents {
   return {
     ...defaultMdxComponents,
+    table: Table,
     Callout,
     Card,
     Cards,

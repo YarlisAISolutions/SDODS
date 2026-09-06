@@ -17,6 +17,7 @@ import {
   Card,
   ErrorBox,
   PageHeader,
+  SkeletonList,
   Spinner,
   StatusPill,
   TotalsBar,
@@ -184,6 +185,7 @@ export function DashboardPage() {
             </Link>
           }
         >
+          {runs.isLoading && <SkeletonList rows={4} className="px-0" />}
           <ul className="divide-y divide-[var(--border)] text-sm">
             {(runs.data?.items ?? []).map((r) => (
               <li key={r.id} className="flex items-center justify-between gap-3 py-1.5">
@@ -219,8 +221,12 @@ export function DashboardPage() {
                   <Badge tone="purple">{p.role}</Badge> <span>{p.summary}</span>
                 </li>
               ))}
-            {(proposals.data ?? []).filter((p) => p.status === 'pending').length === 0 && (
-              <li className="muted text-xs">Nothing awaiting review.</li>
+            {proposals.isLoading ? (
+              <SkeletonList rows={2} className="px-0" />
+            ) : (
+              (proposals.data ?? []).filter((p) => p.status === 'pending').length === 0 && (
+                <li className="muted text-xs">Nothing awaiting review.</li>
+              )
             )}
           </ul>
         </Card>

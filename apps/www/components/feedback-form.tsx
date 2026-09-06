@@ -53,7 +53,7 @@ export function FeedbackForm() {
 
   if (sent) {
     return (
-      <div className="card p-6" aria-live="polite">
+      <div className="card p-6" role="status">
         <h3 className="font-semibold">Thanks — that reached us.</h3>
         <p className="muted mt-2 text-sm">
           Your {kind === 'bug' ? 'bug report' : kind === 'feature' ? 'feature request' : 'note'} is
@@ -78,7 +78,12 @@ export function FeedbackForm() {
   }
 
   return (
-    <form onSubmit={submit} className="card grid gap-4 p-6" aria-label="Feedback form">
+    <form
+      onSubmit={submit}
+      className="card grid gap-4 p-6"
+      aria-label="Feedback form"
+      aria-busy={sending}
+    >
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="text-sm">
           <span className="mb-1 block font-medium">Type</span>
