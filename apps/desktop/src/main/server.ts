@@ -15,6 +15,8 @@ import { killTree } from './runtime.js';
 import { workspacePaths } from './paths.js';
 
 export interface ServerHandle {
+  /** pid of the `sdods serve` child -- the process that can outlive the app. */
+  pid: number | undefined;
   port: number;
   url: string;
   /** Present only on a genuinely first run: the token that authorises admin creation. */
@@ -132,6 +134,7 @@ export async function startServer(opts: StartOptions): Promise<ServerHandle> {
   }
 
   return {
+    pid: child.pid,
     port,
     url,
     setupToken,

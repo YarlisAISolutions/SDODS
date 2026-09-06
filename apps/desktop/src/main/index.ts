@@ -10,14 +10,17 @@
  * the renderer here covers only the states that exist before that server does.
  */
 import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron';
+import { readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
+  appDataDir,
   defaultWorkspace,
   isBootstrapped,
   readConfig,
   writeConfig,
   type DesktopConfig,
 } from './paths.js';
+import { killTree } from './runtime.js';
 import { bootstrap, BootstrapError, generateSessionSecret, type Progress } from './bootstrap.js';
 import { startServer, ServerStartError, type ServerHandle } from './server.js';
 import { authenticate, loadCredentials } from './auth.js';
@@ -32,6 +35,58 @@ app.setName('SDODS');
 let win: BrowserWindow | null = null;
 let server: ServerHandle | null = null;
 let starting = false;
+
+/**
+ * Teardown that does not depend on the app being asked politely.
+ *
+ * Measured: a SIGTERM to the packaged app does NOT run `before-quit`, `will-quit`, `exit`, or even
+ * an explicit `process.on('SIGTERM')` handler -- Electron terminates natively and none of them
+ * fire. So the server child, which is spawned detached in its own process group, can outlive the
+ * app that owns it. Two servers on one SQLite file with two schedulers firing the same crons is a
+ * genuinely bad state.
+ *
+ * Recording the *child's* pid makes the next launch able to clean up regardless of how the last
+ * one died. The graceful paths above still run when they can; this is the floor, not the plan.
+ */
+function pidfilePath(): string {
+  return join(appDataDir(), 'server.pid');
+}
+
+function writePidfile(pid: number | undefined, port: number) {
+  if (!pid) return;
+  try {
+    writeFileSync(pidfilePath(), JSON.stringify({ pid, port }), { mode: 0o600 });
+  } catch {
+    /* a missing pidfile only costs us the orphan check */
+  }
+}
+
+function clearPidfile() {
+  try {
+    rmSync(pidfilePath(), { force: true });
+  } catch {
+    /* nothing to clear */
+  }
+}
+
+/** Kill a server left behind by a previous crash, so its port and database are free. */
+function reapOrphanServer() {
+  let record: { pid?: number } | null = null;
+  try {
+    record = JSON.parse(readFileSync(pidfilePath(), 'utf8')) as { pid?: number };
+  } catch {
+    return;
+  }
+  if (!record?.pid || record.pid === process.pid) return clearPidfile();
+  try {
+    process.kill(record.pid, 0); // probe only
+    log.warn('found a server from a previous session (pid', String(record.pid), '), stopping it');
+    killTree(record.pid);
+  } catch {
+    /* already gone */
+  }
+  clearPidfile();
+}
 
 function loadOrCreateConfig(): DesktopConfig {
   const existing = readConfig();
@@ -135,6 +190,7 @@ async function startup(config: DesktopConfig) {
       config.port = server.port;
       writeConfig(config);
     }
+    writePidfile(server.pid, server.port);
 
     log.info('server: ready at', server.url, server.setupToken ? '(first run)' : '');
     await authenticate(server.url, server.setupToken);
@@ -184,6 +240,7 @@ if (!app.requestSingleInstanceLock()) {
 
   void app.whenReady().then(async () => {
     const config = loadOrCreateConfig();
+    reapOrphanServer();
 
     ipcMain.handle('bootstrap:retry', () => startup(config));
     ipcMain.handle('app:info', () => ({
@@ -209,10 +266,23 @@ if (!app.requestSingleInstanceLock()) {
 function shutdown() {
   server?.stop();
   server = null;
+  clearPidfile();
 }
 app.on('before-quit', shutdown);
 app.on('will-quit', shutdown);
 process.on('exit', shutdown);
+
+// Best-effort signal handling. It does fire under `electron-vite dev` and for SIGINT from a
+// terminal, where it stops the server promptly. It does NOT fire in the packaged app -- measured:
+// a SIGTERM there runs none of before-quit, will-quit, exit, or this handler. So this is a
+// convenience for development, not the guarantee; the pidfile above is the guarantee.
+for (const signal of ['SIGTERM', 'SIGINT', 'SIGHUP'] as const) {
+  process.on(signal, () => {
+    log.info(`received ${signal}, stopping the server`);
+    shutdown();
+    app.exit(0);
+  });
+}
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();

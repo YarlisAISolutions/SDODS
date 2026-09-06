@@ -1,0 +1,152 @@
+name: desktop
+
+# Builds the SDODS desktop app for macOS, Windows and Linux and attaches the installers to a
+# GitHub Release.
+#
+# Tag-gated on purpose: six Electron builds, each bundling a ~120 MB Node runtime, is not a cost to
+# pay on every pull request. Use workflow_dispatch to produce artifacts without cutting a release.
+#
+#   git tag desktop-v0.1.0 && git push origin desktop-v0.1.0
+
+on:
+  push:
+    tags: ['desktop-v*']
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: 'Attach the artifacts to a GitHub Release'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: desktop-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  BUN_VERSION: '1.4.0'
+
+jobs:
+  build:
+    name: ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Each platform builds on its own runner. Cross-building is not an option: the Node
+          # tarball's bin/npm and bin/npx are symlinks with shebangs and the node binary needs mode
+          # 0755, both of which a foreign host loses.
+          - { name: macos · arm64 + x64, os: macos-14, flags: --mac }
+          - { name: windows · x64 + arm64, os: windows-latest, flags: --win }
+          - { name: linux · x64 + arm64, os: ubuntu-latest, flags: --linux }
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - run: bun install --frozen-lockfile
+
+      # The staged runtimes are large and version-pinned, so a cache hit skips ~250 MB of
+      # downloads per runner. Keyed on the pinned version in fetch-node-runtime.ts.
+      - name: Cache the bundled Node runtimes
+        uses: actions/cache@v4
+        with:
+          path: apps/desktop/resources/node
+          key: node-runtime-${{ runner.os }}-${{ hashFiles('apps/desktop/scripts/fetch-node-runtime.ts') }}
+
+      - run: bun run --filter @sdods/desktop typecheck
+
+      # Signing is wired behind these; every one is optional, so an unsigned build still succeeds.
+      # See .claude/skills/code-signing/SKILL.md for how to obtain the certificates.
+      - name: Build installers
+        working-directory: apps/desktop
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # macOS: Developer ID Application certificate + notarization
+          CSC_LINK: ${{ secrets.MAC_CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.MAC_CSC_KEY_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          # Windows: Azure Trusted Signing or a traditional certificate
+          WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
+          WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
+        shell: bash
+        run: |
+          bun run build
+          # --publish never: releasing is a separate, explicit step below.
+          npx electron-builder ${{ matrix.flags }} --publish never
+
+      # Prove the artifact is not hollow. A missing extraResources source is only a warning in
+      # electron-builder, and it once produced a .dmg with no Node runtime and a zero exit code.
+      - name: Verify each app bundles its Node runtime
+        working-directory: apps/desktop
+        shell: bash
+        run: |
+          set -euo pipefail
+          found=0
+          for dir in release/*/; do
+            case "$dir" in
+              *mac*) exe="$dir"SDODS.app/Contents/Resources/node/bin/node ;;
+              *win*) exe="$dir"resources/node/node.exe ;;
+              *linux*) exe="$dir"resources/node/bin/node ;;
+              *) continue ;;
+            esac
+            if [ -f "$exe" ]; then
+              echo "ok   $dir"
+              found=$((found + 1))
+            else
+              echo "FAIL $dir has no bundled Node at $exe"
+              exit 1
+            fi
+          done
+          [ "$found" -gt 0 ] || { echo 'no packaged app directories found'; exit 1; }
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sdods-desktop-${{ runner.os }}
+          path: |
+            apps/desktop/release/*.dmg
+            apps/desktop/release/*.zip
+            apps/desktop/release/*.exe
+            apps/desktop/release/*.AppImage
+            apps/desktop/release/*.deb
+            apps/desktop/release/latest*.yml
+          if-no-files-found: error
+          retention-days: 14
+
+  release:
+    name: publish release
+    needs: [build]
+    if: startsWith(github.ref, 'refs/tags/desktop-v') || inputs.publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: sdods-desktop-*
+          path: artifacts
+          merge-multiple: true
+
+      - name: Attach the installers to the release
+        uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          # A draft first: the download page on sdods.com points at these filenames, so the
+          # release is checked by a person before anyone can download a broken installer.
+          files: artifacts/*
+          body: |
+            SDODS desktop — installs, launches and upgrades SDODS in one click.
+
+            **These builds are unsigned.** Until certificates are in place:
+            - macOS: right-click the app → Open (Gatekeeper blocks a plain double-click)
+            - Windows: More info → Run anyway (SmartScreen)
+            - Linux: AppImage and .deb install normally

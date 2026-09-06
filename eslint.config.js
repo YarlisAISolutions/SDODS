@@ -49,6 +49,22 @@ export default tseslint.config(
     },
   },
   {
+    // The electron-builder hooks are plain .mjs running in Node: js.configs.recommended declares
+    // no Node globals, and TypeScript files get theirs from typescript-eslint. Scoped narrowly --
+    // the Next.js configs import `process` themselves and a blanket rule collides with that.
+    files: ['apps/desktop/scripts/**/*.mjs'],
+    languageOptions: {
+      globals: {
+        console: 'readonly',
+        process: 'readonly',
+        Buffer: 'readonly',
+        URL: 'readonly',
+        fetch: 'readonly',
+        __dirname: 'readonly',
+      },
+    },
+  },
+  {
     rules: {
       '@typescript-eslint/no-unused-vars': [
         'error',
