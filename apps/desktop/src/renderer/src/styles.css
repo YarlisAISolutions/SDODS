@@ -5,8 +5,10 @@
   --panel: #14181d;
   --fg: #e6e9ee;
   --muted: #8b95a3;
+  --faint: #5b6572;
   --line: #232a33;
   --accent: #4c9aff;
+  --ok: #3fb950;
   --danger: #ff6b6b;
   color-scheme: dark;
 }
@@ -28,9 +30,9 @@ body {
 }
 
 .shell {
-  max-width: 720px;
+  max-width: 640px;
   margin: 0 auto;
-  padding: 56px 32px 32px;
+  padding: 56px 32px 24px;
   display: flex;
   flex-direction: column;
   min-height: 100vh;
@@ -47,70 +49,171 @@ h1 {
   color: var(--muted);
 }
 
-.steps {
+/* ── progress bar ───────────────────────────────────────────────────────────────────────── */
+
+.progress-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+.progress-message {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.progress-percent {
+  /* Tabular figures stop the percentage jittering as the number changes width. */
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  flex: none;
+}
+
+.bar {
+  height: 6px;
+  border-radius: 3px;
+  background: var(--line);
+  overflow: hidden;
+}
+.bar-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: inherit;
+  /* npm progress arrives in bursts; easing turns them into movement rather than jumps. */
+  transition: width 400ms ease-out;
+}
+.bar-failed .bar-fill {
+  background: var(--danger);
+}
+@media (prefers-reduced-motion: reduce) {
+  .bar-fill {
+    transition: none;
+  }
+}
+
+/* ── stages and steps ───────────────────────────────────────────────────────────────────── */
+
+.stages {
   list-style: none;
   margin: 0;
   padding: 0;
   display: grid;
-  gap: 12px;
+  gap: 14px;
 }
-.steps li {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  color: var(--muted);
+.stages > li {
+  display: grid;
+  grid-template-columns: 20px 1fr;
+  gap: 10px;
+  align-items: start;
+  color: var(--faint);
 }
-.steps li.done {
+.stages > li.done,
+.stages > li.active {
   color: var(--fg);
 }
-.steps li.active {
-  color: var(--fg);
+.stages > li.failed {
+  color: var(--danger);
+}
+
+.stage-title {
+  margin: 0;
+  font-weight: 500;
+}
+.stages > li.active .stage-title {
   font-weight: 600;
 }
 
-.dot {
-  width: 9px;
-  height: 9px;
+.marker {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
-  background: var(--line);
+  border: 1px solid var(--line);
+  font-size: 11px;
+  line-height: 1;
   flex: none;
 }
-.steps li.done .dot {
-  background: var(--accent);
+.stages > li.done .marker {
+  border-color: var(--ok);
+  color: var(--ok);
 }
-.steps li.active .dot {
-  background: var(--accent);
-  box-shadow: 0 0 0 0 rgba(76, 154, 255, 0.6);
+.stages > li.failed .marker {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+.stages > li.active .marker {
+  border-color: var(--accent);
+  /* Motion here is load-bearing: it is the signal that a multi-minute install is still alive. */
   animation: pulse 1.6s ease-out infinite;
 }
-
-/* Motion here is load-bearing: it is the signal that a multi-minute install is still alive. */
 @keyframes pulse {
+  from {
+    box-shadow: 0 0 0 0 rgba(76, 154, 255, 0.5);
+  }
   to {
-    box-shadow: 0 0 0 10px rgba(76, 154, 255, 0);
+    box-shadow: 0 0 0 8px rgba(76, 154, 255, 0);
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .steps li.active .dot {
+  .stages > li.active .marker {
     animation: none;
+    background: rgba(76, 154, 255, 0.18);
   }
 }
 
-.status {
-  margin: 0;
+.steps {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--faint);
+}
+.steps li::before {
+  content: '· ';
+}
+.steps li.done {
   color: var(--muted);
+}
+.steps li.done::before {
+  content: '✓ ';
+  color: var(--ok);
+}
+.steps li.current {
+  color: var(--fg);
+}
+.steps li.current::before {
+  content: '› ';
+  color: var(--accent);
+}
+
+/* ── details and errors ─────────────────────────────────────────────────────────────────── */
+
+.log-details {
+  margin-top: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+}
+.log-details > summary {
+  cursor: pointer;
+  padding: 10px 12px;
+  color: var(--muted);
+  font-size: 13px;
+  user-select: none;
+}
+.log-details > summary:hover {
+  color: var(--fg);
 }
 
 .log {
   margin: 0;
-  flex: 1;
-  min-height: 120px;
-  max-height: 320px;
+  max-height: 220px;
   overflow: auto;
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 12px;
+  padding: 0 12px 12px;
   font:
     12px/1.45 ui-monospace,
     SFMono-Regular,
@@ -132,7 +235,7 @@ h1 {
 }
 .detail {
   margin: 0;
-  max-height: 240px;
+  max-height: 200px;
   overflow: auto;
   background: var(--panel);
   border: 1px solid var(--line);
@@ -166,7 +269,7 @@ footer {
   display: flex;
   justify-content: space-between;
   gap: 16px;
-  color: var(--muted);
+  color: var(--faint);
   font-size: 12px;
   border-top: 1px solid var(--line);
   padding-top: 12px;

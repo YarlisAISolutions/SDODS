@@ -21,7 +21,8 @@ import {
   type DesktopConfig,
 } from './paths.js';
 import { killTree } from './runtime.js';
-import { bootstrap, BootstrapError, generateSessionSecret, type Progress } from './bootstrap.js';
+import { bootstrap, BootstrapError, generateSessionSecret } from './bootstrap.js';
+import { percentFor, type Progress } from '../shared/stages.js';
 import { startServer, ServerStartError, type ServerHandle } from './server.js';
 import { authenticate, loadCredentials } from './auth.js';
 import { buildMenu } from './menu.js';
@@ -155,16 +156,28 @@ async function startup(config: DesktopConfig) {
   starting = true;
   log.info('startup: workspace=', config.workspace, 'port=', String(config.port));
   try {
-    if (!isBootstrapped(config.workspace)) {
+    /** Report a step in the final stage, which lives here rather than in bootstrap.ts. */
+    const launching = (step: string, fraction: number, message: string) =>
       send('bootstrap:progress', {
-        phase: 'checking',
-        message: 'Setting up SDODS for the first time…',
+        stage: 'launch',
+        step,
+        percent: percentFor('launch', fraction),
+        message,
       } satisfies Progress);
+
+    if (!isBootstrapped(config.workspace)) {
       log.info('bootstrap: workspace is not installed, running first-run install');
+      // The UI wants every tick; the log wants one line per step. Fetching ~640 packages emits a
+      // progress event per package, and logging each would bury the four lines that matter.
+      let lastLogged = '';
       await bootstrap({
         workspace: config.workspace,
         onProgress: (p) => {
-          if (p.message) log.info('bootstrap:', p.phase, p.message);
+          const key = `${p.stage}/${p.step}`;
+          if (p.message && key !== lastLogged) {
+            lastLogged = key;
+            log.info(`bootstrap: ${p.percent}% ${key} ${p.message}`);
+          }
           send('bootstrap:progress', p);
         },
       });
@@ -173,16 +186,17 @@ async function startup(config: DesktopConfig) {
       writeConfig(config);
     }
 
-    send('bootstrap:progress', {
-      phase: 'done',
-      message: 'Starting the SDODS server…',
-    } satisfies Progress);
+    launching('secret', 0.1, 'Generating a session key…');
+    launching('serve', 0.25, 'Starting the local server…');
 
     server = await startServer({
       workspace: config.workspace,
       sessionSecret: config.sessionSecret,
       port: config.port,
-      onLog: (line) => send('server:log', line),
+      onLog: (line) => {
+        send('server:log', line);
+        launching('health', 0.6, 'Waiting for the server to answer…');
+      },
     });
 
     // Remember the port so the URL stays stable for .mcp.json clients and bookmarks.
@@ -193,8 +207,10 @@ async function startup(config: DesktopConfig) {
     writePidfile(server.pid, server.port);
 
     log.info('server: ready at', server.url, server.setupToken ? '(first run)' : '');
+    launching('account', 0.85, server.setupToken ? 'Creating your account…' : 'Signing you in…');
     await authenticate(server.url, server.setupToken);
     log.info('auth: session established');
+    launching('account', 1, 'Ready.');
     buildMenu({
       workspace: config.workspace,
       serverUrl: server.url,

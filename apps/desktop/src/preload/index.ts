@@ -6,12 +6,8 @@
  * preload and talks to the API over HTTP like any browser would.
  */
 import { contextBridge, ipcRenderer } from 'electron';
+import type { Progress } from '../shared/stages.js';
 
-export interface Progress {
-  phase: string;
-  message: string;
-  detail?: string;
-}
 export interface BootstrapFailure {
   message: string;
   detail: string;
@@ -45,3 +41,4 @@ const api = {
 contextBridge.exposeInMainWorld('sdods', api);
 
 export type SdodsBridge = typeof api;
+export type { Progress };

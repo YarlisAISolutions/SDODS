@@ -7,23 +7,17 @@
  * Every step is idempotent and re-entrant. A user who force-quits during a slow install (Defender
  * scanning ~1200 freshly written files can stretch this to minutes) must be able to relaunch and
  * have it pick up rather than start over or wedge.
+ *
+ * Progress is reported as stages and steps from `shared/stages.ts`, not as raw child output. npm's
+ * log is still captured and forwarded as `detail`, but it belongs behind a disclosure: a wall of
+ * `npm http fetch` tells someone nothing about whether their install is healthy.
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { randomBytes } from 'node:crypto';
 import { runNpm, runSdods, type OnLine } from './proc.js';
 import { isBootstrapped, workspacePaths } from './paths.js';
-
-export type Phase =
-  'checking' | 'installing-cli' | 'scaffolding' | 'installing-deps' | 'done' | 'failed';
-
-export interface Progress {
-  phase: Phase;
-  /** Human-readable line for the progress UI. */
-  message: string;
-  /** Streamed child output, if any. */
-  detail?: string;
-}
+import { EXPECTED_NPM_LINES, percentFor, type Progress, type StageId } from '../shared/stages.js';
 
 export interface BootstrapOptions {
   workspace: string;
@@ -35,7 +29,7 @@ export interface BootstrapOptions {
 export class BootstrapError extends Error {
   constructor(
     message: string,
-    readonly phase: Phase,
+    readonly stage: StageId,
     readonly detail: string,
   ) {
     super(message);
@@ -48,26 +42,47 @@ export function generateSessionSecret(): string {
 }
 
 /**
- * Run the install. Resolves once the workspace is usable; throws BootstrapError with the captured
- * child output otherwise, so the renderer can show something actionable rather than "it failed".
+ * Count the package lines npm emits and turn them into movement inside one stage.
+ *
+ * npm at `--loglevel=info` prints one `npm http fetch` or `npm http cache` line per package, which
+ * is the only real signal of progress it offers — there is no total to divide by until it finishes.
+ * So the bar approaches the stage ceiling asymptotically and the stage's completion, not the count,
+ * is what actually closes it out.
  */
+function npmProgress(
+  expected: number,
+  emit: (fraction: number, packages: number, line: string) => void,
+): OnLine {
+  let seen = 0;
+  return (line) => {
+    if (/^npm (http|verb) (fetch|cache)/.test(line)) seen += 1;
+    // One event per line carrying both the fraction and the line. Emitting progress and detail
+    // separately meant the detail event's fraction overwrote the real one, pinning the bar to the
+    // stage floor while the package counter climbed into the hundreds.
+    emit(1 - Math.exp(-seen / (expected * 0.45)), seen, line);
+  };
+}
+
 export async function bootstrap(opts: BootstrapOptions): Promise<void> {
   const { workspace, spec = 'latest' } = opts;
-  const report = (phase: Phase, message: string, detail?: string) =>
-    opts.onProgress?.({ phase, message, detail });
-  /** Forward a child's output lines as progress detail for the given phase. */
-  const streamTo =
-    (phase: Phase): OnLine =>
-    (line) =>
-      report(phase, '', line);
+  const paths = workspacePaths(workspace);
 
-  report('checking', 'Checking for an existing installation…');
+  const report = (
+    stage: StageId,
+    step: string,
+    fraction: number,
+    message: string,
+    detail?: string,
+  ) => opts.onProgress?.({ stage, step, percent: percentFor(stage, fraction), message, detail });
+
+  // ── Prepare ─────────────────────────────────────────────────────────────────────────────────
+  report('prepare', 'check', 0, 'Looking for an existing installation…');
   if (isBootstrapped(workspace)) {
-    report('done', 'Already installed.');
+    report('launch', 'secret', 0, 'Already installed.');
     return;
   }
 
-  const paths = workspacePaths(workspace);
+  report('prepare', 'folder', 0.5, 'Creating your workspace folder…');
   mkdirSync(workspace, { recursive: true });
 
   // Step 1 — seed a manifest. `npm install <pkg>` in a bare directory does not reliably leave a
@@ -79,70 +94,77 @@ export async function bootstrap(opts: BootstrapOptions): Promise<void> {
     );
   }
 
-  // Step 2 — bootstrap install. This exists solely to obtain the `init` command; the fuller
-  // dependency set arrives in step 4 from the manifest `init` writes.
+  // ── Download ────────────────────────────────────────────────────────────────────────────────
+  // This install exists solely to obtain the `init` command; the fuller dependency set arrives
+  // below, from the manifest `init` writes.
   if (!existsSync(paths.cliBin)) {
-    report('installing-cli', `Downloading SDODS (@sdods/cli@${spec})…`);
+    report('download', 'resolve', 0, `Resolving @sdods/cli@${spec}…`);
     const res = await runNpm(['install', `@sdods/cli@${spec}`], {
       workspace,
-      onLine: streamTo('installing-cli'),
+      onLine: npmProgress(EXPECTED_NPM_LINES.cli, (fraction, packages, line) =>
+        report('download', 'packages', fraction, `Fetching packages… (${packages})`, line),
+      ),
     });
     if (res.code !== 0 || !existsSync(paths.cliBin)) {
       throw new BootstrapError(
         'Could not download SDODS. Check your network connection or proxy settings.',
-        'installing-cli',
+        'download',
         tail(res.stderr || res.stdout),
       );
     }
   }
 
-  // Step 3 — scaffold. Flags are all load-bearing:
-  //   --force        `init` refuses a non-empty directory, and step 2 just created node_modules.
+  // ── Workspace ───────────────────────────────────────────────────────────────────────────────
+  // Flags are all load-bearing:
+  //   --force        `init` refuses a non-empty directory, and the install above made node_modules.
   //   --no-install   `init --pm` accepts only bun|pnpm, neither of which a user machine has; npm
-  //                  is driven directly in step 4 instead.
+  //                  is driven directly below instead.
   //   --no-browsers  browsers are fetched on demand, not during first run.
   // `init` overwrites package.json, which is intended: its manifest is a superset that declares
   // @playwright/test and playwright-bdd. It only writes files, so node_modules survives.
   if (!existsSync(paths.runnerConfig)) {
-    report('scaffolding', 'Setting up your workspace…');
+    report('workspace', 'scaffold', 0, 'Writing project files…');
     const res = await runSdods(['init', '.', '--force', '--no-install', '--no-browsers'], {
       workspace,
-      onLine: streamTo('scaffolding'),
+      onLine: (line) => report('workspace', 'scaffold', 0.4, '', line),
     });
     if (res.code !== 0 || !existsSync(paths.runnerConfig)) {
       throw new BootstrapError(
         'Could not set up the workspace.',
-        'scaffolding',
+        'workspace',
         tail(res.stderr || res.stdout),
       );
     }
   }
+  report('workspace', 'demo', 0.9, 'Adding the demo project…');
 
-  // Step 4 — reconcile against the manifest `init` wrote. Not optional: `sdods run` shells out to
-  // `npx bddgen`, and playwright-bdd is not a dependency of @sdods/cli.
-  report('installing-deps', 'Installing test dependencies…');
+  writeCliBridgeIfNeeded(workspace);
+
+  // ── Dependencies ────────────────────────────────────────────────────────────────────────────
+  // Not optional: `sdods run` shells out to `npx bddgen`, and playwright-bdd is not a dependency
+  // of @sdods/cli.
+  report('dependencies', 'deps', 0, 'Installing the test runner…');
   const deps = await runNpm(['install'], {
     workspace,
-    onLine: streamTo('installing-deps'),
+    onLine: npmProgress(EXPECTED_NPM_LINES.deps, (fraction, _packages, line) =>
+      report('dependencies', 'deps', fraction, 'Installing the test runner…', line),
+    ),
   });
   if (deps.code !== 0) {
     throw new BootstrapError(
-      'Could not install test dependencies.',
-      'installing-deps',
+      'Could not install the test runner.',
+      'dependencies',
       tail(deps.stderr || deps.stdout),
     );
   }
 
-  writeCliBridgeIfNeeded(workspace);
-
   if (!isBootstrapped(workspace)) {
     throw new BootstrapError(
       'The workspace looks incomplete after installing.',
-      'failed',
+      'dependencies',
       `expected ${paths.cliBin} and ${paths.runnerConfig}`,
     );
   }
-  report('done', 'Ready.');
 }
 
 /**

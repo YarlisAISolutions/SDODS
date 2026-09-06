@@ -18,15 +18,28 @@ import { existsSync } from 'node:fs';
 import { delimiter, dirname, join } from 'node:path';
 import { browsersDir } from './paths.js';
 
-/** Root of the bundled Node distribution: `resources/node` in a packaged app. */
+/** The node executable inside a runtime root, whichever layout the platform uses. */
+const exeIn = (root: string) =>
+  process.platform === 'win32' ? join(root, 'node.exe') : join(root, 'bin', 'node');
+
+/**
+ * Root of the bundled Node distribution.
+ *
+ * The layout differs between packaged and development, which is a real trap: electron-builder maps
+ * `resources/node/<platform>-<arch>` to `Resources/node`, so in a packaged app that directory *is*
+ * the runtime root. In the source tree it is the parent of every staged per-arch runtime, and
+ * treating it as a root yields `resources/node/bin/node`, which does not exist.
+ *
+ * Both branches confirm the executable is actually there rather than trusting the directory.
+ */
 function runtimeRoot(): string | null {
-  if (app.isPackaged) {
-    const packaged = join(process.resourcesPath, 'node');
-    return existsSync(packaged) ? packaged : null;
-  }
-  // In dev there is no staged runtime; fall back to the Node that is running the dev server.
-  const staged = join(app.getAppPath(), 'resources', 'node');
-  return existsSync(staged) ? staged : null;
+  const candidates = app.isPackaged
+    ? [join(process.resourcesPath, 'node')]
+    : [
+        join(app.getAppPath(), 'resources', 'node', `${process.platform}-${process.arch}`),
+        join(app.getAppPath(), 'resources', 'node'),
+      ];
+  return candidates.find((root) => existsSync(exeIn(root))) ?? null;
 }
 
 /** Look for a real `node` on PATH. Dev machines have one; packaged installs must not rely on it. */
@@ -53,9 +66,7 @@ export function nodeBin(): string {
   if (override && existsSync(override)) return override;
 
   const root = runtimeRoot();
-  if (root) {
-    return process.platform === 'win32' ? join(root, 'node.exe') : join(root, 'bin', 'node');
-  }
+  if (root) return exeIn(root);
 
   const system = systemNode();
   if (system) return system;
