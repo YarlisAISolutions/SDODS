@@ -66,7 +66,8 @@ jobs:
       - run: bun run --filter @sdods/desktop typecheck
 
       # Signing is wired behind these; every one is optional, so an unsigned build still succeeds.
-      # See .claude/skills/code-signing/SKILL.md for how to obtain the certificates.
+      # See .claude/skills/code-signing/SKILL.md for how to obtain them, and for the
+      # geographic restriction that decides which Windows route is even available to you.
       - name: Build installers
         working-directory: apps/desktop
         env:
@@ -77,7 +78,13 @@ jobs:
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
-          # Windows: Azure Trusted Signing or a traditional certificate
+          # Windows, route A: Azure Artifact Signing (formerly Trusted Signing). No hardware
+          # token, so it is the only option that works on a hosted runner without a self-hosted
+          # box. Needs azureSignOptions in electron-builder.yml as well as these.
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          # Windows, route B: a traditional OV certificate.
           WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
           WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
         shell: bash
