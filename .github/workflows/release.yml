@@ -21,6 +21,12 @@ jobs:
     name: version · publish (npm)
     if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    # The image is built from the same commit that publishes the packages, so the image job has to
+    # know whether anything was actually published -- a `main` push that only merges a docs change
+    # must not retag `latest`.
+    outputs:
+      published: ${{ steps.changesets.outputs.published }}
+      version: ${{ steps.version.outputs.version }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -57,6 +63,7 @@ jobs:
             echo "no NPM_TOKEN and NPM_TRUSTED_PUBLISHING is not true — skipping publish"
           fi
       - name: Create release PR or publish
+        id: changesets
         if: steps.creds.outputs.present == 'true'
         uses: changesets/action@v1
         with:
@@ -73,9 +80,35 @@ jobs:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
+      # The image is tagged with the CLI's version, which is the one users cite. Read from what
+      # changesets reports it published rather than from the checked-out package.json: on the run
+      # that opens a release PR the two differ, and the image would claim a version nobody has.
+      - name: Resolve the published version
+        id: version
+        if: steps.changesets.outputs.published == 'true'
+        env:
+          PACKAGES: ${{ steps.changesets.outputs.publishedPackages }}
+        run: |
+          version=$(node -e "
+            const pkgs = JSON.parse(process.env.PACKAGES || '[]');
+            const cli = pkgs.find((p) => p.name === '@sdods/cli');
+            process.stdout.write(cli ? cli.version : '');
+          ")
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "publishing image for ${version:-<no @sdods/cli in this release>}"
+
   docker:
     name: server image (GHCR)
-    if: startsWith(github.ref, 'refs/tags/v')
+    # It used to gate on `refs/tags/v*` alone -- and nothing creates such a tag. Releases go out
+    # through changesets on `main`, which commits a version bump and publishes, without tagging.
+    # So this job had never run once and ghcr.io/<owner>/sdods-server does not exist.
+    #
+    # Not fixed by having the workflow push the tag itself: a tag pushed with GITHUB_TOKEN does not
+    # trigger workflows, so the job still would not run. It keys off the publish instead.
+    needs: [changesets]
+    if: >-
+      always() &&
+      (startsWith(github.ref, 'refs/tags/v') || needs.changesets.outputs.published == 'true')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -92,6 +125,7 @@ jobs:
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=${{ needs.changesets.outputs.version }},enable=${{ needs.changesets.outputs.version != '' }}
             type=raw,value=latest
       - uses: docker/build-push-action@v6
         with:

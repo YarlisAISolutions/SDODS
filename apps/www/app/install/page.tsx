@@ -19,7 +19,7 @@ const STEPS: Array<[string, string]> = [
   ],
   [
     'Fetches SDODS',
-    'A shallow clone into ~/.sdods/app, switching to npm automatically once packages are published.',
+    'The published @sdods/* packages into ~/.sdods. --source git builds from a clone instead.',
   ],
   [
     'Installs browsers',
@@ -47,12 +47,19 @@ export default function InstallPage() {
       <h1 className="text-4xl font-extrabold tracking-tight">Install SDODS</h1>
       <p className="muted mt-4 text-lg">
         One command on any operating system. It installs into <code>~/.sdods</code>, adds an{' '}
-        <code>sdods</code> command, and tells you what to run next.
+        <code>sdods</code> command, and tells you what to run next. If you would rather your own
+        package manager owned the install, the tabs below have it.
       </p>
 
       <div className="card mt-8 p-6">
         <InstallTabs />
       </div>
+
+      <p className="muted mt-4 text-sm">
+        Every tab above is a channel that has been checked against its registry. A package manager
+        appears here only once the manifest is actually published to it, so nothing on this page can
+        point at a version that does not exist.
+      </p>
 
       <p className="muted mt-4 text-sm">
         Prefer to read it first?{' '}

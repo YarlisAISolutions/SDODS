@@ -1,0 +1,116 @@
+import { describe, expect, it } from 'vitest';
+import { readFileSync, existsSync, readdirSync } from 'node:fs';
+import { join } from 'node:path';
+import {
+  INSTALL_CHANNELS,
+  TAB_CHANNELS,
+  alternatesFor,
+  defaultTabFor,
+} from '../apps/www/lib/install-channels.js';
+
+const repoRoot = join(import.meta.dirname, '..');
+const packaging = join(repoRoot, 'packaging');
+
+describe('install channels', () => {
+  it('every alternate hangs off a channel that owns a tab', () => {
+    // An alternate whose parent is missing or is itself an alternate renders nowhere: the panel
+    // it names is never drawn, so the command silently disappears from the page.
+    const owners = new Set(INSTALL_CHANNELS.filter((c) => !c.under).map((c) => c.id));
+    const orphans = INSTALL_CHANNELS.filter((c) => c.under && !owners.has(c.under));
+    expect(orphans.map((c) => c.id)).toEqual([]);
+  });
+
+  it('a live alternate is never stranded under a channel that is not live', () => {
+    // alternatesFor() only reaches channels whose parent panel is rendered, so a live winget under
+    // a dead Windows tab would be published-but-invisible — the worst of both states.
+    const live = new Map(INSTALL_CHANNELS.map((c) => [c.id, c.live]));
+    const stranded = INSTALL_CHANNELS.filter((c) => c.live && c.under && !live.get(c.under));
+    expect(stranded.map((c) => c.id)).toEqual([]);
+  });
+
+  it('no install command spans more than one line', () => {
+    // A command that wraps gets pasted in two halves. That has already happened once to a real
+    // person, which is why every command here is one line and the box scrolls instead.
+    const wrapped = INSTALL_CHANNELS.filter((c) => /[\r\n]/.test(c.command));
+    expect(wrapped.map((c) => c.id)).toEqual([]);
+  });
+
+  it('the default tab is always a script, on every platform', () => {
+    // Package managers are a preference; the script is the one path that works for a visitor who
+    // has none of them installed. Autodetect must never land on Homebrew.
+    for (const os of ['macos', 'linux', 'windows'] as const) {
+      expect(defaultTabFor(os)).toMatch(/^script-/);
+    }
+  });
+
+  it('the compact home-page tab set is never empty', () => {
+    // The scripts are hard-coded live, so this is a guard on someone marking them false: an empty
+    // tablist renders nothing at all and the home page loses its only call to action.
+    const compact = TAB_CHANNELS.filter((c) => c.id === 'script-unix' || c.id === 'script-windows');
+    expect(compact.length).toBe(2);
+  });
+
+  it('a live channel names the artifact it actually installs', () => {
+    // The failure this guards is a channel flipped live while its command still points at the
+    // placeholder it was written with.
+    const expected: Record<string, RegExp> = {
+      npm: /@sdods\/cli/,
+      homebrew: /^brew install \S+$/,
+      docker: /ghcr\.io\//,
+      winget: /^winget install \S+$/,
+      scoop: /scoop/,
+    };
+    for (const channel of INSTALL_CHANNELS.filter((c) => c.live)) {
+      const pattern = expected[channel.id];
+      if (pattern) expect(channel.command, channel.id).toMatch(pattern);
+    }
+  });
+
+  it('no rendered manifest still contains a template placeholder', () => {
+    // Rendering writes the manifest next to its .tmpl. A leftover {{VERSION}} would be pushed to
+    // a tap or a bucket and fail for every user, having passed every check here.
+    const rendered: string[] = [];
+    for (const dir of readdirSync(packaging, { withFileTypes: true })) {
+      if (!dir.isDirectory()) continue;
+      for (const file of readdirSync(join(packaging, dir.name))) {
+        if (file.endsWith('.tmpl') || file === 'README.md') continue;
+        const full = join(packaging, dir.name, file);
+        if (readFileSync(full, 'utf8').includes('{{')) rendered.push(`${dir.name}/${file}`);
+      }
+    }
+    expect(rendered, 'run: bun run channels:sync').toEqual([]);
+  });
+
+  it('the Homebrew formula carries a real sha256 and the version it claims', () => {
+    const formula = join(packaging, 'homebrew', 'sdods.rb');
+    if (!existsSync(formula)) return; // not rendered until the package is published
+    const source = readFileSync(formula, 'utf8');
+    const sha = /sha256 "([^"]+)"/.exec(source)?.[1];
+    // 64 hex characters, not a sha1 copied off a registry page and not a truncated paste.
+    expect(sha).toMatch(/^[0-9a-f]{64}$/);
+
+    const version = /^ {2}version "([^"]+)"$/m.exec(source)?.[1];
+    expect(source).toContain(`/cli-${version}.tgz`);
+  });
+
+  it('every packaging directory has a template for what it publishes', () => {
+    // A directory with a rendered manifest but no template is one somebody hand-edited, which is
+    // the state this whole pipeline exists to prevent.
+    for (const dir of ['homebrew', 'scoop', 'winget']) {
+      const files = readdirSync(join(packaging, dir));
+      expect(
+        files.some((f) => f.endsWith('.tmpl')),
+        `${dir} has no template`,
+      ).toBe(true);
+    }
+  });
+
+  it('alternatesFor returns only live channels', () => {
+    for (const channel of TAB_CHANNELS) {
+      for (const alt of alternatesFor(channel.id)) {
+        expect(alt.live, alt.id).toBe(true);
+        expect(alt.under).toBe(channel.id);
+      }
+    }
+  });
+});
