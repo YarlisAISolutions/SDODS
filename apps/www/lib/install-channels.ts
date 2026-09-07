@@ -98,8 +98,8 @@ export const INSTALL_CHANNELS: Channel[] = [
     os: ['macos', 'linux', 'windows'],
     kind: 'server',
     command: 'docker run --rm -p 8080:8080 -v sdods-data:/data ghcr.io/siri1410/sdods-server',
-    note: 'The server and web UI, browser engines included. Any CLI command works as the argument.',
-    live: false,
+    note: 'The server and web UI, browser engines included. linux/amd64 — Apple silicon emulates it.',
+    live: true,
   },
   {
     id: 'linux-packages',
