@@ -81,7 +81,7 @@ export const INSTALL_CHANNELS: Channel[] = [
     kind: 'cli',
     command: 'brew install siri1410/sdods/sdods',
     note: 'Installs the published CLI against your own Node. brew upgrade sdods updates it.',
-    live: false,
+    live: true,
   },
   {
     id: 'npm',
