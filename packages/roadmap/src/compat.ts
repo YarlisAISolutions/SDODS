@@ -17,6 +17,7 @@ export interface HorizonYear {
   because: string;
   features: string[];
   milestone: string;
+  maxi: string;
 }
 
 export const HORIZON: HorizonYear[] = LADDER.map((arc) => ({
@@ -28,6 +29,7 @@ export const HORIZON: HorizonYear[] = LADDER.map((arc) => ({
   because: arc.because,
   features: arc.features,
   milestone: arc.milestone,
+  maxi: arc.maxi,
 }));
 
 /** The fourteen phases, flattened back out of the chapters that group them. */
@@ -48,6 +50,21 @@ export const NEXT_UP: string[] = [
   'Your idea — open a feature request',
 ];
 
-/** The checkpoint the traveller is standing on, and the arc it belongs to. */
+/** The checkpoint the traveller is standing on. */
 export const CURRENT: Checkpoint = CHECKPOINTS.find((c) => c.state === 'now')!;
-export const CURRENT_YEAR: number = LADDER.find((a) => a.level === CURRENT.arc)!.displayYear;
+
+/**
+ * The calendar year the "today" marker sits on.
+ *
+ * Read from the current checkpoint's own date, not from the arc's `displayYear`. The two are not
+ * the same thing and were quietly disagreeing: the current stop is a month in 2026 while the rung
+ * it climbs is drawn under 2027, so the rail flagged a year that had not started yet. A delivered
+ * chapter carries no date at all, so the arc's display year remains the fallback for that case.
+ */
+export const CURRENT_YEAR: number =
+  'when' in CURRENT
+    ? Number(CURRENT.when.slice(0, 4))
+    : LADDER.find((a) => a.level === CURRENT.arc)!.displayYear;
+
+/** The rung being climbed right now, which may sit a year ahead of the calendar. */
+export const CURRENT_LEVEL_YEAR: number = LADDER.find((a) => a.level === CURRENT.arc)!.displayYear;

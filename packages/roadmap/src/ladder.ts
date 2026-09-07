@@ -24,6 +24,7 @@ export const LADDER: Arc[] = [
       'Run history in SQLite or Postgres, switchable with one flag',
       'Recorder, HAR replay, MCP server, agents, web UI, GitHub and Jira',
     ],
+    maxi: 'Everything on this rung runs today — the two screenshots either side of a failed step, the heal record, the run history. If a claim on this page has no test behind it, it should not be on this page.',
     milestone: 'Fourteen phases delivered, installable in one line.',
   },
   {
@@ -42,6 +43,7 @@ export const LADDER: Arc[] = [
       'Per-scenario network fixtures for offline suites',
       'Scheduled runs with change-aware selection',
     ],
+    maxi: 'This is the rung being built right now, and it is named after one sentence: two people looking at the same failure should see the same evidence, without either of them being the person who remembers.',
     milestone: 'A stable 1.0 with a compatibility promise for the CLI and the run format.',
   },
   {
@@ -60,6 +62,7 @@ export const LADDER: Arc[] = [
       'Failures clustered by cause, so one incident is one item and not forty',
       'Suggested scenarios from a change set, ranked by the risk they cover',
     ],
+    maxi: 'Direction, not a date. Maintenance is what actually kills automation, so this is the rung where the agents have to earn their keep — as a pull request you can reject, never a silent fix.',
     milestone: 'Most locator drift is fixed and merged without anyone writing a selector.',
   },
   {
@@ -78,6 +81,7 @@ export const LADDER: Arc[] = [
       'Environment provisioning hooks, so a suite can create what it needs',
       'Connectors for the trackers, chat tools and pipelines already in use',
     ],
+    maxi: 'By here the question has changed from “do the tests pass” to “who approved this, and what did they see when they did”.',
     milestone: 'The release gate becomes the record teams point at when asked why they shipped.',
   },
   {
@@ -96,6 +100,7 @@ export const LADDER: Arc[] = [
       'Private and on-premises agent runtimes for regulated environments',
       'A signed trail from requirement through run to release',
     ],
+    maxi: 'The last rung is for teams who have to prove it to somebody outside the room. Complete, tamper-evident and exportable — or it counts for nothing at all.',
     milestone: 'An auditor can follow one requirement to one release without asking a human.',
   },
 ];
