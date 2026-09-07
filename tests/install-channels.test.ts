@@ -118,6 +118,20 @@ describe('install channels', () => {
     expect(badComments).toEqual([]);
   });
 
+  it('the winget manifests parse, and ReleaseDate stays a string', () => {
+    // Unquoted, YAML types `2026-09-07` as a date, and winget's schema requires a string —
+    // `datetime.date is not of type 'string'`. It validates everywhere except the one queue that
+    // matters, so the quoting is load-bearing.
+    const dir = join(packaging, 'winget');
+    const yamls = readdirSync(dir).filter((f) => f.endsWith('.yaml'));
+    for (const file of yamls) {
+      const text = readFileSync(join(dir, file), 'utf8');
+      expect(text, file).toMatch(/^PackageIdentifier: SDODS\.SDODS$/m);
+      const date = /^ReleaseDate: (.+)$/m.exec(text)?.[1];
+      if (date !== undefined) expect(date, `${file} ReleaseDate must be quoted`).toMatch(/^".*"$/);
+    }
+  });
+
   it('alternatesFor returns only live channels', () => {
     for (const channel of TAB_CHANNELS) {
       for (const alt of alternatesFor(channel.id)) {
