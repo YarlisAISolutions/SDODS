@@ -81,7 +81,7 @@ export const INSTALL_CHANNELS: Channel[] = [
     kind: 'cli',
     command: 'brew install siri1410/sdods/sdods',
     note: 'Installs the published CLI against your own Node. brew upgrade sdods updates it.',
-    live: false,
+    live: true,
   },
   {
     id: 'npm',
@@ -106,9 +106,9 @@ export const INSTALL_CHANNELS: Channel[] = [
     label: 'Linux packages',
     os: ['linux'],
     kind: 'desktop',
-    command: 'sudo apt install ./SDODS-linux-amd64.deb',
+    command: 'sudo apt install ./SDODS-0.1.0-linux-amd64.deb',
     note: 'The desktop app as a .deb, downloaded from the releases page first.',
-    live: false,
+    live: true,
   },
   {
     id: 'scoop',
@@ -118,7 +118,7 @@ export const INSTALL_CHANNELS: Channel[] = [
     command: 'scoop bucket add sdods https://github.com/siri1410/scoop-sdods',
     note: 'Then: scoop install sdods — the desktop app, updated by scoop update.',
     under: 'script-windows',
-    live: false,
+    live: true,
   },
   {
     id: 'winget',
@@ -138,7 +138,7 @@ export const INSTALL_CHANNELS: Channel[] = [
     command: 'sudo apt update && sudo apt install sdods',
     note: 'After adding the signed SDODS repository once — the docs have the two setup lines.',
     under: 'linux-packages',
-    live: false,
+    live: true,
   },
 ];
 
