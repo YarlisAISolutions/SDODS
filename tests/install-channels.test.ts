@@ -128,7 +128,10 @@ describe('install channels', () => {
       const text = readFileSync(join(dir, file), 'utf8');
       expect(text, file).toMatch(/^PackageIdentifier: SDODS\.SDODS$/m);
       const date = /^ReleaseDate: (.+)$/m.exec(text)?.[1];
-      if (date !== undefined) expect(date, `${file} ReleaseDate must be quoted`).toMatch(/^".*"$/);
+      // Either quote works -- both are YAML strings. What must not happen is a bare 2026-09-07,
+      // which YAML types as a date and the winget schema rejects.
+      if (date !== undefined)
+        expect(date, `${file} ReleaseDate must be quoted`).toMatch(/^(".*"|'.*')$/);
     }
   });
 

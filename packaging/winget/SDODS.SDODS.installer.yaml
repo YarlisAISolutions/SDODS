@@ -12,7 +12,7 @@ InstallModes:
   - silentWithProgress
 UpgradeBehavior: install
 # Quoted: unquoted, YAML types this as a date, and the winget schema requires a string.
-ReleaseDate: '2026-09-07'
+ReleaseDate: "2026-09-07"
 Installers:
   - Architecture: x64
     InstallerUrl: https://github.com/siri1410/sdods-releases/releases/download/desktop-v0.1.0/SDODS-Setup-0.1.0-win-x64.exe
