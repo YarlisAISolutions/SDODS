@@ -1,4 +1,5 @@
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router';
+import { SdodsLockup } from './components/sdods-mark';
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from './auth/AuthContext';
 import { WorkspaceProvider, useWorkspace } from './context/WorkspaceContext';
@@ -54,7 +55,7 @@ function Shell() {
     <div className="flex h-full">
       <aside className="flex w-60 shrink-0 flex-col border-r border-line bg-[var(--panel)]">
         <div className="flex items-center gap-2 px-3 py-3">
-          <img src="/sdods-logo.svg" alt="SDODS" className="h-8" />
+          <SdodsLockup className="h-8" />
         </div>
         <div className="space-y-2 px-3 pb-3">
           <label className="block">

@@ -2,8 +2,7 @@
   <title id="t">SDODS</title>
   <desc id="d">The SDODS mark: two mirrored gates closing on a cored ring.</desc>
   <style>
-    @media (prefers-color-scheme: dark) { .ink { fill: #E6E9EE; } .rule { stroke: #E6E9EE; } .tag { fill: #E6E9EE; } }
-    .rule { stroke: #0B1020; }
+    .rule { stroke: currentColor; }
     .core { fill: #FFB020; }
   </style>
   <!-- The lockup's aperture and centre O, cropped to a square. This is what survives at 16px:
