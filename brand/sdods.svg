@@ -14,8 +14,12 @@
       <path class="rule" d="M28 26 A 58 58 0 0 0 28 110"/>
       <path class="rule" d="M446 26 A 58 58 0 0 1 446 110"/>
     </g>
-    <text class="ink" x="62" y="94" font-family="'Space Grotesk','Avenir Next','Futura','Helvetica Neue',Helvetica,Arial,sans-serif"
+    <text class="ink" x="78" y="94" font-family="'Space Grotesk','Avenir Next','Futura','Helvetica Neue',Helvetica,Arial,sans-serif"
           font-size="76" font-weight="700" letter-spacing="10">SD</text>
+    <!-- The centre O is a drawn circle, not a glyph, so it sits outside the font's metrics and
+         its position is a plain number. Measured with brand/measure.ts: at x=62 the word split
+         into "SD ODS" -- 30.2 units before the O against 14.0 after it. SD starts at 78 so both
+         gaps are 14.0 and the word is centred between the arcs (50.2 either side). -->
     <!-- the centre O: one ring, one core. A single unambiguous letterform. -->
     <g transform="translate(237,68)" fill="none">
       <circle class="rule" cx="0" cy="0" r="21" stroke-width="10"/>
@@ -23,7 +27,7 @@
     </g>
     <text class="ink" x="272" y="94" font-family="'Space Grotesk','Avenir Next','Futura','Helvetica Neue',Helvetica,Arial,sans-serif"
           font-size="76" font-weight="700" letter-spacing="10">DS</text>
-    <text class="tag" x="64" y="129" font-family="'Space Grotesk','Avenir Next','Helvetica Neue',Helvetica,Arial,sans-serif"
+    <text class="tag" x="237" y="129" text-anchor="middle" font-family="'Space Grotesk','Avenir Next','Helvetica Neue',Helvetica,Arial,sans-serif"
           font-size="16" font-weight="500" letter-spacing="3.1">Test automation you can defend.</text>
   </g>
 </svg>
