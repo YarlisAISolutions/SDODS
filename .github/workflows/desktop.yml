@@ -89,6 +89,16 @@ jobs:
           WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
         shell: bash
         run: |
+          # An absent secret expands to an empty string, and an empty string is still *defined*.
+          # electron-builder read CSC_LINK='' as "a certificate was supplied", tried to sign, and
+          # died with "apps/desktop not a file". Unsetting the empties restores the intended
+          # behaviour: sign when credentials exist, skip silently when they do not.
+          for var in CSC_LINK CSC_KEY_PASSWORD APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID \
+                     AZURE_TENANT_ID AZURE_CLIENT_ID AZURE_CLIENT_SECRET \
+                     WIN_CSC_LINK WIN_CSC_KEY_PASSWORD; do
+            [ -z "${!var:-}" ] && unset "$var" || true
+          done
+
           bun run build
           # --publish never: releasing is a separate, explicit step below.
           npx electron-builder ${{ matrix.flags }} --publish never
