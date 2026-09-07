@@ -63,7 +63,7 @@ package manager, these install the same software and let it handle upgrades.
 | Command                                    | Installs              | Needs                                       |
 | ------------------------------------------ | --------------------- | ------------------------------------------- |
 | `npm install -g @sdods/cli`                | the CLI               | Node 22+                                    |
-| `brew install siri1410/sdods/sdods`        | the CLI               | Homebrew, and it brings its own Node        |
+| `brew install siri1410/sdods/sdods`        | the CLI               | Homebrew, which pulls in `node`             |
 | `docker run ghcr.io/siri1410/sdods-server` | the server and web UI | Docker                                      |
 | `winget install SDODS.SDODS`               | the desktop app       | Windows 10+                                 |
 | `scoop install sdods`                      | the desktop app       | Scoop                                       |
@@ -72,8 +72,9 @@ package manager, these install the same software and let it handle upgrades.
 <Callout type="info">
   A channel is listed on [the install page](https://sdods.com/install) only once its manifest is
   actually published to that manager. The table here is the full set; the page shows the ones that
-  work today. They are not always the same, because four of these are published by someone else —
-  npm, GHCR, Microsoft's winget reviewers, and whoever runs your apt mirror.
+  work today, checked against each registry rather than declared. They are not always the same:
+  winget is merged by Microsoft's reviewers on their schedule, and Homebrew refuses a formula whose
+  packages were published less than a day ago.
 </Callout>
 
 ### npm
@@ -99,6 +100,10 @@ rather than vendoring one, so SDODS runs on the same Node as the rest of your to
 ```bash
 brew install siri1410/sdods/sdods
 ```
+
+Homebrew asks you to trust a tap that is not one of its own the first time you install from it, and
+prints the `brew trust` command to run. Reading the formula with `brew info` needs no trust;
+installing does.
 
 ### Docker
 
@@ -137,10 +142,12 @@ scoop install sdods
 
 ### Debian and Ubuntu
 
-Install a single `.deb` straight from a release when you just want the app:
+Install a single `.deb` when you just want the app and not the update channel. Download it from
+[the download page](https://sdods.com/download) first — the filename carries the version, so the
+glob is what keeps this correct across releases:
 
 ```bash
-sudo apt install ./SDODS-linux-amd64.deb
+sudo apt install ./SDODS-*-linux-amd64.deb
 ```
 
 Or add the signed repository, which is what makes `apt upgrade` keep it current. Add the key
