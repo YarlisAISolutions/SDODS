@@ -11,7 +11,8 @@ InstallModes:
   - silent
   - silentWithProgress
 UpgradeBehavior: install
-ReleaseDate: {{RELEASE_DATE}}
+# Quoted: unquoted, YAML types this as a date, and the winget schema requires a string.
+ReleaseDate: "{{RELEASE_DATE}}"
 Installers:
   - Architecture: x64
     InstallerUrl: {{WIN_X64_URL}}
