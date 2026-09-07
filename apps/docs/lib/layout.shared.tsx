@@ -1,4 +1,4 @@
-import { withBase } from '@/lib/base-path';
+import { SdodsMark } from '@/components/sdods-mark';
 import type { BaseLayoutProps } from 'fumadocs-ui/layouts/shared';
 import { REPO_PUBLIC, REPO_URL } from '@/lib/links';
 
@@ -7,7 +7,7 @@ export function baseOptions(): BaseLayoutProps {
     nav: {
       title: (
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
-          <img src={withBase('/img/favicon.svg')} alt="" width={22} height={22} />
+          <SdodsMark size={22} />
           SDODS
         </span>
       ),

@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { SdodsMark } from '@/components/sdods-mark';
 import { usePathname } from 'next/navigation';
 import { MobileNav } from '@/components/mobile-nav';
 import { ThemeToggle } from '@/components/theme-toggle';
@@ -16,7 +17,7 @@ export function SiteHeader() {
         className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3"
       >
         <Link href="/" className="flex items-center gap-2 font-semibold">
-          <img src="/img/favicon.svg" alt="" width={26} height={26} />
+          <SdodsMark size={26} />
           <span>
             SD<span className="text-[var(--brand)]">ODS</span>
           </span>

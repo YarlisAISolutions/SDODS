@@ -44,8 +44,17 @@ cpSync(demo, join(out, 'projects/demo-shop'), { recursive: true, filter: relFilt
 staged.push('projects/demo-shop/');
 
 const skills = join(repoRoot, '.claude/skills');
+// Skills that only make sense inside this repository must not ship to customer workspaces.
+// `sdods-brand` drives files under `brand/`, which no scaffolded workspace has; `code-signing` and
+// `sdods-desktop-release` are about releasing SDODS itself, not about using it.
+const REPO_ONLY_SKILLS = ['sdods-brand', 'code-signing', 'sdods-desktop-release'];
 if (existsSync(skills)) {
-  cpSync(skills, join(out, '.claude/skills'), { recursive: true, filter: relFilter(skills) });
+  const skillFilter = relFilter(skills);
+  cpSync(skills, join(out, '.claude/skills'), {
+    recursive: true,
+    filter: (src, dest) =>
+      skillFilter(src, dest) && !REPO_ONLY_SKILLS.some((s) => src.includes(`/.claude/skills/${s}`)),
+  });
   staged.push('.claude/skills/');
 }
 

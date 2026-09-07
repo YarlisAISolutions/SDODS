@@ -1,4 +1,4 @@
-import { withBase } from '@/lib/base-path';
+import { SdodsLockup } from '@/components/sdods-mark';
 import Link from 'next/link';
 import { HomeLayout } from 'fumadocs-ui/layouts/home';
 import { baseOptions } from '@/lib/layout.shared';
@@ -44,13 +44,14 @@ export default function HomePage() {
           one unbreakable line — pushes the whole page past a 320px screen instead of scrolling
           inside its own box. */}
       <main className="mx-auto flex w-full max-w-5xl flex-col items-center px-4 py-16 text-center">
-        {/* The wordmark is the title. It is an image, so the heading is spelled out for
-            anything that cannot see it — and the image itself becomes decorative. */}
+        {/* The wordmark is the title. Rendered inline rather than as an <img> so it inherits the
+            page's text colour: as an image its ink was baked to #0B1020 and disappeared against
+            the dark background. The heading text is spelled out for anything that cannot see it. */}
         <h1 className="w-full max-w-lg">
           <span className="sr-only">
             SDODS — an automation platform with a reusable architecture
           </span>
-          <img src={withBase('/img/sdods-logo.svg')} alt="" className="w-full max-w-lg" />
+          <SdodsLockup className="w-full max-w-lg" />
         </h1>
         <p className="mt-6 max-w-2xl text-lg text-fd-muted-foreground">
           An automation platform with a reusable architecture. BDD for UI, API and hybrid flows,

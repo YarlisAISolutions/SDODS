@@ -7,7 +7,7 @@
   "author": "SDODS <admin@sdods.com>",
   "scripts": {
     "dev": "next dev --port 3100",
-    "build": "node --import tsx ../../scripts/sync-installer.ts && next build",
+    "build": "node --import tsx ../../scripts/sync-installer.ts && node --import tsx ../../scripts/sync-brand.ts && next build",
     "typecheck": "tsc --noEmit",
     "screenshots": "node --import tsx scripts/screenshots.ts"
   },

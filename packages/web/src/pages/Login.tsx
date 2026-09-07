@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react';
+import { SdodsLockup } from '../components/sdods-mark';
 import { useNavigate, useSearchParams } from 'react-router';
 import { useAuth } from '../auth/AuthContext';
 import { api } from '../api/client';
@@ -8,7 +9,7 @@ function Frame({ title, children }: { title: string; children: React.ReactNode }
   return (
     <div className="flex h-full items-center justify-center p-6">
       <div className="panel w-full max-w-sm p-6">
-        <img src="/sdods-logo.svg" alt="SDODS" className="mx-auto mb-4 h-12" />
+        <SdodsLockup className="h-12" />
         <h1 className="mb-4 text-center text-base font-semibold">{title}</h1>
         {children}
       </div>
