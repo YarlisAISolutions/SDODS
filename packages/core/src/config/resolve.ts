@@ -71,6 +71,19 @@ export interface ResolvedConfig {
   provenance: Record<string, LayerName>;
   /** env var names referenced by ${VAR} and the files that contributed values */
   sources: { dotenvFiles: string[] };
+  /**
+   * The resolved `${VAR}` scope: the dotenv layer merged under `process.env`.
+   *
+   * Exposed because `loadDotEnvLayer` deliberately does NOT mutate `process.env`
+   * (doing so would silently outrank the process layer), so anything that
+   * interpolates `${VAR}` outside the config tree — dataset rows, most of all —
+   * cannot reach the values in `.env.<env>` unless it is handed this. Without
+   * it, the documented pattern of keeping passwords in `.env.<env>` and
+   * referencing them from `data/**\/users.csv` resolves to the literal string
+   * `${TEST_MEMBER_PASSWORD}`, and the failure surfaces far away as a provider
+   * rejecting the credential.
+   */
+  vars: Record<string, string | undefined>;
 }
 
 export interface ResolveOptions {
@@ -258,6 +271,7 @@ export function resolveConfig(opts: ResolveOptions): ResolvedConfig {
     runtime: rt as RuntimeConfig,
     provenance: Object.fromEntries(prov.byPath),
     sources: { dotenvFiles: dotenv.files },
+    vars,
   };
 }
 

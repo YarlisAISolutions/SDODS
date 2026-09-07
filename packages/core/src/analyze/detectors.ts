@@ -227,6 +227,7 @@ export function detectRoutes(scan: Scan, frameworks: DetectedFramework[]): Detec
     scan.files.some((f) => /(^|\/)app\/.*page\.(tsx|jsx|ts|js)$/.test(f.rel))
   ) {
     for (const f of scan.files) {
+      if (isNotShippedCode(f.rel)) continue;
       const m = /(?:^|\/)(?:src\/)?app\/(.*?)(?:^|\/)?(page|route)\.(tsx|jsx|ts|js)$/.exec(f.rel);
       if (!m) continue;
       const dir = f.rel.replace(/\/?(page|route)\.(tsx|jsx|ts|js)$/, '');
@@ -262,8 +263,16 @@ export function detectRoutes(scan: Scan, frameworks: DetectedFramework[]): Detec
       }
     }
     for (const f of scan.files) {
+      if (isNotShippedCode(f.rel)) continue;
       const m = /(?:^|\/)(?:src\/)?pages\/(.+)\.(tsx|jsx|ts|js)$/.exec(f.rel);
       if (!m) continue;
+      // A directory called `pages` is not automatically the Pages Router.
+      // `app/api/intranet/pages/[id]/route.ts` is an App Router ROUTE HANDLER
+      // inside a resource that happens to be named "pages" — and it was being
+      // read as a Pages Router PAGE at `/{id}/route`: wrong kind, wrong source,
+      // and a path that had lost every parent segment. Anything under an `app/`
+      // segment belongs to the App Router loop above, which already handled it.
+      if (/(?:^|\/)(?:src\/)?app\//.test(f.rel)) continue;
       const rel = m[1]!;
       if (/^_app$|^_document$|^_error$|^404$|^500$/.test(rel)) continue;
       const segs = rel.split('/').map((s) => (s === 'index' ? '' : s));
@@ -278,6 +287,16 @@ export function detectRoutes(scan: Scan, frameworks: DetectedFramework[]): Detec
         params: paramsOf(path),
       });
     }
+  }
+
+  /**
+   * Colocated tests, stories and type declarations sit next to the code they
+   * cover and match every route filename pattern. `route.test.ts` was being
+   * reported as a route named `id-publish-route-test`, which then became a key in
+   * the generated `routes:` map — an address that resolves to nothing.
+   */
+  function isNotShippedCode(rel: string): boolean {
+    return /\.(test|spec|stories|story|bench|d)\.(tsx|jsx|ts|js|mts|cts)$/.test(rel);
   }
 
   // React Router

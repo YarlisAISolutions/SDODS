@@ -90,8 +90,14 @@ export class ApiClient {
     };
     if (opts.body !== undefined && !headers['content-type'] && !opts.form)
       headers['content-type'] = 'application/json';
+    // `null` at either level means "send this unauthenticated". Only `undefined`
+    // falls through to the next layer, so a scenario can opt out of the
+    // environment credential without the environment having to know.
+    const ctxAuth = this.deps.ctx.auth;
     const auth =
-      opts.auth === null ? undefined : (opts.auth ?? this.deps.ctx.auth ?? envAuth(env.auth));
+      opts.auth === null
+        ? undefined
+        : (opts.auth ?? (ctxAuth === null ? undefined : (ctxAuth ?? envAuth(env.auth))));
     if (auth) {
       if (auth.type === 'bearer') headers.authorization = `Bearer ${auth.token}`;
       else if (auth.type === 'basic')
