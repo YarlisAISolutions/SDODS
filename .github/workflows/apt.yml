@@ -1,11 +1,15 @@
 name: apt repository
 
-# Builds a signed apt repository from a published desktop release and serves it from GitHub Pages
-# on the PUBLIC releases repository.
+# Builds a signed apt repository from a published desktop release and opens a PR with its metadata,
+# which sdods.com then serves.
 #
-# Why not sdods.com: that site is a static export deployed whole, so hosting the repo there would
-# make every site deploy download a few hundred megabytes of .deb. The apt repo changes on a
-# desktop release, the site changes on every commit, and they should not be the same deploy.
+# The .deb files are not published here and cannot be: they are 120-130 MB each, over GitHub's
+# 100 MB per-file limit, so no branch in any repository can hold them. They stay on the public
+# release, `Packages` records them under `pool/<tag>/`, and firebase.json redirects that path to
+# the release asset. apt follows the redirect and verifies the download against the SHA-256 in
+# `Packages`, so nothing is trusted less for having been fetched from somewhere else.
+#
+# What gets committed is a few kilobytes of metadata, and only when a desktop release is cut.
 #
 # Deliberately manual. Adding an apt source is a trust decision by the person running apt, and the
 # repository is signed with the project key — so a person triggers it, the same way a person
@@ -19,7 +23,8 @@ on:
         type: string
 
 permissions:
-  contents: read
+  contents: write
+  pull-requests: write
 
 concurrency:
   group: apt-repo
@@ -60,6 +65,7 @@ jobs:
           [ -n "$TAG" ] && [ "$TAG" != "null" ] || {
             echo "::error::No published desktop-v* release in $RELEASE_REPO."; exit 1; }
           echo "packaging $TAG"
+          echo "TAG=$TAG" >> "$GITHUB_ENV"
           gh release download "$TAG" -R "$RELEASE_REPO" -p '*.deb' -D debs
           ls -la debs
 
@@ -68,7 +74,8 @@ jobs:
           SDODS_APT_GPG_KEY: ${{ secrets.SDODS_APT_GPG_KEY }}
         run: |
           sudo apt-get update && sudo apt-get install -y --no-install-recommends apt-utils
-          packaging/apt/build-repo.sh debs site/apt
+          # The pool path carries the tag so one redirect rule serves every release.
+          packaging/apt/build-repo.sh debs site/apt "pool/$TAG"
 
       # A local proof before anyone's machine trusts it: apt resolves the package from the repo as
       # written, using the keyring the repo itself ships. A repo that only "looks right" has passed
@@ -86,27 +93,38 @@ jobs:
           apt-cache policy sdods
           apt-cache policy sdods | grep -q 'Candidate: [0-9]' || {
             echo "::error::apt found the repository but no installable sdods package."; exit 1; }
+          # Stronger than reading the metadata: this fetches the .deb through the repository and
+          # checks it against the SHA-256 in Packages. If the two ever disagree, apt says so here
+          # rather than on a user's machine.
+          sudo apt-get install -y --download-only sdods
 
-      - name: Publish to the releases repository's Pages branch
+      - name: Open a PR with the metadata
         env:
-          GH_TOKEN: ${{ secrets.DESKTOP_RELEASE_TOKEN }}
-          RELEASE_REPO: ${{ vars.DESKTOP_RELEASE_REPO || 'siri1410/sdods-releases' }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          [ -n "$GH_TOKEN" ] || {
-            echo "::error::DESKTOP_RELEASE_TOKEN is required to push to $RELEASE_REPO."; exit 1; }
-          git clone --depth 1 --branch gh-pages \
-            "https://x-access-token:$GH_TOKEN@github.com/$RELEASE_REPO.git" pages 2>/dev/null || {
-              git init pages && git -C pages checkout -b gh-pages
-              git -C pages remote add origin "https://x-access-token:$GH_TOKEN@github.com/$RELEASE_REPO.git"
-            }
-          rm -rf pages/apt
-          cp -r site/apt pages/apt
-          # Jekyll would drop the dot-free binary files and any directory it does not recognise.
-          touch pages/.nojekyll
-          git -C pages config user.name 'SDODS'
-          git -C pages config user.email 'admin@sdods.com'
-          git -C pages add -A
-          git -C pages diff --quiet --cached && { echo 'apt repo unchanged'; exit 0; }
-          git -C pages commit -m 'chore(apt): rebuild repository from the published release'
-          git -C pages push origin gh-pages
+          # The payload is deleted now, not skipped earlier: the metadata above records each file's
+          # size and SHA-256, and the verify step needed the real bytes to check them against.
+          find site/apt -name '*.deb' -delete
+          rm -rf apps/www/public/apt
+          mkdir -p apps/www/public
+          cp -r site/apt apps/www/public/apt
+          du -sh apps/www/public/apt
+
+          branch="chore/apt-$TAG"
+          git config user.name 'SDODS'
+          git config user.email 'admin@sdods.com'
+          git checkout -b "$branch"
+          git add apps/www/public/apt
+          git diff --quiet --cached && { echo 'apt metadata unchanged'; exit 0; }
+          git commit -m "chore(apt): repository metadata for $TAG"
+          git push -u origin "$branch"
+          gh pr create --fill --base main --head "$branch" \
+            --title "chore(apt): repository metadata for $TAG" \
+            --body "Signed apt repository metadata for \`$TAG\`, built and verified by the apt workflow.
+
+          The \`.deb\` files are not here — they are over GitHub's 100 MB file limit and stay on the
+          public release. \`Packages\` points at \`pool/$TAG/\`, which firebase.json redirects to the
+          release asset; apt verifies the download against the SHA-256 recorded here.
+
+          Merging this deploys the repository to https://sdods.com/apt."
