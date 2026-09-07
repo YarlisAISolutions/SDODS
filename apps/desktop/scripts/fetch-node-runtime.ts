@@ -110,13 +110,7 @@ export async function fetchRuntime(root: string, t: Target): Promise<string> {
   const archive = join(staging, file);
   writeFileSync(archive, buf);
 
-  // bsdtar reads .zip, .tar.gz and .tar.xz alike, and ships with macOS, Windows 10+ and every
-  // mainstream Linux image -- so one command covers all six targets and `unzip` is not needed.
-  //
-  // Run it from the staging directory with a bare filename. Handed an absolute Windows path,
-  // bsdtar reads the drive letter as a remote host and fails with "Cannot connect to D:", because
-  // `host:path` is valid tar syntax. Keeping both arguments relative avoids the colon entirely.
-  await exec('tar', ['-xf', file], { cwd: staging });
+  await extract(file, staging);
   rmSync(archive);
 
   // Archives contain a single top-level `node-<version>-<os>-<arch>/` directory; hoist it.
@@ -169,6 +163,37 @@ function dirSize(dir: string): number {
     }
   }
   return total;
+}
+
+/**
+ * Unpack one downloaded archive, choosing the tool by what the *host* actually has.
+ *
+ * Two Windows-only traps, both found by CI rather than locally:
+ *
+ *   1. `tar` on a GitHub Windows runner is GNU tar, from Git for Windows, which appears earlier on
+ *      PATH than the bsdtar in System32 and cannot read a .zip at all — "This does not look like a
+ *      tar archive". So Windows hosts use PowerShell's Expand-Archive instead.
+ *   2. bsdtar handed an absolute Windows path reads the leading drive letter as a remote
+ *      `host:path` and fails with "Cannot connect to D:". Everything here stays relative to the
+ *      staging directory, so no colon ever reaches the command line.
+ *
+ * Elsewhere bsdtar reads .zip, .tar.gz and .tar.xz alike, so one call covers the other targets.
+ */
+async function extract(file: string, cwd: string): Promise<void> {
+  if (process.platform === 'win32') {
+    await exec(
+      'powershell',
+      [
+        '-NoProfile',
+        '-NonInteractive',
+        '-Command',
+        `Expand-Archive -LiteralPath '${file}' -DestinationPath '.' -Force`,
+      ],
+      { cwd },
+    );
+    return;
+  }
+  await exec('tar', ['-xf', file], { cwd });
 }
 
 function parseArgs(argv: string[]): Target[] {
