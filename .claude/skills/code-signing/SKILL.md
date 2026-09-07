@@ -9,6 +9,8 @@ Unsigned installers work, but every user is told not to run them. macOS refuses 
 ("SDODS is damaged" or "unidentified developer") and Windows SmartScreen interrupts the install.
 That undercuts the one-click promise more than any technical problem in the app.
 
+Signing also gates a distribution channel: **winget's validation flags unsigned installers**, so the `microsoft/winget-pkgs` submission is the one that most wants the certificate. See the `sdods-release-channels` skill for the rest of that pipeline.
+
 **Everything in the build is already wired.** Supply the credentials as CI secrets and signing turns
 on with no code change. What cannot be automated is acquiring the certificates: both require a
 person's legal identity and a payment.

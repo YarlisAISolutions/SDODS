@@ -28,10 +28,17 @@ bun run --cwd apps/desktop dist:mac      # dist:win · dist:linux
 git tag desktop-v0.1.0 && git push origin desktop-v0.1.0   # triggers .github/workflows/desktop.yml
 #    ... workflow drafts a release in the PUBLIC releases repo; publish it by hand ...
 bun run desktop:sync-release desktop-v0.1.0                # writes apps/www/lib/desktop-release.ts
+bun run channels:sync                                      # renders the Scoop/winget/apt manifests
 git commit -am 'chore(www): desktop 0.1.0 downloads' && merge to main   # www workflow deploys
 ```
 
-**Order matters.** Sync the manifest only after the release is *published*, not while it is a
+Three package managers install this release rather than the CLI — Scoop, winget and apt — and none
+of their manifests can be rendered until it is published, because each one needs the SHA-256 of an
+asset that must be downloaded first. `channels:sync` does that and refuses on a draft. Pushing the
+manifests to the tap, the bucket and Microsoft's queue is a separate step: see the
+`sdods-release-channels` skill.
+
+**Order matters.** Sync the manifests only after the release is *published*, not while it is a
 draft — the download page links straight at the asset URLs, and draft assets are not downloadable.
 The sync script refuses to run against a draft for exactly this reason.
 

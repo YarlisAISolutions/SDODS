@@ -1,23 +1,14 @@
 'use client';
 
 import { useEffect, useId, useRef, useState } from 'react';
-
-export type OsKey = 'unix' | 'windows';
-
-const COMMANDS: Record<OsKey, { label: string; command: string; note: string }> = {
-  unix: {
-    label: 'macOS / Linux',
-    command: 'curl -fsSL https://sdods.com/install.sh | sh',
-    note: 'Options go after -s --, for example: | sh -s -- --workspace ~/my-tests --mcp claude',
-  },
-  windows: {
-    label: 'Windows',
-    command: 'irm https://sdods.com/install.ps1 | iex',
-    note: 'With options: & ([scriptblock]::Create((irm https://sdods.com/install.ps1))) -Workspace C:\\my-tests',
-  },
-};
-
-const KEYS = Object.keys(COMMANDS) as OsKey[];
+import {
+  TAB_CHANNELS,
+  alternatesFor,
+  defaultTabFor,
+  type Channel,
+  type ChannelId,
+  type ChannelOs,
+} from '@/lib/install-channels';
 
 /** Copy button that reports success without a layout shift, and out loud. */
 function CopyButton({ text, label = 'Copy' }: { text: string; label?: string }) {
@@ -51,91 +42,146 @@ function CopyButton({ text, label = 'Copy' }: { text: string; label?: string }) 
 }
 
 /**
- * OS-tabbed install command. Defaults to the visitor's platform, which is the only thing most
- * people need from this page.
+ * One command and its copy button. Never wrapped across lines: a wrapped install command has
+ * already been pasted in two halves and failed, so it scrolls in its own box instead.
+ */
+function CommandRow({ command, label }: { command: string; label: string }) {
+  return (
+    <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+      {/* min-w-0: without it the flex item refuses to shrink past its content, the overflow never
+          engages and the copy button is pushed off the card. */}
+      <pre
+        tabIndex={0}
+        role="region"
+        aria-label={`Install command for ${label}`}
+        className="min-w-0 grow overflow-x-auto"
+      >
+        <code>{command}</code>
+      </pre>
+      <CopyButton text={command} />
+    </div>
+  );
+}
+
+/**
+ * Tabbed install commands, one tab per live channel.
  *
- * The tabs are the real thing: arrows move between them, the tab that is selected is the only
- * one in the tab order, and each one owns the panel underneath.
+ * Which tabs exist is not a decision this component makes: `TAB_CHANNELS` only contains channels
+ * whose registry has actually been probed and answered. A channel that is not published yet is
+ * absent rather than disabled — a greyed-out "Homebrew" tab still promises something that does
+ * not exist.
+ *
+ * The tabs are the real thing: arrows move between them, the tab that is selected is the only one
+ * in the tab order, and each one owns the panel underneath.
  */
 export function InstallTabs({ compact = false }: { compact?: boolean }) {
-  const [os, setOs] = useState<OsKey>('unix');
+  // Compact is the home page, where the question is "what do I paste" and every extra tab is a
+  // decision the visitor did not come to make. The scripts install on every platform, so the
+  // short list loses nobody.
+  const channels: Channel[] = compact
+    ? TAB_CHANNELS.filter((c) => c.id === 'script-unix' || c.id === 'script-windows')
+    : TAB_CHANNELS;
+
+  const keys = channels.map((c) => c.id);
+  const [active, setActive] = useState<ChannelId>(keys[0] ?? 'script-unix');
   const base = useId();
   const tabs = useRef<Record<string, HTMLButtonElement | null>>({});
 
   useEffect(() => {
     const ua = navigator.userAgent || '';
-    if (/Windows/i.test(ua)) setOs('windows');
+    const os: ChannelOs = /Windows/i.test(ua)
+      ? 'windows'
+      : /Mac OS X/i.test(ua)
+        ? 'macos'
+        : 'linux';
+    const wanted = defaultTabFor(os);
+    // Only if that tab is actually rendered: the default must never select a tab that is not there.
+    if (keys.includes(wanted)) setActive(wanted);
+    // Empty deps on purpose: `keys` is derived from a module constant and the platform does not
+    // change mid-visit, so this runs once. Re-running it would undo the visitor's own tab choice.
   }, []);
 
-  const tabId = (key: OsKey) => `${base}-tab-${key}`;
-  const panelId = (key: OsKey) => `${base}-panel-${key}`;
+  if (channels.length === 0) return null;
+
+  const tabId = (key: ChannelId) => `${base}-tab-${key}`;
+  const panelId = (key: ChannelId) => `${base}-panel-${key}`;
 
   function onKeyDown(event: React.KeyboardEvent) {
-    const at = KEYS.indexOf(os);
+    const at = keys.indexOf(active);
     const next =
       event.key === 'ArrowRight' || event.key === 'ArrowDown'
-        ? KEYS[(at + 1) % KEYS.length]
+        ? keys[(at + 1) % keys.length]
         : event.key === 'ArrowLeft' || event.key === 'ArrowUp'
-          ? KEYS[(at - 1 + KEYS.length) % KEYS.length]
+          ? keys[(at - 1 + keys.length) % keys.length]
           : event.key === 'Home'
-            ? KEYS[0]
+            ? keys[0]
             : event.key === 'End'
-              ? KEYS[KEYS.length - 1]
+              ? keys[keys.length - 1]
               : undefined;
-    if (!next || next === os) return;
+    if (!next || next === active) return;
     event.preventDefault();
-    setOs(next);
+    setActive(next);
     tabs.current[next]?.focus();
   }
 
   return (
     <div>
-      <div className="flex flex-wrap gap-2" role="tablist" aria-label="Operating system">
-        {KEYS.map((key) => (
+      <div className="flex flex-wrap gap-2" role="tablist" aria-label="Installation method">
+        {channels.map((channel) => (
           <button
-            key={key}
+            key={channel.id}
             ref={(el) => {
-              tabs.current[key] = el;
+              tabs.current[channel.id] = el;
             }}
             role="tab"
             type="button"
-            id={tabId(key)}
-            aria-selected={os === key}
-            aria-controls={panelId(key)}
-            tabIndex={os === key ? 0 : -1}
+            id={tabId(channel.id)}
+            aria-selected={active === channel.id}
+            aria-controls={panelId(channel.id)}
+            tabIndex={active === channel.id ? 0 : -1}
             onKeyDown={onKeyDown}
-            className={os === key ? 'btn btn-primary' : 'btn btn-secondary'}
-            onClick={() => setOs(key)}
+            className={active === channel.id ? 'btn btn-primary' : 'btn btn-secondary'}
+            onClick={() => setActive(channel.id)}
           >
-            {COMMANDS[key].label}
+            {channel.label}
           </button>
         ))}
       </div>
 
-      {KEYS.map((key) => (
-        <div
-          key={key}
-          role="tabpanel"
-          id={panelId(key)}
-          aria-labelledby={tabId(key)}
-          hidden={os !== key}
-        >
-          <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
-            {/* min-w-0: without it the flex item refuses to shrink past its content, the
-                overflow never engages and the copy button is pushed off the card. */}
-            <pre
-              tabIndex={0}
-              role="region"
-              aria-label={`Install command for ${COMMANDS[key].label}`}
-              className="min-w-0 grow overflow-x-auto"
-            >
-              <code>{COMMANDS[key].command}</code>
-            </pre>
-            <CopyButton text={COMMANDS[key].command} />
+      {channels.map((channel) => {
+        const alternates = compact ? [] : alternatesFor(channel.id);
+        return (
+          <div
+            key={channel.id}
+            role="tabpanel"
+            id={panelId(channel.id)}
+            aria-labelledby={tabId(channel.id)}
+            hidden={active !== channel.id}
+          >
+            <div className="mt-4">
+              <CommandRow command={channel.command} label={channel.label} />
+            </div>
+            {!compact && <p className="muted mt-3 text-sm">{channel.note}</p>}
+
+            {alternates.length > 0 && (
+              <div className="mt-6 border-t pt-4">
+                <p className="muted text-sm font-semibold">
+                  Or with a package manager you already use
+                </p>
+                {alternates.map((alt) => (
+                  <div key={alt.id} className="mt-4">
+                    <p className="text-sm font-semibold">{alt.label}</p>
+                    <div className="mt-2">
+                      <CommandRow command={alt.command} label={alt.label} />
+                    </div>
+                    <p className="muted mt-2 text-sm">{alt.note}</p>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
-          {!compact && <p className="muted mt-3 text-sm">{COMMANDS[key].note}</p>}
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
