@@ -15,7 +15,7 @@ Manifests for the package managers SDODS ships through. Two rules hold for every
 | `homebrew/` | `siri1410/homebrew-sdods`  | the CLI, against system Node| the npm tarball                      |
 | `scoop/`    | `siri1410/scoop-sdods`     | the desktop app             | a published `desktop-v*` release     |
 | `winget/`   | `microsoft/winget-pkgs` PR | the desktop app             | a published `desktop-v*` release     |
-| `apt/`      | Pages on `sdods-releases`  | the desktop app             | a published `desktop-v*` release, the signing key |
+| `apt/`      | `sdods.com/apt`            | the desktop app             | a published `desktop-v*` release, the signing key |
 
 npm and Docker have no manifest: they are published straight from `.github/workflows/release.yml`.
 

@@ -16,7 +16,7 @@ someone who is not you.
 | Homebrew  | the CLI           | `siri1410/homebrew-sdods`     | you, `git push`           |
 | Scoop     | the desktop app   | `siri1410/scoop-sdods`        | you, `git push`           |
 | winget    | the desktop app   | `microsoft/winget-pkgs`       | **Microsoft's reviewers** |
-| apt       | the desktop app   | Pages on `sdods-releases`     | `apt.yml`, run by hand    |
+| apt       | the desktop app   | `sdods.com/apt`               | `apt.yml`, then merge its PR |
 
 ## The one rule
 
@@ -166,8 +166,14 @@ and the error it prints names the mirror rather than the layout. For the same re
 declares no `Suite` or `Components`: a suite that nothing addresses makes apt warn about a
 conflicting distribution on every update.
 
-**GitHub Pages has to be enabled on the releases repository** — Settings → Pages → source
-`gh-pages` — or the workflow pushes the branch and the URL keeps 404ing.
+**The `.deb` files are never committed anywhere.** They are 120-130 MB each, over GitHub's 100 MB
+per-file limit, so no branch in any repository can hold them — that is not a policy choice, it is a
+hard push rejection. They stay on the public release; `Packages` records them under `pool/<tag>/`;
+`firebase.json` redirects that path to the release asset. apt follows the redirect and verifies the
+download against the SHA-256 in `Packages`, so nothing is trusted less for coming from elsewhere.
+
+What gets published is a few kilobytes of metadata, as a PR the workflow opens. **Merging that PR
+is what makes apt live**, because it is the site deploy that serves it.
 
 ## Adding a seventh channel
 
