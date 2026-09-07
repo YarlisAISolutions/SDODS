@@ -100,8 +100,21 @@ jobs:
           done
 
           bun run build
-          # --publish never: releasing is a separate, explicit step below.
-          npx electron-builder ${{ matrix.flags }} --publish never
+
+          # electron-builder downloads the Electron binary and the app-builder helpers at pack
+          # time, and a single transient 5xx from that CDN fails the whole release. One run died
+          # on "Response code 504 (Gateway Time-out)" with nothing wrong in the repo. Retry a few
+          # times before giving up; packing is idempotent, so a second attempt is safe.
+          for attempt in 1 2 3; do
+            # --publish never: releasing is a separate, explicit step below.
+            if npx electron-builder ${{ matrix.flags }} --publish never; then
+              exit 0
+            fi
+            echo "::warning::electron-builder attempt $attempt failed"
+            [ "$attempt" -lt 3 ] && sleep $((attempt * 20))
+          done
+          echo "::error::electron-builder failed three times"
+          exit 1
 
       # Prove the artifact is not hollow. A missing extraResources source is only a warning in
       # electron-builder, and it once produced a .dmg with no Node runtime and a zero exit code.
