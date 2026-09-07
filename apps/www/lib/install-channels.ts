@@ -106,9 +106,9 @@ export const INSTALL_CHANNELS: Channel[] = [
     label: 'Linux packages',
     os: ['linux'],
     kind: 'desktop',
-    command: 'sudo apt install ./SDODS-0.1.0-linux-amd64.deb',
+    command: 'sudo apt install ./SDODS-linux-amd64.deb',
     note: 'The desktop app as a .deb, downloaded from the releases page first.',
-    live: true,
+    live: false,
   },
   {
     id: 'scoop',
@@ -118,7 +118,7 @@ export const INSTALL_CHANNELS: Channel[] = [
     command: 'scoop bucket add sdods https://github.com/siri1410/scoop-sdods',
     note: 'Then: scoop install sdods — the desktop app, updated by scoop update.',
     under: 'script-windows',
-    live: true,
+    live: false,
   },
   {
     id: 'winget',
@@ -138,7 +138,7 @@ export const INSTALL_CHANNELS: Channel[] = [
     command: 'sudo apt update && sudo apt install sdods',
     note: 'After adding the signed SDODS repository once — the docs have the two setup lines.',
     under: 'linux-packages',
-    live: true,
+    live: false,
   },
 ];
 
