@@ -30,11 +30,12 @@ const TAP_REPO = process.env.SDODS_TAP_REPO ?? 'siri1410/homebrew-sdods';
 const BUCKET_REPO = process.env.SDODS_BUCKET_REPO ?? 'siri1410/scoop-sdods';
 const IMAGE = process.env.SDODS_IMAGE ?? 'siri1410/sdods-server';
 /**
- * The apt repository is served from GitHub Pages on the public releases repository, not from
- * sdods.com: that site is a static export deployed whole, and hosting a few hundred megabytes of
- * .deb there would put them in every site deploy. Built by .github/workflows/apt.yml.
+ * The apt repository is served from sdods.com. Only its metadata lives there — a few kilobytes —
+ * because the .deb files are over GitHub's 100 MB file limit and cannot be committed to any
+ * repository. They stay on the public release, and firebase.json redirects `pool/<tag>/` at it.
+ * Built by .github/workflows/apt.yml.
  */
-const APT_URL = process.env.SDODS_APT_URL ?? 'https://siri1410.github.io/sdods-releases/apt';
+const APT_URL = process.env.SDODS_APT_URL ?? 'https://sdods.com/apt';
 
 const CHECK_ONLY = process.argv.includes('--check');
 
