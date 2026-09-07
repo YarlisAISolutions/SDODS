@@ -112,7 +112,11 @@ export async function fetchRuntime(root: string, t: Target): Promise<string> {
 
   // bsdtar reads .zip, .tar.gz and .tar.xz alike, and ships with macOS, Windows 10+ and every
   // mainstream Linux image -- so one command covers all six targets and `unzip` is not needed.
-  await exec('tar', ['-xf', archive, '-C', staging]);
+  //
+  // Run it from the staging directory with a bare filename. Handed an absolute Windows path,
+  // bsdtar reads the drive letter as a remote host and fails with "Cannot connect to D:", because
+  // `host:path` is valid tar syntax. Keeping both arguments relative avoids the colon entirely.
+  await exec('tar', ['-xf', file], { cwd: staging });
   rmSync(archive);
 
   // Archives contain a single top-level `node-<version>-<os>-<arch>/` directory; hoist it.
