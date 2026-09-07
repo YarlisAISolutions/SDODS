@@ -82,13 +82,27 @@ jobs:
           # PRs and pushes: chromium only, 1 shard, offline (HAR replay).
           # Nightly / manual: every browser declared in each project yaml, 2 shards, live sandboxes.
           if [[ "${{ github.event_name }}" == "schedule" || "${{ github.event_name }}" == "workflow_dispatch" ]]; then
-            MATRIX=$(bun run --silent sdods project list --json --matrix --shards 2)
+            RAW=$(bun run --silent sdods project list --json --matrix --shards 2)
+            MODE=all
             echo "live=true" >> "$GITHUB_OUTPUT"
           else
-            FULL=$(bun run --silent sdods project list --json --matrix --shards 1)
-            MATRIX=$(echo "$FULL" | node -e 'let s="";process.stdin.on("data",d=>s+=d).on("end",()=>{const m=JSON.parse(s).filter(x=>x.browser==="chromium");console.log(JSON.stringify(m))})')
+            RAW=$(bun run --silent sdods project list --json --matrix --shards 1)
+            MODE=chromium
             echo "live=false" >> "$GITHUB_OUTPUT"
           fi
+
+          # `sdods project list --json` pretty-prints, and a multi-line value cannot be written as
+          # `name=value` to $GITHUB_OUTPUT -- it fails with "Invalid format '  {'". Both branches
+          # now compact to one line. Previously only the PR branch did, incidentally, by piping
+          # through JSON.stringify to filter browsers, so the nightly matrix job failed every night
+          # and the whole scheduled regression run never started.
+          MATRIX=$(printf '%s' "$RAW" | MODE="$MODE" node -e '
+            let s = "";
+            process.stdin.on("data", (d) => (s += d)).on("end", () => {
+              let m = JSON.parse(s);
+              if (process.env.MODE === "chromium") m = m.filter((x) => x.browser === "chromium");
+              console.log(JSON.stringify(m));
+            });')
           echo "matrix=$MATRIX" >> "$GITHUB_OUTPUT"
           echo "$MATRIX"
 
