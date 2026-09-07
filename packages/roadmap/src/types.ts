@@ -78,8 +78,50 @@ export interface Arc {
   because: string;
   features: string[];
   milestone: string;
+  /** What the tutor says beside this rung. One sentence, in Maxi's voice. */
+  maxi: string;
   /** The year the marketing page renders this arc under. */
   displayYear: number;
+}
+
+/**
+ * One stretch of the road before SDODS existed, named by the problem that defined it.
+ */
+export interface HistoryEra {
+  id: string;
+  /** Position along the road. */
+  order: 1 | 2 | 3;
+  name: string;
+  /** Inclusive year range. */
+  from: number;
+  to: number;
+  /** One line a reader can repeat back. */
+  tagline: string;
+  /** What the tutor says about the whole stretch. */
+  maxi: string;
+}
+
+/**
+ * A year before 2026.
+ *
+ * It carries no `ships` and no `proof` on purpose. Nothing was released by this project in these
+ * years, so the two fields that would imply otherwise do not exist on the type: `shift` records
+ * what the industry did, `carried` records the decision that survived into the code. Writing a
+ * shipped-in-2017 claim is a compile error rather than a matter of discipline.
+ */
+export interface HistoryYear {
+  year: number;
+  /** Which era this year belongs to. */
+  era: HistoryEra['order'];
+  /** What the marker says on the road. */
+  label: string;
+  title: string;
+  /** What the industry actually did that year, dated against public releases. */
+  shift: string;
+  /** The design decision it left behind, verifiable in the product today. */
+  carried: string;
+  /** The tooling that arrived, shown as chips. */
+  tech: string[];
 }
 
 export interface VerificationRow {

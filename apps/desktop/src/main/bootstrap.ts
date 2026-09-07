@@ -188,7 +188,11 @@ function writeCliBridgeIfNeeded(workspace: string): void {
   const serverConfig = join(workspace, 'node_modules', '@sdods', 'server', 'dist', 'config.js');
   if (!existsSync(serverConfig)) return;
   try {
-    if (!readFileSync(serverConfig, 'utf8').includes("'packages/cli/src/bin.ts'")) return;
+    // Detect the *fix*, not the old path. Both versions mention 'packages/cli/src/bin.ts' --
+    // 0.2.2 keeps it as resolveCliBin's last fallback candidate -- so testing for that string
+    // matched the fixed server too and wrote a pointless bridge into every new workspace.
+    // resolveCliBin exists only in servers that already look in node_modules first.
+    if (readFileSync(serverConfig, 'utf8').includes('resolveCliBin')) return;
   } catch {
     return;
   }
