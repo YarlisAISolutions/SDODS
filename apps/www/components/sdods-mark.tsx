@@ -52,7 +52,7 @@ export function SdodsLockup({ className }: { className?: string }) {
           <path d="M446 26 A 58 58 0 0 1 446 110" stroke="currentColor" />
         </g>
         <text
-          x="62"
+          x="78"
           y="94"
           fill="currentColor"
           fontSize="76"
@@ -78,8 +78,9 @@ export function SdodsLockup({ className }: { className?: string }) {
           DS
         </text>
         <text
-          x="64"
+          x="237"
           y="129"
+          textAnchor="middle"
           fill="currentColor"
           opacity="0.62"
           fontSize="16"
