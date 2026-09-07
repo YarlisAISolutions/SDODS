@@ -5,7 +5,12 @@
  * failure being fixed was invisible in the asset and only appeared once the asset met a dark
  * background, so the check has to happen on the rendered page.
  *
- *   node --import tsx brand/verify.ts apps/docs/out
+ *   node --import tsx brand/verify.ts apps/docs/out          # a local build
+ *   node --import tsx brand/verify.ts https://docs.sdods.com  # what is actually deployed
+ *
+ * The URL form matters after a deploy. A green workflow says the build shipped, not that the page
+ * renders — and the failure this whole pipeline exists to fix was invisible everywhere except on a
+ * rendered dark page.
  */
 import { chromium } from '@playwright/test';
 import { createServer } from 'node:http';
@@ -40,15 +45,23 @@ function serve(root: string) {
 }
 
 async function main() {
-  const root = resolve(process.argv[2] ?? 'apps/docs/out');
-  if (!existsSync(root)) throw new Error(`no build at ${root} — run the site build first`);
+  const target = process.argv[2] ?? 'apps/docs/out';
+  const live = /^https?:\/\//.test(target);
+  const label = live ? new URL(target).hostname.split('.')[0] : 'docs';
 
   const outDir = join(import.meta.dirname, 'verify');
   mkdirSync(outDir, { recursive: true });
 
-  const server = serve(root);
-  await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));
-  const { port } = server.address() as { port: number };
+  // A local build is served the way Firebase Hosting serves it; a URL is used as given.
+  let base = target;
+  let server: ReturnType<typeof serve> | null = null;
+  if (!live) {
+    const root = resolve(target);
+    if (!existsSync(root)) throw new Error(`no build at ${root} — run the site build first`);
+    server = serve(root);
+    await new Promise<void>((r) => server!.listen(0, '127.0.0.1', r));
+    base = `http://127.0.0.1:${(server!.address() as { port: number }).port}`;
+  }
 
   const browser = await chromium.launch();
   try {
@@ -58,19 +71,22 @@ async function main() {
       const context = await browser.newContext({ colorScheme: theme, deviceScaleFactor: 2 });
       await context.addInitScript(`localStorage.setItem('theme', '${theme}')`);
       const page = await context.newPage();
-      await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: 'networkidle' });
-      await page.waitForTimeout(400);
+      // 'networkidle' never settles on the live site — analytics and the search index keep it
+      // busy — so wait for the lockup itself, which is the thing being verified.
+      await page.goto(`${base}/`, { waitUntil: 'domcontentloaded', timeout: 60_000 });
+      await page.locator('h1 svg').first().waitFor({ state: 'visible', timeout: 30_000 });
+      await page.waitForTimeout(600);
 
-      const path = join(outDir, `docs-${theme}.png`);
+      const path = join(outDir, `${label}-${theme}.png`);
       await page.screenshot({ path, clip: { x: 0, y: 0, width: 1280, height: 620 } });
       console.log(`  ${theme.padEnd(5)} ${path}`);
       await context.close();
     }
   } finally {
     await browser.close();
-    server.close();
+    server?.close();
   }
-  console.log('brand verify — captured the docs home page in both themes');
+  console.log(`brand verify — captured ${live ? target : 'the local build'} in both themes`);
 }
 
 await main();
