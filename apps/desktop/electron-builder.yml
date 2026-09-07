@@ -1,5 +1,10 @@
 appId: com.sdods.desktop
 productName: SDODS
+# electron-builder derives the Linux executable name from package.json `name`, which here is the
+# scoped `@sdods/desktop`. Stripped of its slash that becomes `@sdodsdesktop`, which it then
+# rejects as unsafe for a file path — so the AppImage and deb targets cannot build without this.
+# macOS and Windows use productName instead, which is why only Linux failed.
+executableName: sdods
 copyright: Copyright © 2026 SDODS
 
 directories:

@@ -5,6 +5,12 @@
   "type": "module",
   "description": "SDODS desktop app \u2014 installs, launches and upgrades SDODS in one click",
   "main": "./out/main/index.js",
+  "homepage": "https://sdods.com",
+  "author": {
+    "name": "SDODS",
+    "email": "admin@sdods.com"
+  },
+  "license": "Apache-2.0",
   "scripts": {
     "dev": "electron-vite dev",
     "build": "electron-vite build",
