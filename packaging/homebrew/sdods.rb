@@ -9,7 +9,6 @@ class Sdods < Formula
   url "https://registry.npmjs.org/@sdods/cli/-/cli-0.2.2.tgz"
   sha256 "21cd0c5aaf97357048444b27a7ef9db5d3c4ef959636a4f9c5a49a00eb97d002"
   license "Apache-2.0"
-  version "0.2.2"
 
   # Not a vendored Node: SDODS spawns Node for the test runner and the server, and a formula that
   # bundled its own would leave the user with two. `depends_on "node"` is the same Node the rest of
@@ -18,6 +17,15 @@ class Sdods < Formula
 
   def install
     system "npm", "install", *std_npm_args
+
+    # better-sqlite3 ships prebuilt binaries for every platform it supports, and npm installs the
+    # lot. Homebrew rejects a keg containing binaries for a foreign architecture, so everything
+    # but this machine's own prebuild is removed -- it would never be loaded anyway.
+    keep = "#{OS.kernel_name.downcase}-#{Hardware::CPU.intel? ? "x64" : "arm64"}"
+    Dir.glob(libexec/"lib/node_modules/**/prebuilds/*").each do |dir|
+      rm_r(dir) if File.basename(dir) != keep
+    end
+
     bin.install_symlink Dir["#{libexec}/bin/*"]
   end
 
@@ -32,9 +40,13 @@ class Sdods < Formula
   end
 
   test do
-    assert_match "0.2.2", shell_output("#{bin}/sdods --version")
-    # `doctor` exercises the parts a broken install actually breaks: the bundled runner resolving,
-    # the config loading and the database opening. `--version` alone would pass on a hollow shim.
-    assert_match "projects", shell_output("#{bin}/sdods doctor 2>&1", 0)
+    assert_match version.to_s, shell_output("#{bin}/sdods --version")
+    # `doctor` exercises the parts a broken install actually breaks: the bundled runner resolving
+    # and the native modules loading against Homebrew's Node. `--version` alone passes on a
+    # hollow shim.
+    #
+    # It exits 1 here, and that is the correct answer: brew test runs in an empty directory, so
+    # there are no projects to find. Asserting exit 0 would fail every time on a working install.
+    assert_match "runner", shell_output("#{bin}/sdods doctor 2>&1", 1)
   end
 end

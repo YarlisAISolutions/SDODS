@@ -73,24 +73,60 @@ Profile → Packages → `sdods-server` → Package settings → Change visibili
 
 ### Homebrew — you push the tap
 
+The tap and the bucket exist and are public. The tap holds `Formula/sdods.rb`; the bucket's
+`bucket/` is empty until a `desktop-v*` release exists, because the manifest carries the SHA-256 of
+an installer that has not been built yet.
+
+To recreate them from nothing:
+
 ```bash
 gh repo create siri1410/homebrew-sdods --public -d 'Homebrew tap for SDODS'
 ```
 
-Copy the rendered formula into the tap as `Formula/sdods.rb`, then audit it before anyone installs
-from it. `--new-formula` is stricter than the default and is what catches a bad `url` or a missing
-license:
+Commit to both as `SDODS <admin@sdods.com>`, not as a personal identity — same rule as the deb
+maintainer and the electron-builder copyright.
+
+Copy the rendered formula into the tap as `Formula/sdods.rb`, then verify it locally before anyone
+installs from it. `--new` implies `--strict` and `--online` and is the check that catches a bad
+`url`, a redundant `version` or a foreign-architecture binary (it is `--new`, not `--new-formula`,
+which current Homebrew rejects):
 
 ```bash
-brew audit --strict --online --new-formula ./Formula/sdods.rb
+brew audit --strict --new siri1410/sdods/sdods
 ```
 
 ```bash
-brew install --build-from-source ./Formula/sdods.rb && sdods doctor
+brew install --build-from-source siri1410/sdods/sdods && brew test sdods
 ```
+
+You can do all of that without publishing anything: `brew tap-new siri1410/sdods --no-git` makes a
+local tap, and `brew untap siri1410/sdods` removes it.
 
 The formula builds from the **npm tarball**, not from a clone, which is why the private source
 repository is not a problem here.
+
+Three things about it are load-bearing, and each was found by running it rather than reading it:
+
+- **You cannot publish the formula the same day you publish the packages.** Homebrew's
+  `std_npm_args` passes `--min-release-age=`, so npm refuses any dependency published inside that
+  window: `No matching version found for @sdods/agents@X with a date before <date>`. The formula is
+  correct; it is too new. The window is 24 hours from the *newest* `@sdods/*` package, not from the
+  CLI — they publish seconds apart but the cutoff is unforgiving.
+
+  `channels:sync` enforces this rather than leaving it to be rediscovered: it reads the publish
+  times from the registry and keeps Homebrew dark while the tree is under 24 hours old, reporting
+  `formula is in the tap, but X is 23h old`. Nothing needs doing — the next sync after the window
+  passes turns it on.
+- **Foreign prebuilds must be deleted.** `better-sqlite3` ships prebuilt binaries for every
+  platform and npm installs all of them; audit then fails with *"Binaries built for a non-native
+  architecture were installed into sdods's prefix"*. The `install` block removes every
+  `prebuilds/*` directory but this machine's.
+- **Homebrew asks the user to trust a third-party tap** before installing from it, and prints the
+  `brew trust` command to run. Reading the formula (`brew info`) needs no trust; installing does.
+- **`brew test` runs in an empty directory, so `sdods doctor` exits 1** — there are no projects to
+  find, which is the right answer for a fresh install. The test asserts exit `1` deliberately;
+  asserting `0` fails on a perfectly good install. It runs against Homebrew's `node`, which is
+  well ahead of 22 — that path is tested, and the native modules resolve on it.
 
 ### Scoop — you push the bucket
 
@@ -121,7 +157,17 @@ disables signature checking for everything else that machine installs.
 
 The workflow proves the repo works before publishing it — it adds the built repo as a local apt
 source and asserts `apt-cache policy sdods` reports an installable candidate. A repo that merely
-looks right has been verified zero times.
+looks right has been verified zero times. The `apt · flat repo layout` job in `ci.yml` runs the
+same proof on every PR against a synthetic package, so the layout is exercised without a key.
+
+**It is a flat repository**, so the sources line ends in `./`, not `stable main`. With a suite and
+component apt looks for `dists/stable/main/binary-amd64/Packages`, which a flat repo does not have,
+and the error it prints names the mirror rather than the layout. For the same reason `build-repo.sh`
+declares no `Suite` or `Components`: a suite that nothing addresses makes apt warn about a
+conflicting distribution on every update.
+
+**GitHub Pages has to be enabled on the releases repository** — Settings → Pages → source
+`gh-pages` — or the workflow pushes the branch and the URL keeps 404ing.
 
 ## Adding a seventh channel
 

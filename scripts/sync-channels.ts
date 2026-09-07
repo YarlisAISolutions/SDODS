@@ -72,21 +72,60 @@ interface Npm {
   version: string;
   tarball: string;
   sha256: string;
+  /** ISO time the newest package in this release set was published. */
+  publishedAt: string;
 }
+
+/**
+ * Homebrew's `std_npm_args` passes `--min-release-age`, so npm refuses any dependency published
+ * inside that window — the install dies with `No matching version found for @sdods/x@V with a date
+ * before <cutoff>`. The formula is correct when this happens; it is simply too new.
+ *
+ * So a formula in the tap is not yet an installable formula, and the Homebrew channel stays dark
+ * until the packages it pulls have aged out. Twenty-four hours matches the cutoff npm reported.
+ */
+const HOMEBREW_MIN_RELEASE_AGE_MS = 24 * 60 * 60 * 1000;
 
 async function probeNpm(): Promise<{ probe: Probe; npm: Npm | null }> {
   const res = await fetch('https://registry.npmjs.org/@sdods/cli/latest');
   if (!res.ok) {
     return { probe: { live: false, detail: `registry returned ${res.status}` }, npm: null };
   }
-  const meta = (await res.json()) as { version: string; dist: { tarball: string } };
+  const meta = (await res.json()) as {
+    version: string;
+    dist: { tarball: string };
+    dependencies?: Record<string, string>;
+  };
   // The registry publishes sha1 (`dist.shasum`) and an integrity string that is sha512. Homebrew
   // wants sha256, which is in neither, so the tarball is downloaded and hashed.
   const { hash } = await sha256(meta.dist.tarball);
+  // Not the CLI's own publish time: npm refuses the whole tree if any @sdods/* dependency is too
+  // new, and they are published one after another, so the newest of them is what gates the install.
+  const publishedAt = await newestPublish(meta.version, meta.dependencies ?? {});
   return {
     probe: { live: true, detail: `@sdods/cli@${meta.version}` },
-    npm: { version: meta.version, tarball: meta.dist.tarball, sha256: hash },
+    npm: { version: meta.version, tarball: meta.dist.tarball, sha256: hash, publishedAt },
   };
+}
+
+/** When the last of @sdods/cli and its pinned @sdods/* dependencies hit the registry. */
+async function newestPublish(cliVersion: string, deps: Record<string, string>): Promise<string> {
+  const names = ['@sdods/cli', ...Object.keys(deps).filter((d) => d.startsWith('@sdods/'))];
+  const times = await Promise.all(
+    names.map(async (name) => {
+      const want = name === '@sdods/cli' ? cliVersion : deps[name];
+      try {
+        const res = await fetch(`https://registry.npmjs.org/${name}`);
+        if (!res.ok) return null;
+        const meta = (await res.json()) as { time: Record<string, string> };
+        return want ? (meta.time[want] ?? null) : null;
+      } catch {
+        return null;
+      }
+    }),
+  );
+  const known = times.filter((t): t is string => t !== null).sort();
+  return known[known.length - 1] ?? new Date().toISOString();
 }
 
 // ── Docker (GHCR) ──────────────────────────────────────────────────────────────────────────────
@@ -276,10 +315,25 @@ async function main() {
 
   // The tap and the bucket are separate publishes: a rendered manifest in this repository is not
   // an installable formula until it is pushed there.
-  const [tapProbe, bucketProbe] = await Promise.all([
+  const [tapProbeRaw, bucketProbe] = await Promise.all([
     probeRepoFile(TAP_REPO, 'Formula/sdods.rb', 'formula'),
     probeRepoFile(BUCKET_REPO, 'bucket/sdods.json', 'manifest'),
   ]);
+  // A formula in the tap that npm will refuse to install is not a live channel. This is the one
+  // check that is a clock rather than a registry, and it resolves itself: the next sync after the
+  // window passes flips Homebrew on with no code change.
+  const age = npm ? Date.now() - new Date(npm.publishedAt).getTime() : 0;
+  const aged = age >= HOMEBREW_MIN_RELEASE_AGE_MS;
+  const tapProbe: Probe =
+    tapProbeRaw.live && npm && !aged
+      ? {
+          live: false,
+          detail:
+            `formula is in the tap, but ${npm.version} is ${Math.round(age / 3.6e6)}h old — ` +
+            `Homebrew's --min-release-age refuses it until 24h`,
+        }
+      : tapProbeRaw;
+
   // winget is the one channel this repository cannot publish: the manifest is merged by
   // Microsoft's reviewers into microsoft/winget-pkgs. Its presence there is the only truth.
   const wingetProbe = await probeRepoFile(
