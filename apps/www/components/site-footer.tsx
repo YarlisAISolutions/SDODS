@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { SdodsMark } from '@/components/sdods-mark';
 import { DISCUSSIONS_URL, DOCS_URL, LICENSE_URL, REPO_PUBLIC, REPO_URL } from '@/lib/links';
 
 export function SiteFooter() {
@@ -7,7 +8,7 @@ export function SiteFooter() {
       <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 text-sm md:grid-cols-4">
         <div>
           <div className="flex items-center gap-2 font-semibold">
-            <img src="/img/favicon.svg" alt="" width={22} height={22} />
+            <SdodsMark size={22} />
             SDODS
           </div>
           <p className="muted mt-2">

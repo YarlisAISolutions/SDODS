@@ -44,7 +44,8 @@
     "roadmap:sync": "node --import tsx ./scripts/sync-roadmap.ts",
     "desktop:sync-release": "node --import tsx ./scripts/sync-desktop-release.ts",
     "desktop:dev": "bun run --filter @sdods/desktop dev",
-    "desktop:dist": "bun run --filter @sdods/desktop build && bun run --cwd apps/desktop dist:mac"
+    "desktop:dist": "bun run --filter @sdods/desktop build && bun run --cwd apps/desktop dist:mac",
+    "brand:sync": "node --import tsx ./scripts/sync-brand.ts"
   },
   "devDependencies": {
     "@changesets/cli": "^3.0.1",

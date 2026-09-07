@@ -7,7 +7,7 @@
   "author": "SDODS <admin@sdods.com>",
   "scripts": {
     "dev": "next dev -p 3002",
-    "build": "node --import tsx ../../scripts/sync-installer.ts && node --import tsx scripts/collect-screenshots.ts && next build && node --import tsx scripts/check-links.ts",
+    "build": "node --import tsx ../../scripts/sync-installer.ts && node --import tsx ../../scripts/sync-brand.ts && node --import tsx scripts/collect-screenshots.ts && next build && node --import tsx scripts/check-links.ts",
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "verify": "node --import tsx scripts/verify-examples.ts",

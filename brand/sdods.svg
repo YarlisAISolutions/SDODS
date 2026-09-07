@@ -2,10 +2,10 @@
   <title id="t">SDODS</title>
   <desc id="d">SDODS lockup: the name sits inside an aperture formed by two mirrored gates, with a cored ring standing in for the centre O.</desc>
   <style>
-    .ink  { fill: #0B1020; }
-    .rule { stroke: #0B1020; }
+    .ink  { fill: currentColor; }
+    .rule { stroke: currentColor; }
     .core { fill: #FFB020; }
-    .tag  { fill: #0B1020; opacity: .62; }
+    .tag  { fill: currentColor; opacity: .62; }
   </style>
   <g transform="translate(30,0)">
     <!-- The gate, opened out to hold the word. Tighter than the first pass: the arcs sit closer
