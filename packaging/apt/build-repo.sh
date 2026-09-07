@@ -1,17 +1,7 @@
 #!/usr/bin/env bash
 # Build a signed flat apt repository from the .deb files of a published desktop release.
 #
-#   packaging/apt/build-repo.sh <deb-dir> <out-dir> [pool-path]
-#
-# The .deb files are 120-130 MB each, which is over GitHub's 100 MB per-file limit, so they cannot
-# be committed anywhere -- not to a Pages branch and not to this repository. They stay on the
-# public release, which is where they already are, and the repository serves metadata only:
-# `Packages` records each file under <pool-path>/, and the host redirects that path to the release
-# asset. apt follows the redirect and then verifies the download against the SHA-256 in `Packages`,
-# so nothing is trusted less for having been fetched from somewhere else.
-#
-# SDODS_APT_METADATA_ONLY=1 deletes the .deb files after the metadata is built, which is what makes
-# the output small enough to commit. The paths inside `Packages` are unaffected.
+#   packaging/apt/build-repo.sh <deb-dir> <out-dir>
 #
 # A flat repository, not a pool: there is one package with two architectures, and the pool layout
 # exists to make thousands of packages navigable. Flat keeps the whole repo four files plus the
@@ -23,9 +13,8 @@
 # armoured private key into SDODS_APT_GPG_KEY in CI and it signs; leave it unset and it says so.
 set -euo pipefail
 
-DEB_DIR="${1:?usage: build-repo.sh <deb-dir> <out-dir> [pool-path]}"
-OUT_DIR="${2:?usage: build-repo.sh <deb-dir> <out-dir> [pool-path]}"
-POOL="${3:-pool}"
+DEB_DIR="${1:?usage: build-repo.sh <deb-dir> <out-dir>}"
+OUT_DIR="${2:?usage: build-repo.sh <deb-dir> <out-dir>}"
 ORIGIN="SDODS"
 
 command -v apt-ftparchive >/dev/null || {
@@ -40,14 +29,13 @@ if [ "$debs" = "0" ]; then
 fi
 
 rm -rf "$OUT_DIR"
-mkdir -p "$OUT_DIR/$POOL"
-cp "$DEB_DIR"/*.deb "$OUT_DIR/$POOL/"
+mkdir -p "$OUT_DIR"
+cp "$DEB_DIR"/*.deb "$OUT_DIR/"
 
 cd "$OUT_DIR"
 
 # Paths inside Packages must be relative to the repository root, which is why this runs from
-# inside OUT_DIR rather than passing an absolute path -- each entry comes out as
-# `Filename: <pool-path>/<file>.deb`, which is what the host redirects.
+# inside OUT_DIR rather than passing an absolute path.
 apt-ftparchive packages . > Packages
 gzip -9kf Packages
 
@@ -78,11 +66,4 @@ if [ -n "${SDODS_APT_GPG_KEY:-}" ]; then
 else
   echo "⚠ SDODS_APT_GPG_KEY is not set — wrote an UNSIGNED repo in $OUT_DIR."
   echo "  apt will reject it without [trusted=yes]. Do not deploy this to sdods.com."
-fi
-
-# Done last: the metadata above records each file's size and SHA-256, so removing the payload now
-# changes nothing apt reads. It is what keeps the published repository a few kilobytes.
-if [ -n "${SDODS_APT_METADATA_ONLY:-}" ]; then
-  find "$POOL" -name '*.deb' -delete
-  echo "  metadata only — .deb files removed, $POOL/ paths kept for the host to redirect"
 fi
