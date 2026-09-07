@@ -1,9 +1,17 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" role="img" aria-label="SDODS">
-  <rect width="32" height="32" rx="8" fill="#0B1020"/>
-  <g transform="translate(16,16)" fill="none">
-    <path d="M-5.5 -4.6 A 4.6 4.6 0 0 0 -5.5 4.6" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round"/>
-    <path d="M5.5 -4.6 A 4.6 4.6 0 0 1 5.5 4.6" stroke="#FFFFFF" stroke-width="2.6" stroke-linecap="round"/>
-    <circle cx="0" cy="0" r="4.2" stroke="#FFFFFF" stroke-width="2.6"/>
-    <circle cx="0" cy="0" r="1.7" fill="#FFB020"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128" role="img" aria-labelledby="t d">
+  <title id="t">SDODS</title>
+  <desc id="d">The SDODS mark: two mirrored gates closing on a cored ring.</desc>
+  <style>
+    @media (prefers-color-scheme: dark) { .ink { fill: #E6E9EE; } .rule { stroke: #E6E9EE; } .tag { fill: #E6E9EE; } }
+    .rule { stroke: #0B1020; }
+    .core { fill: #FFB020; }
+  </style>
+  <!-- The lockup's aperture and centre O, cropped to a square. This is what survives at 16px:
+       two gates, one core, mirror-symmetric about the vertical axis. -->
+  <g transform="translate(64,64)" fill="none" stroke-linecap="round">
+    <path class="rule" d="M-40 -26 A 30 30 0 0 0 -40 26" stroke-width="11"/>
+    <path class="rule" d="M40 -26 A 30 30 0 0 1 40 26" stroke-width="11"/>
+    <circle class="rule" cx="0" cy="0" r="20" stroke-width="11"/>
+    <circle class="core" cx="0" cy="0" r="7" stroke="none"/>
   </g>
 </svg>

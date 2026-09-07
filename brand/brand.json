@@ -1,0 +1,12 @@
+{
+  "name": "SDODS",
+  "tagline": "Test automation you can defend.",
+  "description": "An automation platform with a reusable architecture.",
+  "palette": {
+    "core": "#FFB020",
+    "rail": "#2F5BFF",
+    "ink": "#0B1020",
+    "paper": "#F8FAFC"
+  },
+  "note": "tagline and description are the source of truth for every lockup and every brand string that scripts/sync-brand.ts rewrites. Structural strokes use currentColor and are not listed here."
+}

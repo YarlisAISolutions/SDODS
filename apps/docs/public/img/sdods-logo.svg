@@ -1,28 +1,29 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="760" height="180" viewBox="0 0 760 180" role="img" aria-labelledby="t d">
+<svg xmlns="http://www.w3.org/2000/svg" width="560" height="150" viewBox="0 0 560 150" role="img" aria-labelledby="t d">
   <title id="t">SDODS</title>
-  <desc id="d">SDODS logo: two endpoints, two gates and a central pivot on one rail — mirror-symmetric like the name — beside the SDODS wordmark.</desc>
-
-  <!-- mark: ●—( ◯ )—● reads identically left-to-right and right-to-left -->
-  <g transform="translate(24,26)">
-    <rect x="0" y="0" width="128" height="128" rx="30" fill="#0B1020"/>
-    <g transform="translate(64,64)" fill="none">
-      <line x1="-40" y1="0" x2="40" y2="0" stroke="#2F5BFF" stroke-width="6" stroke-linecap="round" opacity="0.5"/>
-      <circle cx="-40" cy="0" r="5.5" fill="#2F5BFF"/>
-      <circle cx="40" cy="0" r="5.5" fill="#2F5BFF"/>
-      <path d="M-20 -13 A 13 13 0 0 0 -20 13" stroke="#FFFFFF" stroke-width="7" stroke-linecap="round"/>
-      <path d="M20 -13 A 13 13 0 0 1 20 13" stroke="#FFFFFF" stroke-width="7" stroke-linecap="round"/>
-      <circle cx="0" cy="0" r="12" stroke="#FFFFFF" stroke-width="7"/>
-      <circle cx="0" cy="0" r="4" fill="#FFB020"/>
+  <desc id="d">SDODS lockup: the name sits inside an aperture formed by two mirrored gates, with a cored ring standing in for the centre O.</desc>
+  <style>
+    .ink  { fill: #0B1020; }
+    .rule { stroke: #0B1020; }
+    .core { fill: #FFB020; }
+    .tag  { fill: #0B1020; opacity: .62; }
+  </style>
+  <g transform="translate(30,0)">
+    <!-- The gate, opened out to hold the word. Tighter than the first pass: the arcs sit closer
+         to the letters so the lockup reads as one object rather than text inside decoration. -->
+    <g fill="none" stroke-linecap="round" stroke-width="10">
+      <path class="rule" d="M28 26 A 58 58 0 0 0 28 110"/>
+      <path class="rule" d="M446 26 A 58 58 0 0 1 446 110"/>
     </g>
-  </g>
-
-  <!-- wordmark -->
-  <g transform="translate(186,0)">
-    <text x="0" y="96"
-      font-family="'Space Grotesk', 'Avenir Next', 'Futura', 'Helvetica Neue', Helvetica, Arial, sans-serif"
-      font-size="76" font-weight="700" fill="#0B1020" letter-spacing="14">SDODS</text>
-    <text x="4" y="132"
-      font-family="'Space Grotesk', 'Avenir Next', 'Helvetica Neue', Helvetica, Arial, sans-serif"
-      font-size="17" font-weight="500" fill="#5B6478" letter-spacing="3.2">Smart Digital Orchestration &amp; Delivery System</text>
+    <text class="ink" x="62" y="94" font-family="'Space Grotesk','Avenir Next','Futura','Helvetica Neue',Helvetica,Arial,sans-serif"
+          font-size="76" font-weight="700" letter-spacing="10">SD</text>
+    <!-- the centre O: one ring, one core. A single unambiguous letterform. -->
+    <g transform="translate(237,68)" fill="none">
+      <circle class="rule" cx="0" cy="0" r="21" stroke-width="10"/>
+      <circle class="core" cx="0" cy="0" r="7" stroke="none"/>
+    </g>
+    <text class="ink" x="272" y="94" font-family="'Space Grotesk','Avenir Next','Futura','Helvetica Neue',Helvetica,Arial,sans-serif"
+          font-size="76" font-weight="700" letter-spacing="10">DS</text>
+    <text class="tag" x="64" y="129" font-family="'Space Grotesk','Avenir Next','Helvetica Neue',Helvetica,Arial,sans-serif"
+          font-size="16" font-weight="500" letter-spacing="3.1">Test automation you can defend.</text>
   </g>
 </svg>
