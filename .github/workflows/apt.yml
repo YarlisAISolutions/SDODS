@@ -1,0 +1,110 @@
+name: apt repository
+
+# Builds a signed apt repository from a published desktop release and serves it from GitHub Pages
+# on the PUBLIC releases repository.
+#
+# Why not sdods.com: that site is a static export deployed whole, so hosting the repo there would
+# make every site deploy download a few hundred megabytes of .deb. The apt repo changes on a
+# desktop release, the site changes on every commit, and they should not be the same deploy.
+#
+# Deliberately manual. Adding an apt source is a trust decision by the person running apt, and the
+# repository is signed with the project key — so a person triggers it, the same way a person
+# publishes the release it packages.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'desktop-v* tag to package (default: the newest published one)'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: apt-repo
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: build · sign · publish
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The key is the whole security model: without it apt has no reason to trust these bytes, and
+      # an unsigned repo is one a user can only add with [trusted=yes], which disables the check
+      # for everything else they install too.
+      - name: Require the signing key
+        env:
+          KEY: ${{ secrets.SDODS_APT_GPG_KEY }}
+        run: |
+          if [ -z "$KEY" ]; then
+            echo "::error::SDODS_APT_GPG_KEY is not set. Generate the project signing key, add it" \
+                 "as a repository secret (armoured private key), then run this again."
+            exit 1
+          fi
+
+      - name: Download the .deb files from the release
+        env:
+          GH_TOKEN: ${{ secrets.DESKTOP_RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
+          RELEASE_REPO: ${{ vars.DESKTOP_RELEASE_REPO || 'siri1410/sdods-releases' }}
+          TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          mkdir -p debs
+          if [ -z "$TAG" ]; then
+            TAG=$(gh release list -R "$RELEASE_REPO" --exclude-drafts --limit 30 \
+                  --json tagName --jq '[.[] | select(.tagName | startswith("desktop-v"))][0].tagName')
+          fi
+          [ -n "$TAG" ] && [ "$TAG" != "null" ] || {
+            echo "::error::No published desktop-v* release in $RELEASE_REPO."; exit 1; }
+          echo "packaging $TAG"
+          gh release download "$TAG" -R "$RELEASE_REPO" -p '*.deb' -D debs
+          ls -la debs
+
+      - name: Build and sign the repository
+        env:
+          SDODS_APT_GPG_KEY: ${{ secrets.SDODS_APT_GPG_KEY }}
+        run: |
+          sudo apt-get update && sudo apt-get install -y --no-install-recommends apt-utils
+          packaging/apt/build-repo.sh debs site/apt
+
+      # A local proof before anyone's machine trusts it: apt resolves the package from the repo as
+      # written, using the keyring the repo itself ships. A repo that only "looks right" has passed
+      # this check zero times.
+      - name: Verify apt can read it
+        run: |
+          set -euo pipefail
+          sudo cp site/apt/sdods-archive-keyring.gpg /usr/share/keyrings/
+          echo "deb [signed-by=/usr/share/keyrings/sdods-archive-keyring.gpg] file://$PWD/site/apt stable main" \
+            | sudo tee /etc/apt/sources.list.d/sdods-local.list
+          sudo apt-get update -o Dir::Etc::sourcelist=/etc/apt/sources.list.d/sdods-local.list \
+                              -o Dir::Etc::sourceparts=- -o APT::Get::List-Cleanup=0
+          apt-cache policy sdods
+          apt-cache policy sdods | grep -q 'Candidate: [0-9]' || {
+            echo "::error::apt found the repository but no installable sdods package."; exit 1; }
+
+      - name: Publish to the releases repository's Pages branch
+        env:
+          GH_TOKEN: ${{ secrets.DESKTOP_RELEASE_TOKEN }}
+          RELEASE_REPO: ${{ vars.DESKTOP_RELEASE_REPO || 'siri1410/sdods-releases' }}
+        run: |
+          set -euo pipefail
+          [ -n "$GH_TOKEN" ] || {
+            echo "::error::DESKTOP_RELEASE_TOKEN is required to push to $RELEASE_REPO."; exit 1; }
+          git clone --depth 1 --branch gh-pages \
+            "https://x-access-token:$GH_TOKEN@github.com/$RELEASE_REPO.git" pages 2>/dev/null || {
+              git init pages && git -C pages checkout -b gh-pages
+              git -C pages remote add origin "https://x-access-token:$GH_TOKEN@github.com/$RELEASE_REPO.git"
+            }
+          rm -rf pages/apt
+          cp -r site/apt pages/apt
+          # Jekyll would drop the dot-free binary files and any directory it does not recognise.
+          touch pages/.nojekyll
+          git -C pages config user.name 'SDODS'
+          git -C pages config user.email 'admin@sdods.com'
+          git -C pages add -A
+          git -C pages diff --quiet --cached && { echo 'apt repo unchanged'; exit 0; }
+          git -C pages commit -m 'chore(apt): rebuild repository from the published release'
+          git -C pages push origin gh-pages

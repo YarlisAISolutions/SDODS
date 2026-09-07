@@ -77,6 +77,10 @@ for p in "${PKGS[@]}"; do
     exit 1
   }
   printf '  + %-26s %s\n' "$name" "$version"
+  # changesets/action decides its `published` output by scanning this stdout for "New tag:" lines.
+  # It is the only signal it accepts, and without it a successful publish reads as "nothing was
+  # published" -- which is why the GHCR image job never ran.
+  printf 'New tag: %s@%s\n' "$name" "$version"
   published=$((published + 1))
 done
 

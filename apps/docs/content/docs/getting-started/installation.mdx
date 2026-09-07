@@ -11,7 +11,7 @@ description: Install SDODS with one command on macOS, Linux or Windows — then 
 
 <Art
   scene="install-one-command"
-  caption="One command, five stops: Node is checked, Bun is installed if you don't have it, SDODS is cloned, Chromium is downloaded, and the sdods command lands on your PATH. It finishes by running doctor against its own work."
+  caption="One command, five stops: Node is checked, Bun is installed if you don't have it, the published packages are fetched, Chromium is downloaded, and the sdods command lands on your PATH. It finishes by running doctor against its own work."
 />
 
 ## Install
@@ -54,6 +54,109 @@ sh install.sh
 
 </Tab>
 </Tabs>
+
+## With a package manager
+
+The script is the front door because it works on a machine that has nothing. If you already run a
+package manager, these install the same software and let it handle upgrades.
+
+| Command                                    | Installs              | Needs                                       |
+| ------------------------------------------ | --------------------- | ------------------------------------------- |
+| `npm install -g @sdods/cli`                | the CLI               | Node 22+                                    |
+| `brew install siri1410/sdods/sdods`        | the CLI               | Homebrew, and it brings its own Node        |
+| `docker run ghcr.io/siri1410/sdods-server` | the server and web UI | Docker                                      |
+| `winget install SDODS.SDODS`               | the desktop app       | Windows 10+                                 |
+| `scoop install sdods`                      | the desktop app       | Scoop                                       |
+| `apt install sdods`                        | the desktop app       | Debian or Ubuntu, plus the repository below |
+
+<Callout type="info">
+  A channel is listed on [the install page](https://sdods.com/install) only once its manifest is
+  actually published to that manager. The table here is the full set; the page shows the ones that
+  work today. They are not always the same, because four of these are published by someone else —
+  npm, GHCR, Microsoft's winget reviewers, and whoever runs your apt mirror.
+</Callout>
+
+### npm
+
+The CLI is a normal global package. This is exactly what the installer script does for you, minus
+the Node check, the browser download and the PATH shim:
+
+```bash
+npm install -g @sdods/cli
+```
+
+Browser engines are a separate download, because most API suites never need one:
+
+```bash
+sdods browsers install chromium
+```
+
+### Homebrew
+
+The tap holds the formula only; the software comes from npm. It depends on Homebrew's `node`
+rather than vendoring one, so SDODS runs on the same Node as the rest of your toolchain:
+
+```bash
+brew install siri1410/sdods/sdods
+```
+
+### Docker
+
+The image is the server and the web UI, with the browser engines already inside — this is the one
+channel that needs nothing installed on the host at all:
+
+```bash
+docker run --rm -p 8080:8080 -v sdods-data:/data ghcr.io/siri1410/sdods-server
+```
+
+Any CLI command works as the argument, so the same image runs a suite in CI:
+
+```bash
+docker run --rm ghcr.io/siri1410/sdods-server run -p demo-shop -e staging -l api
+```
+
+### Windows: winget and Scoop
+
+Both install the **desktop app**, not the CLI — they are the managers Windows users already have,
+and a GUI installer is what they are built to place. The CLI on Windows comes from npm or the
+PowerShell script.
+
+```powershell
+winget install SDODS.SDODS
+```
+
+Scoop needs the bucket added once:
+
+```powershell
+scoop bucket add sdods https://github.com/siri1410/scoop-sdods
+```
+
+```powershell
+scoop install sdods
+```
+
+### Debian and Ubuntu
+
+Install a single `.deb` straight from a release when you just want the app:
+
+```bash
+sudo apt install ./SDODS-linux-amd64.deb
+```
+
+Or add the signed repository, which is what makes `apt upgrade` keep it current. Add the key
+first — apt reads binary keyrings, so it is dearmoured on the way in:
+
+```bash
+curl -fsSL https://siri1410.github.io/sdods-releases/apt/sdods-archive-keyring.gpg | sudo tee /usr/share/keyrings/sdods-archive-keyring.gpg > /dev/null
+```
+
+```bash
+echo "deb [signed-by=/usr/share/keyrings/sdods-archive-keyring.gpg] https://siri1410.github.io/sdods-releases/apt stable main" | sudo tee /etc/apt/sources.list.d/sdods.list
+```
+
+```bash
+sudo apt update && sudo apt install sdods
+```
 
 <RepoOnly>
 ### From source
