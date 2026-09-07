@@ -89,8 +89,12 @@ describe('install channels', () => {
     // 64 hex characters, not a sha1 copied off a registry page and not a truncated paste.
     expect(sha).toMatch(/^[0-9a-f]{64}$/);
 
-    const version = /^ {2}version "([^"]+)"$/m.exec(source)?.[1];
-    expect(source).toContain(`/cli-${version}.tgz`);
+    // No `version` field: Homebrew scans it from the tarball name and `brew audit --strict`
+    // rejects restating it, so the URL is the only place the version appears.
+    expect(/\/cli-[\d.]+\.tgz/.test(source)).toBe(true);
+    // The formula's own test must read the version back from Homebrew rather than bake it in --
+    // a baked literal is the same redundancy audit rejects, one level down.
+    expect(source).toContain('assert_match version.to_s');
   });
 
   it('every packaging directory has a template for what it publishes', () => {
@@ -103,6 +107,15 @@ describe('install channels', () => {
         `${dir} has no template`,
       ).toBe(true);
     }
+  });
+
+  it('the Scoop template renders to valid JSON and comments only under "##"', () => {
+    // Scoop's schema sets additionalProperties:false and allows exactly one comment key, "##".
+    // A "##installer" note reads like a comment and fails validation for the whole manifest.
+    const tmpl = readFileSync(join(packaging, 'scoop', 'sdods.json.tmpl'), 'utf8');
+    const manifest = JSON.parse(tmpl.replace(/\{\{\w+\}\}/g, 'x')) as Record<string, unknown>;
+    const badComments = Object.keys(manifest).filter((k) => k.startsWith('##') && k !== '##');
+    expect(badComments).toEqual([]);
   });
 
   it('alternatesFor returns only live channels', () => {
