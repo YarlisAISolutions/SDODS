@@ -2,20 +2,25 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import {
   CURRENT_YEAR,
+  ERAS,
+  HISTORY,
+  HISTORY_FROM,
   HORIZON,
   LEVELS,
   NEXT_UP,
   ROADMAP,
   VERIFICATION,
+  yearsOfEra,
   type CheckpointState,
 } from '@sdods/roadmap';
-import { RailHero, YEAR_ART } from '@/components/roadmap-art';
+import { ERA_ART, JourneyRail, MaxiSays, YEAR_ART, type MaxiMood } from '@/components/roadmap-art';
 import { DOCS_URL, REPO_PUBLIC, REPO_URL } from '@/lib/links';
+
+const LAST_YEAR = HORIZON[HORIZON.length - 1]!.year;
 
 export const metadata: Metadata = {
   title: 'Roadmap',
-  description:
-    'Five years of SDODS: what shipped, what is being built, and the customer value each year buys.',
+  description: `SDODS from ${HISTORY_FROM} to ${LAST_YEAR}: the years of test automation that shaped it, what ships today, and the customer value each year ahead buys.`,
 };
 
 const STATUS_STYLE: Record<CheckpointState, string> = {
@@ -32,36 +37,109 @@ const STATUS_WORD: Record<CheckpointState, string> = {
   direction: 'Direction',
 };
 
+/** Maxi is pleased about what shipped, chatty about the present and thoughtful about direction. */
+const MOOD: Record<CheckpointState, MaxiMood> = {
+  delivered: 'happy',
+  now: 'talking',
+  planned: 'idle',
+  direction: 'thinking',
+};
+
 export default function RoadmapPage() {
   return (
     <div className="mx-auto max-w-6xl px-4 py-14">
       <h1 className="max-w-3xl text-3xl font-extrabold tracking-tight md:text-5xl">
-        Five years from <span className="brand-gradient">evidence</span> to sign-off
+        {HISTORY.length} years of lessons, {HORIZON.length} years of{' '}
+        <span className="brand-gradient">ladder</span>
       </h1>
       <p className="muted mt-4 max-w-2xl text-lg">
-        SDODS climbs one ladder. Each year buys a level of confidence the year before could not, and
-        every level is described by what it changes for the people using it.
+        SDODS did not begin in {CURRENT_YEAR}. It begins in {HISTORY_FROM}, with a suite that only
+        ran on one machine. Every year since left something behind, and the five ahead are what
+        those lessons add up to: one ladder, where each year buys a level of confidence the year
+        before could not.
       </p>
 
-      {/* The rail cannot fit five years on a phone, so it scrolls and says so with a fade. */}
-      <div className="relative mt-10">
-        <div
-          tabIndex={0}
-          role="region"
-          aria-label="Five-year rail, scrolls sideways"
-          className="overflow-x-auto"
-        >
-          <div className="min-w-[720px]">
-            <RailHero years={HORIZON.map((h) => h.year)} current={CURRENT_YEAR} />
-          </div>
-        </div>
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-[var(--bg)] to-transparent md:hidden"
+      {/* Two rows on a phone, one continuous road above that: the component picks. */}
+      <div className="mt-8 md:mt-10">
+        <JourneyRail
+          past={HISTORY.map((h) => ({ year: h.year, era: h.era }))}
+          eras={ERAS}
+          years={HORIZON.map((h) => h.year)}
+          current={CURRENT_YEAR}
         />
       </div>
 
-      <section className="mt-14" aria-labelledby="ladder">
+      <section className="mt-16 border-t border-[var(--line)] pt-12" aria-labelledby="road-here">
+        <h2 id="road-here" className="text-2xl font-bold">
+          The road here · {HISTORY_FROM}–{HISTORY[HISTORY.length - 1]!.year}
+        </h2>
+        <p className="muted mt-2 max-w-3xl">
+          Nothing was released in these years, so this is lineage rather than a changelog. Each one
+          records two things you can check for yourself: what the tooling actually did that year,
+          dated against its public releases, and the design decision it left behind that you can
+          point at in the product today.
+        </p>
+
+        {ERAS.map((era) => {
+          const Art = ERA_ART[era.order]!;
+          return (
+            <div key={era.id} id={era.id} className="mt-12 scroll-mt-24">
+              <div className="grid items-center gap-8 md:grid-cols-[1fr_320px]">
+                <div>
+                  <div className="flex flex-wrap items-baseline gap-3">
+                    <h3 className="text-xl font-bold">{era.name}</h3>
+                    <span className="muted text-sm font-semibold tabular-nums">
+                      {era.from}–{era.to}
+                    </span>
+                  </div>
+                  <p className="mt-2 text-lg font-semibold leading-snug">{era.tagline}</p>
+                  <MaxiSays mood="thinking" className="mt-5 max-w-2xl">
+                    {era.maxi}
+                  </MaxiSays>
+                </div>
+                {/* On a phone the scene stacks under Maxi rather than disappearing: it is the
+                    character the section is carried by, not decoration. */}
+                <figure className="mx-auto w-full max-w-[320px] md:mx-0 md:max-w-none">
+                  <Art />
+                </figure>
+              </div>
+
+              <ol className="mt-6 grid gap-3 md:grid-cols-2">
+                {yearsOfEra(era).map((year) => (
+                  <li key={year.year} className="card p-5">
+                    <div className="flex flex-wrap items-baseline gap-3">
+                      <p className="text-2xl font-black tabular-nums text-[var(--brand)]">
+                        {year.year}
+                      </p>
+                      <span className="rounded-full border border-[var(--line)] px-2.5 py-0.5 text-xs font-semibold">
+                        {year.label}
+                      </span>
+                    </div>
+                    <p className="mt-2 font-semibold leading-snug">{year.title}</p>
+                    <p className="muted mt-2 text-sm">{year.shift}</p>
+                    <p className="mt-4 border-l-2 border-[var(--brand-2)] pl-4 text-sm">
+                      <span className="font-bold">SDODS carries. </span>
+                      <span className="muted">{year.carried}</span>
+                    </p>
+                    <ul className="mt-4 flex flex-wrap gap-1.5">
+                      {year.tech.map((t) => (
+                        <li
+                          key={t}
+                          className="muted rounded-md border border-[var(--line)] px-2 py-0.5 text-xs"
+                        >
+                          {t}
+                        </li>
+                      ))}
+                    </ul>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          );
+        })}
+      </section>
+
+      <section className="mt-16 border-t border-[var(--line)] pt-12" aria-labelledby="ladder">
         <h2 id="ladder" className="text-2xl font-bold">
           The ladder
         </h2>
@@ -88,7 +166,7 @@ export default function RoadmapPage() {
       </section>
 
       {HORIZON.map((h, i) => {
-        const Art = YEAR_ART[h.year];
+        const Art = YEAR_ART[h.year]!;
         const flip = i % 2 === 1;
         return (
           <section
@@ -140,8 +218,12 @@ export default function RoadmapPage() {
               </figure>
             </div>
 
+            <MaxiSays mood={MOOD[h.state]} className="mt-8 max-w-3xl">
+              {h.maxi}
+            </MaxiSays>
+
             {h.year === CURRENT_YEAR && (
-              <div className="mt-10 grid gap-4 md:grid-cols-2">
+              <div className="mt-8 grid gap-4 md:grid-cols-2">
                 <figure className="card overflow-hidden">
                   <img
                     src="/screenshots/ui/dashboard.png"
@@ -215,8 +297,10 @@ export default function RoadmapPage() {
           </table>
         </div>
         <p className="muted mt-4 max-w-3xl text-sm">
-          2026 is shipped and verifiable today. 2027 is being built. The years after that are the
-          direction we are steering, not a dated commitment, and feature requests move them.
+          Everything up to {HISTORY[HISTORY.length - 1]!.year} is history, and belongs to the
+          industry rather than to us. {HORIZON[0]!.year} is shipped and verifiable today.{' '}
+          {HORIZON[1]!.year} is being built. The years after that are the direction we are steering,
+          not a dated commitment, and feature requests move them.
         </p>
       </section>
 
@@ -289,7 +373,7 @@ export default function RoadmapPage() {
             Request a feature
           </Link>
           <a href={`${DOCS_URL}/docs/roadmap/`} className="btn btn-secondary">
-            Roadmap in the docs
+            Month by month, in the docs
           </a>
           {REPO_PUBLIC && (
             <a
