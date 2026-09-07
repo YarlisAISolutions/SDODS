@@ -15,8 +15,6 @@ set -euo pipefail
 
 DEB_DIR="${1:?usage: build-repo.sh <deb-dir> <out-dir>}"
 OUT_DIR="${2:?usage: build-repo.sh <deb-dir> <out-dir>}"
-SUITE="${SDODS_APT_SUITE:-stable}"
-COMPONENT="${SDODS_APT_COMPONENT:-main}"
 ORIGIN="SDODS"
 
 command -v apt-ftparchive >/dev/null || {
@@ -41,12 +39,12 @@ cd "$OUT_DIR"
 apt-ftparchive packages . > Packages
 gzip -9kf Packages
 
+# No Suite, Codename or Components: this is a flat repository, reached by a sources line ending
+# in `./` rather than `<suite> <component>`. A flat repo has no components, and declaring a suite
+# it is not being addressed by makes apt warn "Conflicting distribution" on every update.
 apt-ftparchive \
   -o "APT::FTPArchive::Release::Origin=$ORIGIN" \
   -o "APT::FTPArchive::Release::Label=$ORIGIN" \
-  -o "APT::FTPArchive::Release::Suite=$SUITE" \
-  -o "APT::FTPArchive::Release::Codename=$SUITE" \
-  -o "APT::FTPArchive::Release::Components=$COMPONENT" \
   -o "APT::FTPArchive::Release::Architectures=amd64 arm64" \
   release . > Release
 
@@ -64,7 +62,7 @@ if [ -n "${SDODS_APT_GPG_KEY:-}" ]; then
   # an armoured file in that directory fails with a signature error that names the wrong cause.
   gpg --export "$key" > sdods-archive-keyring.gpg
   rm -rf "$GNUPGHOME"
-  echo "✔ signed apt repo in $OUT_DIR ($debs package(s), suite $SUITE)"
+  echo "✔ signed apt repo in $OUT_DIR ($debs package(s), flat layout)"
 else
   echo "⚠ SDODS_APT_GPG_KEY is not set — wrote an UNSIGNED repo in $OUT_DIR."
   echo "  apt will reject it without [trusted=yes]. Do not deploy this to sdods.com."
