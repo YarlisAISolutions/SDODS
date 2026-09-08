@@ -9,12 +9,16 @@ on:
     branches: [main]
     paths:
       - 'apps/www/**'
+      - 'packages/qa-archive/**'
+      - 'scripts/build-qa-index.ts'
       - 'firebase.json'
       - '.firebaserc'
       - '.github/workflows/www.yml'
   pull_request:
     paths:
       - 'apps/www/**'
+      - 'packages/qa-archive/**'
+      - 'scripts/build-qa-index.ts'
       - 'firebase.json'
       - '.firebaserc'
       - '.github/workflows/www.yml'

@@ -30,7 +30,7 @@ const PLACES: Array<{ href: string; title: string; body: string }> = [
     title: 'Documentation',
     body: 'Getting started, the reference, and the workshop.',
   },
-  { href: '/questions', title: 'Questions', body: 'Ask one, or read what others have asked.' },
+  { href: '/questions/', title: 'Questions', body: 'Ask one, or read what others have asked.' },
 ];
 
 export default function NotFound() {
