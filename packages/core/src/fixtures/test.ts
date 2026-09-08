@@ -3,7 +3,7 @@ import { test as base, createBdd } from 'playwright-bdd';
 import type { EnvConfig } from '@sdods/contracts';
 import { ProjectRegistry } from '../config/registry.js';
 import type { HarMode } from '../config/resolve.js';
-import { parseTagValue } from '../config/tags.js';
+import { parseTagValue, scenarioSkipReason } from '../config/tags.js';
 import { noopAuth } from '../auth/index.js';
 import { ApiClient } from '../api/client.js';
 import { CompositeDataProvider } from '../data/provider.js';
@@ -112,6 +112,50 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
   ],
 
   // ── test scope ──────────────────────────────────────────────────────────
+
+  /**
+   * Declared FIRST in test scope, and automatic, so it decides before anything
+   * expensive happens — before a pool account is leased, before a browser
+   * context is built, before a session is minted.
+   *
+   * `@env:`, `@skip:<browser>` and `@flag:` were validated at LINT time and had
+   * no runtime path whatsoever. That is the worst arrangement available: the
+   * tag reads as a control, the linter confirms it is spelled correctly, and
+   * the runner ignores it — so a project can carry hundreds of `@env:` tags and
+   * still point every one of them at production. `@quarantine` was worse still:
+   * it was not a tag this framework knew at all, and every recipe excluded it
+   * by hand in a tag expression that drifts and that nobody can audit.
+   */
+  $sdodsTagGate: [
+    async ({ config, $tags }, use, testInfo) => {
+      const features = config.env.vars?.features;
+      const reason = scenarioSkipReason($tags, {
+        env: config.env.name,
+        browser: testInfo.project.use?.browserName,
+        // Only gate on flags when the environment actually declares them.
+        // An absent list means "not known", and an unknown list must never
+        // silently skip a suite.
+        flags:
+          typeof features === 'string'
+            ? features
+                .split(',')
+                .map((f) => f.trim())
+                .filter(Boolean)
+            : undefined,
+        quarantine: process.env.SDODS_QUARANTINE === 'run' ? 'run' : 'skip',
+      });
+      if (reason) {
+        // Recorded as an annotation as well as a skip reason: a run report that
+        // says "skipped" without saying why is the thing that let 175 parked
+        // scenarios go unnoticed.
+        testInfo.annotations.push({ type: 'sdods:skipped', description: reason });
+        testInfo.skip(true, reason);
+      }
+      await use();
+    },
+    { auto: true },
+  ],
+
   scenario: async ({ config, sdods, $bddContext, $tags }, use, testInfo) => {
     const meta = new ScenarioMeta({
       config,
