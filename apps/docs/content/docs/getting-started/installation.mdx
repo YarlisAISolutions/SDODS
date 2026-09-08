@@ -110,8 +110,16 @@ installing does.
 The image is the server and the web UI, with the browser engines already inside — this is the one
 channel that needs nothing installed on the host at all.
 
-It is built for `linux/amd64` only, because the Playwright base image it derives from is. Docker on
-Apple silicon will run it under emulation, which works but is slow enough to notice on UI runs:
+The published image is `linux/amd64` today. **Docker does not fall back to emulation for a missing
+architecture — it refuses the pull**, so on Apple silicon this fails with
+`no matching manifest for linux/arm64/v8` rather than running slowly. Until the multi-architecture
+image is published, ask for the platform explicitly and let Rosetta handle it:
+
+```bash
+docker run --rm --platform linux/amd64 -p 8080:8080 -v sdods-data:/data ghcr.io/siri1410/sdods-server
+```
+
+On an Intel machine, or once the arm64 image is published, no flag is needed:
 
 ```bash
 docker run --rm -p 8080:8080 -v sdods-data:/data ghcr.io/siri1410/sdods-server
