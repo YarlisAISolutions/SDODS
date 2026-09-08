@@ -48,4 +48,6 @@ export interface TestFixtures {
   heal: Healer;
   /** auto fixture: pushes identity annotations */
   $sdodsAnnotations: void;
+  /** auto fixture: applies @env:, @skip:<browser>, @quarantine and @flag: */
+  $sdodsTagGate: void;
 }
