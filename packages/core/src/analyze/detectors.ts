@@ -927,7 +927,10 @@ function gitIgnoredEnvMatcher(scan: Scan): (rel: string) => boolean {
       if (!body.includes('.env')) continue;
       patterns.push(
         new RegExp(
-          `^${body.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '[^/]*').replace(/\?/g, '[^/]')}$`,
+          `^${body
+            .replace(/[.+^${}()|[\]\\]/g, '\\$&')
+            .replace(/\*/g, '[^/]*')
+            .replace(/\?/g, '[^/]')}$`,
         ),
       );
     }

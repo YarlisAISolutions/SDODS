@@ -61,8 +61,7 @@ function routeName(path: string): string {
     parts.push(isParam(seg) ? `by-${name}` : name);
   }
   // Keep the head (what it is) and the tail (what it does); the middle rarely distinguishes.
-  const trimmed =
-    parts.length > 4 ? [parts[0]!, ...parts.slice(-3)] : parts;
+  const trimmed = parts.length > 4 ? [parts[0]!, ...parts.slice(-3)] : parts;
   return trimmed.join('-').toLowerCase() || 'home';
 }
 

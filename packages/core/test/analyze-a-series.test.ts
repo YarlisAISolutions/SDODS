@@ -47,7 +47,10 @@ describe('A7 — the API base URL is the most specific name, not the first one',
 
   it('keeps file order when two names are equally canonical', () => {
     const root = app({
-      '.env.example': ['API_URL=https://first.example.com', 'API_BASE_URL=https://second.example.com'].join('\n'),
+      '.env.example': [
+        'API_URL=https://first.example.com',
+        'API_BASE_URL=https://second.example.com',
+      ].join('\n'),
     });
     expect(analyzeProject(root).baseUrls.api).toBe('https://first.example.com');
   });
@@ -137,15 +140,18 @@ describe('A8 — an ambiguous auth guess is reported as ambiguous', () => {
   // one library could silently flip it.
   it('records the tie in evidence rather than picking silently', () => {
     // passport-local 0.8 + express-session 0.5 = form 1.3; jsonwebtoken 0.6 + @nestjs/jwt 0.7 = token 1.3
-    const root = app({}, {
-      name: 'x',
-      dependencies: {
-        'passport-local': '1.0.0',
-        'express-session': '1.18.0',
-        jsonwebtoken: '9.0.0',
-        '@nestjs/jwt': '10.0.0',
+    const root = app(
+      {},
+      {
+        name: 'x',
+        dependencies: {
+          'passport-local': '1.0.0',
+          'express-session': '1.18.0',
+          jsonwebtoken: '9.0.0',
+          '@nestjs/jwt': '10.0.0',
+        },
       },
-    });
+    );
     const auth = analyzeProject(root).auth;
     expect(auth.evidence.some((e) => e.snippet?.includes('ambiguous auth'))).toBe(true);
   });
