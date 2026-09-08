@@ -2,6 +2,7 @@ import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Browser, BrowserContext, Page } from '@playwright/test';
 import type { ResolvedConfig } from '../config/resolve.js';
+import { SdodsError } from '../errors.js';
 
 export interface PoolUserLike {
   id: string;
@@ -73,7 +74,20 @@ export function defineAuth(def: AuthDefinition): AuthStrategy {
     case 'token':
       return {
         strategy: 'token',
-        login: async () => undefined,
+        // A `token` project can call the API and has NO browser session. Returning `undefined`
+        // here let a @ui scenario run signed-out and then fail on an assertion about the page,
+        // which reads as a product defect rather than as a misconfigured project. Fail where the
+        // cause is, and say what to do instead.
+        login: async () => {
+          throw new SdodsError(
+            'NOT_SUPPORTED',
+            'The `token` auth strategy provides an API credential, not a browser session.',
+            {
+              hint: 'Use `strategy: "custom"` with a `login` that performs the sign-in and returns a storageState, or restrict these scenarios to the @api layer.',
+              exitCode: 2,
+            },
+          );
+        },
         token: def.token,
       };
     case 'oauth-client-credentials':
@@ -102,7 +116,22 @@ export function defineAuth(def: AuthDefinition): AuthStrategy {
         },
       };
     case 'sso':
-      return { strategy: 'sso', login: async () => undefined };
+      return {
+        strategy: 'sso',
+        // `sso` was a stub: it returned no session and threw nothing, so every scenario under it
+        // ran unauthenticated and silently. There is no generic SSO sign-in to implement — the
+        // flow is provider-specific — so the honest behaviour is to refuse and name the seam.
+        login: async () => {
+          throw new SdodsError(
+            'NOT_SUPPORTED',
+            'The `sso` auth strategy is a placeholder: it performs no sign-in.',
+            {
+              hint: 'SSO flows are provider-specific. Use `strategy: "custom"` with a `login` that drives your identity provider, or capture a session once with `sdods auth capture --interactive`.',
+              exitCode: 2,
+            },
+          );
+        },
+      };
     case 'custom':
       return { strategy: 'custom', login: def.login, token: def.token };
   }

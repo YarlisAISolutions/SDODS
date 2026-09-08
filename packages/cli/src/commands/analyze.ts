@@ -14,6 +14,8 @@ export interface InitFromAppOptions {
   slug?: string;
   name?: string;
   openapi?: string;
+  maxFiles?: number;
+  maxDepth?: number;
   force?: boolean;
   importSpecs?: boolean;
   browsers?: string[];
@@ -22,7 +24,11 @@ export interface InitFromAppOptions {
 /** Programmatic entry used by `sdods init --from <app>`: analyze → propose → apply. */
 export async function initFromApp(opts: InitFromAppOptions) {
   const { analyzeProject, proposeProject, applyProposal } = await import('@sdods/core/analyze');
-  const report = analyzeProject(opts.appPath, { openapi: opts.openapi });
+  const report = analyzeProject(opts.appPath, {
+    openapi: opts.openapi,
+    maxFiles: opts.maxFiles,
+    maxDepth: opts.maxDepth,
+  });
   const proposal = proposeProject(report, {
     slug: opts.slug,
     name: opts.name,
@@ -75,12 +81,24 @@ export function register(program: Command) {
     .option('--force', 'overwrite an existing project when applying')
     .option('--no-import-specs', 'do not copy existing Playwright specs into recorded/imported')
     .option('--report-only', 'print the analysis, skip the proposal')
+    .option(
+      '--max-files <n>',
+      'file budget for the scan (default 25000); raise it on a large monorepo',
+      (v: string) => Number.parseInt(v, 10),
+    )
+    .option('--max-depth <n>', 'directory depth budget for the scan (default 12)', (v: string) =>
+      Number.parseInt(v, 10),
+    )
     .action(async (path: string | undefined, opts, cmd) => {
       const ctx = createContext(cmd);
       // the app path is relative to where the command was typed, not to --cwd (the SDODS repo)
       const appPath = resolvePath(process.cwd(), path ?? '.');
       const { analyzeProject, proposeProject, applyProposal } = await import('@sdods/core/analyze');
-      const report = analyzeProject(appPath, { openapi: opts.openapi });
+      const report = analyzeProject(appPath, {
+        openapi: opts.openapi,
+        maxFiles: opts.maxFiles,
+        maxDepth: opts.maxDepth,
+      });
       const slug = opts.project ?? opts.slug;
       const proposal = opts.reportOnly
         ? undefined

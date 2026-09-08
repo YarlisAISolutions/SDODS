@@ -1,4 +1,5 @@
-import { basename, dirname } from 'node:path';
+import { existsSync, readFileSync } from 'node:fs';
+import { basename, dirname, join, parse as parsePath } from 'node:path';
 import { parse as parseYaml } from 'yaml';
 import type {
   AnalysisReport,
@@ -21,6 +22,46 @@ function ev(file: string, line?: number, snippet?: string): Evidence {
 
 type PmName = AnalysisReport['packageManager']['name'];
 
+const PM_LOCKFILES: Array<[string, PmName]> = [
+  ['bun.lock', 'bun'],
+  ['bun.lockb', 'bun'],
+  ['pnpm-lock.yaml', 'pnpm'],
+  ['yarn.lock', 'yarn'],
+  ['package-lock.json', 'npm'],
+];
+
+/**
+ * Nearest ancestor of `from` that looks like a JS workspace root: it holds a lockfile, or a
+ * package.json declaring `workspaces`, or a pnpm-workspace.yaml.
+ *
+ * Scanning a workspace MEMBER (`analyze apps/sat`) is the normal case on a monorepo, and the
+ * member has none of those files — the root above it does. Without this walk the whole scan
+ * reports `packageManager: unknown` and `monorepo: false` for a repo that is plainly neither.
+ * Returns undefined rather than guessing when nothing is found before the filesystem root.
+ */
+function findWorkspaceRootAbove(from: string): string | undefined {
+  const stopAt = parsePath(from).root;
+  let dir = dirname(from);
+  // Bounded so a pathological path cannot spin; 12 is far beyond any real nesting depth.
+  for (let i = 0; i < 12 && dir && dir !== stopAt; i++) {
+    if (PM_LOCKFILES.some(([f]) => existsSync(join(dir, f)))) return dir;
+    if (existsSync(join(dir, 'pnpm-workspace.yaml'))) return dir;
+    const pkgPath = join(dir, 'package.json');
+    if (existsSync(pkgPath)) {
+      try {
+        const pkg = JSON.parse(readFileSync(pkgPath, 'utf8')) as { workspaces?: unknown };
+        if (pkg.workspaces) return dir;
+      } catch {
+        /* an unparseable package.json is not a workspace root */
+      }
+    }
+    const next = dirname(dir);
+    if (next === dir) break;
+    dir = next;
+  }
+  return undefined;
+}
+
 export function detectPackageManager(scan: Scan): AnalysisReport['packageManager'] {
   const evidence: Evidence[] = [];
   let name: PmName = 'unknown';
@@ -33,13 +74,7 @@ export function detectPackageManager(scan: Scan): AnalysisReport['packageManager
       evidence.push(ev('package.json', undefined, `packageManager: ${pm}`));
     }
   }
-  const lockfiles: Array<[string, PmName]> = [
-    ['bun.lock', 'bun'],
-    ['bun.lockb', 'bun'],
-    ['pnpm-lock.yaml', 'pnpm'],
-    ['yarn.lock', 'yarn'],
-    ['package-lock.json', 'npm'],
-  ];
+  const lockfiles = PM_LOCKFILES;
   for (const [file, pmName] of lockfiles) {
     if (scan.has(file)) {
       if (name === 'unknown') name = pmName;
@@ -73,11 +108,46 @@ export function detectPackageManager(scan: Scan): AnalysisReport['packageManager
   for (const f of ['lerna.json', 'nx.json', 'turbo.json', 'pnpm-workspace.yaml']) {
     if (scan.has(f)) evidence.push(ev(f, undefined, 'monorepo tooling'));
   }
-  const monorepo =
+  let monorepo =
     workspaces.length > 0 ||
     scan.has('lerna.json') ||
     scan.has('nx.json') ||
     scan.has('turbo.json');
+
+  // A workspace member has no lockfile and no `workspaces` key of its own — those live in the
+  // root above it. Scanning a member directly is the normal monorepo case, so resolve upwards
+  // rather than reporting `unknown` / `monorepo: false` for a repo that is neither.
+  if (name === 'unknown' || !monorepo) {
+    const wsRoot = findWorkspaceRootAbove(scan.root);
+    if (wsRoot) {
+      monorepo = true;
+      if (name === 'unknown') {
+        for (const [file, pmName] of PM_LOCKFILES) {
+          if (existsSync(join(wsRoot, file))) {
+            name = pmName;
+            evidence.push(ev(file, undefined, `workspace root ${wsRoot}`));
+            break;
+          }
+        }
+        if (name === 'unknown') {
+          try {
+            const pkg = JSON.parse(readFileSync(join(wsRoot, 'package.json'), 'utf8')) as {
+              packageManager?: string;
+            };
+            const m = /^(npm|pnpm|yarn|bun)@/.exec(pkg.packageManager ?? '');
+            if (m) {
+              name = m[1] as PmName;
+              evidence.push(
+                ev('package.json', undefined, `workspace root ${wsRoot}: ${pkg.packageManager}`),
+              );
+            }
+          } catch {
+            /* no readable manifest at the workspace root */
+          }
+        }
+      }
+    }
+  }
   return { name, monorepo, workspaces: [...new Set(workspaces)], evidence };
 }
 
@@ -752,15 +822,46 @@ export function detectAuth(scan: Scan, routes: DetectedRoute[]): AnalysisReport[
     }
   }
   if (pages.length) votes.form += 0.5;
-  let strategyGuess: AnalysisReport['auth']['strategyGuess'] = 'none';
-  let best = 0;
-  for (const [k, v] of Object.entries(votes) as Array<
-    [AnalysisReport['auth']['strategyGuess'], number]
-  >) {
-    if (v > best) {
-      best = v;
-      strategyGuess = k;
-    }
+  // Ranked, not object-key order. `if (v > best)` over `Object.entries` resolves a TIE by
+  // whichever key happens to be declared first — so a repo scoring form 1.6 and token 1.6 got
+  // `form` for no reason a reader could see, and adding a library could silently flip it.
+  // Ties are now broken by this explicit precedence and, more importantly, are REPORTED: an
+  // ambiguous guess a human must confirm is not the same result as a confident one.
+  const TIE_ORDER: Array<AnalysisReport['auth']['strategyGuess']> = [
+    'sso',
+    'oauth-client-credentials',
+    'token',
+    'form',
+    'none',
+  ];
+  // Epsilon, not `===`. These scores are sums of decimal weights, so a "tie" is almost never
+  // exact: passport-local + express-session is 0.8 + 0.5 = 1.3000000000000000, while
+  // jsonwebtoken + @nestjs/jwt is 0.6 + 0.7 = 1.2999999999999998. Exact equality would report
+  // those as a clear win for `form` by 2e-16 — which is precisely the invisible, weight-order
+  // -dependent decision this fix exists to remove.
+  const TIE_EPSILON = 1e-9;
+  const ranked = (
+    Object.entries(votes) as Array<[AnalysisReport['auth']['strategyGuess'], number]>
+  ).sort(
+    (a, b) =>
+      (Math.abs(b[1] - a[1]) < TIE_EPSILON ? 0 : b[1] - a[1]) ||
+      TIE_ORDER.indexOf(a[0]) - TIE_ORDER.indexOf(b[0]),
+  );
+  const [top, second] = ranked;
+  const best = top?.[1] ?? 0;
+  const strategyGuess: AnalysisReport['auth']['strategyGuess'] = best > 0 ? top![0] : 'none';
+  if (second && best > 0 && Math.abs(second[1] - best) < TIE_EPSILON) {
+    const tied = ranked
+      .filter(([, v]) => Math.abs(v - best) < TIE_EPSILON)
+      .map(([k]) => k)
+      .join(', ');
+    evidence.push(
+      ev(
+        'package.json',
+        undefined,
+        `ambiguous auth: ${tied} all scored ${best.toFixed(2)} — picked ${strategyGuess}, confirm before relying on it`,
+      ),
+    );
   }
   return {
     pages: [...new Set(pages)],
@@ -775,6 +876,72 @@ export function detectAuth(scan: Scan, routes: DetectedRoute[]): AnalysisReport[
 
 const URL_VAR = /(BASE_?URL|API_?URL|APP_?URL|PUBLIC_URL|SITE_URL|HOST|ORIGIN|ENDPOINT)/i;
 
+/** Framework prefixes that expose a variable to the browser but say nothing about its meaning. */
+const PUBLIC_PREFIX = /^(NEXT_PUBLIC_|VITE_|REACT_APP_|NUXT_PUBLIC_|PUBLIC_|GATSBY_|EXPO_PUBLIC_)/;
+
+const CANONICAL_URL_KEYS = new Set([
+  'API_URL',
+  'API_BASE_URL',
+  'BASE_URL',
+  'APP_URL',
+  'APP_BASE_URL',
+  'SITE_URL',
+  'PUBLIC_URL',
+  'ORIGIN',
+  'HOST',
+]);
+
+/**
+ * How strongly a variable NAME claims to be *the* base URL of its kind.
+ *
+ * The old rule was `apiBaseUrl ??= raw` — first match in file order wins. On a real repo that
+ * means `SIM_AGENT_API_URL`, declared 39 lines above `NEXT_PUBLIC_API_URL`, becomes the API base
+ * URL for the whole generated project, and every generated API scenario then talks to a service
+ * that is not the application. A vendor- or service-prefixed name is the LEAST likely to be the
+ * app's own base URL, so specificity has to beat position.
+ */
+function urlKeyScore(key: string): number {
+  const bare = key.toUpperCase().replace(PUBLIC_PREFIX, '');
+  if (CANONICAL_URL_KEYS.has(bare)) return 3;
+  if (/^[A-Z0-9]+_(API_URL|BASE_URL|APP_URL)$/.test(bare)) return 1;
+  return 2;
+}
+
+/**
+ * A deliberately small `.gitignore` reader, scoped to the `.env` family only.
+ *
+ * Full gitignore semantics (negation, directory-only, nested files, precedence) are not needed
+ * to answer the one question asked here — "is this .env file deliberately untracked?" — and a
+ * partial implementation of the full spec would be worse than an honest narrow one. Patterns
+ * that do not concern `.env*` are ignored outright.
+ */
+function gitIgnoredEnvMatcher(scan: Scan): (rel: string) => boolean {
+  const patterns: RegExp[] = [];
+  for (const candidate of ['.gitignore', '.git/info/exclude']) {
+    const text = scan.read(candidate);
+    if (!text) continue;
+    for (const raw of text.split(/\r?\n/)) {
+      const line = raw.trim();
+      if (!line || line.startsWith('#') || line.startsWith('!')) continue;
+      const body = line.replace(/^\/+/, '').replace(/\/+$/, '');
+      if (!body.includes('.env')) continue;
+      patterns.push(
+        new RegExp(
+          `^${body
+            .replace(/[.+^${}()|[\]\\]/g, '\\$&')
+            .replace(/\*/g, '[^/]*')
+            .replace(/\?/g, '[^/]')}$`,
+        ),
+      );
+    }
+  }
+  if (!patterns.length) return () => false;
+  return (rel: string) => {
+    const base = basename(rel);
+    return patterns.some((re) => re.test(base) || re.test(rel));
+  };
+}
+
 export function detectEnvs(scan: Scan): {
   envs: AnalysisReport['envs'];
   baseUrls: AnalysisReport['baseUrls'];
@@ -783,22 +950,44 @@ export function detectEnvs(scan: Scan): {
   const evidence: Evidence[] = [];
   let ui: string | undefined;
   let api: string | undefined;
+  const ignored = gitIgnoredEnvMatcher(scan);
   for (const f of scan.files) {
     const name = basename(f.rel);
     if (!name.startsWith('.env')) continue;
     if (f.rel.split('/').length > 2) continue;
+    // A gitignored .env holds real credentials and real internal hostnames. Reading it puts
+    // those values into the report, and `analyze --json` / the generated yaml are things people
+    // paste into issues and commit. The file is deliberately not in the repo; the analyzer has
+    // no business republishing it.
+    if (ignored(f.rel)) {
+      evidence.push(ev(f.rel, undefined, 'gitignored — not read'));
+      continue;
+    }
     const envName =
       name === '.env' ? 'local' : name.replace(/^\.env\.?/, '').replace(/\.local$/, '') || 'local';
     const vars: string[] = [];
     let uiBaseUrl: string | undefined;
     let apiBaseUrl: string | undefined;
+    let uiScore = -1;
+    let apiScore = -1;
     for (const hit of scan.grep(f.rel, /^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$/)) {
       const key = hit.match[1]!;
       const raw = hit.match[2]!.trim().replace(/^["']|["']$/g, '');
       vars.push(key);
       if (URL_VAR.test(key) && /^https?:\/\//.test(raw)) {
-        if (/API|ENDPOINT/i.test(key)) apiBaseUrl ??= raw;
-        else uiBaseUrl ??= raw;
+        const score = urlKeyScore(key);
+        const isApi = /API|ENDPOINT/i.test(key);
+        // Strictly greater: the first key at a given specificity still wins, so a file with two
+        // equally-canonical names keeps its existing, file-order-stable answer.
+        if (isApi ? score > apiScore : score > uiScore) {
+          if (isApi) {
+            apiBaseUrl = raw;
+            apiScore = score;
+          } else {
+            uiBaseUrl = raw;
+            uiScore = score;
+          }
+        }
         evidence.push(ev(f.rel, hit.line, `${key}=${/example|sample/i.test(name) ? raw : '…'}`));
       }
     }
@@ -848,7 +1037,14 @@ export function detectEnvs(scan: Scan): {
       }
     }
   }
-  for (const e of envs) {
+  // Real environments first, `.env.example` last. `propose` drops `example` from the env list
+  // (it is a template, not an environment) while base URLs were folded in file order — so a repo
+  // whose .env.example sorted first handed its placeholder URLs to every generated env, and the
+  // proposal named environments that had supplied none of its own values.
+  const isTemplate = (n: string) => n === 'example' || n === 'sample';
+  for (const e of [...envs].sort(
+    (a, b) => Number(isTemplate(a.name)) - Number(isTemplate(b.name)),
+  )) {
     ui ??= e.uiBaseUrl;
     api ??= e.apiBaseUrl;
   }
@@ -859,8 +1055,19 @@ export function detectEnvs(scan: Scan): {
       .flatMap((f) =>
         scan.grep(f.rel, /\.listen\(\s*(?:\{[^}]*port:\s*)?(\d{4,5})/).map((h) => ({ f, h })),
       )[0];
-    api = portHit ? `http://localhost:${portHit.h.match[1]}` : 'http://localhost:3000';
-    if (portHit) evidence.push(ev(portHit.f.rel, portHit.h.line, portHit.h.text));
+    // Only when it names a DIFFERENT origin than the UI. A full-stack app (Next, Nuxt) serves
+    // its API from the same port under /api, and an express dependency there is usually a socket
+    // or worker server — not a second API origin. The old code set `api` unconditionally, which
+    // both invented `http://localhost:3000` out of nothing when no `.listen()` existed AND
+    // suppressed the `api ??= ui + '/api'` fallback below, so every generated API scenario was
+    // pointed at the UI origin with no /api suffix.
+    if (portHit) {
+      const candidate = `http://localhost:${portHit.h.match[1]}`;
+      if (candidate !== ui) {
+        api = candidate;
+        evidence.push(ev(portHit.f.rel, portHit.h.line, portHit.h.text));
+      }
+    }
   }
   api ??= ui ? `${ui}/api` : undefined;
   return { envs, baseUrls: { ui, api, evidence } };
