@@ -28,3 +28,11 @@ proposals/
 apps/desktop/out
 apps/desktop/release
 apps/desktop/resources/node
+
+# Package-manager manifests are generated from the templates beside them by scripts/sync-channels.ts,
+# and they are read by Homebrew, Scoop and winget rather than by us. Formatting them rewrites the
+# output so it no longer matches its own template -- prettier turned a double-quoted ReleaseDate
+# into a single-quoted one, which is a silent difference between what the template says and what
+# ships.
+packaging/**/*.yaml
+packaging/**/*.json

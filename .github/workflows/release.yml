@@ -5,6 +5,11 @@ on:
     branches: [main]
     tags: ['v*']
   workflow_dispatch:
+    inputs:
+      image_only:
+        description: 'Rebuild and push the server image without publishing packages'
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -108,8 +113,11 @@ jobs:
     needs: [changesets]
     if: >-
       always() &&
-      (startsWith(github.ref, 'refs/tags/v') || needs.changesets.outputs.published == 'true')
+      (startsWith(github.ref, 'refs/tags/v') ||
+       needs.changesets.outputs.published == 'true' ||
+       inputs.image_only)
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-buildx-action@v3
@@ -130,6 +138,19 @@ jobs:
       - uses: docker/build-push-action@v6
         with:
           context: .
+          # amd64 only, and that is a limitation rather than a preference.
+          #
+          # Docker does NOT fall back to emulation for a missing architecture -- it refuses the
+          # pull with "no matching manifest for linux/arm64/v8" -- so Apple silicon needs
+          # `--platform linux/amd64`, which the install page and the docs both say.
+          #
+          # Building arm64 here was tried and abandoned: with QEMU on an amd64 runner the arm64
+          # stage did not finish inside 90 minutes, because every one of `bun install`, the native
+          # module builds and the web bundle runs emulated. Two things would fix it properly, and
+          # both are more than a flag: a native arm64 runner (a paid runner tier for a private
+          # repository), or splitting the Dockerfile so the arch-independent web bundle is built
+          # on $BUILDPLATFORM and only the runtime layer is emulated.
+          platforms: linux/amd64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

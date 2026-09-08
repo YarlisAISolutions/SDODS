@@ -1,0 +1,21 @@
+Package: sdods
+Architecture: amd64
+Version: 0.1.0
+Priority: optional
+Section: default
+Maintainer: SDODS <admin@sdods.com>
+Installed-Size: 421460
+Depends: libgtk-3-0, libnotify4, libnss3, libxss1, libxtst6, xdg-utils, libatspi2.0-0, libsecret-1-0
+Recommends: libappindicator3-1
+Filename: pool/desktop-v0.1.0/SDODS-0.1.0-linux-amd64.deb
+Size: 133478136
+MD5sum: 49bb38841e5571cb79c467920c6f8e55
+SHA1: df384120606c71971c13a5b10e2b16c31622d951
+SHA256: 77bd1b1f383a7fc403c35e7b4491718c4d1bee7156037e5fa99084ba5bd6ae61
+SHA512: a2e6a724e6a8c3b37a92f2f0a8be3e672145e1064fc884b8dce1d64624a1d41b396936192d74613d13c46f4d19717e8804665e5225db5aa9eda91dacd59f5254
+Homepage: https://sdods.com
+Description: BDD test automation for UI, API and hybrid flows
+  SDODS runs BDD test suites across UI, API and hybrid layers, with self-healing locators, data-driven scenarios and a local results dashboard. The desktop app bundles a Node runtime and manages the SDODS workspace, server and Playwright browsers for you.
+License: Apache-2.0
+Vendor: SDODS <admin@sdods.com>
+

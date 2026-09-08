@@ -96,30 +96,46 @@ async function probeNpm(): Promise<{ probe: Probe; npm: Npm | null }> {
  * for "does not exist" — which is exactly the state this repository is in until the first `v*`
  * tag is pushed. Either way the pull command on the site would fail, so both are "not live".
  */
-async function probeDocker(): Promise<Probe> {
+async function probeDocker(): Promise<{ probe: Probe; arches: string[] }> {
+  const dead = (detail: string) => ({ probe: { live: false, detail }, arches: [] });
   try {
     const tokenRes = await fetch(
       `https://ghcr.io/token?scope=${encodeURIComponent(`repository:${IMAGE}:pull`)}&service=ghcr.io`,
     );
-    if (!tokenRes.ok)
-      return { live: false, detail: `no anonymous pull token (${tokenRes.status})` };
+    if (!tokenRes.ok) return dead(`no anonymous pull token (${tokenRes.status})`);
     const { token } = (await tokenRes.json()) as { token: string };
     const res = await fetch(`https://ghcr.io/v2/${IMAGE}/manifests/latest`, {
-      method: 'HEAD',
       headers: {
         authorization: `Bearer ${token}`,
         accept:
           'application/vnd.oci.image.index.v1+json, application/vnd.docker.distribution.manifest.list.v2+json, application/vnd.oci.image.manifest.v1+json',
       },
     });
-    return res.ok
-      ? { live: true, detail: `ghcr.io/${IMAGE}:latest` }
-      : {
-          live: false,
-          detail: `manifest ${res.status} — not published, or the package is private`,
-        };
+    if (!res.ok) return dead(`manifest ${res.status} — not published, or the package is private`);
+
+    // Which architectures the index actually carries. Docker does NOT fall back to emulation for a
+    // missing one -- it refuses the pull outright:
+    //   no matching manifest for linux/arm64/v8 in the manifest list entries
+    // So an amd64-only image is not "slow on Apple silicon", it does not run there at all, and the
+    // page must not say otherwise. Attestation entries carry architecture "unknown".
+    const index = (await res.json()) as {
+      manifests?: Array<{ platform?: { architecture?: string } }>;
+    };
+    const arches = (index.manifests ?? [])
+      .map((m) => m.platform?.architecture)
+      .filter((a): a is string => !!a && a !== 'unknown')
+      .filter((a, i, all) => all.indexOf(a) === i)
+      .sort();
+
+    return {
+      probe: {
+        live: true,
+        detail: `ghcr.io/${IMAGE}:latest (${arches.join(', ') || 'no platforms'})`,
+      },
+      arches,
+    };
   } catch (e) {
-    return { live: false, detail: `unreachable: ${(e as Error).message}` };
+    return dead(`unreachable: ${(e as Error).message}`);
   }
 }
 
@@ -239,6 +255,7 @@ function patchChannels(
   live: Record<string, boolean>,
   npm: Npm | null,
   desktop: Desktop | null,
+  arches: string[],
 ): string {
   let out = source;
   for (const [id, isLive] of Object.entries(live)) {
@@ -259,6 +276,18 @@ function patchChannels(
       );
     }
   }
+  // Written from the manifest rather than by hand: claiming an architecture the image does not
+  // carry is a command that fails on the machine reading it.
+  if (arches.length) {
+    const both = arches.includes('amd64') && arches.includes('arm64');
+    const names = arches.map((a) => `linux/${a}`).join(' and ');
+    out = out.replace(
+      /(id: 'docker',[\s\S]*?)note: '[^']*',/,
+      `$1note: 'The server and web UI, browser engines included. ${
+        both ? 'Runs natively on Intel and Apple silicon.' : `${names} only.`
+      }',`,
+    );
+  }
   if (npm) {
     out = out.replace(
       /(id: 'npm',[\s\S]*?)note: '[^']*',/,
@@ -271,8 +300,11 @@ function patchChannels(
 async function main() {
   console.log('Probing each channel against the registry that serves it.\n');
 
-  const [{ probe: npmProbe, npm }, dockerProbe, { probe: desktopProbe, desktop }] =
-    await Promise.all([probeNpm(), probeDocker(), resolveDesktop()]);
+  const [
+    { probe: npmProbe, npm },
+    { probe: dockerProbe, arches },
+    { probe: desktopProbe, desktop },
+  ] = await Promise.all([probeNpm(), probeDocker(), resolveDesktop()]);
 
   // The tap and the bucket are separate publishes: a rendered manifest in this repository is not
   // an installable formula until it is pushed there.
@@ -287,9 +319,16 @@ async function main() {
     'manifests/s/SDODS/SDODS',
     'manifest',
   );
-  const aptProbe: Probe = (await head(`${APT_URL}/InRelease`))
-    ? { live: true, detail: `${APT_URL} (signed)` }
-    : { live: false, detail: `${APT_URL}/InRelease is not served — repo not deployed or unsigned` };
+  // dists/<suite>/InRelease, not /InRelease: a flat repository is addressed with a "./"
+  // distribution, and Firebase answers every path containing that segment with a 302 to an
+  // internal origin that 404s. apt reported "does not have a Release file" while curl on the
+  // normalised path returned 200 — so the probe has to ask for the path apt asks for.
+  const aptProbe: Probe = (await head(`${APT_URL}/dists/stable/InRelease`))
+    ? { live: true, detail: `${APT_URL} stable main (signed)` }
+    : {
+        live: false,
+        detail: `${APT_URL}/dists/stable/InRelease is not served — repo not deployed or unsigned`,
+      };
 
   const written: string[] = [];
 
@@ -352,7 +391,7 @@ async function main() {
   }
 
   const before = readFileSync(CHANNELS_TS, 'utf8');
-  const after = patchChannels(before, live, npm, desktop);
+  const after = patchChannels(before, live, npm, desktop, arches);
 
   if (CHECK_ONLY) {
     if (after !== before) {

@@ -77,9 +77,7 @@ jobs:
         run: |
           set -euo pipefail
           sudo cp site/apt/sdods-archive-keyring.gpg /usr/share/keyrings/
-          # Trailing `./` is what addresses a flat repository. With `stable main` apt looks for
-          # dists/stable/main/binary-amd64/Packages, which a flat repo does not have.
-          echo "deb [signed-by=/usr/share/keyrings/sdods-archive-keyring.gpg] file://$PWD/site/apt ./" \
+          echo "deb [signed-by=/usr/share/keyrings/sdods-archive-keyring.gpg] file://$PWD/site/apt stable main" \
             | sudo tee /etc/apt/sources.list.d/sdods-local.list
           sudo apt-get update -o Dir::Etc::sourcelist=/etc/apt/sources.list.d/sdods-local.list \
                               -o Dir::Etc::sourceparts=- -o APT::Get::List-Cleanup=0
@@ -93,20 +91,32 @@ jobs:
           RELEASE_REPO: ${{ vars.DESKTOP_RELEASE_REPO || 'siri1410/sdods-releases' }}
         run: |
           set -euo pipefail
-          [ -n "$GH_TOKEN" ] || {
-            echo "::error::DESKTOP_RELEASE_TOKEN is required to push to $RELEASE_REPO."; exit 1; }
-          git clone --depth 1 --branch gh-pages \
-            "https://x-access-token:$GH_TOKEN@github.com/$RELEASE_REPO.git" pages 2>/dev/null || {
-              git init pages && git -C pages checkout -b gh-pages
-              git -C pages remote add origin "https://x-access-token:$GH_TOKEN@github.com/$RELEASE_REPO.git"
-            }
-          rm -rf pages/apt
-          cp -r site/apt pages/apt
-          # Jekyll would drop the dot-free binary files and any directory it does not recognise.
-          touch pages/.nojekyll
-          git -C pages config user.name 'SDODS'
-          git -C pages config user.email 'admin@sdods.com'
-          git -C pages add -A
-          git -C pages diff --quiet --cached && { echo 'apt repo unchanged'; exit 0; }
-          git -C pages commit -m 'chore(apt): rebuild repository from the published release'
-          git -C pages push origin gh-pages
+          # The payload is deleted now, not skipped earlier: the metadata above records each file's
+          # size and SHA-256, and the verify step needed the real bytes to check them against.
+          find site/apt -name '*.deb' -delete
+          rm -rf apps/www/public/apt
+          mkdir -p apps/www/public
+          cp -r site/apt apps/www/public/apt
+          du -sh apps/www/public/apt
+
+          branch="chore/apt-$TAG"
+          git config user.name 'SDODS'
+          git config user.email 'admin@sdods.com'
+          git checkout -b "$branch"
+          git add apps/www/public/apt
+          git diff --quiet --cached && { echo 'apt metadata unchanged'; exit 0; }
+          git commit -m "chore(apt): repository metadata for $TAG"
+          git push -u origin "$branch"
+          gh pr create --fill --base main --head "$branch" \
+            --title "chore(apt): repository metadata for $TAG" \
+            --body "Signed apt repository metadata for \`$TAG\`, built and verified by the apt workflow.
+
+          The \`.deb\` files are not here — they are over GitHub's 100 MB file limit and stay on the
+          public release. \`Packages\` points at \`pool/$TAG/\`, which firebase.json redirects to the
+          release asset; apt verifies the download against the SHA-256 recorded here.
+
+          Addressed as \`stable main\`, not a flat \`./\` repository: Firebase answers any path
+          containing a \`./\` segment with a 302 to an internal origin that 404s, so a flat repo
+          served every file to curl and still failed every real apt update.
+
+          Merging this deploys the repository to https://sdods.com/apt."
