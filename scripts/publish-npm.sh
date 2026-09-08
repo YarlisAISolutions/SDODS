@@ -45,7 +45,16 @@ if [ -n "${NPM_TOKEN:-}" ]; then
   export npm_config_userconfig="$NPMRC"
 fi
 
-echo "Building dist output"
+# A CLEAN build, not `tsc -b`. `tsc -b` is incremental: it trusts .tsbuildinfo and emits nothing
+# when it believes dist/ is current, so a dist/ left over from an older source tree (a restored
+# build cache, an interrupted build, a stale worktree) is staged and published verbatim. That is
+# not hypothetical -- @sdods/core@0.2.2 shipped `apiContext.auth = undefined` in
+# dist/steps/api.steps.js while every commit in that release had `auth = null` in src, which
+# silently un-fixed A1 for every consumer. And because the loop below skips any version already
+# on the registry, a stale tarball can never be corrected at that version: only a NEW version
+# can. So the build is forced, and verified below, before anything is staged.
+echo "Building dist output (clean)"
+rm -rf packages/*/dist packages/*/*.tsbuildinfo tsconfig.tsbuildinfo 2>/dev/null || true
 bun run typecheck >/dev/null
 
 # A published install has no checkout to read from: stage init's workspace assets into
@@ -58,6 +67,23 @@ bun run publish:assets >/dev/null
 
 echo "Staging package manifests"
 bun run publish:stage "$STAGE" >/dev/null
+
+# Prove the staged output derives from the source in this checkout. Compares the newest mtime
+# under each package's src/ against its staged dist/: a dist older than the source it claims to
+# compile is the exact failure that shipped 0.2.2, and it must stop the publish rather than
+# reach the registry where it becomes permanent.
+echo "Verifying staged output is newer than source"
+for p in "${PKGS[@]}"; do
+  src="packages/$p/src"
+  dist="$STAGE/$p/dist"
+  [ -d "$src" ] || continue
+  [ -d "$dist" ] || { echo "  ! $p staged without a dist/" >&2; exit 5; }
+  newest_src=$(find "$src" -type f -newer "$dist" -print -quit 2>/dev/null || true)
+  if [ -n "$newest_src" ]; then
+    echo "  ! $p: $newest_src is newer than the staged dist/ -- the build did not run" >&2
+    exit 5
+  fi
+done
 
 published=0 skipped=0
 for p in "${PKGS[@]}"; do
