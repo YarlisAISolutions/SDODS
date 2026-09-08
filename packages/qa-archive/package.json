@@ -1,0 +1,15 @@
+{
+  "name": "@sdods/qa-archive",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The sdods.com/questions archive as data: threads, answers, the people who wrote them.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./blocks": "./src/blocks.ts"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
