@@ -1,4 +1,5 @@
 import type { MetadataRoute } from 'next';
+import { HANDLES, TAG_NAMES, THREADS, USE_CASES } from '@sdods/qa-archive';
 import { SITE_URL } from '@/lib/links';
 
 export const dynamic = 'force-static';
@@ -15,7 +16,10 @@ const PAGES: Array<[path: string, priority: number]> = [
   ['/install/', 0.9],
   ['/download/', 0.9],
   ['/roadmap/', 0.6],
-  ['/questions/', 0.6],
+  ['/questions/', 0.7],
+  ['/questions/tags/', 0.5],
+  ['/questions/users/', 0.4],
+  ['/questions/use-cases/', 0.6],
   ['/feedback/', 0.6],
   // A repository address that happens to have a page. Worth indexing so someone searching for the
   // apt setup finds it, but it is not a destination anyone browses to.
@@ -25,10 +29,46 @@ const PAGES: Array<[path: string, priority: number]> = [
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date();
-  return PAGES.map(([path, priority]) => ({
+  const pages: MetadataRoute.Sitemap = PAGES.map(([path, priority]) => ({
     url: `${SITE_URL}${path}`,
     lastModified: now,
     changeFrequency: path === '/' ? 'weekly' : 'monthly',
     priority,
   }));
+
+  // Every question, tag and profile page. Generated rather than listed, because the whole point of
+  // rendering the archive statically is that a search engine can reach all of it — and a
+  // hand-maintained list of several hundred URLs would be wrong within a week.
+  // `/questions/live/` is deliberately absent: it renders empty at build time.
+  const threads: MetadataRoute.Sitemap = THREADS.map((t) => ({
+    url: `${SITE_URL}/questions/${t.slug}/`,
+    lastModified: new Date(
+      t.answers.reduce((latest, a) => (a.on > latest ? a.on : latest), t.askedOn),
+    ),
+    changeFrequency: 'yearly',
+    priority: 0.5,
+  }));
+
+  const tags: MetadataRoute.Sitemap = TAG_NAMES.map((tag) => ({
+    url: `${SITE_URL}/questions/tags/${tag}/`,
+    lastModified: now,
+    changeFrequency: 'weekly',
+    priority: 0.4,
+  }));
+
+  const people: MetadataRoute.Sitemap = HANDLES.map((handle) => ({
+    url: `${SITE_URL}/questions/users/${handle}/`,
+    lastModified: now,
+    changeFrequency: 'monthly',
+    priority: 0.3,
+  }));
+
+  const useCases: MetadataRoute.Sitemap = USE_CASES.map((u) => ({
+    url: `${SITE_URL}/questions/use-cases/${u.slug}/`,
+    lastModified: now,
+    changeFrequency: 'monthly',
+    priority: 0.5,
+  }));
+
+  return [...pages, ...threads, ...tags, ...people, ...useCases];
 }
