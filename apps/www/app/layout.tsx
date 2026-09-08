@@ -28,7 +28,10 @@ export const metadata: Metadata = {
     title: 'SDODS',
     description: 'An automation platform with a reusable architecture.',
   },
-  alternates: { canonical: SITE_URL },
+  // './' resolves against metadataBase *and the current route*, so every page declares itself
+  // canonical. A literal SITE_URL here told Google that /install, /download and every other page
+  // were duplicates of the home page, which is an instruction to drop them from the index.
+  alternates: { canonical: './' },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
