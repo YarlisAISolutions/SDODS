@@ -44,8 +44,8 @@ if [ "$debs" = "0" ]; then
 fi
 
 rm -rf "$OUT_DIR"
-mkdir -p "$OUT_DIR/$POOL"
-cp "$DEB_DIR"/*.deb "$OUT_DIR/$POOL/"
+mkdir -p "$OUT_DIR"
+cp "$DEB_DIR"/*.deb "$OUT_DIR/"
 
 cd "$OUT_DIR"
 
@@ -95,11 +95,4 @@ if [ -n "${SDODS_APT_GPG_KEY:-}" ]; then
 else
   echo "⚠ SDODS_APT_GPG_KEY is not set — wrote an UNSIGNED repo in $OUT_DIR."
   echo "  apt will reject it without [trusted=yes]. Do not deploy this to sdods.com."
-fi
-
-# Done last: the metadata above records each file's size and SHA-256, so removing the payload now
-# changes nothing apt reads. It is what keeps the published repository a few kilobytes.
-if [ -n "${SDODS_APT_METADATA_ONLY:-}" ]; then
-  find "$POOL" -name '*.deb' -delete
-  echo "  metadata only — .deb files removed, $POOL/ paths kept for the host to redirect"
 fi

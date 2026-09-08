@@ -1,15 +1,11 @@
 name: apt repository
 
-# Builds a signed apt repository from a published desktop release and opens a PR with its metadata,
-# which sdods.com then serves.
+# Builds a signed apt repository from a published desktop release and serves it from GitHub Pages
+# on the PUBLIC releases repository.
 #
-# The .deb files are not published here and cannot be: they are 120-130 MB each, over GitHub's
-# 100 MB per-file limit, so no branch in any repository can hold them. They stay on the public
-# release, `Packages` records them under `pool/<tag>/`, and firebase.json redirects that path to
-# the release asset. apt follows the redirect and verifies the download against the SHA-256 in
-# `Packages`, so nothing is trusted less for having been fetched from somewhere else.
-#
-# What gets committed is a few kilobytes of metadata, and only when a desktop release is cut.
+# Why not sdods.com: that site is a static export deployed whole, so hosting the repo there would
+# make every site deploy download a few hundred megabytes of .deb. The apt repo changes on a
+# desktop release, the site changes on every commit, and they should not be the same deploy.
 #
 # Deliberately manual. Adding an apt source is a trust decision by the person running apt, and the
 # repository is signed with the project key — so a person triggers it, the same way a person
@@ -23,8 +19,7 @@ on:
         type: string
 
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
 
 concurrency:
   group: apt-repo
@@ -65,7 +60,6 @@ jobs:
           [ -n "$TAG" ] && [ "$TAG" != "null" ] || {
             echo "::error::No published desktop-v* release in $RELEASE_REPO."; exit 1; }
           echo "packaging $TAG"
-          echo "TAG=$TAG" >> "$GITHUB_ENV"
           gh release download "$TAG" -R "$RELEASE_REPO" -p '*.deb' -D debs
           ls -la debs
 
@@ -74,8 +68,7 @@ jobs:
           SDODS_APT_GPG_KEY: ${{ secrets.SDODS_APT_GPG_KEY }}
         run: |
           sudo apt-get update && sudo apt-get install -y --no-install-recommends apt-utils
-          # The pool path carries the tag so one redirect rule serves every release.
-          packaging/apt/build-repo.sh debs site/apt "pool/$TAG"
+          packaging/apt/build-repo.sh debs site/apt
 
       # A local proof before anyone's machine trusts it: apt resolves the package from the repo as
       # written, using the keyring the repo itself ships. A repo that only "looks right" has passed
@@ -91,14 +84,11 @@ jobs:
           apt-cache policy sdods
           apt-cache policy sdods | grep -q 'Candidate: [0-9]' || {
             echo "::error::apt found the repository but no installable sdods package."; exit 1; }
-          # Stronger than reading the metadata: this fetches the .deb through the repository and
-          # checks it against the SHA-256 in Packages. If the two ever disagree, apt says so here
-          # rather than on a user's machine.
-          sudo apt-get install -y --download-only sdods
 
-      - name: Open a PR with the metadata
+      - name: Publish to the releases repository's Pages branch
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.DESKTOP_RELEASE_TOKEN }}
+          RELEASE_REPO: ${{ vars.DESKTOP_RELEASE_REPO || 'siri1410/sdods-releases' }}
         run: |
           set -euo pipefail
           # The payload is deleted now, not skipped earlier: the metadata above records each file's
