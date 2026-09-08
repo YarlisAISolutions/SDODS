@@ -84,6 +84,7 @@
     "@sdods/db": "workspace:*"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.10.2",
     "@playwright/test": "^1.62.1",
     "playwright-bdd": "^9.2.0"
   },
