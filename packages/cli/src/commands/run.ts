@@ -25,6 +25,7 @@ import {
   type CliOverrides,
   type RunnerSelection,
 } from '@sdods/core';
+import { analyzeChangeImpact } from '@sdods/mcp';
 import { createContext } from '../context.js';
 import { collect, json, out, parseIntFlag, warn } from '../ui.js';
 
@@ -42,6 +43,7 @@ export interface RunFlags {
   retries?: number;
   grep?: string;
   feature?: string;
+  since?: string;
   scenario?: string;
   runId?: string;
   artifactsDir?: string;
@@ -91,6 +93,10 @@ function addRunOptions(cmd: Command): Command {
     .option('--retries <n>', 'retries per test', parseIntFlag('retries'))
     .option('--grep <pattern>', 'filter tests by title (regular expression)')
     .option('--feature <path>', 'only this feature file (relative to features/)')
+    .option(
+      '--since <range>',
+      'only features impacted by a git range, e.g. main..HEAD (test-impact analysis)',
+    )
     .option('--scenario <name>', 'only scenarios whose title contains this text')
     .option('--run-id <id>', 'run id (default: uuid v7)')
     .option('--artifacts-dir <dir>', 'artifacts root (default: .sdods/runs)')
@@ -333,11 +339,34 @@ export async function runCommand(flags: RunFlags, cmd: Command): Promise<number>
       `\\.sdods/generated/${escapeRe(runId)}/${escapeRe(entry.slug)}/[^/]+/${escapeRe(rel)}/`,
     );
   }
-  if (flags.feature)
-    filters.push(
-      escapeRe(flags.feature.replace(/^features\//, '').replace(/\.feature$/, '')) +
-        '\\.feature\\.spec',
-    );
+  const featureFilter = (rel: string) =>
+    escapeRe(rel.replace(/^features\//, '').replace(/\.feature$/, '')) + '\\.feature\\.spec';
+
+  if (flags.feature) filters.push(featureFilter(flags.feature));
+
+  // --since <range>: run only what the change could have broken.
+  //
+  // `analyzeChangeImpact` has existed for a while and was reachable only
+  // through MCP, so it could advise a human and could not select a run. This is
+  // the seam that was missing; the mapping itself is unchanged.
+  if (flags.since) {
+    const impact = analyzeChangeImpact(cfg.project.root, ctx.rootDir, flags.since);
+    if (impact.impacted.length === 0) {
+      // Deliberately NOT "run everything" and deliberately not a silent empty
+      // run. A run that registered zero scenarios exits 0 and looks identical
+      // to a green run, which is the single most dangerous outcome a test
+      // runner has. Say so, in words, and stop.
+      out(pc.bold(`No features impacted by ${flags.since}.`));
+      out(`  ${impact.changedFiles.length} changed file(s), none reaching a feature.`);
+      out(pc.dim('  Nothing was run. This is not a pass — re-run without --since to verify.'));
+      // Exit 0: selecting nothing is a correct outcome for this flag, not a
+      // failure. The wording above is what stops it being read as a pass.
+      return 0;
+    }
+    out(pc.bold(`--since ${flags.since}: ${impact.impacted.length} impacted feature(s)`));
+    for (const row of impact.impacted) out(`  ${row.feature}  ${pc.dim(row.reasons.join('; '))}`);
+    for (const row of impact.impacted) filters.push(featureFilter(row.feature));
+  }
   // positional filters must precede `--project` (variadic in the runner CLI)
   args.splice(4, 0, ...filters);
 
