@@ -3,7 +3,16 @@
 import { useEffect, useState } from 'react';
 
 /** Copy button that reports success without a layout shift, and out loud. */
-export function CopyButton({ text, label = 'Copy' }: { text: string; label?: string }) {
+export function CopyButton({
+  text,
+  label = 'Copy',
+  what = 'install command',
+}: {
+  text: string;
+  label?: string;
+  /** What is being copied, for the label a screen reader announces. */
+  what?: string;
+}) {
   const [copied, setCopied] = useState(false);
   useEffect(() => {
     if (!copied) return;
@@ -15,7 +24,7 @@ export function CopyButton({ text, label = 'Copy' }: { text: string; label?: str
       <button
         type="button"
         className="btn btn-secondary shrink-0"
-        aria-label={`${label} the install command`}
+        aria-label={`${label} the ${what}`}
         onClick={() => {
           navigator.clipboard?.writeText(text).then(
             () => setCopied(true),
@@ -27,7 +36,7 @@ export function CopyButton({ text, label = 'Copy' }: { text: string; label?: str
       </button>
       {/* The label swap is the only feedback there is, and a swap is silent. */}
       <span role="status" className="sr-only">
-        {copied ? 'Install command copied to the clipboard' : ''}
+        {copied ? `${what[0]!.toUpperCase()}${what.slice(1)} copied to the clipboard` : ''}
       </span>
     </>
   );

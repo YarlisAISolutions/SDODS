@@ -7,11 +7,12 @@
   "author": "SDODS <admin@sdods.com>",
   "scripts": {
     "dev": "next dev --port 3100",
-    "build": "node --import tsx ../../scripts/sync-installer.ts && node --import tsx ../../scripts/sync-brand.ts && next build",
+    "build": "node --import tsx ../../scripts/sync-installer.ts && node --import tsx ../../scripts/sync-brand.ts && node --import tsx ../../scripts/build-qa-index.ts && next build",
     "typecheck": "tsc --noEmit",
     "screenshots": "node --import tsx scripts/screenshots.ts"
   },
   "dependencies": {
+    "@sdods/qa-archive": "workspace:*",
     "@sdods/roadmap": "workspace:*",
     "firebase": "^12.18.0",
     "next": "^16.3.4",

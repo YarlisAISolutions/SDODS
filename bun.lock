@@ -11,6 +11,7 @@
         "@sdods/cli": "workspace:*",
         "@sdods/contracts": "workspace:*",
         "@sdods/core": "workspace:*",
+        "@sdods/qa-archive": "workspace:*",
         "@sdods/roadmap": "workspace:*",
         "@types/node": "^22.15.0",
         "eslint": "^9.39.0",
@@ -72,6 +73,7 @@
       "name": "@sdods/www",
       "version": "0.1.0",
       "dependencies": {
+        "@sdods/qa-archive": "workspace:*",
         "@sdods/roadmap": "workspace:*",
         "firebase": "^12.18.0",
         "next": "^16.3.4",
@@ -212,6 +214,10 @@
       "devDependencies": {
         "@modelcontextprotocol/client": "^2.0.0",
       },
+    },
+    "packages/qa-archive": {
+      "name": "@sdods/qa-archive",
+      "version": "0.1.0",
     },
     "packages/roadmap": {
       "name": "@sdods/roadmap",
@@ -1112,6 +1118,8 @@
     "@sdods/integrations": ["@sdods/integrations@workspace:packages/integrations"],
 
     "@sdods/mcp": ["@sdods/mcp@workspace:packages/mcp"],
+
+    "@sdods/qa-archive": ["@sdods/qa-archive@workspace:packages/qa-archive"],
 
     "@sdods/roadmap": ["@sdods/roadmap@workspace:packages/roadmap"],
 
