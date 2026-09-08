@@ -12,16 +12,25 @@ export const metadata: Metadata = {
 /**
  * A page at the apt repository's own address.
  *
- * apt reads /apt/InRelease and /apt/Packages and never asks for a directory listing, so this
- * address used to 404 for the only visitor who would ever type it: a person checking whether the
- * repository is real before pointing their machine at it. Adding an index answers that, and does
- * not change a single path apt fetches.
+ * apt reads /apt/dists/stable/InRelease and the per-architecture Packages beneath it, and never
+ * asks for a directory listing — so this address used to 404 for the only visitor who would ever
+ * type it: a person checking the repository is real before pointing their machine at it. Adding an
+ * index answers that, and changes no path apt fetches.
  */
 
 const SERVED: Array<[string, string]> = [
-  ['InRelease', 'The signed index. apt reads this first and verifies it against the key below.'],
-  ['Release · Release.gpg', 'The same index with a detached signature, for older apt clients.'],
-  ['Packages · Packages.gz', 'What is available, with the size and SHA-256 of each package.'],
+  [
+    'dists/stable/InRelease',
+    'The signed index. apt reads this first and verifies it against the key below.',
+  ],
+  [
+    'dists/stable/Release · Release.gpg',
+    'The same index with a detached signature, for older apt clients.',
+  ],
+  [
+    'dists/stable/main/binary-{amd64,arm64}/Packages',
+    'What is available for each architecture, with the size and SHA-256 of every package.',
+  ],
   [
     'sdods-archive-keyring.gpg',
     'The public half of the signing key, in the binary form apt reads.',
@@ -67,13 +76,14 @@ export default function AptPage() {
       <h3 className="mt-8 font-semibold">2. Add the source</h3>
       <Command label="Add the SDODS apt source">
         {
-          'echo "deb [signed-by=/usr/share/keyrings/sdods-archive-keyring.gpg] https://sdods.com/apt ./" | sudo tee /etc/apt/sources.list.d/sdods.list'
+          'echo "deb [signed-by=/usr/share/keyrings/sdods-archive-keyring.gpg] https://sdods.com/apt stable main" | sudo tee /etc/apt/sources.list.d/sdods.list'
         }
       </Command>
       <p className="muted mt-3 text-sm">
-        The trailing <code>./</code> is not a typo. This is a flat repository, and a source line
-        naming a suite and component would send apt looking for a <code>dists/</code> tree that a
-        flat repository does not have.
+        One suite, <code>stable</code>, and one component, <code>main</code>. It is deliberately not
+        a flat repository: a flat one is addressed with a <code>./</code> distribution, and every
+        path apt then builds carries a <code>./</code> segment that this host answers with a
+        redirect to nowhere.
       </p>
 
       <h3 className="mt-8 font-semibold">3. Install</h3>

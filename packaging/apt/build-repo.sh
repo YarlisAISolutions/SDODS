@@ -1,31 +1,35 @@
 #!/usr/bin/env bash
-# Build a signed flat apt repository from the .deb files of a published desktop release.
+# Build a signed apt repository from the .deb files of a published desktop release.
 #
 #   packaging/apt/build-repo.sh <deb-dir> <out-dir> [pool-path]
 #
-# The .deb files are 120-130 MB each, which is over GitHub's 100 MB per-file limit, so they cannot
-# be committed anywhere -- not to a Pages branch and not to this repository. They stay on the
-# public release, which is where they already are, and the repository serves metadata only:
-# `Packages` records each file under <pool-path>/, and the host redirects that path to the release
-# asset. apt follows the redirect and then verifies the download against the SHA-256 in `Packages`,
-# so nothing is trusted less for having been fetched from somewhere else.
+# A standard dists/ repository, not a flat one. Flat is smaller and was the obvious choice for a
+# single package, but it is addressed with a "./" distribution, and every path apt then builds
+# contains a "./" segment:
+#
+#   https://sdods.com/apt/./InRelease
+#
+# Firebase Hosting answers that with a 302 to an internal origin host that 404s, so apt reports
+# "does not have a Release file" while curl on the normalised path returns 200. A dists/ layout
+# has no "./" anywhere -- every request is a plain static path -- and it also carries the Suite and
+# Components that stop apt warning about a conflicting distribution.
+#
+# The .deb files are 120-130 MB each, over GitHub's 100 MB per-file limit, so they cannot be
+# committed anywhere. They stay on the public release; Packages records them under <pool-path>/ and
+# the host redirects that prefix to the release asset. apt verifies every download against the
+# SHA-256 recorded here, so a package fetched through the redirect is checked exactly as one served
+# directly would be.
 #
 # SDODS_APT_METADATA_ONLY=1 deletes the .deb files after the metadata is built, which is what makes
-# the output small enough to commit. The paths inside `Packages` are unaffected.
-#
-# A flat repository, not a pool: there is one package with two architectures, and the pool layout
-# exists to make thousands of packages navigable. Flat keeps the whole repo four files plus the
-# debs, which a static host serves without any configuration.
-#
-# Signing is optional here and mandatory in practice. Without SDODS_APT_GPG_KEY this writes an
-# unsigned repo, which apt refuses to use unless the source line says [trusted=yes] — fine for a
-# local check, never for sdods.com. The key belongs to the project, not to this script: export the
-# armoured private key into SDODS_APT_GPG_KEY in CI and it signs; leave it unset and it says so.
+# the output small enough to commit. The paths inside Packages are unaffected.
 set -euo pipefail
 
 DEB_DIR="${1:?usage: build-repo.sh <deb-dir> <out-dir> [pool-path]}"
 OUT_DIR="${2:?usage: build-repo.sh <deb-dir> <out-dir> [pool-path]}"
 POOL="${3:-pool}"
+SUITE="${SDODS_APT_SUITE:-stable}"
+COMPONENT="${SDODS_APT_COMPONENT:-main}"
+ARCHES="${SDODS_APT_ARCHES:-amd64 arm64}"
 ORIGIN="SDODS"
 
 command -v apt-ftparchive >/dev/null || {
@@ -45,20 +49,33 @@ cp "$DEB_DIR"/*.deb "$OUT_DIR/$POOL/"
 
 cd "$OUT_DIR"
 
-# Paths inside Packages must be relative to the repository root, which is why this runs from
-# inside OUT_DIR rather than passing an absolute path -- each entry comes out as
-# `Filename: <pool-path>/<file>.deb`, which is what the host redirects.
-apt-ftparchive packages . > Packages
-gzip -9kf Packages
+# Scanning the pool directory by name, rather than ".", is what keeps `Filename:` free of a leading
+# "./" -- the same segment that breaks the flat layout, one level down.
+#
+# Scanned once and split by architecture rather than with `apt-ftparchive --arch`, which matches
+# nothing here and silently writes an empty index: apt then reports the suite as having no packages,
+# with no error to explain why.
+all_packages=$(mktemp)
+apt-ftparchive packages "$POOL" > "$all_packages"
+for arch in $ARCHES; do
+  dir="dists/$SUITE/$COMPONENT/binary-$arch"
+  mkdir -p "$dir"
+  awk -v a="$arch" 'BEGIN { RS = ""; ORS = "\n\n" } $0 ~ ("(^|\n)Architecture: " a "(\n|$)") { print }' \
+    "$all_packages" > "$dir/Packages"
+  gzip -9kf "$dir/Packages"
+  # An architecture in the Release file with an empty index is a repository apt reports as broken.
+  [ -s "$dir/Packages" ] || echo "⚠ no packages for $arch" >&2
+done
+rm -f "$all_packages"
 
-# No Suite, Codename or Components: this is a flat repository, reached by a sources line ending
-# in `./` rather than `<suite> <component>`. A flat repo has no components, and declaring a suite
-# it is not being addressed by makes apt warn "Conflicting distribution" on every update.
 apt-ftparchive \
   -o "APT::FTPArchive::Release::Origin=$ORIGIN" \
   -o "APT::FTPArchive::Release::Label=$ORIGIN" \
-  -o "APT::FTPArchive::Release::Architectures=amd64 arm64" \
-  release . > Release
+  -o "APT::FTPArchive::Release::Suite=$SUITE" \
+  -o "APT::FTPArchive::Release::Codename=$SUITE" \
+  -o "APT::FTPArchive::Release::Components=$COMPONENT" \
+  -o "APT::FTPArchive::Release::Architectures=$ARCHES" \
+  release "dists/$SUITE" > "dists/$SUITE/Release"
 
 if [ -n "${SDODS_APT_GPG_KEY:-}" ]; then
   export GNUPGHOME
@@ -68,13 +85,13 @@ if [ -n "${SDODS_APT_GPG_KEY:-}" ]; then
   key=$(gpg --list-secret-keys --with-colons | awk -F: '/^sec:/ {print $5; exit}')
   # InRelease (inline signature) is what modern apt reads; Release.gpg is kept for older clients,
   # and costs one extra call.
-  gpg --batch --yes --default-key "$key" --clearsign -o InRelease Release
-  gpg --batch --yes --default-key "$key" -abs -o Release.gpg Release
+  gpg --batch --yes --default-key "$key" --clearsign -o "dists/$SUITE/InRelease" "dists/$SUITE/Release"
+  gpg --batch --yes --default-key "$key" -abs -o "dists/$SUITE/Release.gpg" "dists/$SUITE/Release"
   # The public key visitors add to /usr/share/keyrings. Dearmoured: apt reads binary keyrings, and
   # an armoured file in that directory fails with a signature error that names the wrong cause.
   gpg --export "$key" > sdods-archive-keyring.gpg
   rm -rf "$GNUPGHOME"
-  echo "✔ signed apt repo in $OUT_DIR ($debs package(s), flat layout)"
+  echo "✔ signed apt repo in $OUT_DIR ($debs package(s), suite $SUITE, arches: $ARCHES)"
 else
   echo "⚠ SDODS_APT_GPG_KEY is not set — wrote an UNSIGNED repo in $OUT_DIR."
   echo "  apt will reject it without [trusted=yes]. Do not deploy this to sdods.com."
