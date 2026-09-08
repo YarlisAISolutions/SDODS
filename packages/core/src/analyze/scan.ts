@@ -100,7 +100,12 @@ export class Scan {
 
   constructor(root: string, opts: ScanOptions = {}) {
     this.root = resolvePath(root);
-    const maxFiles = opts.maxFiles ?? 8000;
+    // 8,000 was below the size of a single real monorepo app: `apps/sat` alone is ~6,400 files,
+    // so the walk truncated before reaching `.github/`, and every absence-based finding
+    // ("no CI", "no OpenAPI", "no test ids") was then reported as fact rather than as
+    // "not seen". Raising the default is half the fix; `--max-files` / `--max-depth` on the CLI
+    // is the other half, because no default is right for every repo.
+    const maxFiles = opts.maxFiles ?? 25000;
     const maxDepth = opts.maxDepth ?? 12;
     let truncated = false;
     const walk = (dir: string, depth: number) => {

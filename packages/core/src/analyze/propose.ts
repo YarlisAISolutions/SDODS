@@ -28,18 +28,41 @@ export function slugify(input: string): string {
   return s || 'app';
 }
 
+/**
+ * A route key is a feature-file identifier a person has to read, type and grep for — it names
+ * `features/<module>/<key>.feature`. The old version cleaned every segment and joined all of
+ * them, so a deep route produced a long key whose leading segments were pure transport
+ * (`api-v1-…`) and whose parameter segments lost the fact that they were parameters.
+ *
+ * Now: transport prefixes are dropped, parameters read as `by-<param>`, and the key is capped at
+ * the segments that actually distinguish it. Collisions are still resolved by the `-2`, `-3`
+ * suffix loop in the caller, so shortening cannot silently merge two routes.
+ */
+const TRANSPORT_SEGMENTS = new Set(['api', 'rest', 'v1', 'v2', 'v3']);
+
 function routeName(path: string): string {
   if (path === '/' || path === '') return 'home';
-  const segs = path
-    .split('/')
-    .filter(Boolean)
-    .map((s) => s.replace(/[{}*]/g, '').replace(/[^a-zA-Z0-9]+/g, '-'));
-  const name = segs
-    .filter(Boolean)
-    .map((s, i) => (i > 0 && path.includes(`{${s}}`) ? `by-${s}` : s))
-    .join('-')
-    .toLowerCase();
-  return name || 'home';
+  const raw = path.split('/').filter(Boolean);
+  const isParam = (s: string) => /^[{:*]/.test(s) || /^\[.*\]$/.test(s);
+  const clean = (s: string) =>
+    s
+      .replace(/[{}[\]:*]/g, '')
+      .replace(/^\.\.\./, '')
+      .replace(/[^a-zA-Z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+
+  const parts: string[] = [];
+  for (const [i, seg] of raw.entries()) {
+    const name = clean(seg);
+    if (!name) continue;
+    // Only a LEADING transport segment is dropped: a resource genuinely called `v2` deeper in
+    // the path is part of the identity of the route.
+    if (i === 0 && TRANSPORT_SEGMENTS.has(name.toLowerCase())) continue;
+    parts.push(isParam(seg) ? `by-${name}` : name);
+  }
+  // Keep the head (what it is) and the tail (what it does); the middle rarely distinguishes.
+  const trimmed = parts.length > 4 ? [parts[0]!, ...parts.slice(-3)] : parts;
+  return trimmed.join('-').toLowerCase() || 'home';
 }
 
 function moduleOfPath(path: string): string {
