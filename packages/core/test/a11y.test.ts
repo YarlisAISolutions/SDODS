@@ -1,0 +1,385 @@
+import { createRequire } from 'node:module';
+import { describe, expect, it } from 'vitest';
+import {
+  assertAxeChecked,
+  assertGathered,
+  assertRegion,
+  assertRuleRan,
+  describeViolations,
+  focusRingMissing,
+  headingSkips,
+  iconOnlyControls,
+  imagesWithoutAlt,
+  impactRank,
+  parseImpactFloor,
+  RAW_I18N_KEY,
+  ruleBucket,
+  unnamedControls,
+  violationsAtOrAbove,
+  WCAG_AA_TAGS,
+  type A11yResults,
+  type A11yViolation,
+} from '../src/steps/a11y.steps.js';
+import { SdodsError } from '../src/errors.js';
+
+/**
+ * The library's contract is "no step may pass vacuously". Every judge is therefore tested three
+ * ways: it FAILS on an empty set, it CATCHES a real offender, and it PASSES a clean set. The
+ * middle case alone would be satisfied by a step that also passes over nothing.
+ */
+
+const results = (over: Partial<A11yResults> = {}): A11yResults => ({
+  violations: [],
+  passes: [],
+  incomplete: [],
+  inapplicable: [],
+  ...over,
+});
+
+const violation = (id: string, impact: string | null, nodes = 1): A11yViolation => ({
+  id,
+  impact,
+  help: `${id} help`,
+  nodes: Array.from({ length: nodes }, (_, i) => ({ target: [`#n${i}`] })),
+});
+
+describe('a11y step registration', () => {
+  it('registers exactly the documented step patterns, once each', async () => {
+    await import('../src/steps/a11y.steps.js');
+    const require = createRequire(import.meta.url);
+    const reg = require(
+      require
+        .resolve('playwright-bdd/package.json')
+        .replace('package.json', 'dist/steps/stepRegistry.js'),
+    );
+    const patterns: string[] = reg.stepDefinitions.map((d: { pattern: string }) =>
+      String(d.pattern),
+    );
+    const mine = [
+      'the page should have no accessibility violations',
+      'the page should have no accessibility violations within {string}',
+      'the page should have no accessibility violations of impact {string} or worse',
+      'the page should have no accessibility violations of impact {string} or worse within {string}',
+      'the page should have no accessibility violations of rule {string}',
+      'the page should have no colour-contrast violations',
+      'the page should have no colour-contrast violations within {string}',
+      'the page should have exactly one level-1 heading',
+      'the heading levels should not skip a level',
+      'every image on the page should carry an alt attribute',
+      'every image within {string} should carry an alt attribute',
+      'every icon-only control within {string} should expose an accessible name',
+      'every focusable element within {string} should show a visible focus indicator',
+    ];
+    for (const p of mine) {
+      // playwright-bdd hard-fails the whole run on a duplicate expression, so a second
+      // registration of any of these — here or in another step file — must be caught.
+      expect(
+        patterns.filter((x) => x === p),
+        `pattern registered ${patterns.filter((x) => x === p).length}x: ${p}`,
+      ).toHaveLength(1);
+    }
+  });
+});
+
+describe('impact levels', () => {
+  it('ranks the four axe levels weakest-first and treats a null impact as minor', () => {
+    expect(IMPACTS.map(impactRank)).toEqual([0, 1, 2, 3]);
+    expect(impactRank(null)).toBe(0);
+    expect(impactRank(undefined)).toBe(0);
+    // an impact axe invented in a future release must not silently outrank "critical"
+    expect(impactRank('apocalyptic')).toBe(0);
+  });
+
+  it('rejects an impact level a feature file invented, rather than matching nothing', () => {
+    expect(() => parseImpactFloor('banana')).toThrow(SdodsError);
+    try {
+      parseImpactFloor('banana');
+    } catch (e) {
+      expect((e as SdodsError).code).toBe('CONFIG_INVALID');
+      expect((e as SdodsError).hint).toContain('minor, moderate, serious, critical');
+    }
+  });
+
+  it('filters to violations at or above the floor', () => {
+    const vs = [
+      violation('a', 'minor'),
+      violation('b', 'moderate'),
+      violation('c', 'serious'),
+      violation('d', 'critical'),
+      violation('e', null),
+    ];
+    expect(violationsAtOrAbove(vs, parseImpactFloor('serious')).map((v) => v.id)).toEqual([
+      'c',
+      'd',
+    ]);
+    expect(violationsAtOrAbove(vs, parseImpactFloor('minor'))).toHaveLength(5);
+    expect(violationsAtOrAbove([], parseImpactFloor('critical'))).toEqual([]);
+  });
+});
+const IMPACTS = ['minor', 'moderate', 'serious', 'critical'];
+
+describe('violation formatting', () => {
+  it('names the rule, impact, node count and the first targets', () => {
+    const text = describeViolations([violation('color-contrast', 'serious', 5)]);
+    expect(text).toContain('color-contrast [serious]');
+    expect(text).toContain('5 node(s)');
+    expect(text).toContain('#n0 | #n1 | #n2');
+    expect(text).toContain('(+2 more node(s))');
+  });
+
+  it('does not claim "+n more" when every node is shown', () => {
+    expect(describeViolations([violation('x', 'minor', 2)])).not.toContain('more node(s)');
+  });
+});
+
+describe('assertAxeChecked — the audit must have run', () => {
+  it('fails when axe reported nothing at all, which reads as a clean page', () => {
+    expect(() => assertAxeChecked(results(), 'on /dash')).toThrow(/examined nothing/);
+    try {
+      assertAxeChecked(results(), 'on /dash');
+    } catch (e) {
+      expect((e as SdodsError).code).toBe('RUN_FAILED');
+      expect((e as SdodsError).hint).toMatch(/Content-Security-Policy/);
+    }
+  });
+
+  it('passes when any rule landed in passes, violations or incomplete', () => {
+    expect(() => assertAxeChecked(results({ passes: [{ id: 'r' }] }), 'x')).not.toThrow();
+    expect(() =>
+      assertAxeChecked(results({ violations: [violation('r', 'minor')] }), 'x'),
+    ).not.toThrow();
+    expect(() => assertAxeChecked(results({ incomplete: [{ id: 'r' }] }), 'x')).not.toThrow();
+  });
+
+  it('is not satisfied by inapplicable alone — nothing was actually examined', () => {
+    expect(() => assertAxeChecked(results({ inapplicable: [{ id: 'r' }] }), 'x')).toThrow();
+  });
+});
+
+describe('assertRuleRan — a rule-scoped audit must have been able to fail', () => {
+  it('reports which bucket a rule landed in', () => {
+    expect(
+      ruleBucket(
+        results({ violations: [violation('color-contrast', 'serious')] }),
+        'color-contrast',
+      ),
+    ).toBe('violations');
+    expect(ruleBucket(results({ passes: [{ id: 'image-alt' }] }), 'image-alt')).toBe('passes');
+    expect(ruleBucket(results({ incomplete: [{ id: 'color-contrast' }] }), 'color-contrast')).toBe(
+      'incomplete',
+    );
+    expect(ruleBucket(results({ inapplicable: [{ id: 'image-alt' }] }), 'image-alt')).toBe(
+      'inapplicable',
+    );
+    expect(ruleBucket(results(), 'image-alt')).toBe('none');
+  });
+
+  it('fails on a misspelt rule id, which axe would otherwise report as zero violations', () => {
+    try {
+      assertRuleRan(results({ passes: [{ id: 'image-alt' }] }), 'imgae-alt', 'on /dash');
+      throw new Error('expected a throw');
+    } catch (e) {
+      expect((e as SdodsError).code).toBe('CONFIG_INVALID');
+      expect((e as SdodsError).message).toContain('never ran the rule "imgae-alt"');
+    }
+  });
+
+  it('fails when the rule was inapplicable — a rule with nothing to check cannot pass', () => {
+    try {
+      assertRuleRan(results({ inapplicable: [{ id: 'image-alt' }] }), 'image-alt', 'on /dash');
+      throw new Error('expected a throw');
+    } catch (e) {
+      expect((e as SdodsError).code).toBe('RUN_FAILED');
+      expect((e as SdodsError).message).toContain('inapplicable on /dash');
+      expect((e as SdodsError).hint).toContain('cannot fail');
+    }
+  });
+
+  it('accepts a rule that ran, incomplete included, and hands back the bucket', () => {
+    expect(
+      assertRuleRan(results({ passes: [{ id: 'color-contrast' }] }), 'color-contrast', 'x'),
+    ).toBe('passes');
+    expect(
+      assertRuleRan(results({ incomplete: [{ id: 'color-contrast' }] }), 'color-contrast', 'x'),
+    ).toBe('incomplete');
+    expect(
+      assertRuleRan(
+        results({ violations: [violation('color-contrast', 'serious')] }),
+        'color-contrast',
+        'x',
+      ),
+    ).toBe('violations');
+  });
+});
+
+describe('assertRegion — a selector matching nothing is a failure, not an empty scan', () => {
+  it('fails when the browser reported the region absent', () => {
+    try {
+      assertRegion({ regionFound: false, items: [] }, 'nav[aria-label="Main"]');
+      throw new Error('expected a throw');
+    } catch (e) {
+      expect((e as SdodsError).code).toBe('RUN_FAILED');
+      expect((e as SdodsError).message).toContain('nav[aria-label="Main"]');
+    }
+  });
+
+  it('hands back the items when the region was found, empty ones included', () => {
+    expect(assertRegion({ regionFound: true, items: [1, 2] }, 'nav')).toEqual([1, 2]);
+    expect(assertRegion({ regionFound: true, items: [] }, 'nav')).toEqual([]);
+  });
+});
+
+describe('assertGathered — the anti-vacuity guard the whole library turns on', () => {
+  it('fails on an empty set and says what to do instead', () => {
+    try {
+      assertGathered([], 'img elements', 'on /pricing');
+      throw new Error('expected a throw');
+    } catch (e) {
+      expect((e as SdodsError).code).toBe('RUN_FAILED');
+      expect((e as SdodsError).message).toBe(
+        'Found no img elements on /pricing; nothing was checked.',
+      );
+      expect((e as SdodsError).hint).toContain('passes without proving anything');
+    }
+  });
+
+  it('passes anything non-empty straight through', () => {
+    expect(assertGathered([1], 'x', 'y')).toEqual([1]);
+  });
+});
+
+describe('heading outline', () => {
+  it('catches a skipped level and names both ends of the jump', () => {
+    const skips = headingSkips([
+      { level: 1, text: 'Page' },
+      { level: 2, text: 'Section' },
+      { level: 4, text: 'Deep' },
+    ]);
+    expect(skips).toEqual(['h2 "Section" → h4 "Deep"']);
+  });
+
+  it('allows going back up any number of levels — only downward jumps break the outline', () => {
+    expect(
+      headingSkips([
+        { level: 1, text: 'a' },
+        { level: 2, text: 'b' },
+        { level: 3, text: 'c' },
+        { level: 1, text: 'd' },
+      ]),
+    ).toEqual([]);
+  });
+
+  it('reports every skip, not just the first', () => {
+    expect(
+      headingSkips([
+        { level: 1, text: 'a' },
+        { level: 3, text: 'b' },
+        { level: 2, text: 'c' },
+        { level: 6, text: 'd' },
+      ]),
+    ).toHaveLength(2);
+  });
+
+  it('an empty outline yields no skips — which is why the step guards it with assertGathered', () => {
+    expect(headingSkips([])).toEqual([]);
+    expect(() => assertGathered([], 'headings', 'on /blank')).toThrow(SdodsError);
+  });
+});
+
+describe('image alt attributes', () => {
+  it('flags a missing alt but not an empty one — those are different decisions', () => {
+    expect(
+      imagesWithoutAlt([
+        { src: '/a.png', hasAlt: true },
+        { src: '/b.png', hasAlt: false },
+      ]),
+    ).toEqual(['/b.png']);
+  });
+
+  it('names a src-less image rather than printing an empty string', () => {
+    expect(imagesWithoutAlt([{ src: '', hasAlt: false }])).toEqual(['(no src)']);
+  });
+
+  it('an image-free page yields no offenders — the step guards it with assertGathered', () => {
+    expect(imagesWithoutAlt([])).toEqual([]);
+    expect(() => assertGathered([], 'img elements', 'on /blank')).toThrow(SdodsError);
+  });
+});
+
+describe('icon-only controls', () => {
+  const control = (over: Partial<{ tag: string; text: string; name: string; html: string }>) => ({
+    tag: 'button',
+    text: '',
+    name: '',
+    html: '<button/>',
+    ...over,
+  });
+
+  it('counts only controls that render no text', () => {
+    const all = [control({ name: 'Search' }), control({ text: 'Save', name: '' })];
+    expect(iconOnlyControls(all)).toHaveLength(1);
+    expect(iconOnlyControls(all)[0]!.name).toBe('Search');
+  });
+
+  it('treats whitespace-only text as icon-only', () => {
+    expect(iconOnlyControls([control({ text: '  \n ' })])).toHaveLength(1);
+  });
+
+  it('flags an unnamed control', () => {
+    expect(unnamedControls([control({ name: '' })])[0]).toContain('(no name)');
+  });
+
+  it('flags a name that is still a raw i18n key — axe sees a name and passes it', () => {
+    const bad = unnamedControls([control({ name: 'nav.workspace.settings' })]);
+    expect(bad).toHaveLength(1);
+    expect(bad[0]).toContain('raw i18n key');
+  });
+
+  it('accepts a real human name, including one with a full stop in it', () => {
+    expect(unnamedControls([control({ name: 'Search' })])).toEqual([]);
+    expect(unnamedControls([control({ name: 'Delete this. Permanently' })])).toEqual([]);
+    expect(unnamedControls([control({ name: 'Étape suivante' })])).toEqual([]);
+  });
+
+  it('matches the raw-key shape the app actually renders', () => {
+    expect(RAW_I18N_KEY.test('settings.memory.itemAria')).toBe(true);
+    expect(RAW_I18N_KEY.test('nav.settings')).toBe(true);
+    expect(RAW_I18N_KEY.test('workspace.a_b.c1')).toBe(true);
+    expect(RAW_I18N_KEY.test('Search')).toBe(false);
+    expect(RAW_I18N_KEY.test('Save changes')).toBe(false);
+  });
+
+  it('a region with no icon-only control proves nothing — the step guards it', () => {
+    expect(unnamedControls([])).toEqual([]);
+    expect(() => assertGathered([], 'icon-only controls', 'within "nav"')).toThrow(SdodsError);
+  });
+});
+
+describe('focus indicators', () => {
+  it('flags a control whose computed style is identical focused and at rest', () => {
+    expect(
+      focusRingMissing([
+        { label: 'Search', rest: 'none|0px', focused: 'solid|3px' },
+        { label: 'Close', rest: 'none|0px', focused: 'none|0px' },
+      ]),
+    ).toEqual(['Close']);
+  });
+
+  it('accepts any style difference, not just an outline — a ring may be a box-shadow', () => {
+    expect(
+      focusRingMissing([{ label: 'x', rest: 'a|none', focused: 'a|0 0 0 2px #FF6B35' }]),
+    ).toEqual([]);
+  });
+
+  it('a region with no focusable element proves nothing — the step guards it', () => {
+    expect(focusRingMissing([])).toEqual([]);
+    expect(() => assertGathered([], 'focusable elements', 'within "nav"')).toThrow(SdodsError);
+  });
+});
+
+describe('audit scope is pinned', () => {
+  it('audits WCAG A/AA only, so a new axe release cannot move the verdict on its own', () => {
+    expect(WCAG_AA_TAGS).toEqual(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']);
+    expect(WCAG_AA_TAGS).not.toContain('best-practice');
+  });
+});
