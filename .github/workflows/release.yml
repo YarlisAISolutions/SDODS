@@ -117,16 +117,9 @@ jobs:
        needs.changesets.outputs.published == 'true' ||
        inputs.image_only)
     runs-on: ubuntu-latest
-    # arm64 is emulated through QEMU on an amd64 runner, which is slow but needs no extra runner
-    # tier. The native modules resolve prebuilt binaries for both arches, so this is mostly
-    # download time rather than compilation.
-    timeout-minutes: 90
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
-      # Without this the arm64 layer cannot execute, and buildx quietly produces an index with only
-      # the runner's own architecture -- which is exactly how a single-arch image shipped and then
-      # failed on every Apple silicon machine with "no matching manifest for linux/arm64/v8".
-      - uses: docker/setup-qemu-action@v3
       - uses: docker/setup-buildx-action@v3
       - uses: docker/login-action@v3
         with:
@@ -145,9 +138,19 @@ jobs:
       - uses: docker/build-push-action@v6
         with:
           context: .
-          # Docker does NOT fall back to emulation for a missing architecture: it refuses the pull.
-          # So an amd64-only image is not "slow on Apple silicon", it does not run there at all.
-          platforms: linux/amd64,linux/arm64
+          # amd64 only, and that is a limitation rather than a preference.
+          #
+          # Docker does NOT fall back to emulation for a missing architecture -- it refuses the
+          # pull with "no matching manifest for linux/arm64/v8" -- so Apple silicon needs
+          # `--platform linux/amd64`, which the install page and the docs both say.
+          #
+          # Building arm64 here was tried and abandoned: with QEMU on an amd64 runner the arm64
+          # stage did not finish inside 90 minutes, because every one of `bun install`, the native
+          # module builds and the web bundle runs emulated. Two things would fix it properly, and
+          # both are more than a flag: a native arm64 runner (a paid runner tier for a private
+          # repository), or splitting the Dockerfile so the arch-independent web bundle is built
+          # on $BUILDPLATFORM and only the runtime layer is emulated.
+          platforms: linux/amd64
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
