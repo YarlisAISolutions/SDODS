@@ -188,11 +188,13 @@ jobs:
   apt-repo:
     # The apt repository is built from a real desktop release and signed with the project key, so
     # the workflow that publishes it cannot run on a PR. Its *layout* can: a flat repo addressed by
-    # a `./` sources line is the part that is easy to get wrong and impossible to spot by reading,
-    # and getting it wrong means apt looks for a dists/ tree that will never exist.
+    # the layout is the part that is easy to get wrong and impossible to spot by reading: a flat
+    # repo shipped once, served every file correctly to curl, and still failed every real
+    # `apt update`, because a `./` distribution puts a `./` segment in every path apt builds and
+    # the host 302s those to nowhere.
     #
     # So this builds one from a synthetic package and makes apt resolve it. No secret, no release.
-    name: apt · flat repo layout
+    name: apt · repo layout
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -211,13 +213,13 @@ jobs:
           CONTROL
           mkdir -p debs && dpkg-deb --build pkg debs/sdods_0.0.0-ci_amd64.deb
       - name: Build the repository
-        run: packaging/apt/build-repo.sh debs out
+        run: packaging/apt/build-repo.sh debs out pool/ci
       - name: apt must resolve the package from it
         run: |
           set -euo pipefail
           # Unsigned here, so [trusted=yes]. The signed path is exercised by apt.yml; what is
           # being checked is that apt finds Packages and Release where this layout puts them.
-          echo "deb [trusted=yes] file://$PWD/out ./" | sudo tee /etc/apt/sources.list.d/sdods-ci.list
+          echo "deb [trusted=yes] file://$PWD/out stable main" | sudo tee /etc/apt/sources.list.d/sdods-ci.list
           sudo apt-get update -o Dir::Etc::sourcelist=/etc/apt/sources.list.d/sdods-ci.list \
                               -o Dir::Etc::sourceparts=- -o APT::Get::List-Cleanup=0
           apt-cache policy sdods

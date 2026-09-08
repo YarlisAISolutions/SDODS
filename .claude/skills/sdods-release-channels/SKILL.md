@@ -67,6 +67,15 @@ nothing in this repository creates one, so the job had never run and the image d
 Do not "fix" it by pushing a tag from CI: a tag pushed with `GITHUB_TOKEN` does not trigger
 workflows, so the job still would not run.
 
+**The image is `linux/amd64` only, and Docker does not emulate a missing architecture** — it
+refuses the pull with `no matching manifest for linux/arm64/v8`. Apple silicon needs
+`--platform linux/amd64`. Building arm64 in CI was tried and abandoned: under QEMU on an amd64
+runner the arm64 stage did not finish in 90 minutes, because `bun install`, the native module
+builds and the web bundle all run emulated. Fixing it properly means either a native arm64 runner
+(a paid tier for a private repository) or splitting the Dockerfile so the arch-independent web
+bundle builds on `$BUILDPLATFORM`. `channels:sync` reads the architectures out of the manifest and
+writes the note from them, so the page cannot claim an arch the image does not carry.
+
 **GHCR packages default to private, and visibility is a UI-only setting.** After the first push:
 Profile → Packages → `sdods-server` → Package settings → Change visibility → Public. Until then
 `channels:sync` reports `no anonymous pull token (403)` and the Docker tab stays hidden.
@@ -143,11 +152,23 @@ source and asserts `apt-cache policy sdods` reports an installable candidate. A 
 looks right has been verified zero times. The `apt · flat repo layout` job in `ci.yml` runs the
 same proof on every PR against a synthetic package, so the layout is exercised without a key.
 
-**It is a flat repository**, so the sources line ends in `./`, not `stable main`. With a suite and
-component apt looks for `dists/stable/main/binary-amd64/Packages`, which a flat repo does not have,
-and the error it prints names the mirror rather than the layout. For the same reason `build-repo.sh`
-declares no `Suite` or `Components`: a suite that nothing addresses makes apt warn about a
-conflicting distribution on every update.
+**It is a standard `dists/` repository, not a flat one, and that is load-bearing.** A flat repo is
+addressed with a `./` distribution, which puts a `./` segment into every path apt builds:
+
+```
+https://sdods.com/apt/./InRelease
+```
+
+Firebase Hosting answers that with a 302 to an internal origin host that 404s. The result is a
+repository where every file is served correctly to `curl` on the normalised path, and every real
+`apt update` fails with *"does not have a Release file"*. It shipped that way, and only an actual
+`apt install` in a container found it — checking that the files were reachable was not the same
+question.
+
+`build-repo.sh` also scans the pool directory by name rather than `.`, because `apt-ftparchive
+packages .` writes `Filename: ./pool/...` and that is the same broken segment one level down. And
+it splits the index per architecture with awk rather than `apt-ftparchive --arch`, which matches
+nothing here and silently writes an empty `Packages`.
 
 **GitHub Pages has to be enabled on the releases repository** — Settings → Pages → source
 `gh-pages` — or the workflow pushes the branch and the URL keeps 404ing.

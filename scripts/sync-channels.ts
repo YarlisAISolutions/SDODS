@@ -374,9 +374,16 @@ async function main() {
     'manifests/s/SDODS/SDODS',
     'manifest',
   );
-  const aptProbe: Probe = (await head(`${APT_URL}/InRelease`))
-    ? { live: true, detail: `${APT_URL} (signed)` }
-    : { live: false, detail: `${APT_URL}/InRelease is not served — repo not deployed or unsigned` };
+  // dists/<suite>/InRelease, not /InRelease: a flat repository is addressed with a "./"
+  // distribution, and Firebase answers every path containing that segment with a 302 to an
+  // internal origin that 404s. apt reported "does not have a Release file" while curl on the
+  // normalised path returned 200 — so the probe has to ask for the path apt asks for.
+  const aptProbe: Probe = (await head(`${APT_URL}/dists/stable/InRelease`))
+    ? { live: true, detail: `${APT_URL} stable main (signed)` }
+    : {
+        live: false,
+        detail: `${APT_URL}/dists/stable/InRelease is not served — repo not deployed or unsigned`,
+      };
 
   const written: string[] = [];
 

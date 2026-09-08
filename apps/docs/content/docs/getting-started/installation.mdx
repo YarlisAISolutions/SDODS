@@ -169,7 +169,7 @@ curl -fsSL https://sdods.com/apt/sdods-archive-keyring.gpg | sudo tee /usr/share
 ```
 
 ```bash
-echo "deb [signed-by=/usr/share/keyrings/sdods-archive-keyring.gpg] https://sdods.com/apt ./" | sudo tee /etc/apt/sources.list.d/sdods.list
+echo "deb [signed-by=/usr/share/keyrings/sdods-archive-keyring.gpg] https://sdods.com/apt stable main" | sudo tee /etc/apt/sources.list.d/sdods.list
 ```
 
 ```bash
