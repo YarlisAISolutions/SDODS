@@ -7,6 +7,11 @@ import './api.steps.js';
 import './ui.steps.js';
 import './data.steps.js';
 import './hybrid.steps.js';
+import './a11y.steps.js';
+import './browser.steps.js';
+import './dom.steps.js';
+import './net.steps.js';
+import './perf.steps.js';
 import '../shots/hooks.js';
 
 export { coreStepsGlob, coreStepsDir } from './glob.js';
