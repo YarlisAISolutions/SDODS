@@ -165,22 +165,11 @@ jobs:
   edge:
     # Edge is a system browser, not a Playwright download, so it is kept out of the generic matrix
     # via `ci.browsers` in demo-shop's project yaml and exercised here instead. Scheduled and
-    # manual only.
-    #
-    # On Windows because that is where Edge lives: it is preinstalled, so there is no vendor
-    # installer to run, no sudo, and no Linux sandbox flags to get right. A dispatched run proved
-    # `sdods browsers install -b edge` DOES work on ubuntu-latest, but the headless launch after it
-    # did not, and chasing that buys nothing — Edge users are on Windows.
+    # manual only: provisioning Edge is slower and more fragile than a cached engine.
     name: demo-shop · edge · @smoke
     if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     timeout-minutes: 30
-    defaults:
-      run:
-        # bash, not the Windows default pwsh: `@` starts a splat in PowerShell, so `-t @smoke`
-        # arrived as a bare `-t` with the tag silently eaten and the next flag consumed as its
-        # value. Every other job in this file is written for bash; this keeps them the same.
-        shell: bash
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
@@ -190,13 +179,14 @@ jobs:
         with:
           node-version: 22
       - run: bun install --frozen-lockfile
-      - name: Confirm Edge is present
-        # No install step: the runner image ships Edge. This is the real precondition, and saying
-        # so here makes a missing browser look like provisioning rather than a test failure.
+      - run: bun run sdods browsers install -b edge
+      - name: Confirm Edge really is installed
+        # Scoped to edge: this runner installs only Edge, and `-p demo-shop` would check all four
+        # and exit 1 on the three engines nobody asked it to download.
         run: bun run sdods browsers list -b edge
       - name: Warm up Edge
-        # A browser that has never run sets up its profile on first launch, and an automation run
-        # started before that finishes dies with "Target page, context or browser has been closed".
+        # A freshly installed browser sets up its profile on first launch, and a run started before
+        # that finishes dies with "Target page, context or browser has been closed".
         run: bun run sdods browsers warmup -b edge
       - name: UI layer · @smoke on Edge
         run: >
