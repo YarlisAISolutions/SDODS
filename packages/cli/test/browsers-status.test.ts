@@ -34,3 +34,12 @@ describe('browserStatuses', () => {
     expect(names).not.toContain('edge');
   });
 });
+
+describe('browsers list filtering', () => {
+  it('names only what was asked for', async () => {
+    // The CI job that installs just Edge has to be able to check just Edge: `-p <slug>` checks
+    // every browser the project declares and exits 1 on the ones that runner never downloaded.
+    const only = await browserStatuses(['edge']);
+    expect(only.map((s) => s.name)).toEqual(['edge']);
+  });
+});

@@ -148,12 +148,18 @@ export function register(program: Command) {
     .command('list')
     .description('Show which browsers are installed and where; exits 1 if any is missing')
     .option('-p, --project <slug>', 'limit to the browsers declared by a project')
+    .option('-b, --browser <name>', 'limit to one browser (repeatable)', collect, [])
     .action(async (opts, cmd) => {
       const ctx = createContext(cmd);
       // A bare `browsers list` reports the browsers Playwright downloads. Channel browsers are a
       // system install that most machines will not have, and exiting 1 for a missing Edge nobody
       // asked for would turn this into a permanently failing command.
-      const names = opts.project ? ctx.registry.get(opts.project).browsers : DOWNLOADED_BROWSERS;
+      const names: string[] = opts.browser.length
+        ? opts.browser
+        : opts.project
+          ? ctx.registry.get(opts.project).browsers
+          : DOWNLOADED_BROWSERS;
+      for (const b of names) BrowserSchema.parse(b);
       const statuses = await browserStatuses(names);
       if (ctx.opts.json) return json(statuses);
       table(
