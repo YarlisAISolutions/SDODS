@@ -32,7 +32,10 @@ describe('agent install --for claude|codex|all', () => {
     expect(existsSync(join(root, '.mcp.json'))).toBe(false); // MCP registration is the CLI's job
     const claudeMd = readFileSync(join(root, 'CLAUDE.md'), 'utf8');
     expect(claudeMd).toContain('AGENT.md');
-    expect(claudeMd).toContain('sdods lint -p shop -e staging');
+    // `lint` has no -e; asserting the broken form is what kept it broken.
+    expect(claudeMd).toContain('sdods lint -p shop');
+    expect(claudeMd).not.toContain('sdods lint -p shop -e');
+    expect(claudeMd).toContain('sdods run -p shop -e staging -l api');
     const agentsMd = readFileSync(join(root, 'AGENTS.md'), 'utf8');
     expect(agentsMd).toContain('### sdods-generator');
     expect(agentsMd).toContain('sdods mcp install codex');
