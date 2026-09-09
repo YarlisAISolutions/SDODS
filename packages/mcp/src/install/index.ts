@@ -36,6 +36,15 @@ export function serverEntry(o: SnippetOptions, client: McpClient): Record<string
   return { command: o.command ?? 'npx', args: stdioArgs(o) };
 }
 
+/**
+ * The raw upstream browser server.
+ *
+ * No longer registered by default: SDODS now wraps every one of its tools as `browser_*`, bound to
+ * a project and environment, with credential headers redacted and the two code-execution tools
+ * behind a scope and a switch. Registering the raw server alongside would leave an ungoverned path
+ * to the same browser, which is the thing the wrapper exists to close. Kept for
+ * `--with-playwright`, for anyone who wants upstream directly and accepts that.
+ */
 export function playwrightEntry(): Record<string, unknown> {
   return { command: 'npx', args: ['playwright', 'mcp', '--headless'] };
 }
@@ -60,7 +69,7 @@ export function codexTomlEntries(o: SnippetOptions): Record<string, Record<strin
     ? { url: o.httpUrl, bearer_token_env_var: 'SDODS_TOKEN' }
     : { command: o.command ?? 'npx', args: stdioArgs(o) };
   const out: Record<string, Record<string, unknown>> = { sdods };
-  if (o.withPlaywright !== false) out.playwright = playwrightEntry();
+  if (o.withPlaywright === true) out.playwright = playwrightEntry();
   return out;
 }
 
@@ -74,7 +83,7 @@ export function snippets(
   McpClient,
   { file: string; json?: Record<string, unknown>; toml?: string; cli?: string }
 > {
-  const pw = o.withPlaywright === false ? {} : { playwright: playwrightEntry() };
+  const pw = o.withPlaywright === true ? { playwright: playwrightEntry() } : {};
   const cli = cliCommands(o);
   return {
     claude: {

@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
-import { ToolRegistry, defineTool, type ToolContext } from '../src/registry/registry.js';
+import {
+  ALL_CAPABILITIES,
+  DEFAULT_CAPABILITIES,
+  ToolRegistry,
+  defineTool,
+  type ToolContext,
+} from '../src/registry/registry.js';
 import { toAgentSdkTools, toOpenAiFunctions, toolJsonSchema } from '../src/registry/adapters.js';
 import { createRegistry } from '../src/tools/index.js';
 import { buildToolContext, parseCaps } from '../src/server.js';
@@ -91,6 +97,7 @@ describe('ToolRegistry', () => {
       'step_',
       'run_',
       'heal_',
+      'browser_',
       'data_',
       'analyze_',
       'issue_',
@@ -113,9 +120,14 @@ describe('ToolRegistry', () => {
   });
 
   it('parses capability lists', () => {
-    expect([...parseCaps(undefined)]).toEqual(['core', 'analyze', 'run', 'data', 'schedules']);
+    // Asserted against the constants rather than a restated list: this test previously hardcoded
+    // both the default set and the count, so adding a capability failed here for no reason other
+    // than the test having its own copy.
+    expect([...parseCaps(undefined)]).toEqual(DEFAULT_CAPABILITIES);
     expect([...parseCaps('core,agents')]).toEqual(['core', 'agents']);
-    expect(parseCaps('all').size).toBe(7);
+    expect(parseCaps('all').size).toBe(ALL_CAPABILITIES.length);
+    expect(ALL_CAPABILITIES).toContain('browser');
+    expect(DEFAULT_CAPABILITIES, 'browser is on by default').toContain('browser');
     expect(() => parseCaps('bogus')).toThrow(/Unknown capability/);
   });
 });

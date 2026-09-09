@@ -1,15 +1,22 @@
 import type { Command } from 'commander';
 import pc from 'picocolors';
 import { SdodsError } from '@sdods/core';
+import { ALL_CAPABILITIES, DEFAULT_CAPABILITIES } from '@sdods/mcp';
 import { createContext } from '../context.js';
 import { json, ok, out } from '../ui.js';
 
 const CLIENTS = ['claude', 'codex', 'cursor', 'vscode', 'windsurf'] as const;
 type Client = (typeof CLIENTS)[number];
 
+/**
+ * The default capability list, derived rather than restated. It used to be spelled out in three
+ * places in this file — the fallback, the flag default and the "did the user change it" sentinel —
+ * so adding a capability silently left the CLI handing out the old set.
+ */
+const DEFAULT_CAPS = DEFAULT_CAPABILITIES.join(',');
+
 function capsOf(raw: string | undefined): string[] | 'all' {
-  if (!raw || raw === 'all')
-    return raw === 'all' ? 'all' : ['core', 'analyze', 'run', 'data', 'schedules'];
+  if (!raw || raw === 'all') return raw === 'all' ? 'all' : [...DEFAULT_CAPABILITIES];
   return raw
     .split(',')
     .map((s) => s.trim())
@@ -22,11 +29,7 @@ export function register(program: Command) {
     .description('Start the SDODS MCP server (stdio by default) or install client configuration')
     .option('-p, --project <slug>', 'default project for tools and prompts')
     .option('-e, --env <name>', 'default environment')
-    .option(
-      '--caps <list>',
-      'capabilities: core,analyze,run,data,agents,issues,schedules or "all"',
-      'core,analyze,run,data,schedules',
-    )
+    .option('--caps <list>', `capabilities: ${ALL_CAPABILITIES.join(',')} or "all"`, DEFAULT_CAPS)
     .option('--http', 'serve streamable HTTP instead of stdio')
     .option('--port <n>', 'HTTP port', '4001')
     .option('--host <host>', 'HTTP host', '127.0.0.1')
@@ -101,7 +104,10 @@ export function register(program: Command) {
     .option('--caps <list>')
     .option('--http-url <url>', 'configure the HTTP transport instead of stdio')
     .option('--token-placeholder <text>', 'placeholder written for the bearer token')
-    .option('--no-playwright', 'do not add the bundled Playwright MCP server')
+    .option(
+      '--with-playwright',
+      'also register the raw upstream Playwright MCP server (ungoverned; the sdods server already wraps it as browser_*)',
+    )
     .option(
       '--file',
       'always write the config file instead of calling `claude mcp add` / `codex mcp add`',
@@ -121,12 +127,10 @@ export function register(program: Command) {
       const o = {
         project: opts.project ?? parent.project,
         env: opts.env ?? parent.env,
-        caps:
-          opts.caps ??
-          (parent.caps !== 'core,analyze,run,data,schedules' ? parent.caps : undefined),
+        caps: opts.caps ?? (parent.caps !== DEFAULT_CAPS ? parent.caps : undefined),
         httpUrl: opts.httpUrl,
         tokenPlaceholder: opts.tokenPlaceholder,
-        withPlaywright: opts.playwright !== false,
+        withPlaywright: opts.withPlaywright === true,
       };
       const s = snippets(o)[client as Client];
       if (opts.print || ctx.opts.json) {
@@ -141,7 +145,7 @@ export function register(program: Command) {
         const done = await registerViaClientCli(client, o, ctx.rootDir);
         if (done) {
           ok(`Registered the sdods MCP server with ${client} (${cliCommands(o)[client]})`);
-          if (o.withPlaywright && client === 'codex')
+          if (o.withPlaywright === true && client === 'codex')
             out(pc.dim('Also registered the bundled Playwright MCP server as "playwright".'));
           return;
         }
@@ -199,7 +203,7 @@ async function registerViaClientCli(
         : ['mcp', 'add', 'sdods', '--', ...stdio];
   const ok1 = await run(addArgs);
   if (!ok1) return false;
-  if (o.withPlaywright !== false) {
+  if (o.withPlaywright === true) {
     const pw =
       client === 'claude'
         ? [

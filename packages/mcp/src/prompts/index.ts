@@ -38,7 +38,7 @@ Goal: produce \`docs/test-plans/<name>.md\` for the requested feature area.
 
 Method:
 1. Read the project config (project_get_config) and existing features (feature_list) to avoid duplicates.
-2. Explore the application: if a browser MCP is available, navigate the relevant routes and take ARIA snapshots; otherwise read source roots and the OpenAPI spec (analyze_project, analyze_routes).
+2. Explore the application: open a session with browser_session_open, then navigate the relevant routes and take ARIA snapshots with browser_navigate and browser_snapshot; otherwise read source roots and the OpenAPI spec (analyze_project, analyze_routes).
 3. Write independent scenarios grouped by module. For each: title, preconditions, Gherkin steps (reuse step phrasing from step_list), the layer and suite tag, data needs (@data:/@user:), negative cases, and which existing steps already cover it.
 4. Include an "Out of scope / risks" section and an estimate of new steps needed.
 5. Save the plan through the proposal tools; do not modify features directly.`,

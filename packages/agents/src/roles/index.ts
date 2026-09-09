@@ -57,10 +57,22 @@ const COMMON_READ = [
   'proposal_get',
 ];
 
+/**
+ * Browser access for the roles whose job is to look at the application.
+ *
+ * These used to get it from a separately registered Playwright MCP server, so nothing about the
+ * browser was bound to the project under test. The `browser_*` family on the sdods server is the
+ * same tools with the project's baseURL, test-id attribute and login state applied.
+ *
+ * Not added to any `smallTools`: that list is a menu a 7B model has to choose from, and it is
+ * capped at six for exactly that reason.
+ */
+const BROWSER = ['browser_'];
+
 export const ROLES: Record<RoleName, RoleDefinition> = {
   planner: {
     role: 'planner',
-    toolPrefixes: [...COMMON_READ, 'feature_write'],
+    toolPrefixes: [...COMMON_READ, ...BROWSER, 'feature_write'],
     smallTools: [
       'project_get_config',
       'feature_list',
@@ -78,7 +90,7 @@ export const ROLES: Record<RoleName, RoleDefinition> = {
   },
   generator: {
     role: 'generator',
-    toolPrefixes: [...COMMON_READ, 'feature_write', 'run_tests'],
+    toolPrefixes: [...COMMON_READ, ...BROWSER, 'feature_write', 'run_tests'],
     // run_tests is deliberately absent: it carries the two largest schemas in the registry and a
     // small model that calls it spends minutes on output it cannot read. A person reviews the
     // proposal anyway.
@@ -92,7 +104,7 @@ export const ROLES: Record<RoleName, RoleDefinition> = {
   },
   healer: {
     role: 'healer',
-    toolPrefixes: [...COMMON_READ, 'feature_write', 'run_tests', 'analyze_failure'],
+    toolPrefixes: [...COMMON_READ, ...BROWSER, 'feature_write', 'run_tests', 'analyze_failure'],
     smallTools: [
       'analyze_failure',
       'run_get_scenario',
