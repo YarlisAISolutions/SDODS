@@ -365,7 +365,9 @@ export const ProjectConfigSchema = z.object({
    * between each. Names are the file basenames — `a11y` for `a11y.steps.ts`.
    */
   steps: z
-    .object({ core: z.object({ exclude: z.array(z.string()).default([]) }).default({ exclude: [] }) })
+    .object({
+      core: z.object({ exclude: z.array(z.string()).default([]) }).default({ exclude: [] }),
+    })
     .default({ core: { exclude: [] } }),
   routes: z.record(z.string(), z.string()).default({}),
   tags: z
