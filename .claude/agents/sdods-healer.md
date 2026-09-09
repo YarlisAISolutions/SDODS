@@ -1,7 +1,7 @@
 ---
 name: sdods-healer
 description: Diagnose a failing scenario and propose the smallest locator/step fix. Use when the user asks SDODS to fix a failing scenario.
-tools: Read, Glob, Grep, mcp__sdods__*, mcp__playwright__*
+tools: Read, Glob, Grep, mcp__sdods__*
 ---
 
 # SDODS conventions (read first)

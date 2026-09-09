@@ -54,7 +54,7 @@ export function installCodingAgents(
       const p = ROLE_PROMPTS[role];
       writeIfMissing(
         join(agentsDir, `sdods-${role}.md`),
-        `---\nname: sdods-${role}\ndescription: ${p.description} Use when the user asks SDODS to ${roleUse(role)}.\ntools: Read, Glob, Grep, mcp__sdods__*, mcp__playwright__*\n---\n\n${CONVENTIONS}\n\n${p.body}\n`,
+        `---\nname: sdods-${role}\ndescription: ${p.description} Use when the user asks SDODS to ${roleUse(role)}.\ntools: Read, Glob, Grep, mcp__sdods__*\n---\n\n${CONVENTIONS}\n\n${p.body}\n`,
       );
     }
     writeIfMissing(join(rootDir, 'CLAUDE.md'), claudeMdContent(opts));
@@ -121,7 +121,7 @@ ${TAGLINE} This file is read by the OpenAI Codex CLI. \`AGENT.md\` holds the men
 ## Tools
 
 - The SDODS MCP server is registered as \`sdods\` (\`sdods mcp install codex\` re-registers it in \`~/.codex/config.toml\`); use its tools for projects, features, steps, runs, results, proposals.
-- The bundled Playwright MCP server is registered as \`playwright\` for driving a browser.
+- Drive a browser with the \`browser_*\` tools on the \`sdods\` server (\`browser_session_open\`, then \`browser_navigate\`, \`browser_snapshot\`, \`browser_click\`). They are the upstream Playwright MCP tools bound to the project and environment, so the page carries the right test-id attribute and login state.
 - Commands: \`sdods lint${projectFlags(opts)}\`, \`sdods run${projectFlags(opts)} -l api\`, \`sdods run${projectFlags(opts)} -l ui -b chromium -t @smoke\`, \`sdods steps list${projectFlags(opts)}\`, \`sdods proposals list|show|accept\`.
 
 ## Rules

@@ -333,7 +333,7 @@ sdods mcp install claude|codex|cursor|vscode|windsurf                         # 
 sdods mcp --http --port 4001                                                  # streamable HTTP with scoped tokens
 ```
 
-Tool families: `project_*`, `analyze_*` (framework, routes, OpenAPI, locators audit, coverage, best practices, change impact, failure analysis), `feature_*`/`step_*`, `run_*`, `data_*`, `heal_*`/`insights_*`, `record_*`, `agent_*`/`proposal_*`, `issue_*`, `schedule_*`. Browser driving stays with the bundled `npx playwright mcp`, configured alongside.
+Tool families: `project_*`, `analyze_*` (framework, routes, OpenAPI, locators audit, coverage, best practices, change impact, failure analysis), `feature_*`/`step_*`, `run_*`, `data_*`, `heal_*`/`insights_*`, `record_*`, `agent_*`/`proposal_*`, `issue_*`, `schedule_*`. `browser_*` wraps every tool of the bundled Playwright MCP server, bound to a project and environment: the session carries the project's test-id attribute and login state, artifacts land in the run directory, credential headers are redacted, and the two code-execution tools need an explicit opt-in.
 
 ## AI agents
 

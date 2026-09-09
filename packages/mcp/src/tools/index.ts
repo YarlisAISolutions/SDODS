@@ -1,5 +1,6 @@
 import { ToolRegistry, type SdodsTool } from '../registry/registry.js';
 import { analyzeTools } from './analyze.js';
+import { browserTools } from './browser.js';
 import { dataTools } from './data.js';
 import { featureTools } from './feature.js';
 import { issueTools, scheduleTools } from './issue-schedule.js';
@@ -11,6 +12,7 @@ export const ALL_TOOLS: Array<SdodsTool<any>> = [
   ...projectTools,
   ...featureTools,
   ...runTools,
+  ...browserTools,
   ...dataTools,
   ...analyzeTools,
   ...issueTools,
@@ -24,6 +26,7 @@ export function createRegistry(extra: Array<SdodsTool<any>> = []): ToolRegistry 
 
 export {
   analyzeTools,
+  browserTools,
   dataTools,
   featureTools,
   issueTools,
