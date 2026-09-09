@@ -68,7 +68,10 @@ jobs:
           SDODS_APT_GPG_KEY: ${{ secrets.SDODS_APT_GPG_KEY }}
         run: |
           sudo apt-get update && sudo apt-get install -y --no-install-recommends apt-utils
-          packaging/apt/build-repo.sh debs site/apt
+          # The pool path carries the tag so one redirect rule serves every release:
+          # firebase.json maps /apt/pool/:tag/:file to the release asset, and that pattern
+          # needs two segments. A bare `pool` writes one, and every download 404s.
+          packaging/apt/build-repo.sh debs site/apt "pool/$TAG"
 
       # A local proof before anyone's machine trusts it: apt resolves the package from the repo as
       # written, using the keyring the repo itself ships. A repo that only "looks right" has passed
