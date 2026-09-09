@@ -127,7 +127,9 @@ jobs:
         with:
           node-version: 22
       - run: bun install --frozen-lockfile
-      - run: npx playwright install --with-deps ${{ matrix.browser }}
+        # Through the CLI, so the SDODS browser name -> Playwright engine/channel mapping
+        # lives in one place. `npx playwright install mobile-chrome` is not a valid target.
+      - run: bun run sdods browsers install -b ${{ matrix.browser }} --with-deps
       - name: API layer (no browser)
         if: matrix.browser == 'chromium' && matrix.shard == 1
         run: >
@@ -156,6 +158,40 @@ jobs:
         if: always()
         with:
           name: sdods-${{ matrix.project }}-${{ matrix.browser }}-${{ matrix.shard }}
+          path: .sdods/runs
+          retention-days: 14
+          if-no-files-found: ignore
+
+  edge:
+    # Edge is a system browser, not a Playwright download, so it is kept out of the generic matrix
+    # via `ci.browsers` in demo-shop's project yaml and exercised here instead. Scheduled and
+    # manual only: installing msedge on a runner is slower and more fragile than a cached engine.
+    name: demo-shop · edge · @smoke
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: bun install --frozen-lockfile
+      - run: bun run sdods browsers install -b edge
+      - name: Confirm Edge really is installed
+        # `sdods run -b edge` fails with an install hint when it is not, but saying so here makes a
+        # provisioning failure obvious instead of looking like a test failure.
+        run: bun run sdods browsers list -p demo-shop
+      - name: UI layer · @smoke on Edge
+        run: >
+          bun run sdods run -p demo-shop -e staging -l ui -b edge -t @smoke
+          --run-id ${{ env.RUN_ID }}-demo-shop-edge --no-ingest --har-replay --strict
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: sdods-demo-shop-edge
           path: .sdods/runs
           retention-days: 14
           if-no-files-found: ignore

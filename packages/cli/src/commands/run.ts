@@ -27,6 +27,7 @@ import {
 } from '@sdods/core';
 import { analyzeChangeImpact } from '@sdods/mcp';
 import { createContext } from '../context.js';
+import { browserStatuses } from './browsers.js';
 import { collect, json, out, parseIntFlag, warn } from '../ui.js';
 
 export interface RunFlags {
@@ -79,7 +80,7 @@ function addRunOptions(cmd: Command): Command {
     .option('-l, --layer <layer>', 'ui | api | hybrid | recorded (repeatable)', collect, [])
     .option(
       '-b, --browser <name>',
-      'chromium | firefox | webkit | mobile-chrome | mobile-safari (repeatable)',
+      'chromium | edge | firefox | webkit | mobile-chrome | mobile-safari (repeatable)',
       collect,
       [],
     )
@@ -183,6 +184,27 @@ export async function runCommand(flags: RunFlags, cmd: Command): Promise<number>
     }
   }
   for (const m of modules) moduleByName(projectCfg, m);
+
+  // Fail before generating specs and creating a run directory. Without this the first sign of a
+  // missing browser is Playwright's own launch error deep in the worker output, which names a
+  // channel rather than anything the user typed and suggests no way forward.
+  const missing = (await browserStatuses(browsers)).filter((s) => !s.installed);
+  if (missing.length) {
+    const names = missing.map((s) => s.name);
+    const channels = missing.filter((s) => s.channel);
+    throw new SdodsError(
+      'NOT_SUPPORTED',
+      `${names.join(', ')} ${names.length > 1 ? 'are' : 'is'} not installed.`,
+      {
+        hint:
+          `Run \`sdods browsers install ${names.map((n) => `-b ${n}`).join(' ')}\`.` +
+          (channels.length
+            ? ` ${channels.map((s) => s.name).join(', ')} ${channels.length > 1 ? 'are system browsers' : 'is a system browser'}: Playwright runs the vendor installer rather than downloading a build.`
+            : ''),
+        exitCode: 2,
+      },
+    );
+  }
 
   const runId = flags.runId ?? newRunId();
   const cli: CliOverrides = {

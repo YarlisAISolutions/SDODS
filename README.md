@@ -50,7 +50,7 @@ So the questions that actually decide a release have an answer:
 | Does the whole journey still work, not just the page? | Gherkin features with **one merged fixture set**, so a scenario can seed through the API and assert in the browser |
 | Is this the same suite that passed in staging? | `projects/<slug>/sdods.project.yaml` + `envs/<env>.yaml`; strict, explainable config precedence; secrets only through `${VAR}` |
 | Can we prove it with real data, for every role? | CSV / JSON / YAML / DB tables / faker factories per environment, plus **user pools** leased per worker with login state reuse |
-| Will it work for customers on any browser? | chromium, firefox, webkit, mobile emulation, `--project-matrix`, `@skip:<browser>` tags validated by lint |
+| Will it work for customers on any browser? | chromium, edge (real Microsoft Edge via the `msedge` channel), firefox, webkit, mobile emulation, `--project-matrix`, `@skip:<browser>` tags validated by lint |
 | What exactly did the user see when it broke? | before/after screenshots per step (policy by suite tag), API request/response snapshots, a run viewer with slider/overlay/diff |
 | Will a UI tweak send the team on a false hunt? | scored self-healing locators with persisted heal history and proposals to fix page objects |
 | Which flows are getting less reliable over time? | cucumber NDJSON ingested into SQLite or Postgres: flakiness, locator fragility, env stability, suite health |

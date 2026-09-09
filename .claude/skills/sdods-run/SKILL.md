@@ -12,7 +12,7 @@ description: Run SDODS test suites for a project across environments, layers (ui
 | `project` | only project if one exists | `bun run sdods project list` |
 | `env` | project `envs.default` | `bun run sdods env list -p <project>` |
 | `layer` | all layers in the project | `-l ui`, `-l api`, `-l hybrid`, `-l recorded` (repeatable) |
-| `browser` | project `browsers` | `-b chromium -b firefox -b webkit`, or `--project-matrix` for all |
+| `browser` | project `browsers` | `-b chromium -b edge -b firefox -b webkit`, or `--project-matrix` for all |
 | `tags` | none | Cucumber expression, e.g. `"@smoke and not @mock"`, `@user:admin`, `@jira:DEMO-12` |
 | `headed` | false | `--headed` for a visible browser |
 | `workers` | runner default | `-w 2` |

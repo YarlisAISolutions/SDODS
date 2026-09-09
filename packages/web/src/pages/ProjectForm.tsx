@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { useMutation } from '@tanstack/react-query';
+import { BrowserSchema } from '@sdods/contracts';
 import { api } from '../api/client';
 import { useInvalidate, useProject } from '../api/queries';
 import type { Project } from '../api/types';
@@ -22,7 +23,7 @@ import {
 import { useToast } from '../components/ui/Toast';
 
 const ALL_LAYERS = ['ui', 'api', 'hybrid', 'recorded'] as const;
-const ALL_BROWSERS = ['chromium', 'firefox', 'webkit', 'mobile-chrome', 'mobile-safari'] as const;
+const ALL_BROWSERS = BrowserSchema.options;
 const TESTING_TYPES = [
   'functional',
   'smoke',

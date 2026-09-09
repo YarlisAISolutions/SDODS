@@ -29,11 +29,50 @@ export interface SdodsUseOption {
 
 const DEVICE_FOR_BROWSER: Record<BrowserName, string> = {
   chromium: 'Desktop Chrome',
+  edge: 'Desktop Edge',
   firefox: 'Desktop Firefox',
   webkit: 'Desktop Safari',
   'mobile-chrome': 'Pixel 7',
   'mobile-safari': 'iPhone 15',
 };
+
+/**
+ * Browsers that are a branded channel of an engine rather than the bundled build.
+ *
+ * `devices['Desktop Edge']` only sets an Edge user-agent — its `defaultBrowserType` is still
+ * 'chromium' — so without an explicit channel Playwright launches the bundled Chromium and it
+ * merely claims to be Edge. The channel is what actually starts the browser the user installed.
+ */
+const CHANNEL_FOR_BROWSER: Partial<Record<BrowserName, string>> = { edge: 'msedge' };
+
+/** The Playwright channel family a project-level `channel:` belongs to, for compatibility checks. */
+function channelFamily(channel: string): 'chrome' | 'msedge' {
+  return channel.startsWith('msedge') ? 'msedge' : 'chrome';
+}
+
+/**
+ * The channel a run target launches with.
+ *
+ * A project-level `channel:` refines a branded browser, it does not redirect it: `channel: chrome`
+ * on a project that also runs `edge` must not make the `--edge` target launch Google Chrome, which
+ * would put a browser in the results under another browser's name.
+ */
+function channelFor(browser: BrowserName, projectChannel?: string): string | undefined {
+  const branded = CHANNEL_FOR_BROWSER[browser];
+  if (!branded) {
+    // Chromium-family engines take whatever the project asked for; other engines have no channels.
+    return browser === 'chromium' || browser === 'mobile-chrome' ? projectChannel : undefined;
+  }
+  if (projectChannel && channelFamily(projectChannel) === channelFamily(branded))
+    return projectChannel;
+  return branded;
+}
+
+/** The `use` keys that select the browser binary for a run target. */
+function browserUse(browser: BrowserName, projectChannel?: string): Record<string, unknown> {
+  const channel = channelFor(browser, projectChannel);
+  return { ...devices[DEVICE_FOR_BROWSER[browser]], ...(channel ? { channel } : {}) };
+}
 
 export const DASHBOARD_REPORTER = '@sdods/core/reporters/dashboard';
 
@@ -163,10 +202,7 @@ export function buildRunnerConfig(
               '{arg}{ext}',
             ),
             use: {
-              ...devices[DEVICE_FOR_BROWSER[browser]],
-              ...(p.channel && (browser === 'chromium' || browser === 'mobile-chrome')
-                ? { channel: p.channel }
-                : {}),
+              ...browserUse(browser, p.channel),
               baseURL: cfg.env.ui.baseUrl,
               testIdAttribute: p.testIdAttribute,
               ...envUse,
@@ -226,10 +262,7 @@ export function buildRunnerConfig(
             '{arg}{ext}',
           ),
           use: {
-            ...devices[DEVICE_FOR_BROWSER[browser]],
-            ...(p.channel && (browser === 'chromium' || browser === 'mobile-chrome')
-              ? { channel: p.channel }
-              : {}),
+            ...browserUse(browser, p.channel),
             baseURL: cfg.env.ui.baseUrl,
             testIdAttribute: p.testIdAttribute,
             viewport: browser.startsWith('mobile') ? undefined : p.screenshots.viewport,

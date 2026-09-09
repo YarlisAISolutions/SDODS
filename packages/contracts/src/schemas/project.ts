@@ -3,6 +3,10 @@ import { z } from 'zod';
 export const LayerSchema = z.enum(['ui', 'api', 'hybrid', 'recorded']);
 export const BrowserSchema = z.enum([
   'chromium',
+  // Real Microsoft Edge, launched through Playwright's `msedge` channel. It is a distinct browser
+  // name rather than a `channel:` on chromium so that Chromium and Edge can run in one matrix and
+  // keep separate run targets, visual baselines, result rows and `@skip:` values.
+  'edge',
   'firefox',
   'webkit',
   'mobile-chrome',

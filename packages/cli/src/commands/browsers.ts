@@ -1,31 +1,76 @@
 import { existsSync } from 'node:fs';
 import { createRequire } from 'node:module';
+import { join } from 'node:path';
 import type { Command } from 'commander';
 import { execa } from 'execa';
 import pc from 'picocolors';
-import { BrowserSchema } from '@sdods/contracts';
+import { BrowserSchema, type BrowserName } from '@sdods/contracts';
 import { SdodsError } from '@sdods/core';
 import { createContext } from '../context.js';
 import { collect, json, ok, table } from '../ui.js';
 
-const ENGINE_OF: Record<string, 'chromium' | 'firefox' | 'webkit'> = {
+type Engine = 'chromium' | 'firefox' | 'webkit';
+
+// Typed against BrowserName (not `string`) so a new browser is a compile error here rather than a
+// silent fall-through to chromium.
+const ENGINE_OF: Record<BrowserName, Engine> = {
   chromium: 'chromium',
+  edge: 'chromium',
   firefox: 'firefox',
   webkit: 'webkit',
   'mobile-chrome': 'chromium',
   'mobile-safari': 'webkit',
 };
 
+/**
+ * Browsers that are a system install of a branded channel rather than a Playwright download.
+ * `playwright install msedge` runs the vendor installer; there is nothing in the browsers cache to
+ * find afterwards, which is why these need their own install target and their own detection.
+ */
+const CHANNEL_OF: Partial<Record<BrowserName, string>> = { edge: 'msedge' };
+
+/** Browsers Playwright downloads, i.e. the ones a bare `browsers list` can expect to be present. */
+const DOWNLOADED_BROWSERS = (Object.keys(ENGINE_OF) as BrowserName[]).filter((b) => !CHANNEL_OF[b]);
+
+/**
+ * Where the stable Microsoft Edge binary lives, mirroring Playwright's own channel resolution.
+ * `playwright-core`'s `executablePath()` cannot answer this: for a channel browser it returns the
+ * bundled Chromium path, which exists on nearly every machine and would report Edge as installed
+ * when it is not.
+ */
+function channelExecutable(channel: string): string | null {
+  if (channel !== 'msedge') return null;
+  if (process.platform === 'darwin')
+    return '/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge';
+  if (process.platform === 'linux') return '/opt/microsoft/msedge/msedge';
+  if (process.platform === 'win32') {
+    const suffix = join('Microsoft', 'Edge', 'Application', 'msedge.exe');
+    const roots = [
+      process.env.LOCALAPPDATA,
+      process.env.PROGRAMFILES,
+      process.env['PROGRAMFILES(X86)'],
+    ].filter((r): r is string => Boolean(r));
+    for (const root of roots) {
+      const candidate = join(root, suffix);
+      if (existsSync(candidate)) return candidate;
+    }
+    return roots.length ? join(roots[0]!, suffix) : null;
+  }
+  return null;
+}
+
 export interface BrowserStatus {
   name: string;
-  engine: 'chromium' | 'firefox' | 'webkit';
+  engine: Engine;
+  /** The branded channel this browser launches, when it is not the bundled build. */
+  channel: string | null;
   installed: boolean;
   executable: string | null;
   playwrightVersion: string;
 }
 
 export async function browserStatuses(
-  names: string[] = Object.keys(ENGINE_OF),
+  names: string[] = DOWNLOADED_BROWSERS,
 ): Promise<BrowserStatus[]> {
   const require = createRequire(import.meta.url);
   let pw: any;
@@ -36,23 +81,26 @@ export async function browserStatuses(
   } catch {
     return names.map((name) => ({
       name,
-      engine: ENGINE_OF[name] ?? 'chromium',
+      engine: ENGINE_OF[name as BrowserName] ?? 'chromium',
+      channel: CHANNEL_OF[name as BrowserName] ?? null,
       installed: false,
       executable: null,
       playwrightVersion: version,
     }));
   }
   return names.map((name) => {
-    const engine = ENGINE_OF[name] ?? 'chromium';
+    const engine = ENGINE_OF[name as BrowserName] ?? 'chromium';
+    const channel = CHANNEL_OF[name as BrowserName] ?? null;
     let executable: string | null = null;
     try {
-      executable = pw[engine].executablePath() as string;
+      executable = channel ? channelExecutable(channel) : (pw[engine].executablePath() as string);
     } catch {
       executable = null;
     }
     return {
       name,
       engine,
+      channel,
       installed: Boolean(executable && existsSync(executable)),
       executable,
       playwrightVersion: version,
@@ -60,19 +108,22 @@ export async function browserStatuses(
   });
 }
 
-/** Install browser engines (used by `browsers install`, `doctor --fix`, `init`). */
+/** Install browser engines and channels (used by `browsers install`, `doctor --fix`, `init`). */
 export async function installBrowsers(
   opts: { browsers?: string[]; withDeps?: boolean; cwd?: string } = {},
 ): Promise<void> {
-  const engines = [
-    ...new Set(
-      (opts.browsers?.length ? opts.browsers : Object.keys(ENGINE_OF)).map(
-        (b) => ENGINE_OF[b] ?? b,
-      ),
-    ),
-  ];
-  const args = ['playwright', 'install', ...(opts.withDeps ? ['--with-deps'] : []), ...engines];
-  await execa('npx', args, { stdio: 'inherit', cwd: opts.cwd });
+  const names = (opts.browsers?.length ? opts.browsers : DOWNLOADED_BROWSERS) as BrowserName[];
+  const engines = [...new Set(names.filter((b) => !CHANNEL_OF[b]).map((b) => ENGINE_OF[b] ?? b))];
+  const channels = [...new Set(names.map((b) => CHANNEL_OF[b]).filter((c): c is string => !!c))];
+  if (engines.length) {
+    const args = ['playwright', 'install', ...(opts.withDeps ? ['--with-deps'] : []), ...engines];
+    await execa('npx', args, { stdio: 'inherit', cwd: opts.cwd });
+  }
+  // Channels are a system install run by the vendor's own installer, so `--with-deps` does not
+  // apply and they cannot share the engine invocation.
+  for (const channel of channels) {
+    await execa('npx', ['playwright', 'install', channel], { stdio: 'inherit', cwd: opts.cwd });
+  }
 }
 
 export function register(program: Command) {
@@ -80,7 +131,7 @@ export function register(program: Command) {
 
   browsers
     .command('install')
-    .description('Install browser engines (default: chromium, firefox, webkit)')
+    .description('Install browsers (default: chromium, firefox, webkit)')
     .option('-b, --browser <name>', 'browser to install (repeatable)', collect, [])
     .option('--with-deps', 'also install OS dependencies (Linux CI)')
     .option('-p, --project <slug>', 'install the browsers declared by a project')
@@ -90,7 +141,7 @@ export function register(program: Command) {
       if (opts.project) list = ctx.registry.get(opts.project).browsers;
       for (const b of list) BrowserSchema.parse(b);
       await installBrowsers({ browsers: list, withDeps: opts.withDeps, cwd: ctx.rootDir });
-      ok(`Installed ${list.length ? list.join(', ') : 'chromium, firefox, webkit'}`);
+      ok(`Installed ${list.length ? list.join(', ') : DOWNLOADED_BROWSERS.join(', ')}`);
     });
 
   browsers
@@ -99,13 +150,17 @@ export function register(program: Command) {
     .option('-p, --project <slug>', 'limit to the browsers declared by a project')
     .action(async (opts, cmd) => {
       const ctx = createContext(cmd);
-      const names = opts.project ? ctx.registry.get(opts.project).browsers : Object.keys(ENGINE_OF);
+      // A bare `browsers list` reports the browsers Playwright downloads. Channel browsers are a
+      // system install that most machines will not have, and exiting 1 for a missing Edge nobody
+      // asked for would turn this into a permanently failing command.
+      const names = opts.project ? ctx.registry.get(opts.project).browsers : DOWNLOADED_BROWSERS;
       const statuses = await browserStatuses(names);
       if (ctx.opts.json) return json(statuses);
       table(
         statuses.map((s) => ({
           browser: s.name,
           engine: s.engine,
+          channel: s.channel ?? '',
           installed: s.installed ? pc.green('yes') : pc.red('no'),
           playwright: s.playwrightVersion,
           executable: s.executable ?? '',

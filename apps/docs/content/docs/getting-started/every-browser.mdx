@@ -1,36 +1,69 @@
 ---
 title: Run on every browser
-description: Run a project across Chromium, Firefox, WebKit and mobile emulation.
+description: Run a project across Chromium, Edge, Firefox, WebKit and mobile emulation.
 ---
 
 <Learn>
   Which browsers SDODS supports, how the project YAML declares them, how `-b` and `--project-matrix`
-  select them, and how to exclude a scenario from one engine without hiding the exclusion in code.
+  select them, how Edge differs from the engines Playwright downloads, and how to exclude a scenario
+  from one engine without hiding the exclusion in code.
 </Learn>
 
 ## Supported browsers
 
-| Name            | Engine   | Device profile  |
-| --------------- | -------- | --------------- |
-| `chromium`      | Chromium | Desktop Chrome  |
-| `firefox`       | Gecko    | Desktop Firefox |
-| `webkit`        | WebKit   | Desktop Safari  |
-| `mobile-chrome` | Chromium | Pixel 7         |
-| `mobile-safari` | WebKit   | iPhone 15       |
+| Name            | Engine   | Device profile  | Source                     |
+| --------------- | -------- | --------------- | -------------------------- |
+| `chromium`      | Chromium | Desktop Chrome  | downloaded by Playwright   |
+| `edge`          | Chromium | Desktop Edge    | your system Microsoft Edge |
+| `firefox`       | Gecko    | Desktop Firefox | downloaded by Playwright   |
+| `webkit`        | WebKit   | Desktop Safari  | downloaded by Playwright   |
+| `mobile-chrome` | Chromium | Pixel 7         | downloaded by Playwright   |
+| `mobile-safari` | WebKit   | iPhone 15       | downloaded by Playwright   |
 
-Branded channels (`chrome`, `msedge`) are set with `channel:` in the project YAML.
+## Edge is the real browser, not a user agent
+
+`edge` runs Microsoft Edge through Playwright's `msedge` channel. This is worth stating plainly
+because the near-miss is invisible: Playwright's `Desktop Edge` device profile only sets an Edge
+user-agent string, so a setup that stops there launches bundled Chromium that _reports_ itself as
+Edge. Tests pass, screenshots look right, and nothing is testing Edge. SDODS sets the channel, so
+`-b edge` starts the browser you installed.
+
+Two consequences follow from Edge being a system browser rather than a download:
+
+```bash
+sdods browsers install -b edge
+```
+
+runs Microsoft's own installer instead of fetching a build into the Playwright cache — on Linux and
+Windows it needs privileges, and `sdods browsers list` finds it by its installed path rather than in
+the cache. And `sdods run -b edge` on a machine without Edge stops before running anything:
+
+```
+✖ NOT_SUPPORTED: edge is not installed.
+  hint: Run `sdods browsers install -b edge`. edge is a system browser: Playwright runs the
+        vendor installer rather than downloading a build.
+```
+
+Other branded channels are still set with `channel:` in the project YAML. For `edge`, a same-family
+channel refines it — `channel: msedge-beta` moves the `edge` target to the beta build — while a
+`chrome` channel is ignored rather than applied, so a project that runs both Chromium and Edge can
+never end up with Google Chrome reported under Edge's name.
 
 ## Declare and select
 
 ```yaml
-browsers: [chromium, firefox, webkit]
+browsers: [chromium, edge, firefox, webkit]
 ```
 
 ```bash
 bun run sdods run -p demo-shop -l ui -b chromium
 bun run sdods run -p demo-shop -l ui -b firefox -b webkit
+bun run sdods run -p demo-shop -l ui -b edge
 bun run sdods run -p demo-shop -l ui --list          # prints the generated run target names
 ```
+
+A browser must be listed in the project's `browsers:` before `-b` will accept it; `sdods run`
+rejects anything else with the list of what is enabled.
 
 Each browser becomes a run target named `demo-shop--ui--<browser>`. Generation happens once per layer; browsers share the generated spec files.
 
@@ -47,11 +80,23 @@ bun run sdods run -p demo-shop --project-matrix -t @smoke
 Scenario: Uses a Chromium-only DevTools feature
 ```
 
+Every name in the table above is a valid `@skip:` value, `edge` included.
+
 `@skip:<browser>` is validated by `sdods lint` and applied by a hook. Do not branch inside steps on the browser name; the exclusion stays visible in the feature and in reports.
 
 ## Continuous integration
 
 Pull requests run `@smoke` on Chromium; merges to `main` run `@regression`; a nightly job runs the full matrix including mobile emulation. See [Sharding and CI](/docs/guides/sharding-and-ci).
+
+The generic matrix comes from `ci.browsers` when a project sets it, and from `browsers:` otherwise.
+That is how a project declares Edge for local and on-demand runs without putting a system browser
+into every matrix job:
+
+```yaml
+browsers: [chromium, edge, firefox, webkit]
+ci:
+  browsers: [chromium, firefox, webkit]
+```
 
 ## Next steps
 

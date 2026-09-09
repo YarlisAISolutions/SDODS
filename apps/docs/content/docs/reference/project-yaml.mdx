@@ -38,12 +38,13 @@ description: Field-by-field reference for the project file and the workspace fil
   type={{
     layers: { type: "('ui'|'api'|'hybrid'|'recorded')[]", required: true },
     browsers: {
-      type: "('chromium'|'firefox'|'webkit'|'mobile-chrome'|'mobile-safari')[]",
+      type: "('chromium'|'edge'|'firefox'|'webkit'|'mobile-chrome'|'mobile-safari')[]",
       default: "['chromium']",
     },
     channel: {
       type: "'chrome'|'msedge'|'chrome-beta'|'msedge-beta'",
-      description: 'Branded browser channel.',
+      description:
+        'Branded channel for the Chromium-family targets. It refines the `edge` browser rather than redirecting it: a `chrome` channel is not applied to `edge`.',
     },
     testIdAttribute: { type: 'string', default: "'data-testid'" },
     routes: {
