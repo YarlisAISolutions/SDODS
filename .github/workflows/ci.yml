@@ -182,8 +182,10 @@ jobs:
       - run: bun run sdods browsers install -b edge
       - name: Confirm Edge really is installed
         # `sdods run -b edge` fails with an install hint when it is not, but saying so here makes a
-        # provisioning failure obvious instead of looking like a test failure.
-        run: bun run sdods browsers list -p demo-shop
+        # provisioning failure obvious instead of looking like a test failure. Scoped to edge: this
+        # runner installs only Edge, and `-p demo-shop` would check all four and exit 1 on the
+        # three engines nobody asked it to download.
+        run: bun run sdods browsers list -b edge
       - name: Warm up Edge
         # A freshly installed Edge sets up its profile on first launch, and a headless automation
         # run started before that finishes dies with "Target page, context or browser has been
