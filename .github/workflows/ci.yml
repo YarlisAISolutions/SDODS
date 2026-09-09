@@ -191,8 +191,7 @@ jobs:
       - name: Warm up Edge
         # A browser that has never run sets up its profile on first launch, and an automation run
         # started before that finishes dies with "Target page, context or browser has been closed".
-        # One throwaway launch makes the first real run deterministic.
-        run: node -e "require('playwright-core').chromium.launch({channel:'msedge',headless:true}).then(b=>b.close())"
+        run: bun run sdods browsers warmup -b edge
       - name: UI layer · @smoke on Edge
         run: >
           bun run sdods run -p demo-shop -e staging -l ui -b edge -t @smoke

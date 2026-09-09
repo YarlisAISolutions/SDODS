@@ -1,6 +1,6 @@
 import { existsSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { browserStatuses } from '../src/commands/browsers.js';
+import { browserStatuses, warmupBrowsers } from '../src/commands/browsers.js';
 
 /**
  * Edge is a channel, not a Playwright download. Detection used to go through
@@ -42,4 +42,16 @@ describe('browsers list filtering', () => {
     const only = await browserStatuses(['edge']);
     expect(only.map((s) => s.name)).toEqual(['edge']);
   });
+});
+
+describe('warmupBrowsers', () => {
+  it('opens and closes each requested browser', async () => {
+    // The CI job that provisions a browser and uses it in the same job depends on this: the
+    // `node -e "require('playwright-core')…"` it replaced could not resolve playwright-core from
+    // the repo root on a runner, so the step failed on every platform while looking like a
+    // browser problem.
+    const [edge] = await browserStatuses(['edge']);
+    if (!edge?.installed) return; // nothing to warm up on a machine without Edge
+    await expect(warmupBrowsers(['edge'])).resolves.toEqual(['edge']);
+  }, 120_000);
 });
