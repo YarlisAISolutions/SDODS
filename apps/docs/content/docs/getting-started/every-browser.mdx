@@ -11,14 +11,21 @@ description: Run a project across Chromium, Edge, Firefox, WebKit and mobile emu
 
 ## Supported browsers
 
-| Name            | Engine   | Device profile  | Source                     |
-| --------------- | -------- | --------------- | -------------------------- |
-| `chromium`      | Chromium | Desktop Chrome  | downloaded by Playwright   |
-| `edge`          | Chromium | Desktop Edge    | your system Microsoft Edge |
-| `firefox`       | Gecko    | Desktop Firefox | downloaded by Playwright   |
-| `webkit`        | WebKit   | Desktop Safari  | downloaded by Playwright   |
-| `mobile-chrome` | Chromium | Pixel 7         | downloaded by Playwright   |
-| `mobile-safari` | WebKit   | iPhone 15       | downloaded by Playwright   |
+| Name            | Engine   | Device profile  | Playwright installs it as         |
+| --------------- | -------- | --------------- | --------------------------------- |
+| `chromium`      | Chromium | Desktop Chrome  | a build, into the browser cache   |
+| `edge`          | Chromium | Desktop Edge    | the `msedge` channel, system-wide |
+| `firefox`       | Gecko    | Desktop Firefox | a build, into the browser cache   |
+| `webkit`        | WebKit   | Desktop Safari  | a build, into the browser cache   |
+| `mobile-chrome` | Chromium | Pixel 7         | a build, into the browser cache   |
+| `mobile-safari` | WebKit   | iPhone 15       | a build, into the browser cache   |
+
+Every one of these is provisioned by Playwright — `sdods browsers install -b <name>` is all you
+need for any of them. Edge differs only in _where the binary lands_: Playwright ships no Edge
+build (its download manifest lists chromium, firefox and webkit only), so `playwright install
+msedge` runs Microsoft's own installer and Edge ends up in the normal application location rather
+than under `~/.cache/ms-playwright`. That is why `sdods browsers list` finds it by path, and why
+its row shows a channel.
 
 ## Edge is the real browser, not a user agent
 
@@ -26,9 +33,10 @@ description: Run a project across Chromium, Edge, Firefox, WebKit and mobile emu
 because the near-miss is invisible: Playwright's `Desktop Edge` device profile only sets an Edge
 user-agent string, so a setup that stops there launches bundled Chromium that _reports_ itself as
 Edge. Tests pass, screenshots look right, and nothing is testing Edge. SDODS sets the channel, so
-`-b edge` starts the browser you installed.
+`-b edge` starts Edge itself — a different binary at a different version from the bundled Chromium,
+which is the whole reason for running it.
 
-Two consequences follow from Edge being a system browser rather than a download:
+Two consequences follow from the channel landing system-wide:
 
 ```bash
 sdods browsers install -b edge

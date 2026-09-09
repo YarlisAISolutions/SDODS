@@ -21,12 +21,13 @@ flowchart LR
   CC & CU & VS -->|HTTP + bearer token| S2["sdods serve → /mcp"]
   S1 & S2 --> REG["ToolRegistry<br/>project_ · analyze_ · feature_ · run_ · data_ · heal_ · agent_ · issue_ · schedule_"]
   REG --> CLI["sdods commands"]
+  REG -->|browser_*| PW["Playwright MCP<br/>(bundled with Playwright)"]
   AG["SDODS agents"] --> REG
-  AG -->|browser| PW["npx playwright mcp"]
   AG -->|optional| EXT["GitHub MCP · Jira MCP"]
 ```
 
-Browser driving stays with Playwright MCP; SDODS MCP drives the automation project. Install both side by side.
+Browser driving goes **through** SDODS rather than beside it: the `browser_*` tools are the
+Playwright MCP tools bound to a project and environment. One server to install.
 
 ## Connect
 
@@ -34,7 +35,6 @@ Browser driving stays with Playwright MCP; SDODS MCP drives the automation proje
 <Tab value="Claude Code">
 ```bash
 claude mcp add sdods -- npx sdods mcp --project demo-shop --env staging
-claude mcp add playwright -- npx playwright mcp --headless
 ```
 </Tab>
 <Tab value="Cursor">
@@ -87,7 +87,6 @@ Over HTTP the bearer token's scopes decide which tools appear: `viewer` tokens s
 ```yaml title="sdods.project.yaml"
 mcp:
   servers:
-    playwright: { transport: stdio, command: npx, args: [playwright, mcp, --headless] }
     github:
       transport: stdio
       command: npx

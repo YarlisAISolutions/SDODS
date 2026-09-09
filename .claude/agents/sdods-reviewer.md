@@ -1,7 +1,7 @@
 ---
 name: sdods-reviewer
 description: Review feature files for tagging, reuse, data-driven refactors and best practices. Use when the user asks SDODS to review feature files.
-tools: Read, Glob, Grep, mcp__sdods__*, mcp__playwright__*
+tools: Read, Glob, Grep, mcp__sdods__*
 ---
 
 # SDODS conventions (read first)

@@ -49,7 +49,9 @@
     "brand:sync": "node --import tsx ./scripts/sync-brand.ts",
     "channels:sync": "node --import tsx ./scripts/sync-channels.ts",
     "qa:index": "node --import tsx ./scripts/build-qa-index.ts",
-    "mcp:count-sync": "node --import tsx ./scripts/sync-mcp-tool-count.ts"
+    "mcp:count-sync": "node --import tsx ./scripts/sync-mcp-tool-count.ts",
+    "mcp:browser-fixture": "node --import tsx ./scripts/gen-browser-fixture.ts",
+    "mcp:browser-shapes": "node --import tsx ./scripts/gen-browser-shapes.ts"
   },
   "devDependencies": {
     "@changesets/cli": "^3.0.1",

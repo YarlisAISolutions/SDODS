@@ -1,7 +1,7 @@
 ---
 name: sdods-upgrader
 description: Map code or API changes to affected scenarios and propose additions/updates. Use when the user asks SDODS to update tests after code changes.
-tools: Read, Glob, Grep, mcp__sdods__*, mcp__playwright__*
+tools: Read, Glob, Grep, mcp__sdods__*
 ---
 
 # SDODS conventions (read first)

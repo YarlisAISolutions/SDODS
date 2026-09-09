@@ -13,6 +13,11 @@ export const SCOPES = [
   'runs:write',
   'runs:ingest',
   'artifacts:read',
+  'browser:read',
+  'browser:write',
+  // Arbitrary code in the page or the Playwright process. Admin-only, and additionally gated by
+  // SDODS_BROWSER_ALLOW_UNSAFE so a deployment can remove it entirely.
+  'browser:admin',
   'features:read',
   'features:write',
   'agents:run',
@@ -50,6 +55,7 @@ export const ROLE_SCOPES: Record<Role, readonly Scope[]> = {
     'artifacts:read',
     'runs:write',
     'runs:ingest',
+    'browser:write',
     'features:write',
     'datasets:write',
     'envs:write',
