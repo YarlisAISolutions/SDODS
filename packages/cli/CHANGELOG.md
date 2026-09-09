@@ -1,5 +1,18 @@
 # @sdods/cli
 
+## 0.3.2
+
+### Patch Changes
+
+- Updated dependencies [8370778]
+  - @sdods/core@0.3.2
+  - @sdods/server@0.3.2
+  - @sdods/agents@0.3.2
+  - @sdods/contracts@0.3.2
+  - @sdods/db@0.3.2
+  - @sdods/integrations@0.3.2
+  - @sdods/mcp@0.3.2
+
 ## 0.3.1
 
 ### Patch Changes
