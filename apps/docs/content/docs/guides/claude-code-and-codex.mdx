@@ -17,7 +17,7 @@ flowchart LR
     CX["Codex CLI<br/>codex"]
   end
   subgraph sdods["SDODS"]
-    MCP["sdods mcp<br/>37 tools · prompts · resources"]
+    MCP["sdods mcp<br/>82 tools · prompts · resources"]
     AG["sdods agent …<br/>planner · generator · healer · upgrader · reviewer"]
     PR["proposals/"]
   end
@@ -70,7 +70,7 @@ claude
 # > @sdods-healer fix the "Add a product to the cart" scenario from the last run
 ```
 
-`claude mcp list` shows `sdods` and `playwright`. Every SDODS tool appears as `mcp__sdods__<tool>`.
+`claude mcp list` shows `sdods`. Every SDODS tool appears as `mcp__sdods__<tool>`, browser tools included — `mcp__sdods__browser_navigate` and friends.
 
 </Steps>
 
@@ -113,10 +113,10 @@ bun run sdods agent generate -p demo-shop --goal "checkout with a discount code"
 
 What the adapters do:
 
-| Adapter       | Command executed                                                                                                                                                                                                 | Tools                                        | Cost reporting                                  |
-| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- | ----------------------------------------------- |
-| `claude-code` | `claude -p <prompt> --output-format stream-json --mcp-config <temp.json> --strict-mcp-config --allowedTools Read Glob Grep mcp__sdods__* mcp__playwright__* --disallowedTools Bash Write Edit … --max-turns <n>` | SDODS + Playwright MCP, read-only file tools | `total_cost_usd` from the CLI when available    |
-| `codex`       | `codex exec --json --ephemeral -s read-only -c mcp_servers.sdods.command=… -c mcp_servers.sdods.args=… <system + prompt>`                                                                                        | SDODS + Playwright MCP, read-only sandbox    | token usage only (Codex reports no dollar cost) |
+| Adapter       | Command executed                                                                                                                                                                              | Tools                                                    | Cost reporting                                  |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- | ----------------------------------------------- |
+| `claude-code` | `claude -p <prompt> --output-format stream-json --mcp-config <temp.json> --strict-mcp-config --allowedTools Read Glob Grep mcp__sdods__* --disallowedTools Bash Write Edit … --max-turns <n>` | SDODS MCP (browser tools included), read-only file tools | `total_cost_usd` from the CLI when available    |
+| `codex`       | `codex exec --json --ephemeral -s read-only -c mcp_servers.sdods.command=… -c mcp_servers.sdods.args=… <system + prompt>`                                                                     | SDODS + Playwright MCP, read-only sandbox                | token usage only (Codex reports no dollar cost) |
 
 Both adapters keep the SDODS guarantee: roles can only write proposals (`sdods proposals list|show|accept`). When no adapter is chosen, SDODS auto-detects: `ANTHROPIC_API_KEY` → `claude` CLI → `codex` CLI → `OPENAI_API_KEY` → `fake`, and prints which one it picked.
 

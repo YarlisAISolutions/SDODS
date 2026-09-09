@@ -59,10 +59,10 @@ url = "https://mcp.perplexity.ai"
       command: 'npx',
       args: ['sdods', 'mcp', '--project', 'demo-shop', '--env', 'staging'],
     });
-    expect(parsed.mcp_servers.playwright).toEqual({
-      command: 'npx',
-      args: ['playwright', 'mcp', '--headless'],
-    });
+    // The raw upstream browser server is no longer registered alongside: the sdods server wraps
+    // every one of its tools as browser_*, and a second ungoverned path to the same browser would
+    // defeat that. `withPlaywright: true` still adds it for anyone who wants it.
+    expect(parsed.mcp_servers.playwright).toBeUndefined();
 
     // second install is idempotent and can switch to HTTP
     installCodexConfig({ httpUrl: 'https://sdods.example.com/mcp', withPlaywright: false });

@@ -153,7 +153,10 @@ describe('agent jobs', () => {
       mcpServers: Record<string, { args: string[] }>;
     };
     expect(mcp.mcpServers.sdods!.args).toEqual(['sdods', 'mcp', '--project', 'shop']);
-    expect(mcp.mcpServers.playwright).toBeDefined();
+    // The raw Playwright server is not registered any more: the sdods server wraps every one of
+    // its tools as browser_*, bound to the project, and a second ungoverned path to the same
+    // browser would defeat that.
+    expect(mcp.mcpServers.playwright).toBeUndefined();
     expect(readFileSync(join(root, 'AGENT.md'), 'utf8')).toContain(
       'automation and orchestration platform with a reusable architecture',
     );

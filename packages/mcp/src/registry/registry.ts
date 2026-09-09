@@ -4,17 +4,29 @@ import { hasScope, isScope, scopeForToolAccess, type Scope } from '@sdods/contra
 export const DOCS_BASE_URL = 'https://docs.sdods.com';
 
 export type ToolAccess = 'read' | 'run' | 'write';
-export type Capability = 'core' | 'analyze' | 'run' | 'data' | 'agents' | 'issues' | 'schedules';
+export type Capability =
+  'core' | 'analyze' | 'run' | 'data' | 'browser' | 'agents' | 'issues' | 'schedules';
 export const ALL_CAPABILITIES: Capability[] = [
   'core',
   'analyze',
   'run',
   'data',
+  'browser',
   'agents',
   'issues',
   'schedules',
 ];
-export const DEFAULT_CAPABILITIES: Capability[] = ['core', 'analyze', 'run', 'data', 'schedules'];
+// `browser` is on by default: the agents that need a browser used to get one from a separately
+// registered Playwright server, and that registration is being removed. Leaving it opt-in would
+// take the browser away from the planner, generator and healer rather than governing it.
+export const DEFAULT_CAPABILITIES: Capability[] = [
+  'core',
+  'analyze',
+  'run',
+  'data',
+  'browser',
+  'schedules',
+];
 
 export interface Principal {
   userId?: string;
@@ -40,6 +52,19 @@ export interface ToolContext {
   onProgress?: (progress: { message?: string; current?: number; total?: number }) => void;
   signal?: AbortSignal;
   logger: ToolLogger;
+  /**
+   * Live browser sessions for this connection. Present only when the `browser` capability is on.
+   *
+   * It hangs off the context rather than living in a module map so that sessions belong to the
+   * principal that opened them: the HTTP transport builds one context per MCP session, so a
+   * second principal cannot name the first one's session id and drive their logged-in browser.
+   */
+  browser?: BrowserSessions;
+}
+
+/** The subset of the session manager the registry needs to know about, to avoid a cycle. */
+export interface BrowserSessions {
+  closeAll(): Promise<void>;
 }
 
 export interface ToolAnnotations {
@@ -69,6 +94,11 @@ export interface SdodsTool<S extends ZodRawShape = ZodRawShape> {
   domain: string;
   capability: Capability;
   annotations?: ToolAnnotations;
+  /**
+   * Explicit scope, overriding the access/domain derivation. Lets one tool in a family sit behind
+   * a stricter scope than its siblings without inventing a capability for it.
+   */
+  scope?: Scope;
   docsPath?: string;
   handler: (args: z.infer<z.ZodObject<S>>, ctx: ToolContext) => Promise<ToolResult>;
 }
@@ -87,6 +117,7 @@ export function defineTool<S extends ZodRawShape>(tool: SdodsTool<S>): SdodsTool
 }
 
 export function requiredScope(tool: SdodsTool<any>): Scope | null {
+  if (tool.scope) return tool.scope;
   // agents has no read/write pair: run → agents:run, review/apply → agents:review
   if (tool.domain === 'agents') return tool.access === 'run' ? 'agents:run' : 'agents:review';
   return scopeForToolAccess(tool.access, tool.domain);

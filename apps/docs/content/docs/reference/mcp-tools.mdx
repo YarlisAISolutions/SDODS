@@ -1,26 +1,56 @@
 ---
 title: MCP tools
-description: The 37 tools, prompts and resources of the SDODS MCP server.
+description: The 82 tools, prompts and resources of the SDODS MCP server.
 ---
 
-Tools are grouped by capability (`sdods mcp --caps core,analyze,run,data,agents,issues,schedules`; default `core,analyze,run,data,schedules`). Access levels map to scopes: `read` needs the matching `*:read` scope, `run` needs `runs:write`, `write` produces proposals and needs `features:write`. Print the live catalogue with `sdods mcp --list-tools`.
+Tools are grouped by capability (`sdods mcp --caps core,analyze,run,data,browser,agents,issues,schedules`; default `core,analyze,run,data,browser,schedules`). Access levels map to scopes: `read` needs the matching `*:read` scope, `run` needs `runs:write`, `write` produces proposals and needs `features:write`. Print the live catalogue with `sdods mcp --list-tools`.
 
-| Tool                                                                                                                                                                           | Capability | Access | Purpose                                                                                                     |
-| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------- | ------ | ----------------------------------------------------------------------------------------------------------- |
-| `project_list`, `project_get_config`, `project_list_envs`, `project_validate_config`, `project_doctor`                                                                         | core       | read   | projects, resolved configuration (secrets redacted), environments, health                                   |
-| `workspace_tree`, `process_list`                                                                                                                                               | core       | read   | organization → workspaces → projects → modules → processes                                                  |
-| `feature_list`, `feature_read`, `feature_parse`, `feature_lint`, `step_list`, `step_find`                                                                                      | core       | read   | features, Gherkin parsing, lint, step catalogue and fuzzy step reuse                                        |
-| `feature_write`                                                                                                                                                                | core       | write  | validated feature staged as a proposal (never the working tree)                                             |
-| `proposal_list`, `proposal_get`                                                                                                                                                | core       | read   | review proposals written by agents and write tools                                                          |
-| `run_tests`, `run_tests_async`                                                                                                                                                 | run        | run    | execute a project slice through `sdods run`, with progress                                                  |
-| `run_list`, `run_get`, `run_get_scenario`, `run_last_failed`                                                                                                                   | run        | read   | runs, scenario detail with `sdods://screenshot/…` URIs and API snapshots                                    |
-| `heal_events`, `heal_locator_stats`                                                                                                                                            | run        | read   | self-healing events and aggregated locator statistics                                                       |
-| `data_list_datasets`, `data_preview`, `data_pool_status`                                                                                                                       | data       | read   | datasets per environment (masked), pool users and leases                                                    |
-| `analyze_project`, `analyze_routes`, `analyze_coverage`, `analyze_best_practices`, `analyze_locators`, `analyze_change_impact`, `analyze_failure`, `analyze_suggest_scenarios` | analyze    | read   | onboarding analysis, coverage, best practices, locator audit, change impact, failure triage, Gherkin drafts |
-| `schedule_list`, `schedule_next`                                                                                                                                               | schedules  | read   | schedules from YAML and next fire times                                                                     |
+| Tool                                                                                                                                                                           | Capability | Access     | Purpose                                                                                                     |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------- | ---------- | ----------------------------------------------------------------------------------------------------------- |
+| `project_list`, `project_get_config`, `project_list_envs`, `project_validate_config`, `project_doctor`                                                                         | core       | read       | projects, resolved configuration (secrets redacted), environments, health                                   |
+| `workspace_tree`, `process_list`                                                                                                                                               | core       | read       | organization → workspaces → projects → modules → processes                                                  |
+| `feature_list`, `feature_read`, `feature_parse`, `feature_lint`, `step_list`, `step_find`                                                                                      | core       | read       | features, Gherkin parsing, lint, step catalogue and fuzzy step reuse                                        |
+| `feature_write`                                                                                                                                                                | core       | write      | validated feature staged as a proposal (never the working tree)                                             |
+| `proposal_list`, `proposal_get`                                                                                                                                                | core       | read       | review proposals written by agents and write tools                                                          |
+| `run_tests`, `run_tests_async`                                                                                                                                                 | run        | run        | execute a project slice through `sdods run`, with progress                                                  |
+| `run_list`, `run_get`, `run_get_scenario`, `run_last_failed`                                                                                                                   | run        | read       | runs, scenario detail with `sdods://screenshot/…` URIs and API snapshots                                    |
+| `heal_events`, `heal_locator_stats`                                                                                                                                            | run        | read       | self-healing events and aggregated locator statistics                                                       |
+| `data_list_datasets`, `data_preview`, `data_pool_status`                                                                                                                       | data       | read       | datasets per environment (masked), pool users and leases                                                    |
+| `analyze_project`, `analyze_routes`, `analyze_coverage`, `analyze_best_practices`, `analyze_locators`, `analyze_change_impact`, `analyze_failure`, `analyze_suggest_scenarios` | analyze    | read       | onboarding analysis, coverage, best practices, locator audit, change impact, failure triage, Gherkin drafts |
+| `browser_session_open`, `browser_session_close`, `browser_session_list` + the 42 wrapped Playwright tools                                                                      | browser    | read/write | drive a real browser bound to a project and environment — see below                                         |
+| `schedule_list`, `schedule_next`                                                                                                                                               | schedules  | read       | schedules from YAML and next fire times                                                                     |
 
 Resources: `sdods://project/{slug}/features/{path}`, `sdods://run/{runId}/summary`, `sdods://run/{runId}/messages.ndjson`, `sdods://screenshot/{runId}/{fingerprint}/{retry}/{file}`, `sdods://proposal/{id}`.
 
 Prompts: `sdods-plan`, `sdods-generate`, `sdods-heal`, `sdods-upgrade`, `sdods-review`.
 
-Browser driving is not reimplemented: `sdods mcp install` configures the bundled `npx playwright mcp` alongside, so agents get `browser_navigate`, `browser_snapshot`, `browser_click` and friends from the upstream server while SDODS tools drive the automation project.
+## Browser tools
+
+SDODS wraps **every** tool of the Playwright MCP server that ships inside the pinned Playwright — 42 of them — as `browser_*`, plus three of its own for session lifecycle.
+
+They are the upstream tools, argument for argument. What the wrapper adds is the context an ungoverned browser has no way to know:
+
+- **Bound to a project and environment.** The session carries the project's `testIdAttribute`, the environment's locale, timezone, headers and credentials, and the viewport from `screenshots.viewport`. A snapshot taken through `browser_snapshot` refers to elements by the same test-id attribute the page objects use.
+- **Logged in as a role.** `browser_session_open` with `role` reuses the storage state `sdods auth capture` wrote for that `@user:<role>`. It will not capture one for you — that drives a real login flow.
+- **Artifacts in the run.** Screenshots, PDFs, traces and videos land in `.sdods/runs/<runId>/browser/<sessionId>/`, next to everything else about that run.
+- **Credentials redacted.** `authorization`, `cookie`, `set-cookie` and API-key headers are masked in `browser_network_request` output before it reaches a transcript.
+- **Refusable.** `browser:read` lets a viewer look; acting needs `browser:write`. `browser_evaluate` and `browser_run_code_unsafe` run caller-supplied code — upstream calls the latter RCE-equivalent — so they need `browser:admin` **and** `SDODS_BROWSER_ALLOW_UNSAFE=1`, and are off by default.
+
+```
+browser_session_open { project: "demo-shop", env: "staging", browser: "edge", role: "standard" }
+browser_navigate     { url: "/inventory.html" }
+browser_snapshot     {}
+browser_session_close {}
+```
+
+Calling an action tool without opening a session first opens a default one from the server's `--project`, so the common case is one call. Observe tools do not — they return `BROWSER_NO_SESSION` rather than starting a browser, because `browser:read` is a scope every viewer holds.
+
+`browser_session_close` ends the session and stops the browser; upstream's `browser_close` closes the page and leaves the session up. Sessions are also reaped when idle, and belong to the connection that opened them, so one HTTP principal cannot drive another's logged-in browser.
+
+<Callout>
+  The extra Playwright capability packs are per session: pass `caps: ["vision", "pdf", "devtools"]`
+  to `browser_session_open` for coordinate-based mouse input, `browser_pdf_save`, and
+  tracing/video/highlighting.
+</Callout>
+
+The raw upstream server is no longer registered alongside. `sdods mcp install --with-playwright` still adds it for anyone who wants it directly, with none of the above.
