@@ -177,14 +177,21 @@ export async function captureAuth(opts: CaptureOptions): Promise<CaptureResult[]
         results.push(result);
         continue;
       }
-      if (!opts.force && cache.isFresh(user)) {
+      // A fresh storageState means the LOGIN can be skipped. It says nothing about
+      // the token: the two are separate artefacts with separate lifetimes, and the
+      // token file is what the API layer reads (steps/data.steps.ts). Skipping the
+      // whole user here left roles with a browser session and no token, so every
+      // `@user:<role>` API scenario fell through to a live mint -- one Firebase
+      // sign-in per scenario, which is how a suite earns QUOTA_EXCEEDED. So the
+      // freshness check now gates the login only, and the token block below still
+      // runs -- and it is not a wasted mint either, because it now mints only when
+      // there is no token file yet, or when --force asked for a fresh one.
+      const loginIsFresh = !opts.force && cache.isFresh(user);
+      const interactive = opts.interactive || strategy.strategy === 'sso';
+      if (loginIsFresh) {
         result.file = cache.fileFor(user);
         result.skipped = 'fresh state exists (use force to recapture)';
-        results.push(result);
-        continue;
-      }
-      const interactive = opts.interactive || strategy.strategy === 'sso';
-      if (interactive) {
+      } else if (interactive) {
         const file = cache.fileFor(user);
         const loginUrl = new URL(
           opts.loginUrl ?? config.project.auth.form?.loginPath ?? '/',
@@ -213,7 +220,7 @@ export async function captureAuth(opts: CaptureOptions): Promise<CaptureResult[]
         if (state) result.file = cache.save(user, state);
         else if (!strategy.token) result.skipped = 'strategy returned no storage state';
       }
-      if (strategy.token) {
+      if (strategy.token && (opts.force || !existsSync(tokenFileFor(config, user)))) {
         const token = await strategy.token({ config, user });
         if (token) {
           const file = tokenFileFor(config, user);
@@ -229,6 +236,10 @@ export async function captureAuth(opts: CaptureOptions): Promise<CaptureResult[]
           );
           result.tokenFile = file;
         }
+      } else if (strategy.token) {
+        // Reused, not absent. Reporting nothing here reads as "this role has no
+        // token", which is the opposite of the truth.
+        result.tokenFile = tokenFileFor(config, user);
       }
       results.push(result);
     }
