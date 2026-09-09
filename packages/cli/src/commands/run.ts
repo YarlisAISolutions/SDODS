@@ -185,22 +185,27 @@ export async function runCommand(flags: RunFlags, cmd: Command): Promise<number>
   }
   for (const m of modules) moduleByName(projectCfg, m);
 
-  // Fail before generating specs and creating a run directory. Without this the first sign of a
-  // missing browser is Playwright's own launch error deep in the worker output, which names a
-  // channel rather than anything the user typed and suggests no way forward.
-  const missing = (await browserStatuses(browsers)).filter((s) => !s.installed);
+  // Stop before generating specs when a CHANNEL browser is missing. Playwright's own error for a
+  // missing engine is already actionable ("Run npx playwright install"), but for a channel it
+  // reports a name the user never typed and no way forward — and unlike an engine, the fix is a
+  // system install rather than a download.
+  //
+  // Deliberately narrow. Selecting a browser is not the same as using one: `--project-matrix -l api`
+  // fills `browsers` from the project yaml for a run that never opens a browser, so checking every
+  // selected browser here would fail runs that would have worked.
+  const usesBrowser = !layers.length || layers.some((l) => l !== 'api');
+  const missing = usesBrowser
+    ? (await browserStatuses(browsers)).filter((s) => s.channel && !s.installed)
+    : [];
   if (missing.length) {
     const names = missing.map((s) => s.name);
-    const channels = missing.filter((s) => s.channel);
     throw new SdodsError(
       'NOT_SUPPORTED',
       `${names.join(', ')} ${names.length > 1 ? 'are' : 'is'} not installed.`,
       {
         hint:
-          `Run \`sdods browsers install ${names.map((n) => `-b ${n}`).join(' ')}\`.` +
-          (channels.length
-            ? ` ${channels.map((s) => s.name).join(', ')} ${channels.length > 1 ? 'are system browsers' : 'is a system browser'}: Playwright runs the vendor installer rather than downloading a build.`
-            : ''),
+          `Run \`sdods browsers install ${names.map((n) => `-b ${n}`).join(' ')}\`. ` +
+          `${names.length > 1 ? 'They are system browsers' : 'It is a system browser'}: Playwright runs the vendor installer rather than downloading a build.`,
         exitCode: 2,
       },
     );
