@@ -11,6 +11,7 @@
         "@sdods/cli": "workspace:*",
         "@sdods/contracts": "workspace:*",
         "@sdods/core": "workspace:*",
+        "@sdods/mcp": "workspace:*",
         "@sdods/qa-archive": "workspace:*",
         "@sdods/roadmap": "workspace:*",
         "@types/node": "^22.15.0",
@@ -94,7 +95,7 @@
     },
     "packages/agents": {
       "name": "@sdods/agents",
-      "version": "0.2.2",
+      "version": "0.3.0",
       "dependencies": {
         "@anthropic-ai/claude-agent-sdk": "^0.3.259",
         "@anthropic-ai/sdk": "^0.123.0",
@@ -106,7 +107,7 @@
     },
     "packages/cli": {
       "name": "@sdods/cli",
-      "version": "0.2.2",
+      "version": "0.3.0",
       "bin": {
         "sdods": "./bin/sdods.js",
       },
@@ -134,14 +135,14 @@
     },
     "packages/contracts": {
       "name": "@sdods/contracts",
-      "version": "0.2.2",
+      "version": "0.3.0",
       "dependencies": {
         "zod": "^4.5.4",
       },
     },
     "packages/core": {
       "name": "@sdods/core",
-      "version": "0.2.2",
+      "version": "0.3.0",
       "dependencies": {
         "@cucumber/gherkin": "^42.0.1",
         "@cucumber/messages": "^34.2.1",
@@ -173,7 +174,7 @@
     },
     "packages/db": {
       "name": "@sdods/db",
-      "version": "0.2.2",
+      "version": "0.3.0",
       "dependencies": {
         "@sdods/contracts": "workspace:*",
         "better-sqlite3": "^13.0.3",
@@ -188,7 +189,7 @@
     },
     "packages/integrations": {
       "name": "@sdods/integrations",
-      "version": "0.2.2",
+      "version": "0.3.0",
       "dependencies": {
         "@octokit/rest": "^22.0.1",
         "@sdods/contracts": "workspace:*",
@@ -200,7 +201,7 @@
     },
     "packages/mcp": {
       "name": "@sdods/mcp",
-      "version": "0.2.2",
+      "version": "0.3.0",
       "dependencies": {
         "@cucumber/gherkin": "^42.0.1",
         "@cucumber/messages": "^34.2.1",
@@ -226,7 +227,7 @@
     },
     "packages/server": {
       "name": "@sdods/server",
-      "version": "0.2.2",
+      "version": "0.3.0",
       "dependencies": {
         "@fastify/cookie": "^11.1.2",
         "@fastify/multipart": "^10.1.1",
