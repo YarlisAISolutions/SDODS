@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { z } from 'zod';
-import { runFiles } from '@sdods/contracts';
+import { BrowserSchema, runFiles } from '@sdods/contracts';
 import { SdodsCliError, sdodsCli } from '../cli.js';
 import {
   getRun,
@@ -19,9 +19,7 @@ const runArgs = {
   env: z.string().optional(),
   tags: z.string().optional().describe('Cucumber tag expression, e.g. "@smoke and not @mock"'),
   layers: z.array(z.enum(['ui', 'api', 'hybrid', 'recorded'])).optional(),
-  browsers: z
-    .array(z.enum(['chromium', 'firefox', 'webkit', 'mobile-chrome', 'mobile-safari']))
-    .optional(),
+  browsers: z.array(BrowserSchema).optional(),
   process: z
     .string()
     .optional()

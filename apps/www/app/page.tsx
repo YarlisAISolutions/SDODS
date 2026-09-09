@@ -17,7 +17,7 @@ const WHY: Array<[string, string]> = [
   ],
   [
     'Confidence across browsers',
-    'Chromium, Firefox, WebKit and mobile emulation; --project-matrix runs every browser you declared, @skip:<browser> is validated by lint.',
+    'Chromium, Edge, Firefox, WebKit and mobile emulation; --project-matrix runs every browser you declared, @skip:<browser> is validated by lint.',
   ],
   [
     'Readable results',

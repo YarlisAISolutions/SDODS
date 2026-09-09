@@ -5,6 +5,7 @@ import { execa } from 'execa';
 import pc from 'picocolors';
 import { collectVarRefs, loadDotEnvLayer, loadEnvFile } from '@sdods/core';
 import { createContext } from '../context.js';
+import { browserStatuses } from './browsers.js';
 import { json, out } from '../ui.js';
 
 interface Check {
@@ -357,25 +358,17 @@ async function versionCheck(name: string, args: string[], fix: string, bin = nam
 }
 
 async function browserCheck(): Promise<Check[]> {
-  const out: Check[] = [];
-  for (const b of ['chromium', 'firefox', 'webkit'] as const) {
-    try {
-      const mod = await import('playwright-core');
-      const path = (mod as any)[b].executablePath() as string;
-      out.push({
-        name: `browser:${b}`,
-        ok: existsSync(path),
-        detail: existsSync(path) ? path : 'not installed',
-        fix: `sdods browsers install -b ${b}`,
-      });
-    } catch {
-      out.push({
-        name: `browser:${b}`,
-        ok: false,
-        detail: 'browser runner not resolvable',
-        fix: 'install workspace dependencies: bun install (or npm install)',
-      });
-    }
-  }
-  return out;
+  // Reuses `browsers list`'s detection so the two commands can never disagree about what is
+  // installed — and so channel browsers are probed by path rather than by the bundled engine's
+  // executable, which exists whether or not the branded browser does.
+  const statuses = await browserStatuses(['chromium', 'edge', 'firefox', 'webkit']);
+  return statuses.map((s) => ({
+    name: `browser:${s.name}`,
+    ok: s.installed,
+    detail: s.installed ? (s.executable ?? 'installed') : 'not installed',
+    fix: `sdods browsers install -b ${s.name}`,
+    // Edge is a system browser a project opts into. A machine that does not run Edge suites should
+    // not get a red doctor for not having it.
+    optional: Boolean(s.channel),
+  }));
 }

@@ -7,7 +7,7 @@ description: >-
 organization: sdods
 workspace: default
 layers: [ui, api, hybrid, recorded]
-browsers: [chromium, firefox, webkit]
+browsers: [chromium, edge, firefox, webkit]
 testIdAttribute: data-test # SauceDemo uses data-test="..."
 
 # Modules: feature directories with their testing types and the tag every scenario carries.
@@ -183,3 +183,9 @@ reports:
   cucumberHtml: false
   allure: false
   junit: false
+
+# Edge is declared above so `-b edge` is legal and `@skip:edge` lints, but the generic browser
+# matrix stays on the three engines Playwright downloads. msedge is a system install that a
+# Linux runner does not have; the dedicated `edge` job in ci.yml installs it first.
+ci:
+  browsers: [chromium, firefox, webkit]
