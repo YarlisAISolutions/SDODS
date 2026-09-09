@@ -114,9 +114,15 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
   // ── test scope ──────────────────────────────────────────────────────────
 
   /**
-   * Declared FIRST in test scope, and automatic, so it decides before anything
-   * expensive happens — before a pool account is leased, before a browser
-   * context is built, before a session is minted.
+   * Automatic, and an explicit DEPENDENCY of `user` — which is what actually makes
+   * it decide before anything expensive happens.
+   *
+   * Declaration order alone does not: Playwright instantiates fixtures in
+   * dependency order, and `user` is pulled in by `storageState`, which the browser
+   * context needs, so the pool lease happened first regardless of where the gate
+   * sat in the object. An `@env:local @user:noconsent` scenario on staging failed
+   * with `No users with role "noconsent"` instead of skipping — the gate never got
+   * to run. Depending on it is the only ordering guarantee Playwright offers.
    *
    * `@env:`, `@skip:<browser>` and `@flag:` were validated at LINT time and had
    * no runtime path whatsoever. That is the worst arrangement available: the
@@ -207,7 +213,11 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
     void apiContext;
   },
 
-  user: async ({ userPool, $tags }, use, testInfo) => {
+  // `$sdodsTagGate` first, and it is not unused: it is here to force the ordering.
+  // Leasing an account for a scenario that the tag gate is about to skip burns a
+  // pool slot, and on a role with no rows it throws before the skip can happen.
+  user: async ({ $sdodsTagGate, userPool, $tags }, use, testInfo) => {
+    void $sdodsTagGate;
     const role = parseTagValue($tags, 'user');
     await use(role ? await userPool.lease(role, testInfo.parallelIndex) : undefined);
   },

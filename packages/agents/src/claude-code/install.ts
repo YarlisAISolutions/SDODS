@@ -83,8 +83,21 @@ export function installClaudeCode(
   return installCodingAgents(rootDir, { ...opts, for: 'claude', mcp: true });
 }
 
-function projectFlags(opts: { project?: string; env?: string }): string {
-  return `${opts.project ? ` -p ${opts.project}` : ''}${opts.env ? ` -e ${opts.env}` : ''}`;
+/**
+ * Flags for a command that takes a project only.
+ *
+ * Kept apart from {@link projectEnvFlags} because one shared helper produced
+ * `sdods lint -p <slug> -e <env>` in every generated CLAUDE.md and AGENTS.md, and `lint` has no
+ * `-e`: the first thing those files told an agent to run exited with "unknown option '-e'".
+ * `steps list` had the same problem. Only `run` takes an environment.
+ */
+function projectFlags(opts: { project?: string }): string {
+  return opts.project ? ` -p ${opts.project}` : '';
+}
+
+/** Flags for a command that takes both, i.e. `run`. */
+function projectEnvFlags(opts: { project?: string; env?: string }): string {
+  return `${projectFlags(opts)}${opts.env ? ` -e ${opts.env}` : ''}`;
 }
 
 /** CLAUDE.md: what Claude Code loads automatically. Short pointer plus the rules that matter. */
@@ -98,7 +111,7 @@ ${TAGLINE} Read \`AGENT.md\` for the mental model and \`SKILL.md\` for the comma
 - Use the SDODS MCP server (\`sdods mcp\`) for anything about projects, features, steps, runs and results — it is registered in \`.mcp.json\` (\`sdods mcp install claude\` re-registers it).
 - Subagents live in \`.claude/agents/sdods-*.md\`: planner, generator, healer, upgrader, reviewer. Delegate matching requests to them.
 - Never edit features/steps/pages directly when acting as an SDODS agent: write a proposal (\`write_proposal\` / \`feature_write\`) and let a person accept it with \`sdods proposals accept <id>\`.
-- Verify with \`sdods lint${projectFlags(opts)}\` and \`sdods run${projectFlags(opts)} -l api\` / \`-l ui -b chromium -t @smoke\` before claiming done.
+- Verify with \`sdods lint${projectFlags(opts)}\` and \`sdods run${projectEnvFlags(opts)} -l api\` / \`-l ui -b chromium -t @smoke\` before claiming done.
 
 ## Rules
 

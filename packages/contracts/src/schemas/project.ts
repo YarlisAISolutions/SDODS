@@ -354,6 +354,25 @@ export const ProjectConfigSchema = z.object({
   browsers: z.array(BrowserSchema).min(1).default(['chromium']),
   channel: z.enum(['chrome', 'msedge', 'chrome-beta', 'msedge-beta']).optional(),
   testIdAttribute: z.string().default('data-testid'),
+  /**
+   * Which of the built-in step libraries NOT to load.
+   *
+   * The core libraries share one step namespace with the project's own steps, and
+   * playwright-bdd fails generation outright when two definitions match the same
+   * text — it cannot know which one the author meant. So every library added to
+   * core is a potential break for a project that already wrote that phrasing, and
+   * before this existed the only remedy was to rewrite every colliding step in one
+   * commit, unverified, before the suite could run again.
+   *
+   * This is the migration path: exclude the libraries you have already covered,
+   * upgrade, then delete your own steps one library at a time with a green run
+   * between each. Names are the file basenames — `a11y` for `a11y.steps.ts`.
+   */
+  steps: z
+    .object({
+      core: z.object({ exclude: z.array(z.string()).default([]) }).default({ exclude: [] }),
+    })
+    .default({ core: { exclude: [] } }),
   routes: z.record(z.string(), z.string()).default({}),
   tags: z
     .object({
