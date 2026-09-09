@@ -58,4 +58,4 @@ body:
     id: browser
     attributes:
       label: Browser (if UI)
-      options: [chromium, firefox, webkit, mobile-chrome, mobile-safari, n/a]
+      options: [chromium, edge, firefox, webkit, mobile-chrome, mobile-safari, n/a]

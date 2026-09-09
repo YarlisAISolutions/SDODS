@@ -1,4 +1,4 @@
-import type { ProjectConfig } from '@sdods/contracts';
+import { BrowserSchema, type ProjectConfig } from '@sdods/contracts';
 
 export const LAYER_TAGS = ['@ui', '@api', '@hybrid'] as const;
 /** Control tags the runner interprets itself; lint passes them through untouched. */
@@ -18,13 +18,11 @@ export const KNOWN_VALUE_TAGS = [
   'title',
   'flag',
 ] as const;
-export const BROWSERS_FOR_SKIP = [
-  'chromium',
-  'firefox',
-  'webkit',
-  'mobile-chrome',
-  'mobile-safari',
-] as const;
+/**
+ * Values `@skip:<browser>` accepts. Derived from the schema rather than copied, so adding a browser
+ * to `BrowserSchema` is the only edit needed — and the lint message lists the new name for free.
+ */
+export const BROWSERS_FOR_SKIP = BrowserSchema.options;
 
 export interface TagTaxonomy {
   layers: readonly string[];
