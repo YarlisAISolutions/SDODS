@@ -6,7 +6,7 @@ SDODS is an automation and orchestration platform with a reusable architecture: 
 
 - The SDODS MCP server is registered as `sdods` (`sdods mcp install codex` re-registers it in `~/.codex/config.toml`); use its tools for projects, features, steps, runs, results, proposals.
 - The bundled Playwright MCP server is registered as `playwright` for driving a browser.
-- Commands: `sdods lint -p demo-shop -e staging`, `sdods run -p demo-shop -e staging -l api`, `sdods run -p demo-shop -e staging -l ui -b chromium -t @smoke`, `sdods steps list -p demo-shop -e staging`, `sdods proposals list|show|accept`.
+- Commands: `sdods lint -p demo-shop`, `sdods run -p demo-shop -e staging -l api`, `sdods run -p demo-shop -e staging -l ui -b chromium -t @smoke`, `sdods steps list -p demo-shop`, `sdods proposals list|show|accept`.
 
 ## Rules
 

@@ -7,7 +7,7 @@ SDODS is an automation and orchestration platform with a reusable architecture: 
 - Use the SDODS MCP server (`sdods mcp`) for anything about projects, features, steps, runs and results — it is registered in `.mcp.json` (`sdods mcp install claude` re-registers it).
 - Subagents live in `.claude/agents/sdods-*.md`: planner, generator, healer, upgrader, reviewer. Delegate matching requests to them.
 - Never edit features/steps/pages directly when acting as an SDODS agent: write a proposal (`write_proposal` / `feature_write`) and let a person accept it with `sdods proposals accept <id>`.
-- Verify with `sdods lint -p demo-shop -e staging` and `sdods run -p demo-shop -e staging -l api` / `-l ui -b chromium -t @smoke` before claiming done.
+- Verify with `sdods lint -p demo-shop` and `sdods run -p demo-shop -e staging -l api` / `-l ui -b chromium -t @smoke` before claiming done.
 
 ## Rules
 
