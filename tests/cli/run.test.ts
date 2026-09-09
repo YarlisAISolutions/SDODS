@@ -122,4 +122,29 @@ describe('sdods CLI (end to end against projects/demo-shop)', () => {
     expect(rows.find((x) => x.feature === 'features/api/posts.feature')?.module).toBe('posts-api');
     expect(rows.find((x) => x.feature === 'features/auth/login.feature')?.module).toBe('auth');
   });
+
+  it('refuses -b edge with an install hint when Edge is absent', async () => {
+    // Without this preflight the first sign of a missing channel browser is Playwright's own
+    // launch error inside worker output, which names a channel the user never typed. Skipped where
+    // Edge IS installed, so the suite is honest on a machine that can really run it.
+    const { browserStatuses } = await import('../../packages/cli/src/commands/browsers.js');
+    const [edge] = await browserStatuses(['edge']);
+    if (edge?.installed) return;
+    const r = await cli(
+      'run',
+      '-p',
+      'demo-shop',
+      '-e',
+      'staging',
+      '-l',
+      'ui',
+      '-b',
+      'edge',
+      '-t',
+      '@smoke',
+    );
+    expect(r.exitCode).not.toBe(0);
+    expect(`${r.stdout}${r.stderr}`).toMatch(/edge is not installed/);
+    expect(`${r.stdout}${r.stderr}`).toMatch(/sdods browsers install -b edge/);
+  });
 });

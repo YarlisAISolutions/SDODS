@@ -27,6 +27,7 @@ import {
 } from '@sdods/core';
 import { analyzeChangeImpact } from '@sdods/mcp';
 import { createContext } from '../context.js';
+import { browserStatuses } from './browsers.js';
 import { collect, json, out, parseIntFlag, warn } from '../ui.js';
 
 export interface RunFlags {
@@ -79,7 +80,7 @@ function addRunOptions(cmd: Command): Command {
     .option('-l, --layer <layer>', 'ui | api | hybrid | recorded (repeatable)', collect, [])
     .option(
       '-b, --browser <name>',
-      'chromium | firefox | webkit | mobile-chrome | mobile-safari (repeatable)',
+      'chromium | edge | firefox | webkit | mobile-chrome | mobile-safari (repeatable)',
       collect,
       [],
     )
@@ -183,6 +184,32 @@ export async function runCommand(flags: RunFlags, cmd: Command): Promise<number>
     }
   }
   for (const m of modules) moduleByName(projectCfg, m);
+
+  // Stop before generating specs when a CHANNEL browser is missing. Playwright's own error for a
+  // missing engine is already actionable ("Run npx playwright install"), but for a channel it
+  // reports a name the user never typed and no way forward — and unlike an engine, the fix is a
+  // system install rather than a download.
+  //
+  // Deliberately narrow. Selecting a browser is not the same as using one: `--project-matrix -l api`
+  // fills `browsers` from the project yaml for a run that never opens a browser, so checking every
+  // selected browser here would fail runs that would have worked.
+  const usesBrowser = !layers.length || layers.some((l) => l !== 'api');
+  const missing = usesBrowser
+    ? (await browserStatuses(browsers)).filter((s) => s.channel && !s.installed)
+    : [];
+  if (missing.length) {
+    const names = missing.map((s) => s.name);
+    throw new SdodsError(
+      'NOT_SUPPORTED',
+      `${names.join(', ')} ${names.length > 1 ? 'are' : 'is'} not installed.`,
+      {
+        hint:
+          `Run \`sdods browsers install ${names.map((n) => `-b ${n}`).join(' ')}\`. ` +
+          `${names.length > 1 ? 'They are system browsers' : 'It is a system browser'}: Playwright runs the vendor installer rather than downloading a build.`,
+        exitCode: 2,
+      },
+    );
+  }
 
   const runId = flags.runId ?? newRunId();
   const cli: CliOverrides = {

@@ -213,3 +213,50 @@ describe('buildRunnerConfig headed', () => {
     }
   });
 });
+
+describe('buildRunnerConfig browsers and channels', () => {
+  // `devices['Desktop Edge']` sets an Edge user-agent but leaves defaultBrowserType at 'chromium',
+  // so without an explicit channel an "edge" target launches bundled Chromium that merely claims
+  // to be Edge — green, and meaningless. These lock the channel in.
+  function targets(projectYaml: string, browsers?: string[]) {
+    const { root, proj } = scaffold({ projectYaml });
+    mkdirSync(join(proj, 'features'), { recursive: true });
+    const cfg = buildRunnerConfig(ProjectRegistry.discover(root), { env: 'local', browsers });
+    return Object.fromEntries(
+      (cfg.projects ?? []).map((p) => [
+        String(p.name),
+        (p.use as Record<string, unknown>)?.channel,
+      ]),
+    );
+  }
+  const yaml = (browsers: string, channel = '') =>
+    `slug: shop\nname: Shop\nlayers: [ui]\nbrowsers: [${browsers}]\n${channel ? `channel: ${channel}\n` : ''}envs: { default: staging, available: [staging, local] }\n`;
+
+  it('gives the edge target the msedge channel and leaves chromium alone', () => {
+    const t = targets(yaml('chromium, edge'));
+    expect(t['shop--ui--edge']).toBe('msedge');
+    expect(t['shop--ui--chromium']).toBeUndefined();
+  });
+
+  it('ignores a project channel from another family rather than retargeting edge', () => {
+    // `channel: chrome` must not make the --edge target launch Google Chrome: that would put one
+    // browser in the results under another browser's name.
+    const t = targets(yaml('chromium, edge', 'chrome'));
+    expect(t['shop--ui--edge']).toBe('msedge');
+    expect(t['shop--ui--chromium']).toBe('chrome');
+  });
+
+  it('lets a same-family project channel refine edge', () => {
+    expect(targets(yaml('edge', 'msedge-beta'))['shop--ui--edge']).toBe('msedge-beta');
+  });
+
+  it('still applies a project channel to chromium', () => {
+    expect(targets(yaml('chromium', 'chrome'))['shop--ui--chromium']).toBe('chrome');
+  });
+
+  it('leaves non-chromium engines without a channel', () => {
+    const t = targets(yaml('firefox, webkit', 'chrome'));
+    expect(t['shop--ui--firefox']).toBeUndefined();
+    expect(t['shop--ui--webkit']).toBeUndefined();
+  });
+});
