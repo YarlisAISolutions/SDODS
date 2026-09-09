@@ -44,6 +44,13 @@ the cache. And `sdods run -b edge` on a machine without Edge stops before runnin
         vendor installer rather than downloading a build.
 ```
 
+<Callout type="warn">
+  A freshly installed Edge sets up its profile on first launch. A headless run started before that
+  finishes fails with `browserType.launch: Target page, context or browser has been closed`. Open
+  Edge once, or launch it headless once and close it, and the run is deterministic afterwards. CI
+  jobs that install Edge and immediately run should include that warm-up step.
+</Callout>
+
 Other branded channels are still set with `channel:` in the project YAML. For `edge`, a same-family
 channel refines it — `channel: msedge-beta` moves the `edge` target to the beta build — while a
 `chrome` channel is ignored rather than applied, so a project that runs both Chromium and Edge can

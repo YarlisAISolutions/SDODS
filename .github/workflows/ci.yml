@@ -184,6 +184,12 @@ jobs:
         # `sdods run -b edge` fails with an install hint when it is not, but saying so here makes a
         # provisioning failure obvious instead of looking like a test failure.
         run: bun run sdods browsers list -p demo-shop
+      - name: Warm up Edge
+        # A freshly installed Edge sets up its profile on first launch, and a headless automation
+        # run started before that finishes dies with "Target page, context or browser has been
+        # closed" — observed on a clean macOS install, and this job installs Edge the same way.
+        # One throwaway launch costs a second and turns a flaky first run into a deterministic one.
+        run: node -e "require('playwright-core').chromium.launch({channel:'msedge',headless:true}).then(b=>b.close())"
       - name: UI layer · @smoke on Edge
         run: >
           bun run sdods run -p demo-shop -e staging -l ui -b edge -t @smoke
