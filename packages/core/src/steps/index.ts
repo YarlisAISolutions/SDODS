@@ -19,4 +19,4 @@ import './net.steps.js';
 import './perf.steps.js';
 import '../shots/hooks.js';
 
-export { coreStepsGlob, coreStepsDir } from './glob.js';
+export { coreStepsGlob, coreStepsPatterns, coreStepNames, coreStepsDir } from './glob.js';

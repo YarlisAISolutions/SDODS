@@ -3,7 +3,7 @@ import { join, resolve as resolvePath } from 'node:path';
 import { devices, type PlaywrightTestConfig, type ReporterDescription } from '@playwright/test';
 import { cucumberReporter, defineBddConfig } from 'playwright-bdd';
 import { runnerProjectName, runFiles, type BrowserName, type Layer } from '@sdods/contracts';
-import { coreStepsGlob } from '../steps/glob.js';
+import { coreStepsPatterns } from '../steps/glob.js';
 import type { ProjectRegistry } from './registry.js';
 import type { ResolvedConfig } from './resolve.js';
 import { combineTagExpr, normalizeTagExpr } from './tags.js';
@@ -180,7 +180,7 @@ export function buildRunnerConfig(
       const testDir = defineBddConfig({
         features: `${toPosix(p.root)}/features/**/*.feature`,
         steps: [
-          coreStepsGlob(),
+          ...coreStepsPatterns(cfg.project.steps?.core?.exclude ?? []),
           `${toPosix(p.root)}/steps/**/*.ts`,
           `${toPosix(p.root)}/pages/**/*.ts`,
         ],
