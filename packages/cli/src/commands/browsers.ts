@@ -126,6 +126,28 @@ export async function installBrowsers(
   }
 }
 
+/**
+ * Opens and closes each browser once.
+ *
+ * A browser that has never run sets up its profile on first launch, and an automation run started
+ * before that finishes dies with "Target page, context or browser has been closed" — seen on a
+ * freshly installed Edge, where the first `sdods run -b edge` failed every scenario and the
+ * identical rerun passed every one. Anywhere a browser is provisioned and used in the same job,
+ * this makes the first run deterministic.
+ */
+export async function warmupBrowsers(names: string[]): Promise<string[]> {
+  const pw = (await import('playwright-core')) as any;
+  const warmed: string[] = [];
+  for (const name of names) {
+    const engine = ENGINE_OF[name as BrowserName] ?? 'chromium';
+    const channel = CHANNEL_OF[name as BrowserName];
+    const browser = await pw[engine].launch({ headless: true, ...(channel ? { channel } : {}) });
+    await browser.close();
+    warmed.push(name);
+  }
+  return warmed;
+}
+
 export function register(program: Command) {
   const browsers = program.command('browsers').description('Install and list browser engines');
 
@@ -142,6 +164,21 @@ export function register(program: Command) {
       for (const b of list) BrowserSchema.parse(b);
       await installBrowsers({ browsers: list, withDeps: opts.withDeps, cwd: ctx.rootDir });
       ok(`Installed ${list.length ? list.join(', ') : DOWNLOADED_BROWSERS.join(', ')}`);
+    });
+
+  browsers
+    .command('warmup')
+    .description('Launch each browser once so the first real run is not its first launch')
+    .option('-b, --browser <name>', 'browser to warm up (repeatable)', collect, [])
+    .option('-p, --project <slug>', 'warm up the browsers declared by a project')
+    .action(async (opts, cmd) => {
+      const ctx = createContext(cmd);
+      let list: string[] = opts.browser;
+      if (!list.length && opts.project) list = ctx.registry.get(opts.project).browsers;
+      if (!list.length) list = [...DOWNLOADED_BROWSERS];
+      for (const b of list) BrowserSchema.parse(b);
+      const warmed = await warmupBrowsers(list);
+      ok(`Warmed up ${warmed.join(', ')}`);
     });
 
   browsers
