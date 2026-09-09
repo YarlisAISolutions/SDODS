@@ -13,6 +13,7 @@
     "./proposals": "./src/proposals.ts",
     "./prompts": "./src/prompts/index.ts",
     "./install": "./src/install/index.ts",
+    "./browser": "./src/browser/index.ts",
     "./transports/stdio": "./src/transports/stdio.ts",
     "./transports/http": "./src/transports/http.ts"
   },
@@ -25,6 +26,7 @@
       "./proposals": "./dist/proposals.js",
       "./prompts": "./dist/prompts/index.js",
       "./install": "./dist/install/index.js",
+      "./browser": "./dist/browser/index.js",
       "./transports/stdio": "./dist/transports/stdio.js",
       "./transports/http": "./dist/transports/http.js"
     },
@@ -40,15 +42,13 @@
     "@sdods/contracts": "workspace:*",
     "@cucumber/gherkin": "^42.0.1",
     "@cucumber/messages": "^34.2.1",
+    "@modelcontextprotocol/client": "^2.0.0",
     "@modelcontextprotocol/node": "^2.0.0",
     "@modelcontextprotocol/server": "^2.0.0",
     "csv-parse": "^7.0.2",
     "yaml": "^2.9.0",
     "zod": "^4.5.4",
     "smol-toml": "^1.8.0"
-  },
-  "devDependencies": {
-    "@modelcontextprotocol/client": "^2.0.0"
   },
   "homepage": "https://sdods.com",
   "bugs": {

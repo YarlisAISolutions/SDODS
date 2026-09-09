@@ -1,5 +1,7 @@
 import { z } from 'zod';
 import { McpServer } from '@modelcontextprotocol/server';
+import { SCOPES } from '@sdods/contracts';
+import { BrowserSessionManager } from './browser/session.js';
 import { cliOrNote } from './cli.js';
 import { findRepoRoot } from './cli.js';
 import { toMcpServer } from './registry/adapters.js';
@@ -69,48 +71,30 @@ export const LOCAL_ADMIN: Principal = { name: 'local', scopes: ['*'], via: 'stdi
 export function buildToolContext(opts: BuildServerOptions = {}): ToolContext {
   const rootDir = opts.rootDir ?? findRepoRoot(opts.cwd ?? process.cwd());
   const principal = opts.principal ?? LOCAL_ADMIN;
+  const caps = parseCaps(opts.caps);
   return {
     rootDir,
     cwd: opts.cwd ?? rootDir,
     principal: principal.scopes.includes('*') ? { ...principal, scopes: allScopes() } : principal,
-    caps: parseCaps(opts.caps),
+    caps,
     project: opts.project,
     env: opts.env,
     onProgress: opts.onProgress,
     logger: opts.logger ?? stderrLogger(),
+    browser: caps.has('browser') ? new BrowserSessionManager({ rootDir }) : undefined,
   };
 }
 
+/**
+ * Every scope, for a principal that carries `*`.
+ *
+ * This used to be a hand-copied list with a comment about avoiding a static dependency on the
+ * scope shape — but the registry imports from @sdods/contracts two files away, so the copy bought
+ * nothing and could only drift. A scope missing here is not a visible bug: it silently withholds
+ * tools from an admin.
+ */
 function allScopes(): string[] {
-  // lazy import to avoid a static dependency on the scope list shape
-  return [
-    'orgs:read',
-    'orgs:admin',
-    'workspaces:read',
-    'workspaces:write',
-    'projects:read',
-    'projects:write',
-    'envs:read',
-    'envs:write',
-    'datasets:read',
-    'datasets:write',
-    'runs:read',
-    'runs:write',
-    'runs:ingest',
-    'artifacts:read',
-    'features:read',
-    'features:write',
-    'agents:run',
-    'agents:review',
-    'integrations:read',
-    'integrations:write',
-    'schedules:read',
-    'schedules:write',
-    'processes:read',
-    'processes:write',
-    'users:admin',
-    'audit:read',
-  ];
+  return [...SCOPES];
 }
 
 /** Build a fully wired MCP server (tools + resources + prompts) for a context. */
@@ -119,6 +103,8 @@ export function buildSdodsMcpServer(opts: BuildServerOptions = {}): {
   ctx: ToolContext;
   registry: ToolRegistry;
   toolCount: number;
+  /** Closes the server AND any browser it started. A leaked headless browser outlives the run. */
+  close: () => Promise<void>;
 } {
   const ctx = buildToolContext(opts);
   const registry = opts.registry ?? createRegistry();
@@ -133,7 +119,16 @@ export function buildSdodsMcpServer(opts: BuildServerOptions = {}): {
   const toolCount = toMcpServer(registry, server, ctx);
   registerResources(server, ctx);
   registerPrompts(server, ctx);
-  return { server, ctx, registry, toolCount };
+  return {
+    server,
+    ctx,
+    registry,
+    toolCount,
+    close: async () => {
+      await ctx.browser?.closeAll();
+      await server.close();
+    },
+  };
 }
 
 export function registerPrompts(server: McpServer, ctx: ToolContext): void {
