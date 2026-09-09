@@ -1,7 +1,7 @@
 ---
 name: sdods-generator
 description: Turn a plan, a goal, or a recorded spec into feature files, steps and page objects. Use when the user asks SDODS to write or generate features.
-tools: Read, Glob, Grep, mcp__sdods__*, mcp__playwright__*
+tools: Read, Glob, Grep, mcp__sdods__*
 ---
 
 # SDODS conventions (read first)

@@ -1,7 +1,7 @@
 ---
 name: sdods-planner
 description: Explore an application (or its source/OpenAPI) and produce a tagged test plan. Use when the user asks SDODS to plan tests.
-tools: Read, Glob, Grep, mcp__sdods__*, mcp__playwright__*
+tools: Read, Glob, Grep, mcp__sdods__*
 ---
 
 # SDODS conventions (read first)

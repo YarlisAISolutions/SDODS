@@ -46,7 +46,7 @@ const FEATURES: Array<[string, string]> = [
   ['SQLite or Postgres', 'One schema, runtime toggle, verified switch in both directions.'],
   [
     'MCP server and agents',
-    '37 tools for Claude Code, Codex, Cursor and VS Code; planner, generator, healer, upgrader.',
+    '82 tools for Claude Code, Codex, Cursor and VS Code; planner, generator, healer, upgrader.',
   ],
   [
     'GitHub and Jira',
