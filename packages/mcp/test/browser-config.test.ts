@@ -65,11 +65,20 @@ describe('buildSessionLaunch', () => {
     expect(launch({ headed: true }).argv).not.toContain('--headless');
   });
 
-  it('writes artifacts under the run directory, by absolute path', () => {
+  it('keeps artifacts out of the runs root when no run is in progress', () => {
+    // `listRuns` treats every directory under .sdods/runs as a run, and `config show` mints a
+    // fresh runId on every call — so writing there would invent a run with no results on every
+    // session open, and `sdods report --last` would start pointing at browsing, not testing.
     const l = launch();
-    // Relative paths would resolve against the child's cwd, not the run.
-    expect(l.outputDir.startsWith('/repo/.sdods/runs/run-1/browser/')).toBe(true);
+    expect(l.outputDir).toBe('/repo/.sdods/browser/default');
+    expect(l.outputDir).not.toContain('/.sdods/runs/');
+    // Absolute: a relative path would resolve against the child's cwd.
     expect(l.configFile.outputDir).toBe(l.outputDir);
+  });
+
+  it('nests under the run when one is actually in progress', () => {
+    const l = launch({}, { runId: 'run-42' });
+    expect(l.outputDir).toBe('/repo/.sdods/runs/run-42/browser/default');
   });
 
   it('leaves origins unrestricted unless the environment declares them', () => {

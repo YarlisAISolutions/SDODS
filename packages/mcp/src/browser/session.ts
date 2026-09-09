@@ -71,7 +71,11 @@ export class BrowserSessionManager {
     const storageStateFile = spec.role
       ? await this.storageStateFor(spec.project, spec.env, spec.role)
       : undefined;
-    const launch = buildSessionLaunch(resolved, spec, { storageStateFile });
+    // Only correlate with a run when one is actually in progress; see buildSessionLaunch.
+    const launch = buildSessionLaunch(resolved, spec, {
+      storageStateFile,
+      runId: process.env.SDODS_RUN_ID || undefined,
+    });
 
     mkdirSync(dirname(launch.configPath), { recursive: true });
     writeFileSync(launch.configPath, `${JSON.stringify(launch.configFile, null, 2)}\n`);

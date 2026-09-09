@@ -76,17 +76,19 @@ function originOf(url?: string): string | undefined {
 export function buildSessionLaunch(
   resolved: ResolvedForBrowser,
   spec: BrowserSessionSpec,
-  opts: { secretsFile?: string; storageStateFile?: string } = {},
+  opts: { secretsFile?: string; storageStateFile?: string; runId?: string } = {},
 ): SessionLaunch {
   const browser = spec.browser ?? 'chromium';
   const child = CHILD_BROWSER[browser];
+  const safeId = spec.sessionId.replace(/[^A-Za-z0-9._-]/g, '_');
   const runsDir = resolved.runtime.artifactsDir ?? join(resolved.runtime.repoRoot, '.sdods/runs');
-  const outputDir = join(
-    runsDir,
-    resolved.runtime.runId ?? 'adhoc',
-    'browser',
-    spec.sessionId.replace(/[^A-Za-z0-9._-]/g, '_'),
-  );
+  // Inside a run, artifacts belong with it. Outside one they must NOT go under .sdods/runs:
+  // `listRuns` treats every directory there as a run, and `runtime.runId` from `config show` is a
+  // freshly minted id on every call — so a session would invent a run with no results, once per
+  // open, and `sdods report --last` would start pointing at browsing rather than testing.
+  const outputDir = opts.runId
+    ? join(runsDir, opts.runId, 'browser', safeId)
+    : join(resolved.runtime.repoRoot, '.sdods', 'browser', safeId);
   const configPath = join(outputDir, 'mcp.config.json');
 
   const use = resolved.env.use ?? {};

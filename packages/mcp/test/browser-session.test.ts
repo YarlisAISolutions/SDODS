@@ -11,19 +11,20 @@ import type { ResolvedForBrowser } from '../src/browser/config.js';
  * nobody notices until the machine is out of memory. The driver is faked so the bookkeeping is
  * asserted without launching anything.
  */
-const artifactsDir = join(tmpdir(), 'sdods-browser-session-test');
+const repoRoot = join(tmpdir(), 'sdods-browser-session-test');
+const artifactsDir = join(repoRoot, '.sdods', 'runs');
 
 const resolved: ResolvedForBrowser = {
   project: { slug: 'demo-shop' },
   env: { name: 'staging' },
-  runtime: { repoRoot: '/repo', runId: 'run-1', artifactsDir },
+  runtime: { repoRoot, runId: 'run-1', artifactsDir },
 };
 
 function manager(opts: { maxSessions?: number; idleMs?: number } = {}) {
   const closed: string[] = [];
   let n = 0;
   const mgr = new BrowserSessionManager({
-    rootDir: '/repo',
+    rootDir: repoRoot,
     ...opts,
     resolveConfig: async () => resolved,
     createDriver: async () => {
@@ -66,7 +67,8 @@ describe('BrowserSessionManager', () => {
     const [info] = mgr.list();
     expect(info.browser).toBe('edge');
     expect(info.project).toBe('demo-shop');
-    expect(info.outputDir.startsWith(join(artifactsDir, 'run-1', 'browser'))).toBe(true);
+    expect(info.outputDir).toContain(join('.sdods', 'browser'));
+    expect(info.outputDir).not.toContain(join('.sdods', 'runs'));
   });
 
   it('reopening the same id replaces the old browser rather than leaking it', async () => {
@@ -115,4 +117,4 @@ describe('BrowserSessionManager', () => {
   });
 });
 
-rmSync(artifactsDir, { recursive: true, force: true });
+rmSync(repoRoot, { recursive: true, force: true });
