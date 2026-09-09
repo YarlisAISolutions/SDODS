@@ -153,61 +153,77 @@ describe('captureAuth: the token is a separate artefact from the login state', (
         origins: [],
       }),
       token: async ({ user }) => {
-        mints.push(user.username)
-        return `tok-${user.username}-${mints.length}`
+        mints.push(user.username);
+        return `tok-${user.username}-${mints.length}`;
       },
-    })
+    });
 
   it('mints a token for a user whose login state is already fresh', async () => {
-    const config = scaffold()
-    const mints: string[] = []
-    const strategy = strategyWith(mints)
+    const config = scaffold();
+    const mints: string[] = [];
+    const strategy = strategyWith(mints);
 
-    const first = await captureAuth({ config, role: 'admin', strategy, launch: async () => fakeBrowser })
-    expect(first[0].skipped).toBeUndefined()
-    expect(first[0].tokenFile).toBeDefined()
-    expect(mints).toHaveLength(1)
+    const first = await captureAuth({
+      config,
+      role: 'admin',
+      strategy,
+      launch: async () => fakeBrowser,
+    });
+    expect(first[0].skipped).toBeUndefined();
+    expect(first[0].tokenFile).toBeDefined();
+    expect(mints).toHaveLength(1);
 
     // Second capture: the storage state is fresh (maxAgeMinutes 60), so the login
     // is skipped -- but the token file must still be there afterwards.
-    const tokenFile = tokenFileFor(config, { username: 'admin', role: 'admin', index: 0 } as never)
-    const second = await captureAuth({ config, role: 'admin', strategy, launch: async () => fakeBrowser })
-    expect(second[0].skipped).toMatch(/fresh state exists/)
-    expect(second[0].tokenFile).toBe(tokenFile)
-    expect(existsSync(tokenFile)).toBe(true)
-  })
+    const tokenFile = tokenFileFor(config, { username: 'admin', role: 'admin', index: 0 } as never);
+    const second = await captureAuth({
+      config,
+      role: 'admin',
+      strategy,
+      launch: async () => fakeBrowser,
+    });
+    expect(second[0].skipped).toMatch(/fresh state exists/);
+    expect(second[0].tokenFile).toBe(tokenFile);
+    expect(existsSync(tokenFile)).toBe(true);
+  });
 
   it('re-mints when the token file is gone even though the login state is fresh', async () => {
-    const config = scaffold()
-    const mints: string[] = []
-    const strategy = strategyWith(mints)
-    await captureAuth({ config, role: 'admin', strategy, launch: async () => fakeBrowser })
-    const tokenFile = tokenFileFor(config, { username: 'admin', role: 'admin', index: 0 } as never)
-    rmSync(tokenFile)
+    const config = scaffold();
+    const mints: string[] = [];
+    const strategy = strategyWith(mints);
+    await captureAuth({ config, role: 'admin', strategy, launch: async () => fakeBrowser });
+    const tokenFile = tokenFileFor(config, { username: 'admin', role: 'admin', index: 0 } as never);
+    rmSync(tokenFile);
 
-    await captureAuth({ config, role: 'admin', strategy, launch: async () => fakeBrowser })
-    expect(mints).toHaveLength(2)
-    expect(JSON.parse(readFileSync(tokenFile, 'utf8')).token).toBe('tok-admin-2')
-  })
+    await captureAuth({ config, role: 'admin', strategy, launch: async () => fakeBrowser });
+    expect(mints).toHaveLength(2);
+    expect(JSON.parse(readFileSync(tokenFile, 'utf8')).token).toBe('tok-admin-2');
+  });
 
   it('does not re-mint when a token file is already there', async () => {
-    const config = scaffold()
-    const mints: string[] = []
-    const strategy = strategyWith(mints)
-    await captureAuth({ config, role: 'admin', strategy, launch: async () => fakeBrowser })
-    await captureAuth({ config, role: 'admin', strategy, launch: async () => fakeBrowser })
-    await captureAuth({ config, role: 'admin', strategy, launch: async () => fakeBrowser })
+    const config = scaffold();
+    const mints: string[] = [];
+    const strategy = strategyWith(mints);
+    await captureAuth({ config, role: 'admin', strategy, launch: async () => fakeBrowser });
+    await captureAuth({ config, role: 'admin', strategy, launch: async () => fakeBrowser });
+    await captureAuth({ config, role: 'admin', strategy, launch: async () => fakeBrowser });
     // One mint, not three. A token is a credential on the application under test;
     // minting one per capture leaks keys into the AUT for no gain.
-    expect(mints).toHaveLength(1)
-  })
+    expect(mints).toHaveLength(1);
+  });
 
   it('--force re-mints', async () => {
-    const config = scaffold()
-    const mints: string[] = []
-    const strategy = strategyWith(mints)
-    await captureAuth({ config, role: 'admin', strategy, launch: async () => fakeBrowser })
-    await captureAuth({ config, role: 'admin', strategy, force: true, launch: async () => fakeBrowser })
-    expect(mints).toHaveLength(2)
-  })
-})
+    const config = scaffold();
+    const mints: string[] = [];
+    const strategy = strategyWith(mints);
+    await captureAuth({ config, role: 'admin', strategy, launch: async () => fakeBrowser });
+    await captureAuth({
+      config,
+      role: 'admin',
+      strategy,
+      force: true,
+      launch: async () => fakeBrowser,
+    });
+    expect(mints).toHaveLength(2);
+  });
+});
