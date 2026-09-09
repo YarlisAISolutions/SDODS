@@ -107,6 +107,20 @@ for p in "${PKGS[@]}"; do
   # It is the only signal it accepts, and without it a successful publish reads as "nothing was
   # published" -- which is why the GHCR image job never ran.
   printf 'New tag: %s@%s\n' "$name" "$version"
+  # ...and actually CREATE that tag. changesets/action reads the line above to learn what was
+  # published, then runs `git push origin <name>@<version>` for each one. `changeset publish`
+  # tags as it goes; this script replaced it (see the release.yml comment) and did not, so every
+  # push failed with "src refspec <name>@<version> does not match any" and the release job went
+  # red AFTER a completely successful publish. A red job on a good release is worse than a
+  # cosmetic bug: it trains people to ignore the one signal that says whether a release worked.
+  #
+  # Not fatal if it fails. The packages are already on the registry at this point and nothing can
+  # take them back, so aborting here would leave the release half-done for no gain. Outside a git
+  # checkout (someone running this by hand from a tarball) there is nothing to tag at all.
+  if git rev-parse --git-dir >/dev/null 2>&1; then
+    git tag "$name@$version" >/dev/null 2>&1 ||
+      echo "  . $name@$version: git tag not created (it may already exist)" >&2
+  fi
   published=$((published + 1))
 done
 
