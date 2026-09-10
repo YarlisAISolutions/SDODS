@@ -2,18 +2,19 @@ name: dependencies
 
 # Two jobs on two cadences.
 #
-#   freshness  — every morning: report what is behind, and nothing else. It opens no PR and fails
-#                no build, so it stays readable; the answer lives in one rolling issue.
-#   upgrade    — monthly: actually move @sdods/* and Playwright forward, prove the suite still
-#                passes, and open a PR for a person to merge.
+#   upgrade    — the 1st: move @sdods/* and Playwright forward, prove the suite still passes, and
+#                open a PR for a person to merge.
+#   freshness  — the 15th: report what is behind, and nothing else. It opens no PR and fails no
+#                build; the answer lives in one rolling issue. Offset from the upgrade so the month
+#                has a mid-point check rather than two reports on the same morning.
 #
 # GitHub cron is UTC and does not follow daylight saving: 12:07 UTC is 08:07 in EDT and 07:07 in
 # EST. Minutes are deliberately off the hour — every repository that asks for "8am" picks :00.
 
 on:
   schedule:
-    - cron: '7 12 * * *' # daily freshness report
     - cron: '23 12 1 * *' # monthly upgrade, the 1st
+    - cron: '7 12 15 * *' # monthly freshness report, the 15th
   workflow_dispatch:
     inputs:
       job:
@@ -33,7 +34,7 @@ env:
 jobs:
   freshness:
     name: freshness · what is behind
-    if: github.event.schedule == '7 12 * * *' || inputs.job == 'freshness'
+    if: github.event.schedule == '7 12 15 * *' || inputs.job == 'freshness'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -71,7 +72,7 @@ jobs:
             bun outdated 2>&1 | head -60 || true
             echo '```'
             echo
-            echo 'Monthly upgrades run on the 1st. Run this workflow by hand to refresh the report.'
+            echo 'Upgrades run on the 1st, this report on the 15th. Run the workflow by hand to refresh either.'
           } > report.md
           cat report.md >> "$GITHUB_STEP_SUMMARY"
 
