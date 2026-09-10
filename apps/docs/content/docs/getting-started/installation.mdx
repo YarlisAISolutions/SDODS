@@ -292,12 +292,20 @@ Exit codes and security notes are in [Reference → Installer](/docs/reference/i
 
 ## First run
 
-Projects are discovered from the current directory, so start in the checkout the installer made, or in a workspace you created with `--workspace`:
+Projects are discovered from the current directory, so start in a workspace. The default install is
+a global package with **no source tree**, so create one first — unless you passed `--workspace`,
+which did it for you:
 
 ```bash
-cd ~/.sdods/app
+sdods init ~/my-tests      # skip if you installed with --workspace
+cd ~/my-tests
 sdods project list
 ```
+
+<Callout type="info">
+  `~/.sdods/app` exists only if you installed with `--source git`. On the default path there is no
+  such directory, and commands run from wherever your workspace is.
+</Callout>
 
 <Screenshot
   src="/screenshots/cli/project-list.png"
@@ -479,17 +487,19 @@ Uninstalling removes `~/.sdods` and the command shim. Workspaces you created sta
 
 ## Troubleshooting
 
-| Symptom                                     | Fix                                                                                                                     |
-| ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `Node v20 is too old`                       | `nvm use 22`, `fnm use 22`, or re-run with `--install-node`                                                             |
-| `sdods: command not found` after installing | the bin directory is not on PATH; the installer printed the line to add, or re-run with `--modify-path`                 |
-| Browsers fail to start on Linux             | system libraries need root: `cd ~/.sdods/app && sudo bun run sdods browsers install --with-deps`                        |
-| Behind a corporate proxy                    | export `HTTPS_PROXY`; git and npm read it. Add `git config --global http.proxy "$HTTPS_PROXY"` if the clone still fails |
-| Corporate SSL interception                  | point `NODE_EXTRA_CA_CERTS` at your CA bundle before running the installer                                              |
-| macOS quarantine                            | piping to `sh` is not affected; if you saved the file first, run `xattr -d com.apple.quarantine install.sh`             |
-| WSL                                         | use the macOS/Linux one-liner inside WSL, not the PowerShell one                                                        |
-| `Unknown project "demo-shop"`               | run from `~/.sdods/app`, or from a workspace created by `sdods init`                                                    |
-| Install seems stuck                         | re-run with `--verbose`; the dependency install is the long step                                                        |
+| Symptom                                        | Fix                                                                                                                                                                        |
+| ---------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Node v20 is too old`                          | `nvm use 22`, `fnm use 22`, or re-run with `--install-node`                                                                                                                |
+| `sdods: command not found` after installing    | the bin directory is not on PATH; the installer printed the line to add, or re-run with `--modify-path`                                                                    |
+| Browsers fail to start on Linux                | system libraries need root: `sudo sdods browsers install --with-deps`                                                                                                      |
+| Behind a corporate proxy                       | export `HTTPS_PROXY`; git and npm read it. Add `git config --global http.proxy "$HTTPS_PROXY"` if the clone still fails                                                    |
+| Corporate SSL interception                     | point `NODE_EXTRA_CA_CERTS` at your CA bundle before running the installer                                                                                                 |
+| macOS quarantine                               | piping to `sh` is not affected; if you saved the file first, run `xattr -d com.apple.quarantine install.sh`                                                                |
+| WSL                                            | use the macOS/Linux one-liner inside WSL, not the PowerShell one                                                                                                           |
+| `Unknown project "demo-shop"`                  | run from a workspace created by `sdods init` (or `~/.sdods/app`, if you installed with `--source git`)                                                                     |
+| Install seems stuck                            | re-run with `--verbose`; the dependency install is the long step                                                                                                           |
+| `sdods: command not found` after a Node switch | with fnm/nvm/volta, `npm -g` packages belong to the Node version active when you installed them. Re-install, or use the installer's bun path, which is version-independent |
+| An unexplained `TypeError` from a dependency   | Node older than 22. It does not report itself — check `node -v` first                                                                                                      |
 
 ## Next steps
 

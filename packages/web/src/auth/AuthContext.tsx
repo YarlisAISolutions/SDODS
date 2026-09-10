@@ -43,7 +43,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (e) {
       setMe(null);
       setCsrfToken(null);
-      if (e instanceof ApiError && e.code === 'SETUP_REQUIRED') setNeedsSetup(true);
+      // A platform with no users answers /api/auth/me with AUTH_REQUIRED, exactly like a signed-out
+      // one -- the two are indistinguishable here, so ask the endpoint that separates them. This
+      // used to test for a SETUP_REQUIRED code that the server never emits, which left needsSetup
+      // permanently false and sent first-run users to a sign-in form for an account that could not
+      // exist yet.
+      if (e instanceof ApiError && e.status === 401) {
+        try {
+          const { needsSetup: pending } = await api<{ needsSetup: boolean }>(
+            '/api/auth/setup-status',
+          );
+          setNeedsSetup(Boolean(pending));
+        } catch {
+          setNeedsSetup(false);
+        }
+      }
     } finally {
       setLoading(false);
     }

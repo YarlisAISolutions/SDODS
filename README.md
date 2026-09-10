@@ -1,5 +1,8 @@
 <p align="center">
-  <img src="docs/assets/sdods-logo.svg" alt="SDODS" width="520">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/sdods-logo-dark.svg">
+    <img src="docs/assets/sdods-logo.svg" alt="SDODS" width="520">
+  </picture>
 </p>
 
 <p align="center">
@@ -328,7 +331,7 @@ One Kysely schema serves both drivers. Runs ingest automatically when a database
 SDODS is itself an MCP server:
 
 ```bash
-claude mcp add sdods -- npx sdods mcp --project demo-shop --env staging     # stdio
+claude mcp add sdods -- npx -y @sdods/cli mcp --project demo-shop --env staging   # stdio
 sdods mcp install claude|codex|cursor|vscode|windsurf                         # registers the server with the client
 sdods mcp --http --port 4001                                                  # streamable HTTP with scoped tokens
 ```
@@ -408,19 +411,127 @@ Schedules live in the project yaml (version-controlled) or the database; the ser
 
 ## CLI reference
 
-Every command supports `--json`, `--quiet`, `--verbose`, `--cwd`, `--no-color`. Exit codes: `0` ok, `1` test failures, `2` config or usage error, `3` lint errors, `130` cancelled.
+Every command supports `--json`, `--quiet`, `--verbose`, `--cwd`, `--no-color`. Exit codes: `0` ok, `1` test failures, `2` config or usage error, `3` lint errors, `130` cancelled. `sdods <command> --help` prints the full option list for any of them.
 
-| Command | Purpose |
-|---|---|
-| `init`, `analyze`, `project create\|list`, `env add\|list`, `config show\|validate`, `doctor` | onboarding and configuration |
-| `run` (`test`), `watch`, `lint`, `steps list`, `features list`, `coverage`, `browsers install` | authoring and execution |
-| `record` (`codegen`), `har record\|replay`, `auth capture\|list` | record and playback |
-| `data import\|preview\|seed`, `db migrate\|status\|switch\|export\|import\|prune` | data and database |
-| `report`, `report ingest`, `show-report`, `trace`, `heal report`, `insights compute\|show` | results and learning |
-| `agent plan\|generate\|heal\|upgrade\|review`, `proposals list\|show\|accept\|reject` | agents |
-| `mcp`, `mcp install`, `serve`, `users`, `tokens`, `schedule`, `integrations sync\|notify\|test` | platform |
+### 1. Start a new project
 
-Full reference with examples: the documentation site (`apps/docs`, published on Firebase Hosting at https://docs.sdods.com).
+In order. Each step assumes the one above it.
+
+```bash
+sdods init ~/my-tests                 # workspace yaml, runner config, demo project, skills
+cd ~/my-tests
+sdods doctor                          # Node, bun, browsers, projects, env vars, database
+sdods browsers install -b chromium    # engines are a separate download; API suites need none
+sdods project create checkout         # a project is one app under test
+sdods env add staging -p checkout --ui-url https://staging.example.com --api-url https://api.staging.example.com
+sdods config show -p checkout -e staging --explain    # what resolved, and which file won
+```
+
+### 2. Onboard an application you already have
+
+`analyze` reads a repository and proposes a project from what it finds — routes, API endpoints, test-id attributes. It is read-only until you pass `--apply`.
+
+```bash
+sdods analyze /path/to/your-app                # propose, change nothing
+sdods analyze /path/to/your-app --apply        # write the project
+sdods steps list -p <slug>                     # the vocabulary you can write with
+sdods coverage -p <slug>                       # routes, endpoints and roles with no scenarios yet
+```
+
+### 3. Write, check, run
+
+The inner loop. `lint` before `run` — it is far cheaper and catches tag and step mistakes.
+
+```bash
+sdods lint -p <slug>                                        # Gherkin, tag taxonomy, undefined steps
+sdods run -p <slug> -e staging --list                       # what would run, without running it
+sdods run -p <slug> -e staging -l api                       # API layer, no browser
+sdods run -p <slug> -e staging -l ui -b chromium -t @smoke  # UI smoke
+sdods run -p <slug> -e staging -t @regression --project-matrix   # every browser in the yaml
+sdods watch -p <slug> -e staging                            # regenerate and re-run on change
+```
+
+### 4. Read the results
+
+```bash
+sdods report --last                    # totals, failures, flaky, artifact paths
+sdods report --last --open             # HTML report and dashboard
+sdods trace --last                     # Playwright trace viewer
+sdods show-report --last               # just the HTML report
+```
+
+### 5. Heal, and learn from history
+
+`heal` reports locators that drifted and were recovered at runtime; `insights` aggregates across runs so you fix causes rather than symptoms.
+
+```bash
+sdods heal report --last                       # locators healed in the last run
+sdods heal report --all                        # aggregate every run: what keeps drifting
+sdods heal report --last --write-history       # bias future heals toward what worked
+sdods insights compute -p <slug>               # crunch the run history
+sdods insights show -p <slug>                  # flakiness, locator fragility, suite health
+sdods agent heal -p <slug> --scenario <fingerprint> --dry-run   # propose the smallest fix
+```
+
+### 6. Record and replay
+
+```bash
+sdods record -p <slug> -e staging --user admin --name checkout-flow   # capture a session
+sdods har record -p <slug> -e staging                                 # capture network
+sdods har replay --strict                                             # run offline against the capture
+sdods auth capture -p <slug> -e staging --user admin                  # store login state for a pool user
+```
+
+### 7. Data and database
+
+```bash
+sdods data import users users.csv -p <slug>    # <dataset> <file>: CSV, JSON or YAML
+sdods data preview users.csv                   # first rows, as the runner will see them
+sdods data list -p <slug>
+sdods data seed -p <slug> -e staging
+sdods db migrate                               # platform database
+sdods db status
+sdods db sync                                  # upsert orgs, workspaces, projects from the yaml
+sdods db switch postgres                       # SQLite <-> Postgres (target is positional)
+```
+
+### 8. The web UI and the platform
+
+```bash
+sdods users create --admin --username admin --password '<8+ chars>'
+sdods serve --open                             # http://127.0.0.1:4444
+sdods tokens create --scopes run:read,run:write   # free, scoped, revocable
+sdods schedule add -p <slug> --name nightly --cron '0 3 * * *' -t @regression
+sdods integrations test github
+```
+
+First run with no users prints a one-time `/setup?token=…` URL; open it to create the admin in the browser instead. Full detail, including every OS: the `sdods-start-ui` skill.
+
+### 9. Agents and MCP
+
+Agents never edit your working tree — they write proposals a person accepts.
+
+```bash
+sdods agent plan|generate|heal|upgrade|review -p <slug> --dry-run
+sdods proposals list
+sdods proposals show <id>
+sdods proposals accept <id>                    # or reject
+sdods mcp install claude|codex|cursor|vscode|windsurf
+sdods mcp --http --port 4001                   # streamable HTTP with scoped tokens
+```
+
+### 10. Keep it current
+
+`upgrade` checks the npm registry for newer `@sdods/*` packages and, with `--apply`, installs them with whichever package manager your lockfile implies.
+
+```bash
+sdods upgrade                          # report what is behind
+sdods upgrade --apply                  # install the latest @sdods/* packages
+sdods browsers install --with-deps     # refresh engines after an upgrade (Linux needs root)
+sdods doctor                           # confirm the result
+```
+
+Full reference with examples: <https://docs.sdods.com>.
 
 ## Development process
 
