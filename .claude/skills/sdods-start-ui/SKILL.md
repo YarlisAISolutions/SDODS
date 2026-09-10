@@ -190,7 +190,7 @@ different wording. Same token, not two tokens:
 - **CLI path** — works headlessly, in CI, and in containers:
 
 ```bash
-sdods users create --admin --username admin --password '<at least 8 chars>'   # the /setup form says 10; the enforced minimum is 8
+sdods users create --admin --username admin --password '<at least 8 chars>'
 ```
 
 `--admin` makes a platform admin and owner of every organization without one. Add teammates with
@@ -213,12 +213,11 @@ SQLITE_PATH=/path/to/sdods.db sdods users create --admin --username admin --pass
 SQLITE_PATH=/path/to/sdods.db sdods serve --open
 ```
 
-> **Keep that token — the UI cannot recover it for you.** A fresh database sends `--open` to `/`,
-> and you land on `/login`, which only suggests `sdods users create`. The app *does* contain a
-> redirect to `/setup`, but it never fires (it waits on a `SETUP_REQUIRED` error the server does not
-> emit), and `/setup` reads the token **only from the query string** — so reaching that page without
-> `?token=…` gives you a form that cannot succeed. If you lost the token, restart `serve` to print a
-> new one, or use the CLI path.
+> **Lost the token?** Restart `serve` to print a new one — a fresh database prints one every start.
+> Current versions redirect a first-time visitor to `/setup` on their own and accept the token
+> pasted into the form, so the terminal is not the only way in. Older ones do neither: they land you
+> on `/login`, which only suggests `sdods users create`, and `/setup` takes the token from the query
+> string alone. If that is what you see, use the CLI path or upgrade.
 
 `--auth-disabled` makes every request a local admin. It is a development shortcut on a machine
 only you can reach, never a way to skip onboarding on a shared host.
@@ -271,18 +270,35 @@ the API running **without** the UI bundle — that is the source-checkout case, 
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| `The web UI is not available in this install` | no UI bundle found. The server tries four locations in order: `<root>/packages/web/dist`, `<root>/node_modules/@sdods/web/dist`, the sibling `web/dist` in a checkout, then the copy vendored into `@sdods/server` at pack time. On a fresh clone none exist — `packages/web/dist/` is gitignored | `bun run web:build`, then restart `serve` |
-| `INTERNAL: listen EADDRINUSE … 127.0.0.1:4444` — **and the terminal then hangs** | something already holds the port, often another `serve` or the desktop app. The process does not exit: the scheduler is already running and holds the event loop open | **Ctrl+C**, then `sdods serve --port 4445`, or stop the other process (`lsof -i :4444` · `netstat -ano \| findstr :4444`) |
+| A page saying the web UI was not found (**HTTP 503**) | no UI bundle. The server tries four locations: `<root>/packages/web/dist`, `<root>/node_modules/@sdods/web/dist`, the sibling `web/dist` in a checkout, then the copy vendored into `@sdods/server` at pack time. On a fresh clone none exist — `packages/web/dist/` is gitignored | `bun run web:build`, then restart `serve` |
+| `CONFIG_INVALID: Port 4444 is already in use.` | something already holds the port, often another `serve` or the desktop app | take the port it suggests: `sdods serve --port 4445`, or find the holder (`lsof -i :4444` · `netstat -ano \| findstr :4444`). On versions before this fix the command printed `INTERNAL: listen EADDRINUSE` and then hung — Ctrl+C and upgrade |
 | Login fails with the right password | `users create` and `serve` ran in different workspaces, so two `.sdods/sdods.db` files | run both from one workspace root; `sdods users list` in that directory should show the account |
 | No setup token printed | the database already has users, **or** you passed `--auth-disabled`, which suppresses it | sign in, `sdods users create`, or restart without `--auth-disabled` |
-| `/setup?token=…` returns 404 | source checkout with no built bundle — the stub answers `/` only, and there is no SPA fallback, so the URL `serve` just printed is a dead link | `bun run web:build` and restart, or use `sdods users create --admin` |
+| `/setup?token=…` returns 404 | an SDODS older than the fix that made the stub answer every route | upgrade, or `bun run web:build` and restart, or use `sdods users create --admin` |
 | Fresh install, but `/login` says "ask an admin" | the login page does not redirect to `/setup` | open the `/setup?token=…` URL from the `serve` output, or `sdods users create --admin` |
 | Global CLI errors on a repo project (`CONFIG_INVALID`, unknown browser) | version skew between the global CLI and the checkout | use `bun run sdods` inside a checkout; upgrade the global one otherwise |
 | `sdods: command not found` after installing | the bin dir is not on PATH — `~/.local/bin`, or `%LOCALAPPDATA%\SDODS\bin` on Windows | add it, or re-run the installer with `--modify-path` / `-ModifyPath` |
 | Docker: `no matching manifest for linux/arm64/v8` | amd64-only image on Apple silicon | add `--platform linux/amd64` |
-| UI loads, runs never start | browser engines missing | `sdods browsers install -b chromium` — the engine is a **flag, not a positional**; `sdods browsers install chromium` fails with `too many arguments`. Bare `sdods browsers install` installs all engines; on Linux `--with-deps` needs root |
+| UI loads, runs never start | browser engines missing | `sdods browsers install -b chromium` (the positional `sdods browsers install chromium` also works on current versions, and failed with `too many arguments` before). Bare `sdods browsers install` installs all engines; on Linux `--with-deps` needs root |
 | Node too old | SDODS needs Node 22+ | `nvm use 22` / `fnm use 22`. On macOS/Linux the installer also takes `--install-node`; **`install.ps1` has no such flag** — it exits and tells you to run `winget install OpenJS.NodeJS.LTS`, `scoop install nodejs-lts` or `nvm install 22` |
 | Anything else | — | `sdods doctor` first; it reports what it found, not what it expected |
+
+## Keeping it current
+
+`upgrade` reads the npm registry and reports; it installs nothing without `--apply`.
+
+```bash
+sdods upgrade                       # what is behind
+sdods upgrade --apply               # install the latest @sdods/* packages
+sdods browsers install --with-deps  # refresh engines afterwards (Linux needs root)
+sdods doctor                        # confirm
+```
+
+CI does this on a schedule: `.github/workflows/dependencies.yml` reports freshness into one rolling
+issue every morning, and on the 1st of the month upgrades `@sdods/*` and Playwright, runs the suite,
+and opens a PR only if it passes.
+
+After any upgrade, restart `serve` — a running server keeps the old bundle in memory.
 
 ## Working on the UI itself
 
