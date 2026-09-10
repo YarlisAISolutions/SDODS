@@ -71,6 +71,7 @@ export const handlers = [
     state.loggedIn = false;
     return new HttpResponse(null, { status: 204 });
   }),
+  http.get('/api/auth/setup-status', () => json({ needsSetup: false })),
   http.post('/api/auth/setup', () => json({ ok: true })),
 
   http.get('/api/orgs', () => json(d.orgs)),

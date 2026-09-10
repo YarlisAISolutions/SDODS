@@ -1,4 +1,5 @@
 import type { Command } from 'commander';
+import { SdodsError } from '@sdods/core';
 import { createContext } from '../context.js';
 import { info, ok, parseIntFlag } from '../ui.js';
 
@@ -14,16 +15,35 @@ export function register(program: Command) {
     .action(async (opts, cmd) => {
       const ctx = createContext(cmd);
       const { startServer } = await import('@sdods/server');
-      const { app, url } = await startServer({
-        config: {
-          rootDir: ctx.rootDir,
-          port: opts.port,
-          host: opts.host,
-          authDisabled: opts.authDisabled ? true : undefined,
-        },
-        scheduler: opts.scheduler !== false,
-        open: Boolean(opts.open),
-      });
+      let started;
+      try {
+        started = await startServer({
+          config: {
+            rootDir: ctx.rootDir,
+            port: opts.port,
+            host: opts.host,
+            authDisabled: opts.authDisabled ? true : undefined,
+          },
+          scheduler: opts.scheduler !== false,
+          open: Boolean(opts.open),
+        });
+      } catch (err) {
+        // A failed listen used to leave the process alive: the scheduler had already started, so
+        // the event loop never drained and the terminal hung after printing the error. Say what to
+        // do about the common cause, and exit rather than waiting for Ctrl+C.
+        const e = err as NodeJS.ErrnoException;
+        if (e?.code === 'EADDRINUSE') {
+          const port = opts.port ?? Number(process.env.PORT ?? 4444);
+          throw new SdodsError('CONFIG_INVALID', `Port ${port} is already in use.`, {
+            hint:
+              `Start on another port: sdods serve --port ${port + 1}\n` +
+              `Or find what holds it: lsof -i :${port}  (Windows: netstat -ano | findstr :${port})`,
+            cause: err,
+          });
+        }
+        throw err;
+      }
+      const { app, url } = started;
       ok(`SDODS server listening on ${url}`);
       if (app.setupState.token)
         info(

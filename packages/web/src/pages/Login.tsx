@@ -79,11 +79,15 @@ export function SetupPage() {
   const [password, setPassword] = useState('');
   const [orgName, setOrgName] = useState('My organization');
   const [error, setError] = useState<string | null>(null);
+  // Reaching this page by redirect carries no query string, so the token has to be enterable by
+  // hand -- it is printed in the `sdods serve` output the user still has on screen.
+  const urlToken = params.get('token');
+  const [token, setToken] = useState(urlToken ?? '');
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     try {
       await api('/api/auth/setup', {
-        json: { token: params.get('token'), username, password, organization: orgName },
+        json: { token, username, password, organization: orgName },
       });
       await refresh();
       nav('/', { replace: true });
@@ -94,6 +98,14 @@ export function SetupPage() {
   return (
     <Frame title="Create the first admin">
       <form onSubmit={submit} className="space-y-3">
+        {!urlToken && (
+          <Field
+            label="Setup token"
+            hint="Printed by `sdods serve` on first run. Restart it to print a new one."
+          >
+            <Input value={token} onChange={(e) => setToken(e.target.value)} autoFocus required />
+          </Field>
+        )}
         <Field
           label="Organization name"
           hint="You become its owner. You can add workspaces and members afterwards."
@@ -103,12 +115,12 @@ export function SetupPage() {
         <Field label="Admin username">
           <Input value={username} onChange={(e) => setUsername(e.target.value)} required />
         </Field>
-        <Field label="Password" hint="At least 10 characters.">
+        <Field label="Password" hint="At least 8 characters.">
           <Input
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            minLength={10}
+            minLength={8}
             required
           />
         </Field>
