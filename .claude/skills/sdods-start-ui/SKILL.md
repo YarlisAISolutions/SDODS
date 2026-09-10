@@ -10,6 +10,81 @@ streaming, MCP over HTTP, the scheduler and the React app. There is no separate 
 production. Docs: <https://docs.sdods.com/docs/getting-started/web-ui/> ·
 <https://docs.sdods.com/docs/getting-started/installation/>
 
+## 0. Preflight — check what is already on the machine
+
+Most "the UI won't start" reports are really a Node or npm problem that predates SDODS. Run this
+before installing anything; it takes a second and decides which install is safe.
+
+```bash
+node -v; command -v node          # need v22+
+command -v bun fnm nvm volta asdf # is a version manager in charge of node?
+npm config get prefix             # where npm -g would write
+which -a sdods                    # copies already installed (often more than one)
+```
+
+Then read the four rules below. They are the failures that actually happen.
+
+### Node must be 22+, and being below it does not say so
+
+SDODS needs Node 22. Below that you do **not** get a clean version message — you get a crash from
+somewhere deep in a dependency, because the code uses APIs that only exist in 22+:
+
+```text
+TypeError: TEXT_ENCODINGS.union is not a function     ← this is "your Node is too old"
+```
+
+If you see an unexplained `TypeError` from a package you have never heard of, check `node -v` first.
+
+### If a version manager owns Node, `npm install -g` is a trap
+
+With fnm, nvm, volta or asdf, **global npm packages belong to the Node version that was active when
+you installed them**. Switch versions and they are simply gone. Demonstrated on a machine with four
+Node versions installed:
+
+```text
+$ fnm exec --using=v22.22.2 npm ls -g   →  codex, bruno, firebase-tools, …
+$ fnm exec --using=v24.15.0 npm ls -g   →  corepack, npm, openclaw       ← different world
+```
+
+So `npm install -g @sdods/cli` under Node 22, then `fnm use 24`, and `sdods: command not found` —
+with the package still on disk. Pick one:
+
+| Your situation | Do this |
+|---|---|
+| a version manager is in charge (the common case) | use the installer — it defaults to **bun**, which installs to `~/.bun` and is the same regardless of which Node is active |
+| you want npm anyway | pin the Node version first (`fnm use 22 && fnm default 22`), and re-install after any switch |
+| no version manager, Node from the OS or Homebrew | `npm install -g @sdods/cli` is fine |
+
+### Never `sudo npm install -g`
+
+If `npm config get prefix` points somewhere unwritable (`/usr/local`, `/usr`), `npm -g` fails with
+`EACCES`. `sudo` "fixes" it and leaves root-owned files that break every later install. Instead:
+
+```bash
+npm config set prefix ~/.npm-global          # then add ~/.npm-global/bin to PATH
+```
+
+or just use the installer, which writes only to `~/.sdods`, `~/.bun` and `~/.local/bin`.
+
+### More than one `sdods` is normal — know which one wins
+
+`which -a sdods` frequently returns several (an installer shim, a Homebrew copy, a bun global).
+**The first on PATH wins**, and they drift apart. Inside a checkout none of them is the right one —
+use `bun run sdods`. See the callout in §1.
+
+### Already installed, and you just want it working
+
+| Symptom | Do this |
+|---|---|
+| `sdods: command not found`, but you installed it | you switched Node versions — re-install, or use the bun/installer path |
+| unexplained `TypeError` from a dependency | `node -v`; anything under 22 is the cause |
+| `EACCES` during install | do **not** sudo — repoint the npm prefix, or use the installer |
+| two machines disagree | compare `sdods --version` **and** `which -a sdods` on both |
+| everything looks installed but behaves oddly | `sdods doctor` — but run it outside a checkout, or with `bun run sdods` inside one |
+
+Only the server runs on Node. Do not try to run it under `bun` directly — the native modules abort
+with `panic: NAPI FATAL ERROR`. `bun run sdods` is safe because it shells out to Node via tsx.
+
 ## 1. Identify the install, because the command differs
 
 Run both. **Where you are matters more than what is on PATH** — a global `sdods` and a source
@@ -169,6 +244,18 @@ sdods serve --open
 `--workspace` runs `sdods init` for you, so the workspace already has the `demo-shop` project and
 there is something to look at on the dashboard immediately. Without a project the UI is real but
 empty, which reads as broken to a first-time user.
+
+**If SDODS is already installed**, run the same command again — it upgrades in place rather than
+adding a second copy, and it is the safe response to a version that looks stale. Two flags are worth
+knowing before you run it anywhere you care about:
+
+```bash
+sh install.sh --dry-run        # prints every step, changes nothing
+sh install.sh --version-check  # prints the versions and paths it resolved here, then exits
+```
+
+Paste the `--version-check` output into any support thread: it is the whole environment in one
+block, and it settles the "which Node, which copy" questions from §0 immediately.
 
 ## 5. Confirm it is actually up
 
