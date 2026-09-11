@@ -14,16 +14,13 @@ import { DOCS_URL } from '@/lib/links';
  * entirely — there is nothing to override once the default component is not used.
  */
 
+// The desktop download is absent while DESKTOP_PUBLIC is off: suggesting a page that only
+// explains why there is nothing to download is not a useful thing to offer someone who is lost.
 const PLACES: Array<{ href: string; title: string; body: string }> = [
   {
     href: '/install',
     title: 'Install SDODS',
     body: 'One command, or your own package manager — npm, Homebrew, Docker, Scoop, apt.',
-  },
-  {
-    href: '/download',
-    title: 'Download the desktop app',
-    body: 'macOS, Windows and Linux. It installs what it needs on first launch.',
   },
   {
     href: `${DOCS_URL}/docs/getting-started/installation/`,

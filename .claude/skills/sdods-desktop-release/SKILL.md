@@ -42,6 +42,29 @@ manifests to the tap, the bucket and Microsoft's queue is a separate step: see t
 draft — the download page links straight at the asset URLs, and draft assets are not downloadable.
 The sync script refuses to run against a draft for exactly this reason.
 
+## The download page is switched off
+
+`sdods.com/download` offers nothing right now, and that is deliberate. The installers are
+unsigned, so macOS reports them as malware ("Apple could not verify...") and Windows blocks them
+behind SmartScreen. A download most visitors are actively warned away from costs more trust than
+no download at all, and the CLI install is a complete SDODS that nothing blocks.
+
+**Nothing is deleted.** Releases still build and publish, `desktop-release.ts` still syncs, and
+every surface that offers a download — the nav tab, the header button, the page body, the sitemap
+entry, the 404 suggestion, the apt page CTA — is gated on one flag, `DESKTOP_PUBLIC` in
+`apps/www/lib/links.ts`. The `/download` route survives and explains itself rather than 404ing,
+because people bookmark download pages.
+
+To turn it back on, build the site with:
+
+```bash
+NEXT_PUBLIC_DESKTOP_PUBLIC=true
+```
+
+Verified in both directions: with the flag on, the tab, all ten installers and the sitemap entry
+return. Turn it on once the builds are signed — see the `code-signing` skill for what that costs
+and in which order to buy it.
+
 ## Where the binaries live, and why not in this repo
 
 `siri1410/SDODS` is **private**, and **release assets on a private repo are private too** — a
