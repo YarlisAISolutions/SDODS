@@ -68,19 +68,26 @@ function classify(name: string, size: number): Entry | null {
   if (name.endsWith('.dmg')) {
     return {
       platform: 'macos',
-      label: arch === 'arm64' ? 'Apple silicon' : 'Intel',
+      label: arch === 'arm64' ? 'Apple silicon' : arch === 'x64' ? 'Intel' : 'Universal',
       file: name,
       size: mib(size),
       arch,
+      // A universal build carries both slices and is nearly twice the size. It is the safe answer,
+      // never the best one, so it is listed rather than recommended.
+      secondary: arch === 'universal' || undefined,
     };
   }
   if (name.endsWith('.exe')) {
     return {
       platform: 'windows',
-      label: arch === 'arm64' ? 'ARM64' : '64-bit',
+      // An installer with no architecture in its filename bundles every slice. Labelling it
+      // "64-bit" -- which the arm64-or-else fallback used to do -- put two different downloads
+      // under the same name, one of them twice the size.
+      label: arch === 'arm64' ? 'ARM64' : arch === 'x64' ? '64-bit' : 'Universal (x64 + ARM64)',
       file: name,
       size: mib(size),
       arch,
+      secondary: arch === 'universal' || undefined,
     };
   }
   if (name.endsWith('.AppImage')) {
