@@ -17,10 +17,11 @@ import {
 const ORDER: Platform[] = ['macos', 'windows', 'linux'];
 
 /** What an unsigned build does on first launch, and the exact way past it. */
-const GATEKEEPER: Record<Platform, { title: string; body: string } | null> = {
+const GATEKEEPER: Record<Platform, { title: string; body: string; command?: string } | null> = {
   macos: {
-    title: 'macOS will not open it on a double-click',
-    body: 'Right-click (or Control-click) SDODS in Applications and choose Open, then confirm. macOS remembers the choice, so this is a one-time step.',
+    title: 'macOS says SDODS “is damaged and can’t be opened”',
+    body: 'It is not damaged — verify the checksum below and you will see the download is intact. The build carries no Developer ID, and macOS reports an unsigned app that arrived with a quarantine flag as damaged rather than untrusted. Drag it to Applications, then run the command below once. Right-click → Open does not clear this particular message.',
+    command: 'xattr -dr com.apple.quarantine /Applications/SDODS.app',
   },
   windows: {
     title: 'Windows shows a SmartScreen warning',
@@ -41,7 +42,8 @@ const GATEKEEPER: Record<Platform, { title: string; body: string } | null> = {
 const INSTALL: Record<Platform, string[]> = {
   macos: [
     'Open the .dmg and drag SDODS to Applications.',
-    'First launch only: right-click SDODS → Open → Open.',
+    'Once, in Terminal: xattr -dr com.apple.quarantine /Applications/SDODS.app',
+    'Then open it normally. “Damaged” means unsigned-and-quarantined, not corrupt.',
   ],
   windows: ['Run the .exe installer.', 'At the SmartScreen prompt choose More info → Run anyway.'],
   linux: [
@@ -114,6 +116,11 @@ export function DownloadPicker() {
             <div className="mt-5 rounded-lg border border-amber-300/60 bg-amber-50/60 p-4 text-sm dark:border-amber-500/30 dark:bg-amber-500/10">
               <p className="font-semibold">{GATEKEEPER[detected.platform]!.title}</p>
               <p className="muted mt-1">{GATEKEEPER[detected.platform]!.body}</p>
+              {GATEKEEPER[detected.platform]!.command && (
+                <pre className="mt-3 overflow-x-auto rounded bg-black/80 p-3 text-xs text-white">
+                  <code>{GATEKEEPER[detected.platform]!.command}</code>
+                </pre>
+              )}
             </div>
           )}
         </div>
