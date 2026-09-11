@@ -118,7 +118,14 @@ jobs:
 
       # Prove the artifact is not hollow. A missing extraResources source is only a warning in
       # electron-builder, and it once produced a .dmg with no Node runtime and a zero exit code.
-      - name: Verify each app bundles its Node runtime
+      #
+      # npm is checked as well as node, and that is not belt-and-braces: app-builder-lib's copy
+      # filter silently drops a `node_modules` directory that sits at the root of a copy, which is
+      # exactly where Node puts npm on Windows (`node_modules/npm`) and nowhere else
+      # (`lib/node_modules/npm`). Every Windows installer for 0.1.0 therefore shipped without npm
+      # and could not run its own first-run install, while this step reported "ok". Checking only
+      # the thing that broke last time is how the next hollow artifact gets published.
+      - name: Verify each app bundles its Node runtime and npm
         working-directory: apps/desktop
         shell: bash
         run: |
@@ -126,18 +133,25 @@ jobs:
           found=0
           for dir in release/*/; do
             case "$dir" in
-              *mac*) exe="$dir"SDODS.app/Contents/Resources/node/bin/node ;;
-              *win*) exe="$dir"resources/node/node.exe ;;
-              *linux*) exe="$dir"resources/node/bin/node ;;
+              *mac*) exe="$dir"SDODS.app/Contents/Resources/node/bin/node
+                     npm="$dir"SDODS.app/Contents/Resources/node/lib/node_modules/npm/bin/npm-cli.js ;;
+              *win*) exe="$dir"resources/node/node.exe
+                     npm="$dir"resources/node/node_modules/npm/bin/npm-cli.js ;;
+              *linux*) exe="$dir"resources/node/bin/node
+                     npm="$dir"resources/node/lib/node_modules/npm/bin/npm-cli.js ;;
               *) continue ;;
             esac
-            if [ -f "$exe" ]; then
-              echo "ok   $dir"
-              found=$((found + 1))
-            else
+            if [ ! -f "$exe" ]; then
               echo "FAIL $dir has no bundled Node at $exe"
               exit 1
             fi
+            if [ ! -f "$npm" ]; then
+              echo "FAIL $dir bundles Node but no npm at $npm"
+              echo "     first-run cannot install @sdods/cli without it"
+              exit 1
+            fi
+            echo "ok   $dir (node + npm)"
+            found=$((found + 1))
           done
           [ "$found" -gt 0 ] || { echo 'no packaged app directories found'; exit 1; }
 

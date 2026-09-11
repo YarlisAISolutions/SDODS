@@ -7,6 +7,7 @@ import {
   PLATFORM_LABEL,
   detectArch,
   detectAsset,
+  detectPlatform,
   downloadUrl,
   releaseNotesUrl,
   checksumsUrl,
@@ -15,6 +16,21 @@ import {
 } from '@/lib/desktop-release';
 
 const ORDER: Platform[] = ['macos', 'windows', 'linux'];
+
+/**
+ * Why a platform has no downloads, when that is a deliberate choice rather than an oversight.
+ *
+ * An installer that cannot install is worse than no installer: it costs the visitor a 130 MB
+ * download and a failed setup before they learn anything. When a build is withdrawn, the page has
+ * to say so on the platform it was withdrawn from — a Windows visitor who simply finds no Windows
+ * section will reasonably assume the site is broken.
+ */
+const WITHDRAWN: Partial<Record<Platform, { title: string; body: string }>> = {
+  windows: {
+    title: 'The Windows installers are temporarily withdrawn',
+    body: 'The 0.1.0 installers were packaged without npm, so they could not complete their own first-run setup. Rather than leave a download that always fails, they are pulled until 0.1.1 is published. The command-line install works on Windows today and gives you the same SDODS.',
+  },
+};
 
 /** What an unsigned build does on first launch, and the exact way past it. */
 const GATEKEEPER: Record<Platform, { title: string; body: string; command?: string } | null> = {
@@ -47,14 +63,18 @@ const INSTALL: Record<Platform, string[]> = {
   ],
   windows: ['Run the .exe installer.', 'At the SmartScreen prompt choose More info → Run anyway.'],
   linux: [
-    'AppImage: chmod +x SDODS-*.AppImage, then run it. No install step, no root.',
-    'Debian or Ubuntu: sudo apt install ./SDODS-*.deb',
+    'Debian or Ubuntu: sudo apt install ./SDODS-*.deb — this is the recommended route.',
+    'AppImage: chmod +x SDODS-*.AppImage, then run it.',
+    'The AppImage runtime needs FUSE 2, which Ubuntu 22.04 and later no longer install by default. If it reports “Cannot mount AppImage”, install libfuse2t64 (Ubuntu 24.04) or libfuse2 (Ubuntu 22.04, Debian) — or just use the .deb, which has no such requirement.',
   ],
 };
 
 export function DownloadPicker() {
   const release = DESKTOP_RELEASE;
   const [detected, setDetected] = useState<DesktopAsset | null>(null);
+  // Tracked separately from `detected`: a known platform with no matching asset is a withdrawn
+  // build, and that visitor gets an explanation rather than an empty page.
+  const [detectedPlatform, setDetectedPlatform] = useState<Platform | null>(null);
   // Server-render the full list, then narrow to a recommendation once the UA is readable. Nobody
   // sees an empty page while JavaScript loads, and no-JS visitors keep every download.
   const [ready, setReady] = useState(false);
@@ -65,7 +85,9 @@ export function DownloadPicker() {
     // Safari and Firefox, where detectAsset falls back to the per-platform default.
     void detectArch().then((arch) => {
       if (!live) return;
-      setDetected(detectAsset(release.assets, navigator.userAgent || '', arch));
+      const ua = navigator.userAgent || '';
+      setDetected(detectAsset(release.assets, ua, arch));
+      setDetectedPlatform(detectPlatform(ua));
       setReady(true);
     });
     return () => {
@@ -100,6 +122,18 @@ export function DownloadPicker() {
 
   return (
     <div>
+      {ready && !detected && detectedPlatform && WITHDRAWN[detectedPlatform] && (
+        <div className="card p-6">
+          <h2 className="text-xl font-semibold">{WITHDRAWN[detectedPlatform]!.title}</h2>
+          <p className="muted mt-3">{WITHDRAWN[detectedPlatform]!.body}</p>
+          <div className="mt-5">
+            <Link href="/install/" className="btn btn-primary">
+              Install from the command line
+            </Link>
+          </div>
+        </div>
+      )}
+
       {ready && detected && (
         <div className="card p-6">
           <p className="muted text-sm">Recommended for this computer</p>
