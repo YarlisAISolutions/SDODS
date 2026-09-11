@@ -1,4 +1,5 @@
-import { DESKTOP_PUBLIC, DOCS_URL, REPO_PUBLIC, REPO_URL } from './links';
+import { DOCS_URL, REPO_PUBLIC, REPO_URL } from './links';
+import { DESKTOP_PUBLIC } from './desktop-release';
 
 export interface NavLink {
   label: string;
@@ -12,7 +13,7 @@ export interface NavLink {
  * disclosure below that, and neither copy can drift from the other.
  */
 export const NAV_LINKS: NavLink[] = [
-  // Hidden while the installers are unsigned -- see DESKTOP_PUBLIC in ./links.
+  // Shown once any platform is offered -- see DESKTOP_PLATFORMS in ./desktop-release.
   ...(DESKTOP_PUBLIC ? [{ label: 'Download', href: '/download/' } as NavLink] : []),
   { label: 'Install', href: '/install/' },
   { label: 'Docs', href: DOCS_URL, external: true },

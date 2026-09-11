@@ -1,7 +1,8 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { DownloadPicker } from '@/components/download-picker';
-import { DESKTOP_PUBLIC, DOCS_URL } from '@/lib/links';
+import { DOCS_URL } from '@/lib/links';
+import { DESKTOP_PUBLIC } from '@/lib/desktop-release';
 
 export const metadata: Metadata = {
   title: 'Download SDODS',
