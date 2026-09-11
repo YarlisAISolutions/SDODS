@@ -51,6 +51,22 @@ export interface DesktopRelease {
  * Generated. Do not edit by hand — run `bun run desktop:sync-release <tag>` from the repo root
  * after the desktop workflow publishes a release.
  */
+/*
+ * Four artifacts from 0.1.0 are deliberately absent below, because they cannot install:
+ *
+ *  - all three Windows installers. app-builder-lib's copy filter drops a `node_modules` directory
+ *    that sits at the root of a copy, which is exactly where Node puts npm on Windows. The
+ *    installers therefore shipped without npm, and first-run dies in `npmCli()` before it can
+ *    fetch @sdods/cli. There is no fallback: nothing searches PATH for npm. 100% of Windows
+ *    installs fail, so linking them only produces broken machines.
+ *  - the ARM64 AppImage. Its AppImageKit runtime declares `NEEDED: libz.so` -- the zlib1g-dev
+ *    symlink -- rather than `libz.so.1`, so it cannot start on any stock distro. ARM64 Linux
+ *    users take the .deb, which is verified working.
+ *
+ * All four are fixed in the build (apps/desktop/electron-builder.yml, .github/workflows/
+ * desktop.yml), not here. `bun run desktop:sync-release desktop-v0.1.1` regenerates this file
+ * from the release and restores them once that release is published.
+ */
 export const DESKTOP_RELEASE: DesktopRelease = {
   tag: 'desktop-v0.1.0',
   assetBaseUrl: 'https://github.com/siri1410/sdods-releases/releases/download/desktop-v0.1.0',
@@ -65,13 +81,6 @@ export const DESKTOP_RELEASE: DesktopRelease = {
       size: '127 MB',
       arch: 'x64',
       secondary: true,
-    },
-    {
-      platform: 'linux',
-      label: 'AppImage (ARM64)',
-      file: 'SDODS-0.1.0-linux-arm64.AppImage',
-      size: '166 MB',
-      arch: 'arm64',
     },
     {
       platform: 'linux',
@@ -116,28 +125,6 @@ export const DESKTOP_RELEASE: DesktopRelease = {
       file: 'SDODS-0.1.0-mac-x64.zip',
       size: '165 MB',
       arch: 'x64',
-      secondary: true,
-    },
-    {
-      platform: 'windows',
-      label: 'ARM64',
-      file: 'SDODS-Setup-0.1.0-win-arm64.exe',
-      size: '117 MB',
-      arch: 'arm64',
-    },
-    {
-      platform: 'windows',
-      label: '64-bit',
-      file: 'SDODS-Setup-0.1.0-win-x64.exe',
-      size: '126 MB',
-      arch: 'x64',
-    },
-    {
-      platform: 'windows',
-      label: 'Universal (x64 + ARM64)',
-      file: 'SDODS-Setup-0.1.0-win.exe',
-      size: '243 MB',
-      arch: 'universal',
       secondary: true,
     },
   ],
@@ -214,18 +201,26 @@ export async function detectArch(): Promise<'arm64' | 'x64' | null> {
  * click — every other build is listed directly underneath — but guessing Intel would be wrong for
  * the large majority of Mac visitors.
  */
+/**
+ * Which OS is asking, as far as the user agent will admit.
+ *
+ * Split out from `detectAsset` because the two answers diverge: a platform can be known while no
+ * asset matches it, which is what happens when a build is withdrawn. The page needs to tell that
+ * visitor why rather than show them nothing.
+ */
+export function detectPlatform(ua: string): Platform | null {
+  if (/Windows/i.test(ua)) return 'windows';
+  if (/Mac OS X|Macintosh/i.test(ua)) return 'macos';
+  if (/Linux|X11/i.test(ua)) return 'linux';
+  return null;
+}
+
 export function detectAsset(
   assets: DesktopAsset[],
   ua: string,
   arch: 'arm64' | 'x64' | null = null,
 ): DesktopAsset | null {
-  const platform: Platform | null = /Windows/i.test(ua)
-    ? 'windows'
-    : /Mac OS X|Macintosh/i.test(ua)
-      ? 'macos'
-      : /Linux|X11/i.test(ua)
-        ? 'linux'
-        : null;
+  const platform = detectPlatform(ua);
   if (!platform) return null;
 
   const candidates = assets.filter((a) => a.platform === platform && !a.secondary);

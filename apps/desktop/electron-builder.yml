@@ -1,10 +1,5 @@
 appId: com.sdods.desktop
 productName: SDODS
-# electron-builder derives the Linux executable name from package.json `name`, which here is the
-# scoped `@sdods/desktop`. Stripped of its slash that becomes `@sdodsdesktop`, which it then
-# rejects as unsafe for a file path — so the AppImage and deb targets cannot build without this.
-# macOS and Windows use productName instead, which is why only Linux failed.
-executableName: sdods
 copyright: Copyright © 2026 SDODS
 
 directories:
@@ -16,6 +11,11 @@ asar: true
 # Guarantees the bundled Node exists for the arch being packed. A missing extraResources source is
 # only a warning, which once produced an x64 .dmg with no runtime in it and a zero exit code.
 beforePack: scripts/before-pack.mjs
+
+# Turns the macOS bundle's broken placeholder signature into a valid ad-hoc one, so an unsigned
+# download reports "unidentified developer" rather than "damaged". Runs before electron-builder's
+# own signing step, so real Developer ID credentials still win. See the hook for the full story.
+afterPack: scripts/after-pack.mjs
 
 files:
   - out/**
@@ -81,6 +81,16 @@ win:
     - from: resources/node/win32-${arch}
       to: node
       filter: ['**/*']
+    # npm has to be copied as its own entry. app-builder-lib's copy filter drops a directory named
+    # `node_modules` when it sits at the ROOT of a copy (util/filter.js: `if (relative ===
+    # "node_modules") return false`), and no pattern can override it -- the check runs before the
+    # patterns do. Node ships npm at `node_modules/npm` on Windows but at `lib/node_modules/npm`
+    # everywhere else, so this silently stripped npm from the Windows builds only, and first-run
+    # died in `npmCli()` with "Could not locate npm". Making node_modules the copy root means the
+    # rule has nothing to match.
+    - from: resources/node/win32-${arch}/node_modules
+      to: node/node_modules
+      filter: ['**/*']
   target:
     - target: nsis
       arch: [x64, arm64]
@@ -99,6 +109,15 @@ nsis:
   artifactName: ${productName}-Setup-${version}-win-${arch}.${ext}
 
 linux:
+  # electron-builder derives the Linux executable name from package.json `name`, which here is the
+  # scoped `@sdods/desktop`. Stripped of its slash that becomes `@sdodsdesktop`, which it then
+  # rejects as unsafe for a file path — so the AppImage and deb targets cannot build without this.
+  #
+  # It lives under `linux:` and not at the top level because `executableName` is NOT Linux-only:
+  # at the top level it also renamed the macOS bundle to `sdods.app` and the Windows binary to
+  # `sdods.exe`. That shipped a lowercase app in Finder and made the download page's
+  # `xattr -dr com.apple.quarantine /Applications/SDODS.app` wrong on case-sensitive volumes.
+  executableName: sdods
   category: Development
   maintainer: SDODS <admin@sdods.com>
   synopsis: BDD test automation for UI, API and hybrid flows
@@ -131,6 +150,12 @@ deb:
     - libatspi2.0-0
     # Electron safeStorage encrypts the stored credentials through libsecret.
     - libsecret-1-0
+    # Electron links libasound.so.2 and nothing else in this list pulls it in, so `apt install`
+    # reported success and the app then failed to start on any host without ALSA. Ubuntu 24.04
+    # renamed the package to libasound2t64 (the 64-bit time_t transition) and left `libasound2`
+    # as a virtual name with two providers, which apt refuses to resolve on its own -- hence the
+    # alternation rather than a bare `libasound2`: real package first, Debian's name second.
+    - libasound2t64 | libasound2
 
 # Emitting latest*.yml costs nothing and is what electron-updater reads later. The updater itself
 # stays disabled until the app is signed: Squirrel.Mac refuses to install an unsigned update.
