@@ -1,6 +1,7 @@
 import type { MetadataRoute } from 'next';
 import { HANDLES, TAG_NAMES, THREADS, USE_CASES } from '@sdods/qa-archive';
-import { DESKTOP_PUBLIC, SITE_URL } from '@/lib/links';
+import { SITE_URL } from '@/lib/links';
+import { DESKTOP_PUBLIC } from '@/lib/desktop-release';
 
 export const dynamic = 'force-static';
 
@@ -14,7 +15,7 @@ export const dynamic = 'force-static';
 const PAGES: Array<[path: string, priority: number]> = [
   ['/', 1],
   ['/install/', 0.9],
-  // Only while the desktop app is actually offered -- see DESKTOP_PUBLIC in lib/links.
+  // Only while at least one platform is offered -- see DESKTOP_PLATFORMS in lib/desktop-release.
   ...(DESKTOP_PUBLIC ? ([['/download/', 0.9]] as Array<[string, number]>) : []),
   ['/roadmap/', 0.6],
   ['/questions/', 0.7],

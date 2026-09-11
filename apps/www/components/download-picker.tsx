@@ -7,6 +7,7 @@ import {
   PLATFORM_LABEL,
   detectArch,
   detectAsset,
+  offeredAssets,
   downloadUrl,
   releaseNotesUrl,
   checksumsUrl,
@@ -15,6 +16,16 @@ import {
 } from '@/lib/desktop-release';
 
 const ORDER: Platform[] = ['macos', 'windows', 'linux'];
+
+/**
+ * The assets this build is allowed to offer, filtered by DESKTOP_PLATFORMS.
+ *
+ * Module scope, not a value computed during render: both inputs are fixed at build time, and a
+ * fresh array every render would make the effect below re-run forever. Every path in the component
+ * reads this rather than `release.assets`, so a platform that is switched off cannot leak through
+ * one branch that forgot to filter.
+ */
+const OFFERED = offeredAssets(DESKTOP_RELEASE);
 
 /** What an unsigned build does on first launch, and the exact way past it. */
 const GATEKEEPER: Record<Platform, { title: string; body: string; command?: string } | null> = {
@@ -67,16 +78,16 @@ export function DownloadPicker() {
     void detectArch().then((arch) => {
       if (!live) return;
       const ua = navigator.userAgent || '';
-      setDetected(detectAsset(release.assets, ua, arch));
+      setDetected(detectAsset(OFFERED, ua, arch));
       setReady(true);
     });
     return () => {
       live = false;
     };
-  }, [release.assets]);
+  }, []);
 
   // No assetBaseUrl means nothing is downloadable yet, whatever the tag says.
-  if (!release.tag || !release.assetBaseUrl || release.assets.length === 0) {
+  if (!release.tag || !release.assetBaseUrl || OFFERED.length === 0) {
     return (
       <div className="card p-6">
         <h2 className="text-xl font-semibold">The desktop app is not released yet</h2>
@@ -97,11 +108,28 @@ export function DownloadPicker() {
   const sums = checksumsUrl(release);
   const grouped = ORDER.map((platform) => ({
     platform,
-    assets: release.assets.filter((a) => a.platform === platform),
+    assets: OFFERED.filter((a) => a.platform === platform),
   })).filter((g) => g.assets.length > 0);
 
   return (
     <div>
+      {ready && !detected && (
+        <div className="card p-6">
+          <h2 className="text-xl font-semibold">Not available for your computer yet</h2>
+          <p className="muted mt-3">
+            The download below covers other platforms. Yours is held back until its installer is
+            code-signed — an unsigned build gets reported as malware, which is a worse first
+            impression than no download. The command-line install is the same SDODS and nothing
+            blocks it.
+          </p>
+          <div className="mt-5">
+            <Link href="/install/" className="btn btn-primary">
+              Install from the command line
+            </Link>
+          </div>
+        </div>
+      )}
+
       {ready && detected && (
         <div className="card p-6">
           <p className="muted text-sm">Recommended for this computer</p>

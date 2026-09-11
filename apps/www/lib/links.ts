@@ -14,24 +14,11 @@ export const LICENSE_URL = 'https://www.apache.org/licenses/LICENSE-2.0';
  */
 export const REPO_PUBLIC = process.env.NEXT_PUBLIC_REPO_PUBLIC === 'true';
 
-/**
- * Whether the desktop app is offered on the site at all.
- *
- * Off deliberately. The installers are unsigned, so macOS calls them malware and Windows throws
- * SmartScreen at everyone who tries — and the fix is a Developer ID certificate ($99/year) plus
- * Windows signing, which is a funding decision rather than an engineering one. Offering a download
- * that most visitors are actively warned away from costs more trust than shipping no download at
- * all, and the CLI install is a complete SDODS that nothing blocks.
- *
- * Nothing about the desktop app is deleted: the release still builds and publishes, the manifest
- * in `desktop-release.ts` stays current, and every page that offers a download is gated on this
- * one flag. To turn it back on, build with:
- *
- *     NEXT_PUBLIC_DESKTOP_PUBLIC=true
- *
- * Mirrors REPO_PUBLIC above, which hides the repository links for the same kind of reason.
+/*
+ * The desktop download has a flag of the same kind -- DESKTOP_PLATFORMS in ./desktop-release --
+ * but it lives there rather than here, because it is a list of platforms and this module cannot
+ * import the Platform type without a cycle.
  */
-export const DESKTOP_PUBLIC = process.env.NEXT_PUBLIC_DESKTOP_PUBLIC === 'true';
 
 export type FeedbackKind = 'feature' | 'bug' | 'feedback';
 
