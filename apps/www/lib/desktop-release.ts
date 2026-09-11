@@ -52,79 +52,92 @@ export interface DesktopRelease {
  * after the desktop workflow publishes a release.
  */
 /*
- * Four artifacts from 0.1.0 are deliberately absent below, because they cannot install:
- *
- *  - all three Windows installers. app-builder-lib's copy filter drops a `node_modules` directory
- *    that sits at the root of a copy, which is exactly where Node puts npm on Windows. The
- *    installers therefore shipped without npm, and first-run dies in `npmCli()` before it can
- *    fetch @sdods/cli. There is no fallback: nothing searches PATH for npm. 100% of Windows
- *    installs fail, so linking them only produces broken machines.
- *  - the ARM64 AppImage. Its AppImageKit runtime declares `NEEDED: libz.so` -- the zlib1g-dev
- *    symlink -- rather than `libz.so.1`, so it cannot start on any stock distro. ARM64 Linux
- *    users take the .deb, which is verified working.
- *
- * All four are fixed in the build (apps/desktop/electron-builder.yml, .github/workflows/
- * desktop.yml), not here. `bun run desktop:sync-release desktop-v0.1.1` regenerates this file
- * from the release and restores them once that release is published.
+ * The ARM64 AppImage is absent on purpose, and will stay absent: the AppImageKit runtime
+ * electron-builder embeds for arm64 declares `NEEDED: libz.so` -- the zlib1g-dev symlink --
+ * rather than `libz.so.1`, so it cannot start on a stock distro. That target is switched off in
+ * apps/desktop/electron-builder.yml, so the release genuinely has ten artifacts, not eleven, and
+ * a re-sync will not bring it back. ARM64 Linux users take the .deb.
  */
 export const DESKTOP_RELEASE: DesktopRelease = {
-  tag: 'desktop-v0.1.0',
-  assetBaseUrl: 'https://github.com/siri1410/sdods-releases/releases/download/desktop-v0.1.0',
-  version: '0.1.0',
-  published: '2026-09-07',
+  tag: "desktop-v0.1.1",
+  assetBaseUrl: "https://github.com/siri1410/sdods-releases/releases/download/desktop-v0.1.1",
+  version: "0.1.1",
+  published: "2026-09-11",
   signed: false,
   assets: [
     {
       platform: 'linux',
-      label: '.deb (64-bit)',
-      file: 'SDODS-0.1.0-linux-amd64.deb',
-      size: '127 MB',
+      label: ".deb (64-bit)",
+      file: "SDODS-0.1.1-linux-amd64.deb",
+      size: "127 MB",
       arch: 'x64',
       secondary: true,
     },
     {
       platform: 'linux',
-      label: '.deb (ARM64)',
-      file: 'SDODS-0.1.0-linux-arm64.deb',
-      size: '122 MB',
+      label: ".deb (ARM64)",
+      file: "SDODS-0.1.1-linux-arm64.deb",
+      size: "122 MB",
       arch: 'arm64',
       secondary: true,
     },
     {
       platform: 'linux',
-      label: 'AppImage (64-bit)',
-      file: 'SDODS-0.1.0-linux-x86_64.AppImage',
-      size: '164 MB',
+      label: "AppImage (64-bit)",
+      file: "SDODS-0.1.1-linux-x86_64.AppImage",
+      size: "164 MB",
       arch: 'x64',
     },
     {
       platform: 'macos',
-      label: 'Apple silicon',
-      file: 'SDODS-0.1.0-mac-arm64.dmg',
-      size: '160 MB',
+      label: "Apple silicon",
+      file: "SDODS-0.1.1-mac-arm64.dmg",
+      size: "160 MB",
       arch: 'arm64',
     },
     {
       platform: 'macos',
-      label: 'Zip (Apple silicon)',
-      file: 'SDODS-0.1.0-mac-arm64.zip',
-      size: '161 MB',
+      label: "Zip (Apple silicon)",
+      file: "SDODS-0.1.1-mac-arm64.zip",
+      size: "161 MB",
       arch: 'arm64',
       secondary: true,
     },
     {
       platform: 'macos',
-      label: 'Intel',
-      file: 'SDODS-0.1.0-mac-x64.dmg',
-      size: '164 MB',
+      label: "Intel",
+      file: "SDODS-0.1.1-mac-x64.dmg",
+      size: "166 MB",
       arch: 'x64',
     },
     {
       platform: 'macos',
-      label: 'Zip (Intel)',
-      file: 'SDODS-0.1.0-mac-x64.zip',
-      size: '165 MB',
+      label: "Zip (Intel)",
+      file: "SDODS-0.1.1-mac-x64.zip",
+      size: "167 MB",
       arch: 'x64',
+      secondary: true,
+    },
+    {
+      platform: 'windows',
+      label: "ARM64",
+      file: "SDODS-Setup-0.1.1-win-arm64.exe",
+      size: "120 MB",
+      arch: 'arm64',
+    },
+    {
+      platform: 'windows',
+      label: "64-bit",
+      file: "SDODS-Setup-0.1.1-win-x64.exe",
+      size: "130 MB",
+      arch: 'x64',
+    },
+    {
+      platform: 'windows',
+      label: "Universal (x64 + ARM64)",
+      file: "SDODS-Setup-0.1.1-win.exe",
+      size: "249 MB",
+      arch: 'universal',
       secondary: true,
     },
   ],
@@ -201,26 +214,18 @@ export async function detectArch(): Promise<'arm64' | 'x64' | null> {
  * click — every other build is listed directly underneath — but guessing Intel would be wrong for
  * the large majority of Mac visitors.
  */
-/**
- * Which OS is asking, as far as the user agent will admit.
- *
- * Split out from `detectAsset` because the two answers diverge: a platform can be known while no
- * asset matches it, which is what happens when a build is withdrawn. The page needs to tell that
- * visitor why rather than show them nothing.
- */
-export function detectPlatform(ua: string): Platform | null {
-  if (/Windows/i.test(ua)) return 'windows';
-  if (/Mac OS X|Macintosh/i.test(ua)) return 'macos';
-  if (/Linux|X11/i.test(ua)) return 'linux';
-  return null;
-}
-
 export function detectAsset(
   assets: DesktopAsset[],
   ua: string,
   arch: 'arm64' | 'x64' | null = null,
 ): DesktopAsset | null {
-  const platform = detectPlatform(ua);
+  const platform: Platform | null = /Windows/i.test(ua)
+    ? 'windows'
+    : /Mac OS X|Macintosh/i.test(ua)
+      ? 'macos'
+      : /Linux|X11/i.test(ua)
+        ? 'linux'
+        : null;
   if (!platform) return null;
 
   const candidates = assets.filter((a) => a.platform === platform && !a.secondary);
