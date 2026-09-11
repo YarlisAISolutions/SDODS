@@ -79,6 +79,10 @@ export function outputs(): Output[] {
   const ink = brand.palette.ink;
   const lockupLight = bake(lockup, ink);
   const markAdaptive = bake(mark, ink, { adaptive: true });
+  // github.com picks the theme and gives the page no say, so a media query inside the file is
+  // ignored there. The README instead ships both inks and lets <picture> choose -- which is the one
+  // theme mechanism GitHub does honour. Without this the lockup is #0B1020 on a dark ground.
+  const lockupDark = bake(lockup, brand.palette.paper);
 
   const siteDirs = ['apps/www/public/img', 'apps/docs/public/img'];
   const out: Output[] = [];
@@ -89,9 +93,12 @@ export function outputs(): Output[] {
     out.push({ path: `${dir}/favicon.svg`, content: markAdaptive });
   }
 
-  // The README renders on github.com, which has its own dark mode and no way to influence it.
+  // The README renders on github.com. See lockupDark above: both variants ship, and README.md
+  // selects between them with <picture media="(prefers-color-scheme: dark)">.
   out.push({ path: 'docs/assets/sdods-logo.svg', content: lockupLight });
+  out.push({ path: 'docs/assets/sdods-logo-dark.svg', content: lockupDark });
   out.push({ path: 'docs/assets/sdods-mark.svg', content: bake(mark, ink) });
+  out.push({ path: 'docs/assets/sdods-mark-dark.svg', content: bake(mark, brand.palette.paper) });
   out.push({ path: 'docs/assets/sdods-favicon.svg', content: markAdaptive });
 
   // The web UI serves this from its own public dir. This is the copy that had drifted.

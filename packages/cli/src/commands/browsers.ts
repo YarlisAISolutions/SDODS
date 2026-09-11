@@ -154,12 +154,15 @@ export function register(program: Command) {
   browsers
     .command('install')
     .description('Install browsers (default: chromium, firefox, webkit)')
+    // The positional form reads naturally and is what the docs have always shown, but Commander
+    // rejects excess positionals by default, so `browsers install chromium` failed outright.
+    .argument('[browsers...]', 'browsers to install, e.g. chromium edge')
     .option('-b, --browser <name>', 'browser to install (repeatable)', collect, [])
     .option('--with-deps', 'also install OS dependencies (Linux CI)')
     .option('-p, --project <slug>', 'install the browsers declared by a project')
-    .action(async (opts, cmd) => {
+    .action(async (positional: string[], opts, cmd) => {
       const ctx = createContext(cmd);
-      let list: string[] = opts.browser;
+      let list: string[] = [...positional, ...opts.browser];
       if (opts.project) list = ctx.registry.get(opts.project).browsers;
       for (const b of list) BrowserSchema.parse(b);
       await installBrowsers({ browsers: list, withDeps: opts.withDeps, cwd: ctx.rootDir });

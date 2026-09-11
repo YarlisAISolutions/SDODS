@@ -4,7 +4,8 @@
       "type": "stdio",
       "command": "npx",
       "args": [
-        "sdods",
+        "-y",
+        "@sdods/cli",
         "mcp",
         "--project",
         "demo-shop",
