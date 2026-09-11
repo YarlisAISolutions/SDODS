@@ -134,8 +134,16 @@ linux:
       filter: ['**/*']
   artifactName: ${productName}-${version}-linux-${arch}.${ext}
   target:
+    # x64 only, deliberately. The ARM64 AppImageKit runtime electron-builder embeds declares
+    # `NEEDED: libz.so` -- the zlib1g-dev symlink -- rather than `libz.so.1`, so it dies with
+    # "error while loading shared libraries: libz.so" on any stock distro, before a single line of
+    # our code runs. The x86_64 runtime declares libz.so.1 and is fine. Building it anyway would
+    # only put a download that cannot start back on the page, since `desktop:sync-release` lists
+    # whatever the release contains. ARM64 Linux users take the .deb, which is verified working.
+    # Restore this when the static `type2-runtime` (statically links libfuse3, no libz issue) can
+    # be substituted for the bundled one.
     - target: AppImage
-      arch: [x64, arm64]
+      arch: [x64]
     - target: deb
       arch: [x64, arm64]
 
