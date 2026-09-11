@@ -52,12 +52,94 @@ export interface DesktopRelease {
  * after the desktop workflow publishes a release.
  */
 export const DESKTOP_RELEASE: DesktopRelease = {
-  tag: null,
-  assetBaseUrl: null,
-  version: null,
-  published: null,
+  tag: 'desktop-v0.1.0',
+  assetBaseUrl: 'https://github.com/siri1410/sdods-releases/releases/download/desktop-v0.1.0',
+  version: '0.1.0',
+  published: '2026-09-07',
   signed: false,
-  assets: [],
+  assets: [
+    {
+      platform: 'linux',
+      label: '.deb (64-bit)',
+      file: 'SDODS-0.1.0-linux-amd64.deb',
+      size: '127 MB',
+      arch: 'x64',
+      secondary: true,
+    },
+    {
+      platform: 'linux',
+      label: 'AppImage (ARM64)',
+      file: 'SDODS-0.1.0-linux-arm64.AppImage',
+      size: '166 MB',
+      arch: 'arm64',
+    },
+    {
+      platform: 'linux',
+      label: '.deb (ARM64)',
+      file: 'SDODS-0.1.0-linux-arm64.deb',
+      size: '122 MB',
+      arch: 'arm64',
+      secondary: true,
+    },
+    {
+      platform: 'linux',
+      label: 'AppImage (64-bit)',
+      file: 'SDODS-0.1.0-linux-x86_64.AppImage',
+      size: '164 MB',
+      arch: 'x64',
+    },
+    {
+      platform: 'macos',
+      label: 'Apple silicon',
+      file: 'SDODS-0.1.0-mac-arm64.dmg',
+      size: '160 MB',
+      arch: 'arm64',
+    },
+    {
+      platform: 'macos',
+      label: 'Zip (Apple silicon)',
+      file: 'SDODS-0.1.0-mac-arm64.zip',
+      size: '161 MB',
+      arch: 'arm64',
+      secondary: true,
+    },
+    {
+      platform: 'macos',
+      label: 'Intel',
+      file: 'SDODS-0.1.0-mac-x64.dmg',
+      size: '164 MB',
+      arch: 'x64',
+    },
+    {
+      platform: 'macos',
+      label: 'Zip (Intel)',
+      file: 'SDODS-0.1.0-mac-x64.zip',
+      size: '165 MB',
+      arch: 'x64',
+      secondary: true,
+    },
+    {
+      platform: 'windows',
+      label: 'ARM64',
+      file: 'SDODS-Setup-0.1.0-win-arm64.exe',
+      size: '117 MB',
+      arch: 'arm64',
+    },
+    {
+      platform: 'windows',
+      label: '64-bit',
+      file: 'SDODS-Setup-0.1.0-win-x64.exe',
+      size: '126 MB',
+      arch: 'x64',
+    },
+    {
+      platform: 'windows',
+      label: '64-bit',
+      file: 'SDODS-Setup-0.1.0-win.exe',
+      size: '243 MB',
+      arch: 'universal',
+    },
+  ],
 };
 
 export function downloadUrl(release: DesktopRelease, asset: DesktopAsset): string {
@@ -65,11 +147,27 @@ export function downloadUrl(release: DesktopRelease, asset: DesktopAsset): strin
 }
 
 /**
- * Where to read release notes and checksums. Falls back to the repository only when it is public;
- * otherwise there is nothing a visitor could open, so the caller omits the link.
+ * Where to read release notes and checksums.
+ *
+ * Derived from `assetBaseUrl`, not from REPO_URL: the source repository is private, so its release
+ * pages 404 for visitors, while the repository actually serving the installers is public by
+ * definition — a download link could not work otherwise. Turning
+ * `…/releases/download/<tag>` into `…/releases/tag/<tag>` therefore always lands somewhere a
+ * visitor can open, which is where SHA256SUMS.txt lives.
  */
-export const releaseNotesUrl = (release: DesktopRelease): string | null =>
-  REPO_PUBLIC && release.tag ? `${REPO_URL}/releases/tag/${release.tag}` : null;
+export const releaseNotesUrl = (release: DesktopRelease): string | null => {
+  if (!release.tag) return null;
+  if (release.assetBaseUrl?.includes('/releases/download/'))
+    return release.assetBaseUrl.replace('/releases/download/', '/releases/tag/');
+  // A bucket or CDN has no notes page; the source repo only helps once it is public.
+  return REPO_PUBLIC ? `${REPO_URL}/releases/tag/${release.tag}` : null;
+};
+
+/** The published checksum list, alongside the installers. Null when they are not on a release. */
+export const checksumsUrl = (release: DesktopRelease): string | null =>
+  release.assetBaseUrl?.includes('/releases/download/')
+    ? `${release.assetBaseUrl}/SHA256SUMS.txt`
+    : null;
 
 export const PLATFORM_LABEL: Record<Platform, string> = {
   macos: 'macOS',
