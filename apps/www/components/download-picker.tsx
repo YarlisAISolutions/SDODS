@@ -9,6 +9,7 @@ import {
   detectAsset,
   downloadUrl,
   releaseNotesUrl,
+  checksumsUrl,
   type DesktopAsset,
   type Platform,
 } from '@/lib/desktop-release';
@@ -25,7 +26,28 @@ const GATEKEEPER: Record<Platform, { title: string; body: string } | null> = {
     title: 'Windows shows a SmartScreen warning',
     body: 'Choose “More info”, then “Run anyway”. The warning appears because the installer is not yet signed, not because anything is wrong with the download.',
   },
+  // Linux has no equivalent gate: neither .deb nor AppImage consults a signing authority, so
+  // there is no warning to talk someone past. The install steps below are the whole story.
   linux: null,
+};
+
+/**
+ * How to actually install what was downloaded, per platform.
+ *
+ * Shown against every platform, not only the detected one: people download on one machine for
+ * another all the time, and the AppImage in particular does nothing on a double-click until it is
+ * marked executable — which is not obvious, and is the most common "the download is broken" report.
+ */
+const INSTALL: Record<Platform, string[]> = {
+  macos: [
+    'Open the .dmg and drag SDODS to Applications.',
+    'First launch only: right-click SDODS → Open → Open.',
+  ],
+  windows: ['Run the .exe installer.', 'At the SmartScreen prompt choose More info → Run anyway.'],
+  linux: [
+    'AppImage: chmod +x SDODS-*.AppImage, then run it. No install step, no root.',
+    'Debian or Ubuntu: sudo apt install ./SDODS-*.deb',
+  ],
 };
 
 export function DownloadPicker() {
@@ -68,6 +90,7 @@ export function DownloadPicker() {
   }
 
   const notesUrl = releaseNotesUrl(release);
+  const sums = checksumsUrl(release);
   const grouped = ORDER.map((platform) => ({
     platform,
     assets: release.assets.filter((a) => a.platform === platform),
@@ -113,11 +136,28 @@ export function DownloadPicker() {
                 </li>
               ))}
             </ul>
+            <ol className="muted mt-4 list-decimal space-y-1 pl-4 text-xs">
+              {INSTALL[platform].map((step) => (
+                <li key={step}>{step}</li>
+              ))}
+            </ol>
           </div>
         ))}
       </div>
 
-      <p className="muted mt-6 text-sm">
+      {sums && (
+        <p className="muted mt-6 text-sm">
+          Every installer is listed in{' '}
+          <a className="underline" href={sums}>
+            SHA256SUMS.txt
+          </a>
+          . To check one before you run it:{' '}
+          <code>shasum -a 256 -c SHA256SUMS.txt --ignore-missing</code> (Windows:{' '}
+          <code>certutil -hashfile &lt;file&gt; SHA256</code>).
+        </p>
+      )}
+
+      <p className="muted mt-3 text-sm">
         Version {release.version}
         {release.published ? `, released ${release.published}` : ''}
         {notesUrl && (
