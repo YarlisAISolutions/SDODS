@@ -169,7 +169,10 @@ async function registerViaClientCli(
   cwd: string,
 ): Promise<boolean> {
   const { execa } = await import('execa');
-  const stdio = ['npx', 'sdods', 'mcp'];
+  // `npx sdods` resolves only when the cwd happens to sit inside a checkout that has the binary in
+  // node_modules/.bin. From anywhere else npx goes to the registry, where no package named `sdods`
+  // exists, and the client reports CONNECTION_CLOSED. Name the package that owns the bin instead.
+  const stdio = ['npx', '-y', '@sdods/cli', 'mcp'];
   if (o.project) stdio.push('--project', o.project);
   if (o.env) stdio.push('--env', o.env);
   if (o.caps) stdio.push('--caps', o.caps);

@@ -65,12 +65,20 @@ export default fp(async function staticPlugin(app: FastifyInstance) {
       return reply.type('text/html; charset=utf-8').send(index);
     });
   } else {
+    // No bundle: the API is up but every UI route is unserved. Answer them all rather than only
+    // `/`, because the first thing a first-run user opens is the /setup?token=... URL the server
+    // itself just printed -- and a bare 404 there reads as a broken install rather than a missing
+    // build step.
+    const page = `<!doctype html><title>SDODS</title><body style="font-family:system-ui;padding:2rem;max-width:34rem"><h1>SDODS server</h1><p>The API is live at <code>/api/health</code>, but the web UI was not found in this install.</p><p>From a source checkout, build it once with <code>bun run web:build</code> and restart the server.</p><p>To create the first admin without the UI:<br><code>sdods users create --admin --username &lt;name&gt; --password &lt;pw&gt;</code></p></body>`;
+    app.setNotFoundHandler((req, reply) => {
+      if (req.url.startsWith('/api/') || req.url.startsWith('/mcp'))
+        return reply.code(404).send({
+          error: { code: 'NOT_FOUND', message: `Route ${req.method} ${req.url} not found` },
+        });
+      return reply.code(503).type('text/html; charset=utf-8').send(page);
+    });
     app.get('/', async (_req, reply) =>
-      reply
-        .type('text/html; charset=utf-8')
-        .send(
-          `<!doctype html><title>SDODS</title><body style="font-family:system-ui;padding:2rem"><h1>SDODS server</h1><p>The web UI is not available in this install. The API is live at <code>/api/health</code>.</p><p>From a source checkout, build it with <code>bun run web:build</code>.</p></body>`,
-        ),
+      reply.code(503).type('text/html; charset=utf-8').send(page),
     );
   }
 });

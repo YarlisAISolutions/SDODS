@@ -10,23 +10,87 @@ description: What the SDODS web application offers and how it relates to the CLI
 
 ## Start it
 
+The command depends on how SDODS got onto the machine, not on your operating system — the CLI is
+identical on macOS, Linux and Windows.
+
+<Tabs items={['Installed', 'From a clone', 'Docker']}>
+<Tab value="Installed">
 ```bash
-bun run sdods users create --admin --username admin --password '<at least 8 chars>'
-bun run sdods serve                 # http://127.0.0.1:4444
+sdods users create --admin --username admin --password '<at least 8 chars>'
+sdods serve --open
 ```
+
+The UI is at `http://127.0.0.1:4444`. `--open` launches your browser. On Windows the same commands
+work in PowerShell and in `cmd`; inside WSL, use the Linux form rather than the PowerShell one.
+
+</Tab>
+<Tab value="From a clone">
+```bash
+bun run web:build                   # once: the UI bundle is not committed
+bun run sdods users create --admin --username admin --password '<at least 8 chars>'
+bun run sdods serve --open
+```
+
+`web:build` is not optional. `packages/web/dist/` is gitignored, so a fresh clone has no bundle and
+the server answers with a short page saying the UI is unavailable instead of the app.
+
+Use `bun run sdods` rather than a globally installed `sdods` inside a checkout: the two drift, and
+because both report the same version the mismatch is confusing when it surfaces.
+
+</Tab>
+<Tab value="Docker">
+```bash
+docker run --rm -p 8080:8080 -v sdods-data:/data ghcr.io/siri1410/sdods-server
+```
+
+Note the port: the image binds `0.0.0.0:8080`, not 4444. On Apple silicon add
+`--platform linux/amd64` — the published image is amd64 only, and Docker refuses the pull rather
+than emulating.
+
+</Tab>
+</Tabs>
+
+## The first user
+
+On a database with no users, `serve` prints a one-time setup URL:
+
+```text
+ℹ First run: create the admin at http://127.0.0.1:4444/setup?token=<token> (or: sdods users create --admin --username <name> --password <pw>)
+```
+
+Open it and fill the form, or use `sdods users create` — whichever suits. The browser path is the
+one to hand someone who should never touch a terminal. If you lose the token, restart `serve` to
+print a new one, or paste it into the field on `/setup`.
 
 `--admin` makes a platform admin and owner of every organization without one. Add more people with
 `--role viewer|editor|admin`, and scope them with
 `sdods users grant <username> --workspace <slug> --role editor`.
 
-Run both commands from the workspace root, or anywhere inside it: the platform database lives at
-`<workspace>/.sdods/sdods.db`, and every command walks up to the workspace to find it, so
-`users create` and `serve` always agree on one database.
+<Callout type="warn">
+  Run `users create` and `serve` from the same workspace root. The platform database is
+  `<workspace>/.sdods/sdods.db`, and each command walks up from the current directory to find the
+  workspace. Run them in different places and you create the admin in one database while the server
+  reads another — the sign-in then fails with entirely correct credentials. `SQLITE_PATH` pins both
+  to one file if you want to be certain.
+</Callout>
 
 Signing out clears the session on the server and every cached query in the browser, so nothing
 from one session is readable in the next on a shared machine. If a session ends while the app is
 open — it expires, an admin runs `sdods users deactivate`, or a token is revoked — the next request
 returns you to the sign-in form rather than leaving a half-loaded page behind.
+
+## If it does not start
+
+| Symptom                                      | Cause                                                                              | Fix                                          |
+| -------------------------------------------- | ---------------------------------------------------------------------------------- | -------------------------------------------- |
+| `Port 4444 is already in use`                | another `serve`, or the desktop app                                                | `sdods serve --port 4445`                    |
+| A page saying the web UI is unavailable      | a clone with no built bundle                                                       | `bun run web:build`, then restart            |
+| Sign-in fails with the right password        | two different `.sdods/sdods.db` files                                              | run both commands from one workspace root    |
+| An unexplained `TypeError` from a dependency | Node older than 22                                                                 | `node -v`, then `nvm use 22` or `fnm use 22` |
+| `sdods: command not found` after installing  | a version manager owns Node, and the global install belongs to a different version | re-install, or use the installer's bun path  |
+
+`sdods doctor` reports Node, bun, browsers, projects, environment variables and the database in one
+pass.
 
 The server is a Fastify application. It spawns the same `sdods` commands you run by hand and streams their logs over Server-Sent Events, so a run started from a browser looks exactly like one started from a terminal.
 

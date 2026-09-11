@@ -431,7 +431,7 @@ Docs: https://docs.sdods.com
   }
 
   if (flags.claude) {
-    const res = await execa('npx', ['sdods', 'agent', 'install-claude'], {
+    const res = await execa('npx', ['-y', '@sdods/cli', 'agent', 'install-claude'], {
       cwd: target,
       reject: false,
       stdio: 'pipe',

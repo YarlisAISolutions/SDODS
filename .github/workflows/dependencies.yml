@@ -1,0 +1,161 @@
+name: dependencies
+
+# Two jobs on two cadences.
+#
+#   upgrade    — the 1st: move @sdods/* and Playwright forward, prove the suite still passes, and
+#                open a PR for a person to merge.
+#   freshness  — the 15th: report what is behind, and nothing else. It opens no PR and fails no
+#                build; the answer lives in one rolling issue. Offset from the upgrade so the month
+#                has a mid-point check rather than two reports on the same morning.
+#
+# GitHub cron is UTC and does not follow daylight saving: 12:07 UTC is 08:07 in EDT and 07:07 in
+# EST. Minutes are deliberately off the hour — every repository that asks for "8am" picks :00.
+
+on:
+  schedule:
+    - cron: '23 12 1 * *' # monthly upgrade, the 1st
+    - cron: '7 12 15 * *' # monthly freshness report, the 15th
+  workflow_dispatch:
+    inputs:
+      job:
+        description: Which job to run
+        type: choice
+        options: [freshness, upgrade]
+        default: freshness
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+env:
+  BUN_VERSION: '1.4.0'
+
+jobs:
+  freshness:
+    name: freshness · what is behind
+    if: github.event.schedule == '7 12 15 * *' || inputs.job == 'freshness'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: bun install --frozen-lockfile
+
+      - name: Collect what is outdated
+        id: report
+        run: |
+          {
+            echo '## Dependency freshness'
+            echo
+            echo "_Checked $(date -u '+%Y-%m-%d %H:%M UTC')._"
+            echo
+            echo '### SDODS packages'
+            echo '```'
+            # `upgrade` reads the registry and reports; it does not install without --apply.
+            node --import tsx ./packages/cli/src/bin.ts upgrade 2>&1 | tail -30 || true
+            echo '```'
+            echo
+            echo '### Playwright'
+            echo '```'
+            echo "installed: $(node -p "require('./node_modules/@playwright/test/package.json').version" 2>/dev/null || echo unknown)"
+            echo "latest:    $(npm view @playwright/test version 2>/dev/null || echo unknown)"
+            echo '```'
+            echo
+            echo '### Everything else'
+            echo '```'
+            bun outdated 2>&1 | head -60 || true
+            echo '```'
+            echo
+            echo 'Upgrades run on the 1st, this report on the 15th. Run the workflow by hand to refresh either.'
+          } > report.md
+          cat report.md >> "$GITHUB_STEP_SUMMARY"
+
+      # One rolling issue rather than a new one each morning, so the history stays in the thread.
+      - name: Update the rolling issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TITLE='Dependency freshness'
+          NUM=$(gh issue list --state open --search "$TITLE in:title" --json number,title \
+                  --jq ".[] | select(.title==\"$TITLE\") | .number" | head -1)
+          if [ -n "$NUM" ]; then
+            gh issue comment "$NUM" --body-file report.md
+          else
+            gh issue create --title "$TITLE" --body-file report.md --label dependencies || \
+              gh issue create --title "$TITLE" --body-file report.md
+          fi
+
+  upgrade:
+    name: upgrade · sdods + playwright
+    if: github.event.schedule == '23 12 1 * *' || inputs.job == 'upgrade'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: bun install --frozen-lockfile
+
+      - name: Record the versions we are moving from
+        id: before
+        run: |
+          echo "pw=$(node -p "require('./node_modules/@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Upgrade the SDODS packages
+        run: node --import tsx ./packages/cli/src/bin.ts upgrade --apply --pm bun || true
+
+      # Playwright is upgraded deliberately rather than by a blanket bump: the browser engines are a
+      # separate download that has to match, and a new minor routinely adds locator and trace
+      # features the step library can use.
+      - name: Upgrade Playwright and its engines
+        run: |
+          bun add -d @playwright/test@latest
+          bun add -d playwright-bdd@latest || true
+          npx playwright install --with-deps
+
+      - name: Record the versions we moved to
+        id: after
+        run: |
+          echo "pw=$(node -p "require('./node_modules/@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Prove it still works
+        run: |
+          bun run typecheck
+          bun run lint
+          bun run test
+
+      - name: Open the pull request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: chore/monthly-dependency-upgrade
+          base: main
+          title: 'chore(deps): monthly upgrade — Playwright ${{ steps.before.outputs.pw }} → ${{ steps.after.outputs.pw }}'
+          commit-message: |
+            chore(deps): monthly upgrade of @sdods/* and Playwright
+
+            Playwright ${{ steps.before.outputs.pw }} -> ${{ steps.after.outputs.pw }}.
+            typecheck, lint and the unit suite passed before this PR was opened.
+          body: |
+            Opened by the monthly `dependencies` workflow.
+
+            - `@sdods/*` moved to the latest published versions (`sdods upgrade --apply`).
+            - Playwright **${{ steps.before.outputs.pw }} → ${{ steps.after.outputs.pw }}**, with
+              `playwright install --with-deps` so the engines match the client.
+            - `typecheck`, `lint` and the unit suite all passed on this branch before the PR opened.
+
+            Worth a look before merging: a Playwright minor often adds locator, trace or assertion
+            features the step library could adopt — the release notes are the reason this runs
+            monthly rather than automatically merging.
+
+            If the suite had failed, no PR would exist and the run would be red instead.
+          delete-branch: true
