@@ -127,7 +127,6 @@ export const DESKTOP_RELEASE: DesktopRelease = {
       file: 'SDODS-0.1.1-linux-amd64.deb',
       size: '127 MB',
       arch: 'x64',
-      secondary: true,
     },
     {
       platform: 'linux',
@@ -135,7 +134,6 @@ export const DESKTOP_RELEASE: DesktopRelease = {
       file: 'SDODS-0.1.1-linux-arm64.deb',
       size: '122 MB',
       arch: 'arm64',
-      secondary: true,
     },
     {
       platform: 'linux',
@@ -143,6 +141,7 @@ export const DESKTOP_RELEASE: DesktopRelease = {
       file: 'SDODS-0.1.1-linux-x86_64.AppImage',
       size: '164 MB',
       arch: 'x64',
+      secondary: true,
     },
     {
       platform: 'macos',

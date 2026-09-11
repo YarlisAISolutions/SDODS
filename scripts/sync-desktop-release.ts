@@ -97,6 +97,11 @@ function classify(name: string, size: number): Entry | null {
       file: name,
       size: mib(size),
       arch,
+      // Listed, not recommended. The AppImage runtime dlopens libfuse.so.2, which Ubuntu 22.04 and
+      // later do not install by default, so a double-click can fail with "Cannot mount AppImage"
+      // on a current desktop. The .deb has no such dependency. Recommending the AppImage while the
+      // install steps below call the .deb "the recommended route" also just contradicted itself.
+      secondary: true,
     };
   }
   if (name.endsWith('.deb')) {
@@ -106,7 +111,8 @@ function classify(name: string, size: number): Entry | null {
       file: name,
       size: mib(size),
       arch,
-      secondary: true,
+      // The primary Linux download: `apt install ./SDODS-*.deb` resolves its own dependencies and
+      // needs nothing the distribution does not already ship.
     };
   }
   // macOS .zip exists for electron-updater, not for people to download.
