@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { CommandRow } from '@/components/copy-button';
-import { DOCS_URL } from '@/lib/links';
+import { DESKTOP_PUBLIC, DOCS_URL } from '@/lib/links';
 
 export const metadata: Metadata = {
   title: 'SDODS apt repository',
@@ -133,12 +133,12 @@ export default function AptPage() {
         If you would rather not add a source
       </h2>
       <p className="muted mt-2">
-        A single <code>.deb</code> installs the same application and never updates itself. Every
-        platform&rsquo;s direct download is on the download page.
+        A single <code>.deb</code> installs the same application and never updates itself.
       </p>
       <div className="mt-6 flex flex-wrap gap-3">
-        <Link className="btn btn-primary" href="/download">
-          Download the app
+        {/* Points at the download page only while one is offered -- see DESKTOP_PUBLIC. */}
+        <Link className="btn btn-primary" href={DESKTOP_PUBLIC ? '/download' : '/install'}>
+          {DESKTOP_PUBLIC ? 'Download the app' : 'Install SDODS'}
         </Link>
         <Link className="btn btn-secondary" href="/install">
           Other install methods

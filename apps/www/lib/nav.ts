@@ -1,4 +1,4 @@
-import { DOCS_URL, REPO_PUBLIC, REPO_URL } from './links';
+import { DESKTOP_PUBLIC, DOCS_URL, REPO_PUBLIC, REPO_URL } from './links';
 
 export interface NavLink {
   label: string;
@@ -12,7 +12,8 @@ export interface NavLink {
  * disclosure below that, and neither copy can drift from the other.
  */
 export const NAV_LINKS: NavLink[] = [
-  { label: 'Download', href: '/download/' },
+  // Hidden while the installers are unsigned -- see DESKTOP_PUBLIC in ./links.
+  ...(DESKTOP_PUBLIC ? [{ label: 'Download', href: '/download/' } as NavLink] : []),
   { label: 'Install', href: '/install/' },
   { label: 'Docs', href: DOCS_URL, external: true },
   { label: 'Roadmap', href: '/roadmap/' },
