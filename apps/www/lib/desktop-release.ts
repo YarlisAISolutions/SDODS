@@ -13,6 +13,62 @@ import { REPO_PUBLIC, REPO_URL } from './links';
 
 export type Platform = 'macos' | 'windows' | 'linux';
 
+const ALL_PLATFORMS: readonly Platform[] = ['macos', 'windows', 'linux'];
+
+/**
+ * Which platforms' downloads the site offers, as a build-time list.
+ *
+ * Per-platform rather than one on/off switch, because the reason for hiding is per-platform. The
+ * macOS build needs a $99/year Developer ID before macOS stops calling it malware; Windows needs
+ * its own certificate before SmartScreen relents; **Linux needs nothing at all** -- no Gatekeeper,
+ * no SmartScreen, and the .deb and AppImage install unsigned today. Collapsing those three into a
+ * single boolean forced Linux to wait on a macOS invoice, which was never a real constraint.
+ *
+ *     NEXT_PUBLIC_DESKTOP_PLATFORMS=linux           # only Linux
+ *     NEXT_PUBLIC_DESKTOP_PLATFORMS=macos,linux     # after the Apple certificate lands
+ *     NEXT_PUBLIC_DESKTOP_PLATFORMS=all             # everything
+ *
+ * Unset means none, which is the current state: the whole download is hidden.
+ */
+export const DESKTOP_PLATFORMS: readonly Platform[] = parsePlatforms(
+  process.env.NEXT_PUBLIC_DESKTOP_PLATFORMS,
+);
+
+function parsePlatforms(raw: string | undefined): readonly Platform[] {
+  const tokens = (raw ?? '')
+    .split(',')
+    .map((t) => t.trim().toLowerCase())
+    .filter(Boolean);
+  if (!tokens.length) return [];
+  if (tokens.includes('all')) return ALL_PLATFORMS;
+
+  // A typo must not read as "hide that platform". `NEXT_PUBLIC_DESKTOP_PLATFORMS=mac` silently
+  // offering nothing is exactly the kind of quiet wrong answer that gets discovered by a user.
+  const unknown = tokens.filter((t) => !ALL_PLATFORMS.includes(t as Platform));
+  if (unknown.length) {
+    throw new Error(
+      `NEXT_PUBLIC_DESKTOP_PLATFORMS: unknown platform(s) ${unknown.join(', ')}. ` +
+        `Expected a comma-separated subset of ${ALL_PLATFORMS.join(', ')}, or "all".`,
+    );
+  }
+  return ALL_PLATFORMS.filter((p) => tokens.includes(p));
+}
+
+/** Is the desktop app offered at all? False hides every trace of it across the site. */
+export const DESKTOP_PUBLIC = DESKTOP_PLATFORMS.length > 0;
+
+export const isOffered = (platform: Platform): boolean => DESKTOP_PLATFORMS.includes(platform);
+
+/**
+ * The assets the site may actually link to.
+ *
+ * Everything downstream -- the recommendation, the per-platform grid, the checksum note -- works
+ * from this rather than `release.assets`, so a disabled platform cannot leak through one code path
+ * that forgot to check.
+ */
+export const offeredAssets = (release: DesktopRelease): DesktopAsset[] =>
+  release.assets.filter((a) => isOffered(a.platform));
+
 export interface DesktopAsset {
   platform: Platform;
   /** Shown on the button, e.g. "Apple silicon". */

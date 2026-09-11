@@ -6,8 +6,7 @@ import { usePathname } from 'next/navigation';
 import { MobileNav } from '@/components/mobile-nav';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { NAV_LINKS } from '@/lib/nav';
-import { DESKTOP_PUBLIC } from '@/lib/links';
-import { DESKTOP_RELEASE } from '@/lib/desktop-release';
+import { DESKTOP_PUBLIC, DESKTOP_RELEASE } from '@/lib/desktop-release';
 
 export function SiteHeader() {
   const pathname = usePathname();

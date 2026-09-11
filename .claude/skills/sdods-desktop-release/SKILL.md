@@ -42,28 +42,43 @@ manifests to the tap, the bucket and Microsoft's queue is a separate step: see t
 draft — the download page links straight at the asset URLs, and draft assets are not downloadable.
 The sync script refuses to run against a draft for exactly this reason.
 
-## The download page is switched off
+## The download page is switched off, per platform
 
 `sdods.com/download` offers nothing right now, and that is deliberate. The installers are
 unsigned, so macOS reports them as malware ("Apple could not verify...") and Windows blocks them
 behind SmartScreen. A download most visitors are actively warned away from costs more trust than
 no download at all, and the CLI install is a complete SDODS that nothing blocks.
 
-**Nothing is deleted.** Releases still build and publish, `desktop-release.ts` still syncs, and
-every surface that offers a download — the nav tab, the header button, the page body, the sitemap
-entry, the 404 suggestion, the apt page CTA — is gated on one flag, `DESKTOP_PUBLIC` in
-`apps/www/lib/links.ts`. The `/download` route survives and explains itself rather than 404ing,
-because people bookmark download pages.
+The switch is a **list of platforms**, not a boolean, because the reason for hiding is per-platform:
 
-To turn it back on, build the site with:
+| Platform | What it is waiting for |
+|---|---|
+| macOS | a Developer ID certificate — $99/year |
+| Windows | its own certificate — Azure Artifact Signing ~$10/month, or an OV cert |
+| Linux | **nothing.** No Gatekeeper, no SmartScreen; the `.deb` and AppImage install unsigned today |
+
+So Linux can be switched on at any time for free, and macOS can go live the moment the Apple
+certificate lands without waiting on Windows.
 
 ```bash
-NEXT_PUBLIC_DESKTOP_PUBLIC=true
+NEXT_PUBLIC_DESKTOP_PLATFORMS=linux          # only Linux
+NEXT_PUBLIC_DESKTOP_PLATFORMS=macos,linux    # after the Apple certificate
+NEXT_PUBLIC_DESKTOP_PLATFORMS=all            # everything
 ```
 
-Verified in both directions: with the flag on, the tab, all ten installers and the sitemap entry
-return. Turn it on once the builds are signed — see the `code-signing` skill for what that costs
-and in which order to buy it.
+Unset means none, which is the current state. An unrecognised value **fails the build** rather than
+silently hiding a platform — `=mac` is a typo that would otherwise look like a deliberate choice.
+
+**Nothing is deleted.** Releases still build and publish and `desktop-release.ts` stays current, so
+re-enabling needs no re-sync. `DESKTOP_PLATFORMS` lives in `apps/www/lib/desktop-release.ts` (not
+`links.ts` — it needs the `Platform` type, and importing it there would be a cycle) and gates:
+the nav tab, the header button, the page body, the sitemap entry, the 404 suggestion, the picker's
+recommendation and per-platform grid, and the apt page's CTA — which follows the **Linux** flag
+specifically, so a macOS-only rollout does not send apt users to a page with no `.deb` on it.
+
+The `/download` route survives rather than 404ing, because people bookmark download pages. A
+visitor whose own platform is switched off is told why instead of being shown a grid of other
+people's operating systems.
 
 ## Where the binaries live, and why not in this repo
 
