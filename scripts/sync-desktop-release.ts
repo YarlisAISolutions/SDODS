@@ -156,6 +156,15 @@ async function resolveRelease(tag?: string): Promise<GhRelease> {
   return found;
 }
 
+/**
+ * A single-quoted TypeScript string literal.
+ *
+ * `JSON.stringify` would be the obvious choice, but it emits double quotes and this repo's
+ * Prettier config uses single ones — so the generated manifest failed `prettier --check` and took
+ * CI down with it, on a file nobody had edited by hand.
+ */
+const str = (v: string): string => `'${v.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`;
+
 function render(release: GhRelease, entries: Entry[], signed: boolean): string {
   const version = release.tag_name.replace(/^desktop-v/, '');
   const assetBaseUrl = `https://github.com/${REPO}/releases/download/${release.tag_name}`;
@@ -165,9 +174,9 @@ function render(release: GhRelease, entries: Entry[], signed: boolean): string {
       (e) =>
         `    {\n` +
         `      platform: '${e.platform}',\n` +
-        `      label: ${JSON.stringify(e.label)},\n` +
-        `      file: ${JSON.stringify(e.file)},\n` +
-        `      size: ${JSON.stringify(e.size)},\n` +
+        `      label: ${str(e.label)},\n` +
+        `      file: ${str(e.file)},\n` +
+        `      size: ${str(e.size)},\n` +
         `      arch: '${e.arch}',\n` +
         (e.secondary ? `      secondary: true,\n` : '') +
         `    },`,
@@ -177,10 +186,10 @@ function render(release: GhRelease, entries: Entry[], signed: boolean): string {
   const source = readFileSync(MANIFEST, 'utf8');
   const replacement =
     `export const DESKTOP_RELEASE: DesktopRelease = {\n` +
-    `  tag: ${JSON.stringify(release.tag_name)},\n` +
-    `  assetBaseUrl: ${JSON.stringify(assetBaseUrl)},\n` +
-    `  version: ${JSON.stringify(version)},\n` +
-    `  published: ${published ? JSON.stringify(published) : 'null'},\n` +
+    `  tag: ${str(release.tag_name)},\n` +
+    `  assetBaseUrl: ${str(assetBaseUrl)},\n` +
+    `  version: ${str(version)},\n` +
+    `  published: ${published ? str(published) : 'null'},\n` +
     `  signed: ${signed},\n` +
     `  assets: [\n${assets}\n  ],\n` +
     `};`;
