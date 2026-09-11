@@ -51,6 +51,12 @@ jobs:
         run: bun run www:build
         env:
           WWW_SITE_URL: https://sdods.com
+          # Which desktop downloads the site offers. Linux only, because Linux is the one platform
+          # that needs no code signing: there is no Gatekeeper and no SmartScreen, and the .deb and
+          # AppImage install unsigned exactly as they always have. macOS and Windows stay hidden
+          # until their certificates exist, since an unsigned build there is reported as malware.
+          # Add them here as they are signed: `macos,linux`, then `all`.
+          NEXT_PUBLIC_DESKTOP_PLATFORMS: linux
       - uses: actions/upload-artifact@v4
         with:
           name: www-site
