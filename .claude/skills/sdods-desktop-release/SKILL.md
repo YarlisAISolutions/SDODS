@@ -134,6 +134,44 @@ monorepo-only path, so UI-triggered runs die with ERR_MODULE_NOT_FOUND. `bootstr
 bridge at that path, but only while the installed server still contains that string. **Publishing a
 server newer than 0.2.1 removes the need for it** and fixes `sdods serve` for every npm user.
 
+**A root-level `node_modules` never reaches the package.** app-builder-lib's copy filter drops a
+directory named `node_modules` when it sits at the *root* of a copy
+(`out/util/filter.js`: `if (relative === "node_modules") return false`), and the check runs before
+any pattern, so no `filter` can re-include it. Node ships npm at `node_modules/npm` on **Windows**
+and at `lib/node_modules/npm` everywhere else — so this silently stripped npm from the Windows
+builds only. Every 0.1.0 Windows installer shipped without npm and died in `npmCli()` on first run
+before it could fetch `@sdods/cli`; there is no fallback, because nothing searches PATH for npm.
+The fix is a second `extraResources` entry whose `from` *is* the `node_modules` directory, so the
+rule has nothing to match. `desktop.yml` now asserts npm as well as node in every packaged app —
+checking only the thing that broke last time is how the next hollow artifact ships.
+
+**`executableName` is not Linux-only.** It is needed on Linux (the scoped package name
+`@sdods/desktop` is rejected as a file path), but at the **top level** it also renames the macOS
+bundle to `sdods.app` and the Windows binary to `sdods.exe`. That shipped a lowercase app in
+Finder and made the download page's `xattr -dr com.apple.quarantine /Applications/SDODS.app` wrong
+on case-sensitive volumes. Keep it under `linux:`.
+
+**The deb needs `libasound2` and nothing else declares it.** Electron links `libasound.so.2`; none
+of electron-builder's default depends pull it in, so `apt install` reported success and the app
+then failed to start on any host without ALSA. Ubuntu 24.04 renamed the package `libasound2t64`
+and left `libasound2` as a virtual name with two providers, which apt will not resolve on its own
+— so the dependency must be the alternation `libasound2t64 | libasound2`, not a bare name.
+
+**The ARM64 AppImage cannot start on a stock distro.** Its AppImageKit runtime declares
+`NEEDED: libz.so` — the `zlib1g-dev` symlink — instead of `libz.so.1`, so it dies with
+`error while loading shared libraries: libz.so` before any of our code runs. The x86_64 runtime
+declares `libz.so.1` and is fine. Both runtimes also dlopen `libfuse.so.2`, which Ubuntu 22.04+
+no longer installs by default. Until the static `type2-runtime` is swapped in, ARM64 Linux users
+should be sent to the `.deb`.
+
+**An unsigned macOS build must still be signed ad-hoc.** With no Developer ID, electron-builder
+skips signing and leaves the linker's placeholder: `Identifier=Electron`, `Sealed Resources=none`,
+no `_CodeSignature`. A signature claiming sealed resources that has none reads as *tampered*, so a
+quarantined download reports "SDODS is damaged and can't be opened" rather than the ordinary
+unidentified-developer prompt. `scripts/after-pack.mjs` re-signs ad-hoc, which costs nothing and
+yields a valid signature; it runs **before** electron-builder's signing step, so real credentials
+still win.
+
 **Do not build the macOS `universal` target.** It lipo-merges two packs that each want a different
 `node` binary at one path. `before-pack.mjs` rejects it. Ship separate arm64 and x64 artifacts.
 
