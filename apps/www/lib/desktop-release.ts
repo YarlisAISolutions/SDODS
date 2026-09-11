@@ -134,10 +134,11 @@ export const DESKTOP_RELEASE: DesktopRelease = {
     },
     {
       platform: 'windows',
-      label: '64-bit',
+      label: 'Universal (x64 + ARM64)',
       file: 'SDODS-Setup-0.1.0-win.exe',
       size: '243 MB',
       arch: 'universal',
+      secondary: true,
     },
   ],
 };
