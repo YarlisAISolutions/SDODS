@@ -1,4 +1,6 @@
+import parseInfix from 'cucumber-tag-expressions';
 import { BrowserSchema, type ProjectConfig } from '@sdods/contracts';
+import { SdodsError } from '../errors.js';
 
 export const LAYER_TAGS = ['@ui', '@api', '@hybrid'] as const;
 /** Control tags the runner interprets itself; lint passes them through untouched. */
@@ -87,6 +89,34 @@ export function normalizeTagExpr(input?: string): string | undefined {
     .filter(Boolean)
     .map((t) => (t.startsWith('@') ? t : `@${t}`));
   return parts.length > 1 ? parts.join(' or ') : parts[0];
+}
+
+export interface TagExpr {
+  evaluate(tags: readonly string[]): boolean;
+}
+
+// The package is CommonJS with `exports.default`; ESM interop may hand back the module object.
+const parseInfixFn = ((parseInfix as unknown as { default?: unknown }).default ??
+  parseInfix) as unknown as (infix: string) => { evaluate(tags: string[]): boolean };
+
+/**
+ * Parse a Cucumber tag expression, or fail as a configuration error (exit 2) that quotes it.
+ * Every command that selects scenarios by tag goes through here so they agree on what matches.
+ */
+export function parseTagExpr(expr: string): TagExpr {
+  try {
+    const node = parseInfixFn(expr);
+    return { evaluate: (tags) => node.evaluate([...tags]) };
+  } catch (e) {
+    throw new SdodsError(
+      'CONFIG_INVALID',
+      `Invalid tag expression "${expr}": ${(e as Error).message}`,
+      {
+        hint: 'Combine tags with and / or / not and balanced parentheses, e.g. "@ui and (@smoke or @sanity)".',
+        exitCode: 2,
+      },
+    );
+  }
 }
 
 // ── runtime tag gate ─────────────────────────────────────────────────────────
