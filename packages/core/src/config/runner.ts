@@ -285,21 +285,13 @@ export function buildRunnerConfig(
             phase: RUNNER_SETUP_PHASE,
           });
           projects.push({ ...target, name: setupName, testDir: setupTestDir });
-          projects.push({ ...target, name, testDir, dependencies: [setupName] });
+          pushProject({ ...target, name, testDir, dependencies: [setupName] });
         } else {
-          projects.push({ ...target, name, testDir });
+          pushProject({ ...target, name, testDir });
         }
       };
 
       if (layer === 'api') {
-        pushProject({
-          name: runnerProjectName({ project: p.slug, layer }),
-          testDir,
-          use: { sdods: { project: p.slug, layer } satisfies SdodsUseOption } as Record<
-            string,
-            unknown
-          >,
-        });
         pushTarget(
           { layer },
           {
@@ -314,28 +306,6 @@ export function buildRunnerConfig(
       }
 
       for (const browser of browsers) {
-        pushProject({
-          name: runnerProjectName({ project: p.slug, layer, browser }),
-          testDir,
-          // Baselines live with the project (generated specs are per-run and deleted):
-          // projects/<slug>/features/__screenshots__/<pw project>/<platform>/<name>.png
-          snapshotPathTemplate: join(
-            p.root,
-            'features',
-            '__screenshots__',
-            '{projectName}',
-            '{platform}',
-            '{arg}{ext}',
-          ),
-          use: {
-            ...browserUse(browser, p.channel),
-            baseURL: cfg.env.ui.baseUrl,
-            testIdAttribute: p.testIdAttribute,
-            viewport: browser.startsWith('mobile') ? undefined : p.screenshots.viewport,
-            ...envUse,
-            sdods: { project: p.slug, layer, browser } satisfies SdodsUseOption,
-          } as Record<string, unknown>,
-        });
         pushTarget(
           { layer, browser },
           {
@@ -451,8 +421,6 @@ export function buildRunnerConfig(
   };
 }
 
-type RunnerProject = NonNullable<PlaywrightTestConfig['projects']>[number];
-
 /**
  * `retries.byTag` as runner projects.
  *
@@ -493,6 +461,8 @@ export function withRetriesByTag(
     seen.push(re);
   }
   return [{ ...project, grepInvert: seen }, ...out];
+}
+
 /**
  * `fullyParallel` and the setup tier for one project, with a named process taking precedence.
  * A process that is not defined for this project (a multi-project run) leaves the project's own.

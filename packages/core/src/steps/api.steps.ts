@@ -40,7 +40,7 @@ When(
 When(
   'I send a {method} request to {string} with the raw body:',
   async ({ api, apiContext, env }, method: HttpMethod, path: string, body: string) => {
-    await api.send(method, render(path, apiContext.vars.toObject(), env.vars), {
+    await api.send(method, renderStrict(path, apiContext.vars.toObject(), env.vars), {
       body: Buffer.from(body, 'utf8'),
     });
   },
