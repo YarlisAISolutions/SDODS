@@ -1,5 +1,56 @@
-import type { Page } from '@playwright/test';
-import type { HealContext, HealProbe } from './types.js';
+import type { Locator, Page } from '@playwright/test';
+import type { AriaRole, HealAction, HealContext, HealProbe } from './types.js';
+
+/**
+ * The roles an element must have for an action to make sense on it. `assert` and `hover` apply to
+ * anything, so they have none. A contenteditable editor has no role at all, which is why callers
+ * treat a role filter as a preference, never as the only way to reach an element.
+ */
+const ACTION_ROLES: Record<HealAction, AriaRole[]> = {
+  fill: ['textbox', 'searchbox', 'combobox', 'spinbutton'],
+  select: ['combobox', 'listbox'],
+  check: ['checkbox', 'radio', 'switch'],
+  click: ['button', 'link', 'menuitem', 'tab', 'option', 'checkbox', 'radio', 'switch'],
+  assert: [],
+  hover: [],
+};
+
+export function rolesFor(action: HealAction): AriaRole[] {
+  return ACTION_ROLES[action];
+}
+
+/** `locator` narrowed to elements whose role fits `action`; `locator` itself when none is defined. */
+export function withActionRole(page: Page, locator: Locator, action: HealAction): Locator {
+  const roles = rolesFor(action);
+  if (roles.length === 0) return locator;
+  return locator.and(roles.map((r) => page.getByRole(r)).reduce((union, next) => union.or(next)));
+}
+
+/**
+ * Candidates for a primary locator that matched several elements: the primary narrowed to the
+ * roles that fit the action (and the context's own role, when it names one), as a single union.
+ * A union keeps a genuine tie ambiguous — an input and a select both labelled "Country" still
+ * count 2 for a fill — rather than letting role order break it silently.
+ */
+export function disambiguationCandidates(
+  page: Page,
+  primary: Locator,
+  ctx: HealContext,
+  action: HealAction,
+): Omit<HealProbe, 'score' | 'count' | 'visible' | 'enabled' | 'ms'>[] {
+  const roles = [...new Set([...(ctx.role ? [ctx.role] : []), ...rolesFor(action)])];
+  if (roles.length === 0) return [];
+  return [
+    {
+      strategy: 'role-filter',
+      selector: `${String(primary)}.and(${roles.map((r) => `getByRole('${r}')`).join('.or(')}${')'.repeat(roles.length - 1)})`,
+      locator: primary.and(
+        roles.map((r) => page.getByRole(r)).reduce((union, next) => union.or(next)),
+      ),
+      baseScore: 1.0,
+    },
+  ];
+}
 
 /** Build candidate locators from the context, ordered by base score (higher = more semantic). */
 export function buildCandidates(

@@ -225,6 +225,9 @@ export async function runCommand(flags: RunFlags, cmd: Command): Promise<number>
     );
   }
 
+  const stepResults = stepResultsWarning(installedPlaywrightVersion(ctx.rootDir));
+  if (stepResults) warn(stepResults);
+
   const runId = flags.runId ?? newRunId();
   const cli: CliOverrides = {
     env: envName,

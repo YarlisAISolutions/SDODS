@@ -3,7 +3,7 @@ import { expect, type Page } from '@playwright/test';
 import { attachmentNames, scenarioFiles } from '@sdods/contracts';
 import './params.js';
 import { Then } from '../fixtures/test.js';
-import { render } from '../api/template.js';
+import { renderStrict } from '../api/template.js';
 import { SdodsError } from '../errors.js';
 import { Logger } from '../logger.js';
 
@@ -564,7 +564,7 @@ Then(
 Then(
   'the page should have no accessibility violations within {string}',
   async ({ page, scenario, apiContext, env, $bddContext, $testInfo }, selector: string) => {
-    const sel = render(selector, ...scopesOf(apiContext, env));
+    const sel = renderStrict(selector, ...scopesOf(apiContext, env));
     await requireRegion(page, sel);
     const results = await runAxe(page, { include: sel });
     attachA11y({ scenario, testInfo: $testInfo, stepIndex: $bddContext.stepIndex }, results);
@@ -584,7 +584,7 @@ Then(
 Then(
   'the page should have no accessibility violations of impact {string} or worse',
   async ({ page, scenario, apiContext, env, $bddContext, $testInfo }, level: string) => {
-    const floor = parseImpactFloor(render(level, ...scopesOf(apiContext, env)));
+    const floor = parseImpactFloor(renderStrict(level, ...scopesOf(apiContext, env)));
     const results = await runAxe(page, {});
     attachA11y({ scenario, testInfo: $testInfo, stepIndex: $bddContext.stepIndex }, results);
     assertAxeChecked(results, `on ${page.url()}`);
@@ -605,8 +605,8 @@ Then(
     selector: string,
   ) => {
     const scopes = scopesOf(apiContext, env);
-    const floor = parseImpactFloor(render(level, ...scopes));
-    const sel = render(selector, ...scopes);
+    const floor = parseImpactFloor(renderStrict(level, ...scopes));
+    const sel = renderStrict(selector, ...scopes);
     await requireRegion(page, sel);
     const results = await runAxe(page, { include: sel });
     attachA11y({ scenario, testInfo: $testInfo, stepIndex: $bddContext.stepIndex }, results);
@@ -629,7 +629,7 @@ Then(
 Then(
   'the page should have no accessibility violations of rule {string}',
   async ({ page, scenario, apiContext, env, $bddContext, $testInfo }, ruleId: string) => {
-    const rule = render(ruleId, ...scopesOf(apiContext, env));
+    const rule = renderStrict(ruleId, ...scopesOf(apiContext, env));
     const results = await runAxe(page, { rules: [rule] });
     attachA11y({ scenario, testInfo: $testInfo, stepIndex: $bddContext.stepIndex }, results);
     const bucket = assertRuleRan(results, rule, `on ${page.url()}`);
@@ -664,7 +664,7 @@ Then(
 Then(
   'the page should have no colour-contrast violations within {string}',
   async ({ page, scenario, apiContext, env, $bddContext, $testInfo }, selector: string) => {
-    const sel = render(selector, ...scopesOf(apiContext, env));
+    const sel = renderStrict(selector, ...scopesOf(apiContext, env));
     await requireRegion(page, sel);
     const results = await runAxe(page, { include: sel, rules: ['color-contrast'] });
     attachA11y({ scenario, testInfo: $testInfo, stepIndex: $bddContext.stepIndex }, results);
@@ -730,7 +730,7 @@ Then('every image on the page should carry an alt attribute', async ({ page }) =
 Then(
   'every image within {string} should carry an alt attribute',
   async ({ page, apiContext, env }, selector: string) => {
-    const sel = render(selector, ...scopesOf(apiContext, env));
+    const sel = renderStrict(selector, ...scopesOf(apiContext, env));
     const gathered = await page.evaluate(gatherImages, sel);
     const images = assertGathered(assertRegion(gathered, sel), 'img elements', `within "${sel}"`);
     const missing = imagesWithoutAlt(images);
@@ -752,7 +752,7 @@ Then(
 Then(
   'every icon-only control within {string} should expose an accessible name',
   async ({ page, apiContext, env }, selector: string) => {
-    const sel = render(selector, ...scopesOf(apiContext, env));
+    const sel = renderStrict(selector, ...scopesOf(apiContext, env));
     const gathered = await page.evaluate(gatherControls, sel);
     const controls = assertRegion(gathered, sel);
     const iconOnly = assertGathered(
@@ -780,7 +780,7 @@ Then(
 Then(
   'every focusable element within {string} should show a visible focus indicator',
   async ({ page, apiContext, env }, selector: string) => {
-    const sel = render(selector, ...scopesOf(apiContext, env));
+    const sel = renderStrict(selector, ...scopesOf(apiContext, env));
     await page.keyboard.press('Tab');
     const gathered = await page.evaluate(gatherFocusIndicators, sel);
     const focusables = assertGathered(

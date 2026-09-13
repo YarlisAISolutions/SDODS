@@ -5,7 +5,7 @@
 # package manager and web bundler; everything executes on Node 22 through tsx, and native
 # modules (better-sqlite3, argon2) resolve prebuilt binaries for Node 22 at install time.
 
-FROM mcr.microsoft.com/playwright:v1.62.1-noble
+FROM mcr.microsoft.com/playwright:v1.63.0-noble
 ENV NODE_ENV=production \
     DB_DRIVER=sqlite \
     SQLITE_PATH=/data/sdods.db \

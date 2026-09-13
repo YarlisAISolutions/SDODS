@@ -1,7 +1,7 @@
 import { expect } from '@playwright/test';
 import type { Cookie, Page } from '@playwright/test';
 import { Given, Then, When } from '../fixtures/test.js';
-import { render } from '../api/template.js';
+import { renderStrict } from '../api/template.js';
 import { SdodsError } from '../errors.js';
 
 /**
@@ -12,7 +12,8 @@ import { SdodsError } from '../errors.js';
  * step PROVES; where a step exists because of a specific trap, the trap is named.
  *
  * Two rules govern the whole file:
- *   * every string argument is interpolated through `render()`, so `{{vars}}` work everywhere;
+ *   * every string argument is interpolated through `renderStrict()`, so `{{vars}}` work everywhere
+ *     and an unset one fails the step instead of being matched literally;
  *   * no assertion may pass over an empty set. A selector that matches nothing, a body that
  *     rendered no text, a recorder that was never armed and a page that never navigated are all
  *     failures, because a green step that observed nothing is worse than no step at all.
@@ -55,8 +56,8 @@ Given(
     const scopes = scopesOf(apiContext, env);
     await page.context().addCookies([
       {
-        name: render(name, ...scopes),
-        value: render(value, ...scopes),
+        name: renderStrict(name, ...scopes),
+        value: renderStrict(value, ...scopes),
         url: baseUrlOf(env, 'I set the browser cookie'),
       },
     ]);
@@ -68,7 +69,7 @@ Given(
 // read-filter-restore. Clearing the jar to drop a session cookie would also drop the consent and
 // locale cookies the scenario set up, and the failure would look like a bug in the app.
 Given('I clear the browser cookie {string}', async ({ page, apiContext, env }, name: string) => {
-  const wanted = render(name, ...scopesOf(apiContext, env));
+  const wanted = renderStrict(name, ...scopesOf(apiContext, env));
   const context = page.context();
   const all = await context.cookies();
   const survivors = all.filter((c) => c.name !== wanted);
@@ -88,10 +89,10 @@ Then(
   'the browser cookie {string} should equal {string}',
   async ({ page, apiContext, env }, name: string, expected: string) => {
     const scopes = scopesOf(apiContext, env);
-    const wanted = render(name, ...scopes);
+    const wanted = renderStrict(name, ...scopes);
     const cookie = await findCookie(page, wanted);
     expect(cookie, `cookie "${wanted}" is not in the jar`).toBeTruthy();
-    expect((cookie as Cookie).value, `cookie "${wanted}"`).toBe(render(expected, ...scopes));
+    expect((cookie as Cookie).value, `cookie "${wanted}"`).toBe(renderStrict(expected, ...scopes));
   },
 );
 
@@ -99,7 +100,7 @@ Then(
 Then(
   'the browser cookie {string} should exist',
   async ({ page, apiContext, env }, name: string) => {
-    const wanted = render(name, ...scopesOf(apiContext, env));
+    const wanted = renderStrict(name, ...scopesOf(apiContext, env));
     expect(await findCookie(page, wanted), `cookie "${wanted}" is not in the jar`).toBeTruthy();
   },
 );
@@ -108,7 +109,7 @@ Then(
 Then(
   'the browser cookie {string} should not exist',
   async ({ page, apiContext, env }, name: string) => {
-    const wanted = render(name, ...scopesOf(apiContext, env));
+    const wanted = renderStrict(name, ...scopesOf(apiContext, env));
     expect(await findCookie(page, wanted), `unexpected cookie "${wanted}"`).toBeUndefined();
   },
 );
@@ -124,8 +125,8 @@ Then(
   'the browser cookie {string} should carry {string} equal to {string}',
   async ({ page, apiContext, env }, name: string, attribute: string, value: string) => {
     const scopes = scopesOf(apiContext, env);
-    const wanted = render(name, ...scopes);
-    const attr = render(attribute, ...scopes);
+    const wanted = renderStrict(name, ...scopes);
+    const attr = renderStrict(attribute, ...scopes);
     if (!(COOKIE_ATTRIBUTES as readonly string[]).includes(attr))
       throw new SdodsError('RUN_FAILED', `"${attr}" is not a cookie attribute.`, {
         hint: `Use one of: ${COOKIE_ATTRIBUTES.join(', ')}.`,
@@ -133,7 +134,7 @@ Then(
     const cookie = await findCookie(page, wanted);
     expect(cookie, `cookie "${wanted}" is not in the jar`).toBeTruthy();
     const actual = (cookie as unknown as Record<string, unknown>)[attr];
-    expect(String(actual), `${wanted}.${attr}`).toBe(render(value, ...scopes));
+    expect(String(actual), `${wanted}.${attr}`).toBe(renderStrict(value, ...scopes));
   },
 );
 
@@ -242,7 +243,7 @@ Given(
   'I seed local storage {string} with {string}',
   async ({ page, apiContext, env }, key: string, value: string) => {
     const scopes = scopesOf(apiContext, env);
-    await seedStorage(page, 'local', render(key, ...scopes), render(value, ...scopes));
+    await seedStorage(page, 'local', renderStrict(key, ...scopes), renderStrict(value, ...scopes));
   },
 );
 
@@ -251,14 +252,19 @@ Given(
   'I seed session storage {string} with {string}',
   async ({ page, apiContext, env }, key: string, value: string) => {
     const scopes = scopesOf(apiContext, env);
-    await seedStorage(page, 'session', render(key, ...scopes), render(value, ...scopes));
+    await seedStorage(
+      page,
+      'session',
+      renderStrict(key, ...scopes),
+      renderStrict(value, ...scopes),
+    );
   },
 );
 
 // Proves the DEFAULT path: what the app does for a visitor with no stored preference. Removal is
 // armed as an init script as well as applied in place, so the next navigation cannot resurrect it.
 Given('I clear the local storage key {string}', async ({ page, apiContext, env }, key: string) => {
-  const wanted = render(key, ...scopesOf(apiContext, env));
+  const wanted = renderStrict(key, ...scopesOf(apiContext, env));
   await page.addInitScript((k: string) => {
     try {
       window.localStorage.removeItem(k);
@@ -304,16 +310,16 @@ Then(
   'local storage {string} should equal {string}',
   async ({ page, apiContext, env }, key: string, expected: string) => {
     const scopes = scopesOf(apiContext, env);
-    const k = render(key, ...scopes);
+    const k = renderStrict(key, ...scopes);
     expect(await readStorage(page, 'local', k), `local storage "${k}"`).toBe(
-      render(expected, ...scopes),
+      renderStrict(expected, ...scopes),
     );
   },
 );
 
 // Proves a sign-out, a reset or a decline actually removed the key rather than blanking the UI.
 Then('local storage {string} should be absent', async ({ page, apiContext, env }, key: string) => {
-  const k = render(key, ...scopesOf(apiContext, env));
+  const k = renderStrict(key, ...scopesOf(apiContext, env));
   expect(await readStorage(page, 'local', k), `local storage "${k}"`).toBeNull();
 });
 
@@ -322,7 +328,7 @@ Then('local storage {string} should be absent', async ({ page, apiContext, env }
 Then(
   'session storage {string} should be absent',
   async ({ page, apiContext, env }, key: string) => {
-    const k = render(key, ...scopesOf(apiContext, env));
+    const k = renderStrict(key, ...scopesOf(apiContext, env));
     expect(await readStorage(page, 'session', k), `session storage "${k}"`).toBeNull();
   },
 );
@@ -332,9 +338,9 @@ Then(
   'session storage {string} should equal {string}',
   async ({ page, apiContext, env }, key: string, expected: string) => {
     const scopes = scopesOf(apiContext, env);
-    const k = render(key, ...scopes);
+    const k = renderStrict(key, ...scopes);
     expect(await readStorage(page, 'session', k), `session storage "${k}"`).toBe(
-      render(expected, ...scopes),
+      renderStrict(expected, ...scopes),
     );
   },
 );
@@ -411,7 +417,7 @@ Then('the page should not scroll horizontally', async ({ page }) => {
 Then(
   'the element matching {string} should not overflow horizontally',
   async ({ page, apiContext, env }, selector: string) => {
-    const sel = render(selector, ...scopesOf(apiContext, env));
+    const sel = renderStrict(selector, ...scopesOf(apiContext, env));
     const info = (await page.evaluate((s: string) => {
       const el = document.querySelector(s) as HTMLElement | null;
       if (!el) return { found: false, scrollWidth: 0, clientWidth: 0 };
@@ -433,7 +439,7 @@ const COLOUR_SCHEMES = ['light', 'dark', 'no-preference'] as const;
 // its own preference is seeded with `Given I seed local storage …` instead, and a complete dark-mode
 // scenario usually needs both.
 Given('I emulate the {string} colour scheme', async ({ page, apiContext, env }, scheme: string) => {
-  const wanted = render(scheme, ...scopesOf(apiContext, env));
+  const wanted = renderStrict(scheme, ...scopesOf(apiContext, env));
   if (!(COLOUR_SCHEMES as readonly string[]).includes(wanted))
     throw new SdodsError('RUN_FAILED', `"${wanted}" is not a colour scheme.`, {
       hint: `Use one of: ${COLOUR_SCHEMES.join(', ')}.`,
@@ -536,7 +542,7 @@ function expectLight(painted: PaintedColour, subject: string): void {
 Then(
   'the html element should carry the {string} class',
   async ({ page, apiContext, env }, cls: string) => {
-    const wanted = render(cls, ...scopesOf(apiContext, env));
+    const wanted = renderStrict(cls, ...scopesOf(apiContext, env));
     const classes = await page.evaluate(() => document.documentElement.className);
     expect(
       String(classes).split(/\s+/).filter(Boolean),
@@ -549,7 +555,7 @@ Then(
 Then(
   'the html element should not carry the {string} class',
   async ({ page, apiContext, env }, cls: string) => {
-    const wanted = render(cls, ...scopesOf(apiContext, env));
+    const wanted = renderStrict(cls, ...scopesOf(apiContext, env));
     const classes = await page.evaluate(() => document.documentElement.className);
     expect(
       String(classes).split(/\s+/).filter(Boolean),
@@ -577,7 +583,7 @@ Then('the painted page background should be light', async ({ page }) => {
 Then(
   'the element matching {string} should paint a dark background',
   async ({ page, apiContext, env }, selector: string) => {
-    const sel = render(selector, ...scopesOf(apiContext, env));
+    const sel = renderStrict(selector, ...scopesOf(apiContext, env));
     expectDark(await paintedColour(page, sel, `the element matching "${sel}"`), `"${sel}"`);
   },
 );
@@ -660,8 +666,8 @@ Given(
     requireNavigated(page, 'I switch the interface locale');
     await page.context().addCookies([
       {
-        name: render(cookieName, ...scopes),
-        value: render(locale, ...scopes),
+        name: renderStrict(cookieName, ...scopes),
+        value: renderStrict(locale, ...scopes),
         url: baseUrlOf(env, 'I switch the interface locale'),
       },
     ]);
@@ -678,7 +684,7 @@ Given(
   async ({ page, apiContext, env }, locale: string) => {
     requireNavigated(page, 'I request the locale with the Accept-Language header');
     await page.setExtraHTTPHeaders({
-      'Accept-Language': render(locale, ...scopesOf(apiContext, env)),
+      'Accept-Language': renderStrict(locale, ...scopesOf(apiContext, env)),
     });
     await page.reload({ waitUntil: 'domcontentloaded' });
   },
@@ -689,7 +695,7 @@ Given(
 Then(
   'the html lang attribute should be {string}',
   async ({ page, apiContext, env }, lang: string) => {
-    const wanted = render(lang, ...scopesOf(apiContext, env));
+    const wanted = renderStrict(lang, ...scopesOf(apiContext, env));
     const actual = await page.evaluate(() => document.documentElement.getAttribute('lang'));
     expect(actual, 'html lang attribute').toBe(wanted);
   },
@@ -833,7 +839,7 @@ Then('no console error should have been recorded', async ({ apiContext }) => {
 // hydration mismatch, a blocked request — while tolerating noise the team has accepted.
 Then('no console error should match {string}', async ({ apiContext, env }, pattern: string) => {
   const recording = recordingFor(apiContext, 'no console error should match');
-  const rendered = render(pattern, apiContext.vars.toObject(), env.vars);
+  const rendered = renderStrict(pattern, apiContext.vars.toObject(), env.vars);
   const re = compilePattern(rendered, 'no console error should match');
   expect(
     recording.errors.filter((line) => re.test(line)),
@@ -845,7 +851,7 @@ Then('no console error should match {string}', async ({ apiContext, env }, patte
 // deprecated API — never at error level.
 Then('no console warning should match {string}', async ({ apiContext, env }, pattern: string) => {
   const recording = recordingFor(apiContext, 'no console warning should match');
-  const rendered = render(pattern, apiContext.vars.toObject(), env.vars);
+  const rendered = renderStrict(pattern, apiContext.vars.toObject(), env.vars);
   const re = compilePattern(rendered, 'no console warning should match');
   expect(
     recording.warnings.filter((line) => re.test(line)),
@@ -863,7 +869,7 @@ Then(
       apiContext,
       'a console error matching … should have been recorded',
     );
-    const rendered = render(pattern, apiContext.vars.toObject(), env.vars);
+    const rendered = renderStrict(pattern, apiContext.vars.toObject(), env.vars);
     const re = compilePattern(rendered, 'a console error matching … should have been recorded');
     expect(
       recording.errors.filter((line) => re.test(line)).length,

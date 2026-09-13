@@ -1,7 +1,7 @@
 import { expect, type Locator, type Page } from '@playwright/test';
 import './params.js';
 import { Then, When } from '../fixtures/test.js';
-import { render } from '../api/template.js';
+import { renderStrict } from '../api/template.js';
 import type { AriaRole } from '../heal/types.js';
 import { SdodsError } from '../errors.js';
 
@@ -15,7 +15,7 @@ import { SdodsError } from '../errors.js';
  *
  * Two conventions hold throughout this file, both of them load-bearing:
  *
- * 1. EVERY string argument goes through `render()`, ids and role names included. A step that
+ * 1. EVERY string argument goes through `renderStrict()`, ids and role names included. A step that
  *    silently drops `{{vars}}` fails much later, in a scenario that looks unrelated; rendering a
  *    string with no placeholder in it is a no-op, so there is no cost to doing it everywhere.
  *
@@ -199,7 +199,7 @@ function bag(key: object): DomScratch {
 Then(
   'the element with test id {string} should not be visible',
   async ({ page, apiContext, env }, id: string) => {
-    await expect(page.getByTestId(render(id, ...scopesOf(apiContext, env)))).toBeHidden();
+    await expect(page.getByTestId(renderStrict(id, ...scopesOf(apiContext, env)))).toBeHidden();
   },
 );
 
@@ -209,7 +209,7 @@ Then(
 Then(
   'the element with test id {string} should not exist',
   async ({ page, apiContext, env }, id: string) => {
-    await expect(page.getByTestId(render(id, ...scopesOf(apiContext, env)))).toHaveCount(0);
+    await expect(page.getByTestId(renderStrict(id, ...scopesOf(apiContext, env)))).toHaveCount(0);
   },
 );
 
@@ -218,7 +218,7 @@ Then(
 Then(
   'the {string} {role} should not be visible',
   async ({ page, apiContext, env }, name: string, role: string) => {
-    const n = render(name, ...scopesOf(apiContext, env));
+    const n = renderStrict(name, ...scopesOf(apiContext, env));
     await expect(page.getByRole(role as AriaRole, { name: n })).toBeHidden();
   },
 );
@@ -228,7 +228,7 @@ Then(
 Then(
   'no {string} {role} should exist',
   async ({ page, apiContext, env }, name: string, role: string) => {
-    const n = render(name, ...scopesOf(apiContext, env));
+    const n = renderStrict(name, ...scopesOf(apiContext, env));
     await expect(page.getByRole(role as AriaRole, { name: n })).toHaveCount(0);
   },
 );
@@ -241,7 +241,7 @@ Then(
   'the {string} {role} should stay absent for {int} seconds',
   async ({ page, apiContext, env }, name: string, role: string, seconds: number) => {
     assertPositiveDuration(seconds);
-    const n = render(name, ...scopesOf(apiContext, env));
+    const n = renderStrict(name, ...scopesOf(apiContext, env));
     const locator = page.getByRole(role as AriaRole, { name: n });
     const deadline = Date.now() + seconds * 1000;
     do {
@@ -261,7 +261,7 @@ Then(
 Then(
   'the text {string} should appear anywhere on the page',
   async ({ page, apiContext, env }, text: string) => {
-    const wanted = render(text, ...scopesOf(apiContext, env));
+    const wanted = renderStrict(text, ...scopesOf(apiContext, env));
     await expect
       .poll(async () => readableText(page), { message: `page never rendered "${wanted}"` })
       .toContain(wanted);
@@ -275,7 +275,7 @@ Then(
 Then(
   'the text {string} should not appear anywhere on the page',
   async ({ page, apiContext, env }, text: string) => {
-    const unwanted = render(text, ...scopesOf(apiContext, env));
+    const unwanted = renderStrict(text, ...scopesOf(apiContext, env));
     const haystack = await readableText(page);
     if (haystack.length === 0) {
       throw new SdodsError('RUN_FAILED', 'The page has rendered no readable text at all.', {
@@ -293,7 +293,7 @@ Then(
 Then(
   'the {string} {role} should be enabled',
   async ({ page, heal, apiContext, env }, name: string, role: string) => {
-    const n = render(name, ...scopesOf(apiContext, env));
+    const n = renderStrict(name, ...scopesOf(apiContext, env));
     const locator = await heal.resolve(
       page.getByRole(role as AriaRole, { name: n }),
       { role: role as AriaRole, name: n, text: n, description: `${role} "${n}"` },
@@ -308,7 +308,7 @@ Then(
 Then(
   'the {string} {role} should be disabled',
   async ({ page, apiContext, env }, name: string, role: string) => {
-    const n = render(name, ...scopesOf(apiContext, env));
+    const n = renderStrict(name, ...scopesOf(apiContext, env));
     await expect(page.getByRole(role as AriaRole, { name: n })).toBeDisabled();
   },
 );
@@ -320,7 +320,7 @@ Then(
   'the {string} {role} should stay disabled for {int} seconds',
   async ({ page, apiContext, env }, name: string, role: string, seconds: number) => {
     assertPositiveDuration(seconds);
-    const n = render(name, ...scopesOf(apiContext, env));
+    const n = renderStrict(name, ...scopesOf(apiContext, env));
     const locator = page.getByRole(role as AriaRole, { name: n });
     const deadline = Date.now() + seconds * 1000;
     do {
@@ -343,7 +343,7 @@ Then(
 Then(
   'the {string} {role} should be absent or disabled',
   async ({ page, apiContext, env }, name: string, role: string) => {
-    const n = render(name, ...scopesOf(apiContext, env));
+    const n = renderStrict(name, ...scopesOf(apiContext, env));
     const locator = page.getByRole(role as AriaRole, { name: n });
     if ((await locator.count()) === 0) return;
     await expect(locator.first()).toBeDisabled();
@@ -354,7 +354,7 @@ Then(
 Then(
   'the element with test id {string} should be enabled',
   async ({ page, heal, apiContext, env }, id: string) => {
-    const testId = render(id, ...scopesOf(apiContext, env));
+    const testId = renderStrict(id, ...scopesOf(apiContext, env));
     const locator = await heal.resolve(
       page.getByTestId(testId),
       { testId, description: `test id "${testId}"` },
@@ -368,7 +368,7 @@ Then(
 Then(
   'the element with test id {string} should be disabled',
   async ({ page, apiContext, env }, id: string) => {
-    await expect(page.getByTestId(render(id, ...scopesOf(apiContext, env)))).toBeDisabled();
+    await expect(page.getByTestId(renderStrict(id, ...scopesOf(apiContext, env)))).toBeDisabled();
   },
 );
 
@@ -376,7 +376,7 @@ Then(
 Then(
   'the element with test id {string} should be absent or disabled',
   async ({ page, apiContext, env }, id: string) => {
-    const locator = page.getByTestId(render(id, ...scopesOf(apiContext, env)));
+    const locator = page.getByTestId(renderStrict(id, ...scopesOf(apiContext, env)));
     if ((await locator.count()) === 0) return;
     await expect(locator.first()).toBeDisabled();
   },
@@ -386,7 +386,7 @@ Then(
 Then(
   'the {string} checkbox should be checked',
   async ({ page, heal, apiContext, env }, label: string) => {
-    const l = render(label, ...scopesOf(apiContext, env));
+    const l = renderStrict(label, ...scopesOf(apiContext, env));
     const locator = await heal.resolve(
       page.getByLabel(l),
       { label: l, role: 'checkbox', name: l, description: `${l} checkbox` },
@@ -404,7 +404,7 @@ Then(
 Then(
   'the {string} checkbox should not be checked',
   async ({ page, apiContext, env }, label: string) => {
-    const l = render(label, ...scopesOf(apiContext, env));
+    const l = renderStrict(label, ...scopesOf(apiContext, env));
     const locator = page.getByLabel(l);
     await expect(locator, `no "${l}" checkbox is rendered`).toHaveCount(1);
     await expect(locator).not.toBeChecked();
@@ -422,7 +422,7 @@ Then(
 When(
   'I click the first element with test id {string}',
   async ({ page, apiContext, env }, id: string) => {
-    const testId = render(id, ...scopesOf(apiContext, env));
+    const testId = renderStrict(id, ...scopesOf(apiContext, env));
     const locator = page.getByTestId(testId);
     await expectAtLeast(locator, 1, `elements with test id "${testId}"`);
     await locator.first().click();
@@ -434,7 +434,7 @@ When(
 When(
   'I click the element with test id {string} at position {int}',
   async ({ page, apiContext, env }, id: string, position: number) => {
-    const testId = render(id, ...scopesOf(apiContext, env));
+    const testId = renderStrict(id, ...scopesOf(apiContext, env));
     const index = indexOfPosition(position, `elements with test id "${testId}"`);
     const locator = page.getByTestId(testId);
     await expectAtLeast(locator, position, `elements with test id "${testId}"`);
@@ -446,7 +446,7 @@ When(
 When(
   'I click the first {string} {role}',
   async ({ page, apiContext, env }, name: string, role: string) => {
-    const n = render(name, ...scopesOf(apiContext, env));
+    const n = renderStrict(name, ...scopesOf(apiContext, env));
     const locator = page.getByRole(role as AriaRole, { name: n });
     await expectAtLeast(locator, 1, `"${n}" ${role} elements`);
     await locator.first().click();
@@ -457,7 +457,7 @@ When(
 When(
   'I click the {string} {role} at position {int}',
   async ({ page, apiContext, env }, name: string, role: string, position: number) => {
-    const n = render(name, ...scopesOf(apiContext, env));
+    const n = renderStrict(name, ...scopesOf(apiContext, env));
     const index = indexOfPosition(position, `"${n}" ${role} elements`);
     const locator = page.getByRole(role as AriaRole, { name: n });
     await expectAtLeast(locator, position, `"${n}" ${role} elements`);
@@ -470,10 +470,10 @@ When(
   'I fill the first element with test id {string} with {string}',
   async ({ page, apiContext, env }, id: string, value: string) => {
     const scopes = scopesOf(apiContext, env);
-    const testId = render(id, ...scopes);
+    const testId = renderStrict(id, ...scopes);
     const locator = page.getByTestId(testId);
     await expectAtLeast(locator, 1, `elements with test id "${testId}"`);
-    await locator.first().fill(render(value, ...scopes));
+    await locator.first().fill(renderStrict(value, ...scopes));
   },
 );
 
@@ -482,11 +482,11 @@ When(
   'I fill the element with test id {string} at position {int} with {string}',
   async ({ page, apiContext, env }, id: string, position: number, value: string) => {
     const scopes = scopesOf(apiContext, env);
-    const testId = render(id, ...scopes);
+    const testId = renderStrict(id, ...scopes);
     const index = indexOfPosition(position, `elements with test id "${testId}"`);
     const locator = page.getByTestId(testId);
     await expectAtLeast(locator, position, `elements with test id "${testId}"`);
-    await locator.nth(index).fill(render(value, ...scopes));
+    await locator.nth(index).fill(renderStrict(value, ...scopes));
   },
 );
 
@@ -495,7 +495,9 @@ When(
 Then(
   'the first element with test id {string} should be visible',
   async ({ page, apiContext, env }, id: string) => {
-    await expect(page.getByTestId(render(id, ...scopesOf(apiContext, env))).first()).toBeVisible();
+    await expect(
+      page.getByTestId(renderStrict(id, ...scopesOf(apiContext, env))).first(),
+    ).toBeVisible();
   },
 );
 
@@ -503,7 +505,7 @@ Then(
 Then(
   'the element with test id {string} at position {int} should be visible',
   async ({ page, apiContext, env }, id: string, position: number) => {
-    const testId = render(id, ...scopesOf(apiContext, env));
+    const testId = renderStrict(id, ...scopesOf(apiContext, env));
     const index = indexOfPosition(position, `elements with test id "${testId}"`);
     await expect(
       page.getByTestId(testId).nth(index),
@@ -518,12 +520,12 @@ Then(
   'the element with test id {string} at position {int} should contain {string}',
   async ({ page, apiContext, env }, id: string, position: number, text: string) => {
     const scopes = scopesOf(apiContext, env);
-    const testId = render(id, ...scopes);
+    const testId = renderStrict(id, ...scopes);
     const index = indexOfPosition(position, `elements with test id "${testId}"`);
     await expect(
       page.getByTestId(testId).nth(index),
       `element with test id "${testId}" at position ${position}`,
-    ).toContainText(render(text, ...scopes));
+    ).toContainText(renderStrict(text, ...scopes));
   },
 );
 
@@ -531,7 +533,7 @@ Then(
 Then(
   'the first {string} {role} should be visible',
   async ({ page, apiContext, env }, name: string, role: string) => {
-    const n = render(name, ...scopesOf(apiContext, env));
+    const n = renderStrict(name, ...scopesOf(apiContext, env));
     await expect(page.getByRole(role as AriaRole, { name: n }).first()).toBeVisible();
   },
 );
@@ -540,7 +542,7 @@ Then(
 Then(
   'the {string} {role} at position {int} should be visible',
   async ({ page, apiContext, env }, name: string, role: string, position: number) => {
-    const n = render(name, ...scopesOf(apiContext, env));
+    const n = renderStrict(name, ...scopesOf(apiContext, env));
     const index = indexOfPosition(position, `"${n}" ${role} elements`);
     await expect(
       page.getByRole(role as AriaRole, { name: n }).nth(index),
@@ -556,7 +558,9 @@ Then(
 Then(
   'the element with test id {string} should have exactly {int} matches',
   async ({ page, apiContext, env }, id: string, count: number) => {
-    await expect(page.getByTestId(render(id, ...scopesOf(apiContext, env)))).toHaveCount(count);
+    await expect(page.getByTestId(renderStrict(id, ...scopesOf(apiContext, env)))).toHaveCount(
+      count,
+    );
   },
 );
 
@@ -565,7 +569,7 @@ Then(
 Then(
   'the element with test id {string} should have at least {int} matches',
   async ({ page, apiContext, env }, id: string, count: number) => {
-    const testId = render(id, ...scopesOf(apiContext, env));
+    const testId = renderStrict(id, ...scopesOf(apiContext, env));
     assertMeaningfulFloor(count, `elements with test id "${testId}"`);
     await expectAtLeast(page.getByTestId(testId), count, `elements with test id "${testId}"`);
   },
@@ -576,7 +580,7 @@ Then(
 Then(
   'there should be exactly {int} {string} {role} elements',
   async ({ page, apiContext, env }, count: number, name: string, role: string) => {
-    const n = render(name, ...scopesOf(apiContext, env));
+    const n = renderStrict(name, ...scopesOf(apiContext, env));
     await expect(page.getByRole(role as AriaRole, { name: n })).toHaveCount(count);
   },
 );
@@ -585,7 +589,7 @@ Then(
 Then(
   'there should be at least {int} {string} {role} elements',
   async ({ page, apiContext, env }, count: number, name: string, role: string) => {
-    const n = render(name, ...scopesOf(apiContext, env));
+    const n = renderStrict(name, ...scopesOf(apiContext, env));
     assertMeaningfulFloor(count, `"${n}" ${role} elements`);
     await expectAtLeast(
       page.getByRole(role as AriaRole, { name: n }),
@@ -606,7 +610,7 @@ Then(
 Then(
   'the focused element should be named {string}',
   async ({ page, apiContext, env }, name: string) => {
-    const wanted = render(name, ...scopesOf(apiContext, env));
+    const wanted = renderStrict(name, ...scopesOf(apiContext, env));
     const info = await readFocus(page);
     expect(
       info.focused,
@@ -647,7 +651,7 @@ Then('the focused element should be inside the open dialog', async ({ page }) =>
 Then(
   'focus should be on the {string} {role}',
   async ({ page, apiContext, env }, name: string, role: string) => {
-    const n = render(name, ...scopesOf(apiContext, env));
+    const n = renderStrict(name, ...scopesOf(apiContext, env));
     await expect(page.locator(':focus'), 'nothing on the page is focused').toHaveCount(1);
     await expect(page.getByRole(role as AriaRole, { name: n }).first()).toBeFocused();
   },
@@ -665,7 +669,7 @@ When(
       'no editable element is focused — did the rename affordance open?',
     ).toHaveCount(1);
     await page.keyboard.press('ControlOrMeta+a');
-    await page.keyboard.type(render(value, ...scopesOf(apiContext, env)));
+    await page.keyboard.type(renderStrict(value, ...scopesOf(apiContext, env)));
   },
 );
 
@@ -681,7 +685,7 @@ When(
         hint: 'Press counts are whole numbers, 1 or more. A 0-press step does nothing, and any assertion that follows it would be about an untouched page.',
       });
     }
-    const k = render(key, ...scopesOf(apiContext, env));
+    const k = renderStrict(key, ...scopesOf(apiContext, env));
     for (let i = 0; i < times; i += 1) await page.keyboard.press(k);
   },
 );
@@ -696,7 +700,7 @@ When(
         hint: 'A focus walk of 0 presses records nothing, and "every recorded focus stayed inside" would then be true of an empty list.',
       });
     }
-    const k = render(key, ...scopesOf(apiContext, env));
+    const k = renderStrict(key, ...scopesOf(apiContext, env));
     const walk: boolean[] = [];
     for (let i = 0; i < times; i += 1) {
       await page.keyboard.press(k);
@@ -731,7 +735,7 @@ Then('every recorded focus should have stayed inside the dialog', async ({ apiCo
 When(
   'I tab to the first focusable element inside the {string} {role}',
   async ({ page, heal, apiContext, env }, name: string, role: string) => {
-    const n = render(name, ...scopesOf(apiContext, env));
+    const n = renderStrict(name, ...scopesOf(apiContext, env));
     const region = await heal.resolve(
       page.getByRole(role as AriaRole, { name: n }),
       { role: role as AriaRole, name: n, text: n, description: `${role} "${n}"` },
@@ -745,7 +749,7 @@ When(
 When(
   'I tab to the first focusable element inside the element with test id {string}',
   async ({ page, heal, apiContext, env }, id: string) => {
-    const testId = render(id, ...scopesOf(apiContext, env));
+    const testId = renderStrict(id, ...scopesOf(apiContext, env));
     const region = await heal.resolve(
       page.getByTestId(testId),
       { testId, description: `test id "${testId}"` },
@@ -804,7 +808,7 @@ When(
     await fillOverlayField(
       page.getByRole('dialog').last(),
       'dialog',
-      render(value, ...scopesOf(apiContext, env)),
+      renderStrict(value, ...scopesOf(apiContext, env)),
     );
   },
 );
@@ -817,7 +821,7 @@ When(
     await fillOverlayField(
       page.getByRole('alertdialog').last(),
       'alert dialog',
-      render(value, ...scopesOf(apiContext, env)),
+      renderStrict(value, ...scopesOf(apiContext, env)),
     );
   },
 );
@@ -830,7 +834,7 @@ When(
     await fillOverlayField(
       page.locator(POPOVER_SELECTOR).last(),
       'popover',
-      render(value, ...scopesOf(apiContext, env)),
+      renderStrict(value, ...scopesOf(apiContext, env)),
     );
   },
 );
@@ -842,12 +846,12 @@ When(
   'I fill the {string} field of the open dialog with {string}',
   async ({ page, apiContext, env }, label: string, value: string) => {
     const scopes = scopesOf(apiContext, env);
-    const l = render(label, ...scopes);
+    const l = renderStrict(label, ...scopes);
     const dialog = page.getByRole('dialog').last();
     await expect(dialog, 'no dialog is open').toBeVisible();
     const field = dialog.getByLabel(l);
     await expect(field, `the open dialog has no "${l}" field`).toHaveCount(1);
-    await field.fill(render(value, ...scopes));
+    await field.fill(renderStrict(value, ...scopes));
   },
 );
 

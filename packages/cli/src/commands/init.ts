@@ -185,8 +185,10 @@ export async function initWorkspace(target: string, flags: InitFlags): Promise<I
           '@sdods/cli': dep('@sdods/cli'),
           '@sdods/core': dep('@sdods/core'),
           '@sdods/contracts': dep('@sdods/contracts'),
+          // 1.63 is the floor, not a preference: below it an npm-installed workspace records every
+          // Gherkin step SKIPPED in messages.ndjson (see runner-compat.ts).
           '@playwright/test':
-            flags.link && flags.pm === 'bun' ? 'link:@playwright/test' : '^1.62.1',
+            flags.link && flags.pm === 'bun' ? 'link:@playwright/test' : '^1.63.0',
           'playwright-bdd': flags.link && flags.pm === 'bun' ? 'link:playwright-bdd' : '^9.2.0',
         },
         devDependencies: {

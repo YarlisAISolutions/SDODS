@@ -6,6 +6,11 @@ import pc from 'picocolors';
 import { collectVarRefs, loadDotEnvLayer, loadEnvFile } from '@sdods/core';
 import { createContext } from '../context.js';
 import { browserStatuses } from './browsers.js';
+import {
+  MIN_PLAYWRIGHT_FOR_STEP_RESULTS,
+  installedPlaywrightVersion,
+  stepResultsWarning,
+} from '../runner-compat.js';
 import { json, out } from '../ui.js';
 
 interface Check {
@@ -45,6 +50,18 @@ export function registerDoctorCommand(program: Command) {
           'npx',
         ),
       );
+
+      const runnerVersion = installedPlaywrightVersion(ctx.rootDir);
+      if (runnerVersion) {
+        checks.push({
+          name: 'step results',
+          ok: !stepResultsWarning(runnerVersion),
+          detail: stepResultsWarning(runnerVersion)
+            ? `@playwright/test ${runnerVersion} records every Gherkin step SKIPPED in messages.ndjson`
+            : `@playwright/test ${runnerVersion} (>= ${MIN_PLAYWRIGHT_FOR_STEP_RESULTS})`,
+          fix: `npm i -D @playwright/test@^${MIN_PLAYWRIGHT_FOR_STEP_RESULTS} (or bun add -d)`,
+        });
+      }
 
       const browsers = await browserCheck();
       checks.push(...browsers);

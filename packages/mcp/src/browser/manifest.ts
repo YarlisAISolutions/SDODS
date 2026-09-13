@@ -113,6 +113,12 @@ export const BROWSER_TOOLS: Record<UpstreamToolName, BrowserToolSpec> = {
   browser_video_chapter: { pack: 'devtools', access: 'read' },
   browser_video_show_actions: { pack: 'devtools', access: 'read' },
   browser_video_hide_actions: { pack: 'devtools', access: 'read' },
+  browser_start_recording: {
+    pack: 'devtools',
+    access: 'read',
+    note: 'Records what a person does in the browser; pair with browser_stop_recording. Not for unattended runs.',
+  },
+  browser_stop_recording: { pack: 'devtools', access: 'read' },
   browser_highlight: { pack: 'devtools', access: 'write' },
   browser_hide_highlight: { pack: 'devtools', access: 'write' },
   browser_annotate: {
