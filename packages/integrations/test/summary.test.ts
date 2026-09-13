@@ -301,6 +301,97 @@ describe('buildRunSummaryFromFiles', () => {
       'a/scenario-start.png',
     ]);
   });
+
+  /**
+   * Issue #82: the runner writes video.webm and trace.zip to runner-output/, but the messages
+   * carry the video inline with no file name, so issues never linked either.
+   */
+  it('links video.webm and trace.zip from runner-results.json (outline rows by example index)', () => {
+    const runDir = makeRunDir();
+    // written by another CI job: only the runner-output/ segment of the absolute path is stable
+    const out = '/home/runner/work/shop/shop/.sdods/runs/run-abc/runner-output';
+    const spec = '.sdods/generated/run-abc/shop/ui/ui/login.feature.spec.js';
+    const media = (dir: string, ...names: string[]) =>
+      names.map((name) => ({
+        name,
+        contentType: name === 'video' ? 'video/webm' : 'application/zip',
+        path: `${out}/${dir}/${name === 'video' ? 'video.webm' : 'trace.zip'}`,
+      }));
+    writeFileSync(
+      join(runDir, 'runner-results.json'),
+      JSON.stringify({
+        suites: [
+          {
+            title: spec,
+            file: spec,
+            specs: [],
+            suites: [
+              {
+                title: 'Login',
+                file: spec,
+                specs: [
+                  {
+                    title: 'Successful login',
+                    file: spec,
+                    tests: [
+                      {
+                        projectName: 'shop--ui--firefox',
+                        results: [{ retry: 0, attachments: media('other', 'video') }],
+                      },
+                      {
+                        projectName: 'shop--ui--chromium',
+                        results: [
+                          { retry: 1, attachments: media('login-retry1', 'video', 'trace') },
+                          { retry: 0, attachments: media('login', 'video') },
+                        ],
+                      },
+                    ],
+                  },
+                ],
+                suites: [
+                  {
+                    title: 'Failed login',
+                    file: spec,
+                    specs: [
+                      {
+                        title: 'row one',
+                        file: spec,
+                        tests: [
+                          {
+                            projectName: 'shop--ui--chromium',
+                            results: [{ retry: 0, attachments: media('row-1', 'video') }],
+                          },
+                        ],
+                      },
+                      {
+                        title: 'row two',
+                        file: spec,
+                        tests: [
+                          {
+                            projectName: 'shop--ui--chromium',
+                            results: [{ retry: 0, attachments: media('row-2', 'video', 'trace') }],
+                          },
+                        ],
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      }),
+    );
+    const s = buildRunSummaryFromFiles(runDir);
+    const login = s.scenarios.find((x) => x.scenarioName === 'Successful login')!;
+    expect(login.videoPath).toBe('runner-output/login-retry1/video.webm');
+    expect(login.tracePath).toBe('runner-output/login-retry1/trace.zip');
+    const failed = s.scenarios.find((x) => x.scenarioName === 'Failed login')!;
+    expect(failed.exampleIndex).toBe(1);
+    expect(failed.videoPath).toBe('runner-output/row-2/video.webm');
+    // a url in the messages wins over the JSON results
+    expect(failed.tracePath).toBe('runner-output/tc2/trace.zip');
+  });
 });
 
 describe('FileIssueLinkStore + IssueDedupe', () => {

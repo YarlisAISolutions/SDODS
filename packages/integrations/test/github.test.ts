@@ -1,3 +1,4 @@
+import { join } from 'node:path';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
@@ -11,11 +12,29 @@ const API = 'https://api.github.test';
 const calls: Array<{ method: string; path: string; body: any }> = [];
 let comments: Array<{ id: number; body: string; html_url: string }> = [];
 let issueSeq = 100;
+let repoLabels: Array<{ name: string }> = [{ name: 'sdods' }];
+let searchItems: Array<{ number: number; html_url: string; body: string; state: string }> = [];
+const searches: string[] = [];
 
 const server = setupServer(
   http.get(`${API}/repos/acme/shop`, () =>
     HttpResponse.json({ full_name: 'acme/shop', private: false }),
   ),
+  http.get(`${API}/search/issues`, ({ request }) => {
+    const q = new URL(request.url).searchParams.get('q') ?? '';
+    searches.push(q);
+    return HttpResponse.json({
+      total_count: searchItems.length,
+      incomplete_results: false,
+      items: searchItems,
+    });
+  }),
+  http.get(`${API}/repos/acme/shop/labels`, () => HttpResponse.json(repoLabels)),
+  http.post(`${API}/repos/acme/shop/labels`, async ({ request }) => {
+    const body = (await request.json()) as { name: string };
+    calls.push({ method: 'POST', path: 'labels', body });
+    return HttpResponse.json({ name: body.name }, { status: 201 });
+  }),
   http.post(`${API}/repos/acme/shop/check-runs`, async ({ request }) => {
     const body = await request.json();
     calls.push({ method: 'POST', path: 'check-runs', body });
@@ -77,6 +96,9 @@ afterEach(() => {
   calls.length = 0;
   comments = [];
   issueSeq = 100;
+  repoLabels = [{ name: 'sdods' }];
+  searchItems = [];
+  searches.length = 0;
 });
 afterAll(() => server.close());
 
@@ -234,10 +256,13 @@ describe('GitHubProvider', () => {
     expect(first.actions[0]).toMatchObject({ kind: 'issue-created', target: 'acme/shop#101' });
 
     calls.length = 0;
-    const second = await p.onRunFinished(summary([scenario()]), ctx);
+    const second = await p.onRunFinished(
+      { ...summary([scenario()]), run: { ...run, id: 'run-2' } },
+      ctx,
+    );
     expect(calls.filter((c) => c.path === 'issues')).toHaveLength(0);
     expect(calls.find((c) => c.path === 'issues/101/comments')!.body.body).toContain(
-      'Failed again in run `run-1`',
+      'Failed again in run `run-2`',
     );
     expect(second.actions[0]).toMatchObject({ kind: 'issue-commented', target: 'acme/shop#101' });
 
@@ -298,5 +323,133 @@ describe('GitHubProvider', () => {
       },
     ]);
     expect(synced[0]!.status).toBe('open');
+  });
+
+  // ── issue #82 ──────────────────────────────────────────────────────────────
+
+  it('test() reports configured labels the repository is missing', async () => {
+    repoLabels = [{ name: 'sdods' }, { name: 'bug' }];
+    const p = await provider({ labels: ['sdods', 'type:bug', 'source:e2e'] });
+    const res = await p.test();
+    expect(res.ok).toBe(false);
+    expect(res.labels).toEqual({ missing: ['type:bug', 'source:e2e'], created: [] });
+    expect(res.detail).toContain('missing labels: type:bug, source:e2e');
+    expect(res.detail).toContain('--create-labels');
+    expect(calls.filter((c) => c.path === 'labels')).toHaveLength(0);
+  });
+
+  it('test({ createMissingLabels }) creates exactly the missing labels', async () => {
+    repoLabels = [{ name: 'SDODS' }];
+    const p = await provider({ labels: ['sdods', 'type:bug', 'source:e2e'] });
+    const res = await p.test({ createMissingLabels: true });
+    expect(res.ok).toBe(true);
+    expect(res.labels).toEqual({ missing: [], created: ['type:bug', 'source:e2e'] });
+    expect(calls.filter((c) => c.path === 'labels').map((c) => c.body.name)).toEqual([
+      'type:bug',
+      'source:e2e',
+    ]);
+  });
+
+  it('reuses an open issue found by fingerprint search when the local store is empty', async () => {
+    searchItems = [
+      {
+        number: 7,
+        html_url: 'https://github.test/acme/shop/issues/7',
+        state: 'open',
+        body: 'older body\n<!-- sdods-fingerprint:fp-login -->',
+      },
+    ];
+    const p = await provider();
+    const store = createMemoryStore(); // a fresh CI runner: no .sdods/issue-links.json
+    const ctx = createIntegrationContext({ store, env: {} as any });
+    const res = await p.onRunFinished(summary([scenario()]), ctx);
+    expect(searches).toEqual([
+      'repo:acme/shop is:issue is:open in:body "sdods-fingerprint:fp-login"',
+    ]);
+    expect(calls.filter((c) => c.path === 'issues')).toHaveLength(0);
+    expect(calls.find((c) => c.path === 'issues/7/comments')!.body.body).toContain(
+      'Failed again in run `run-1`',
+    );
+    expect(res.actions[0]).toMatchObject({ kind: 'issue-commented', target: 'acme/shop#7' });
+    expect(await store.findOpen('shop', 'github', 'fp-login')).toMatchObject({
+      externalKey: 'acme/shop#7',
+      source: 'auto',
+    });
+  });
+
+  it('creates an issue when search hits do not carry the exact fingerprint marker', async () => {
+    searchItems = [
+      {
+        number: 8,
+        html_url: 'https://github.test/acme/shop/issues/8',
+        state: 'open',
+        body: 'sdods-fingerprint:fp-login-other',
+      },
+    ];
+    const p = await provider();
+    const ctx = createIntegrationContext({ store: createMemoryStore(), env: {} as any });
+    const res = await p.onRunFinished(summary([scenario()]), ctx);
+    expect(calls.filter((c) => c.path === 'issues')).toHaveLength(1);
+    expect(res.actions[0]).toMatchObject({ kind: 'issue-created', target: 'acme/shop#101' });
+  });
+
+  it('does not comment twice for the same run', async () => {
+    const p = await provider();
+    const ctx = createIntegrationContext({ store: createMemoryStore(), env: {} as any });
+    await p.onRunFinished(summary([scenario()]), ctx);
+    calls.length = 0;
+    const again = await p.onRunFinished(summary([scenario()]), ctx);
+    expect(calls).toHaveLength(0);
+    expect(again.actions[0]).toMatchObject({ kind: 'skipped' });
+  });
+
+  it('links video.webm and trace.zip with the show-trace command', async () => {
+    const p = await provider();
+    const artifactsDir = join(process.cwd(), '.sdods', 'runs', 'run-1');
+    const ctx = createIntegrationContext({
+      store: createMemoryStore(),
+      env: {} as any,
+      publicUrl: 'https://sdods.test',
+    });
+    await p.onRunFinished(
+      {
+        ...summary([
+          scenario({
+            videoPath: 'runner-output/login-chromium/video.webm',
+            tracePath: 'runner-output/login-chromium/trace.zip',
+          }),
+        ]),
+        run: { ...run, artifactsDir },
+      },
+      ctx,
+    );
+    const body: string = calls.find((c) => c.path === 'issues')!.body.body;
+    expect(body).toContain('### Video and trace');
+    expect(body).toContain(
+      '- Video: https://sdods.test/api/runs/run-1/files/runner-output/login-chromium/video.webm',
+    );
+    expect(body).toContain(
+      '- Trace: https://sdods.test/api/runs/run-1/files/runner-output/login-chromium/trace.zip',
+    );
+    expect(body).toContain(
+      'npx playwright show-trace .sdods/runs/run-1/runner-output/login-chromium/trace.zip',
+    );
+  });
+
+  it('points at the CI run artifacts when no server URL is configured', async () => {
+    const p = await provider();
+    const ctx = createIntegrationContext({ store: createMemoryStore(), env: ciEnv as any });
+    await p.onRunFinished(
+      summary([scenario({ tracePath: 'runner-output/login-chromium/trace.zip' })]),
+      { ...ctx, ci: { ...ctx.ci, isPullRequest: false, sha: undefined } },
+    );
+    const body: string = calls.find((c) => c.path === 'issues')!.body.body;
+    expect(body).toContain(
+      '- Trace: `run-1/runner-output/login-chromium/trace.zip` in the [CI run artifacts](https://github.test/acme/shop/actions/runs/555#artifacts)',
+    );
+    expect(body).toContain(
+      'npx playwright show-trace run-1/runner-output/login-chromium/trace.zip',
+    );
+    expect(body).not.toContain('- Video:');
   });
 });

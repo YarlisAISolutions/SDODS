@@ -31,7 +31,7 @@ flowchart LR
   R --> DB[("Postgres, optional")]
 ```
 
-`.github/workflows/ci.yml` runs lint, typecheck and unit tests, then the demo project per browser, uploads artifacts, merges reports, ingests when a database or a server token is configured, and calls `sdods integrations notify` with the GitHub token. Pull requests run `@smoke`; `main` runs `@regression`; a nightly job runs the full matrix.
+`.github/workflows/ci.yml` runs lint, typecheck and unit tests, then the demo project per browser, uploads artifacts, merges reports, ingests when a database or a server token is configured, and calls `sdods integrations notify` with the GitHub token. `sdods run` notifies enabled integrations on its own at the end of an unsharded run; in a matrix whose report job notifies after merging, pass `--no-notify` to the test jobs so each result is published once. Pull requests run `@smoke`; `main` runs `@regression`; a nightly job runs the full matrix.
 
 ## Offline CI
 
