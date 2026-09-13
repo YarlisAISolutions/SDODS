@@ -13,7 +13,8 @@ description: Field reference for environment files.
     'api.auth': {
       type: 'none | bearer{token} | basic{username,password} | header{name,value} | oauth-client-credentials{tokenUrl,clientId,clientSecret,scope?,audience?}',
       default: '{ type: none }',
-      description: 'Secret fields must be ${VAR} references.',
+      description:
+        'Secret fields must be ${VAR} references. oauth-client-credentials posts a client_credentials grant to tokenUrl and sends the access token as a bearer, cached per worker until shortly before expires_in.',
     },
     'api.openapi': {
       type: 'string',

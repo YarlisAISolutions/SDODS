@@ -80,6 +80,13 @@ export const ProjectAuthSchema = z.object({
   strategy: AuthStrategySchema.default('none'),
   storageState: z.boolean().default(true),
   maxAgeMinutes: z.number().int().positive().default(60),
+  /**
+   * Whether `I use a leased user with role {string} for API calls` attaches the user's token.
+   * `implicit`: it does. `explicit`: it only leases, and the scenario attaches the token with
+   * `I authenticate the API with the leased user's token`. Unset: explicit for `custom` strategies
+   * (whose token may be a different credential class than the session), implicit otherwise.
+   */
+  apiToken: z.enum(['implicit', 'explicit']).optional(),
   form: AuthFormSchema.optional(),
   tokenPlacement: z
     .object({

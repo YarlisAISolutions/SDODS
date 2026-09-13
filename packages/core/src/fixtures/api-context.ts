@@ -25,6 +25,13 @@ export class ApiContext {
     | { type: 'header'; name: string; value: string }
     | null
     | undefined;
+  /**
+   * Send through a request context with an empty cookie jar instead of the shared `request`
+   * fixture. On @ui/@hybrid the shared context starts from the leased role's storageState, so a
+   * "credential X alone is refused" assertion would otherwise pass on the session cookie.
+   * Set by `I use an isolated API client`.
+   */
+  isolated = false;
   /** step index → number of calls made during that step (for attachment numbering) */
   readonly callsByStep = new Map<number, number>();
 

@@ -31,6 +31,21 @@ When(
   },
 );
 
+/**
+ * The doc string goes out byte-for-byte: not parsed, not re-serialised, and not template-rendered
+ * (only the path is). This is how a malformed-input scenario sends `{ this is not json`; the
+ * `with body:` step parses a `json` doc string and would throw before sending.
+ * The content-type defaults to `application/json`; set another with `I set the request header`.
+ */
+When(
+  'I send a {method} request to {string} with the raw body:',
+  async ({ api, apiContext, env }, method: HttpMethod, path: string, body: string) => {
+    await api.send(method, render(path, apiContext.vars.toObject(), env.vars), {
+      body: Buffer.from(body, 'utf8'),
+    });
+  },
+);
+
 When(
   'I send a {method} request to {string} with form:',
   async ({ api, apiContext, env }, method: HttpMethod, path: string, table: any) => {
@@ -88,6 +103,15 @@ Given('I use no authentication', async ({ apiContext }) => {
   // credential — exactly the environments where asserting an unauthenticated
   // refusal matters.
   apiContext.auth = null;
+});
+
+/**
+ * Send the rest of the scenario's API calls through a request context with an empty cookie jar,
+ * so they carry only the credentials the scenario set. Without it, @ui/@hybrid calls also carry the
+ * leased role's session cookie, and "credential X alone is refused" can pass on the session.
+ */
+Given('I use an isolated API client', async ({ apiContext }) => {
+  apiContext.isolated = true;
 });
 
 /* ── assertions ───────────────────────────────────────────────────────── */
