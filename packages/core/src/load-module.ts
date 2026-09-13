@@ -31,7 +31,13 @@ async function acquire(): Promise<void> {
       await offEsm();
     };
   })();
-  await hooks;
+  try {
+    await hooks;
+  } catch (e) {
+    // Do not leave a rejected registration cached for every later import.
+    if (--active === 0) hooks = undefined;
+    throw e;
+  }
 }
 
 async function releaseOne(): Promise<void> {
