@@ -81,13 +81,15 @@ returns you to the sign-in form rather than leaving a half-loaded page behind.
 
 ## If it does not start
 
-| Symptom                                      | Cause                                                                              | Fix                                          |
-| -------------------------------------------- | ---------------------------------------------------------------------------------- | -------------------------------------------- |
-| `Port 4444 is already in use`                | another `serve`, or the desktop app                                                | `sdods serve --port 4445`                    |
-| A page saying the web UI is unavailable      | a clone with no built bundle                                                       | `bun run web:build`, then restart            |
-| Sign-in fails with the right password        | two different `.sdods/sdods.db` files                                              | run both commands from one workspace root    |
-| An unexplained `TypeError` from a dependency | Node older than 22                                                                 | `node -v`, then `nvm use 22` or `fnm use 22` |
-| `sdods: command not found` after installing  | a version manager owns Node, and the global install belongs to a different version | re-install, or use the installer's bun path  |
+| Symptom                                      | Cause                                                                              | Fix                                                      |
+| -------------------------------------------- | ---------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| `Port 4444 is already in use`                | another `serve`, or the desktop app                                                | `sdods serve --port 4445`                                |
+| A page saying the web UI is unavailable      | a clone with no built bundle                                                       | `bun run web:build`, then restart                        |
+| Sign-in fails with the right password        | two different `.sdods/sdods.db` files                                              | run both commands from one workspace root                |
+| An unexplained `TypeError` from a dependency | Node older than 22                                                                 | `node -v`, then `nvm use 22` or `fnm use 22`             |
+| `sdods: command not found` after installing  | a version manager owns Node, and the global install belongs to a different version | re-install, or use the installer's bun path              |
+| Forgot the admin password                    | no other admin can reset it from the Users page                                    | `sdods users set-password <username> --password '<new>'` |
+| `/setup` says the setup token is invalid     | the token is minted when `serve` starts, and users were removed after that         | restart `serve` and use the new link                     |
 
 `sdods doctor` reports Node, bun, browsers, projects, environment variables and the database in one
 pass.
@@ -104,6 +106,149 @@ The server is a Fastify application. It spawns the same `sdods` commands you run
   alt="Workspaces of the organization with each member's effective role"
   caption="Organization → workspaces with roles. Owners and admins create workspaces and manage members."
 />
+
+## Reinstall or reset
+
+Three levels, from the lightest to a clean machine. Stop `sdods serve` first, and run every command
+from the workspace root — the same rule as creating the first user.
+
+| Level         | Keeps                                      | Removes                                                      | Command                                     |
+| ------------- | ------------------------------------------ | ------------------------------------------------------------ | ------------------------------------------- |
+| Users reset   | projects, runs, schedules, organizations   | every user, session, API token and membership                | `sdods users reset --yes`                   |
+| Factory reset | your project files (features, steps, envs) | the whole platform database: users, runs, schedules, history | `sdods db reset --yes`, or delete `.sdods/` |
+| Reinstall     | your workspaces                            | the `sdods` command itself                                   | uninstall, then install                     |
+
+After a users reset or a factory reset, start `serve` again: with no users it prints a new one-time
+`/setup` link, exactly as on the first run. To keep a copy of the database before a factory reset,
+run `sdods db export ./sdods-backup` first; `sdods db import ./sdods-backup` brings it back.
+
+<Tabs items={['Installed', 'From a clone', 'Docker', 'Desktop app']}>
+<Tab value="Installed">
+Reset the users only:
+
+```bash
+sdods users reset --yes
+```
+
+Or reset everything the web UI stores:
+
+```bash
+sdods db reset --yes
+```
+
+`db reset` drops the database tables; run artifacts under `.sdods/runs/` stay on disk. For a truly
+empty start, delete the whole state folder instead — it holds the database (`sdods.db` with its
+`-wal` and `-shm` files), runs, leases and agent jobs, and is recreated on the next start:
+
+```bash
+rm -rf .sdods
+```
+
+Then start again and open the printed `/setup` link:
+
+```bash
+sdods serve --open
+```
+
+To reinstall the CLI itself, uninstall and install again. Your workspaces are not touched.
+
+```bash
+curl -fsSL https://sdods.com/install.sh | sh -s -- --uninstall --yes
+```
+
+```bash
+curl -fsSL https://sdods.com/install.sh | sh
+```
+
+On Windows, in PowerShell:
+
+```powershell
+& ([scriptblock]::Create((irm https://sdods.com/install.ps1))) -Uninstall -Yes
+```
+
+```powershell
+irm https://sdods.com/install.ps1 | iex
+```
+
+</Tab>
+<Tab value="From a clone">
+The same commands through the checkout's CLI:
+
+```bash
+bun run sdods users reset --yes
+```
+
+```bash
+bun run sdods db reset --yes
+```
+
+```bash
+bun run sdods serve --open
+```
+
+To reinstall from scratch, pull, reinstall dependencies and rebuild the UI bundle:
+
+```bash
+git pull && bun install && bun run web:build
+```
+
+</Tab>
+<Tab value="Docker">
+Everything the container stores lives in the `sdods-data` volume. Stop the container, remove the
+volume, and start it again — the next start prints the `/setup` link in the container log:
+
+```bash
+docker volume rm sdods-data
+```
+
+```bash
+docker run --rm -p 8080:8080 -v sdods-data:/data ghcr.io/siri1410/sdods-server
+```
+
+To reset only the users, stop the container and run the CLI against the same volume — the image
+passes any arguments other than `serve` straight to `sdods`:
+
+```bash
+docker run --rm -v sdods-data:/data ghcr.io/siri1410/sdods-server users reset --yes
+```
+
+</Tab>
+<Tab value="Desktop app">
+Quit the app, then delete **both** its data folder and the workspace state. The data folder holds
+the generated admin password and the workspace holds the database it belongs to. Deleting only the
+data folder leaves an app that cannot sign in: it makes a new password the old database does not
+know.
+
+| OS      | App data folder                       | Workspace state              |
+| ------- | ------------------------------------- | ---------------------------- |
+| macOS   | `~/Library/Application Support/SDODS` | `~/SDODS/.sdods`             |
+| Windows | `%LOCALAPPDATA%\SDODS`                | `%USERPROFILE%\SDODS\.sdods` |
+| Linux   | `~/.config/SDODS`                     | `~/SDODS/.sdods`             |
+
+On macOS, for example:
+
+```bash
+rm -rf ~/Library/Application\ Support/SDODS ~/SDODS/.sdods
+```
+
+Relaunch the app; it sets itself up again with a new admin password. To remove the app entirely,
+delete it as you would any other application (or uninstall it with the package manager you
+installed it from) and then delete the same two folders.
+
+</Tab>
+</Tabs>
+
+<Callout type="warn">
+  `sdods db reset` works on SQLite only. On Postgres (`DB_DRIVER=postgres`), drop and recreate the
+  database yourself; `sdods users reset` works on both.
+</Callout>
+
+To regain access without resetting anyone else, set a new password instead. It signs that user out
+everywhere, and `--activate` re-enables an account that was deactivated:
+
+```bash
+sdods users set-password admin --password '<at least 8 chars>' --activate
+```
 
 ## Pages
 

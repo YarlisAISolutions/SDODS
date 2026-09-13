@@ -12,11 +12,15 @@ sdods users set-role <username> <viewer|editor|admin>
 sdods users grant <username> --org <slug> --role owner|admin|member
 sdods users grant <username> --workspace <slug> --role admin|editor|viewer
 sdods users deactivate <username>
+sdods users set-password <username> --password <password> [--activate]
+sdods users reset --yes
 ```
 
 `--admin` creates a platform admin who also becomes owner of every organization without an owner. `grant` manages membership roles; a user's effective role in a workspace is the stronger of the explicit workspace role and the one implied by the organization role (`member` → viewer, `admin`/`owner` → admin).
 
-`deactivate` takes effect immediately: the account can no longer sign in, and **sessions and API tokens it already holds stop working on the next request** — a browser with the app open is returned to the login screen rather than left on a stale page. There is no delete: deactivated accounts stay in `users list` with `active` false, so the audit trail keeps pointing at a real user.
+`deactivate` takes effect immediately: the account can no longer sign in, and **sessions and API tokens it already holds stop working on the next request** — a browser with the app open is returned to the login screen rather than left on a stale page. Single accounts are never deleted: deactivated accounts stay in `users list` with `active` false, so the audit trail keeps pointing at a real user.
+
+`set-password` replaces the password and signs the user out of every browser; `--activate` also re-enables a deactivated account, which is how a sole admin gets back in. `reset --yes` is the deliberate wipe: it removes every user with their sessions, API tokens and memberships, and keeps organizations, workspaces, projects, runs and schedules. With no users left, the next `sdods serve` prints a one-time `/setup` link. Both are recorded in the audit log. See [Reinstall or reset](/docs/getting-started/web-ui#reinstall-or-reset).
 
 Every one of these commands resolves the platform database from the workspace root, so they can be run from any directory inside the workspace and always reach the same database the server uses.
 

@@ -154,6 +154,17 @@ curl -fsSL https://sdods.com/install.sh | sh -s -- --uninstall --yes`}</code>
           </a>
           .
         </p>
+        <p className="muted mt-3 text-sm">
+          Starting over? Reset the web UI&apos;s users or its whole database without reinstalling:
+          see{' '}
+          <a
+            className="underline"
+            href={`${DOCS_URL}/docs/getting-started/web-ui/#reinstall-or-reset`}
+          >
+            reinstall or reset
+          </a>
+          .
+        </p>
       </section>
 
       <section className="mt-14" aria-labelledby="requirements">
