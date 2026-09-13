@@ -29,6 +29,79 @@ export interface CachedState {
   role: string;
 }
 
+function originOf(url: string): string | undefined {
+  try {
+    const o = new URL(url).origin;
+    return o === 'null' ? undefined : o;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Restore one origin's localStorage into a live context without navigating (#99).
+ *
+ * This used to `page.goto(origin)` and write the keys from there. An app that sends a signed-in
+ * visitor away from `/` on the client then had a redirect chain still running when the step
+ * returned, and the scenario's first `page.goto` was aborted (`net::ERR_ABORTED`). The context
+ * already exists by the time a step leases a user, so `newContext({ storageState })` is not an
+ * option here (the `@user:<role>` tag path does use it, via `ensure`).
+ *
+ * - Page already on the origin: write the keys straight into it. Nothing navigates.
+ * - Otherwise: a context init script writes them in the first document of that origin, before the
+ *   app's own scripts run, in any page of the context.
+ *
+ * Planted ONCE per context, not on every navigation. An init script left in place would run again
+ * on each document, so an app that signs out (clears storage) and navigates would be silently
+ * signed back in and a logout scenario would pass while proving nothing. The script is therefore
+ * disposed once a document of that origin has reached DOMContentLoaded (by then it has certainly
+ * run). A navigation that commits in the short window before the dispose lands can run it again;
+ * it only writes keys that are absent, so it never overwrites what the app wrote meanwhile.
+ *
+ * Only localStorage is restored, as before: storageState carries no sessionStorage or IndexedDB.
+ */
+async function plantLocalStorage(
+  context: BrowserContext,
+  page: Page,
+  origin: string,
+  items: Array<{ name: string; value: string }>,
+): Promise<void> {
+  if (originOf(page.url()) === origin) {
+    await page.evaluate((entries) => {
+      for (const { name, value } of entries) window.localStorage.setItem(name, value);
+    }, items);
+    return;
+  }
+  const script = await context.addInitScript(
+    ({ origin: target, entries }) => {
+      if (location.origin !== target) return;
+      try {
+        for (const { name, value } of entries) {
+          if (window.localStorage.getItem(name) === null) window.localStorage.setItem(name, value);
+        }
+      } catch {
+        // storage disabled for this document (sandboxed frame): nothing to plant into
+      }
+    },
+    { origin, entries: items },
+  );
+  const watched = new Set<Page>();
+  let disposed = false;
+  const onLoaded = (p: Page) => {
+    if (disposed || originOf(p.url()) !== origin) return;
+    disposed = true;
+    context.off('page', watch);
+    for (const w of watched) w.off('domcontentloaded', onLoaded);
+    void script.dispose().catch(() => undefined);
+  };
+  const watch = (p: Page) => {
+    watched.add(p);
+    p.on('domcontentloaded', onLoaded);
+  };
+  context.on('page', watch);
+  for (const p of context.pages()) watch(p);
+}
+
 /** How long another worker may hold the refresh lock before we treat it as crashed. */
 const LOCK_STALE_MS = 90_000;
 const LOCK_POLL_MS = 250;
@@ -182,10 +255,7 @@ export class AuthStateCache {
     if (state.cookies?.length) await context.addCookies(state.cookies as any);
     for (const origin of state.origins ?? []) {
       if (!origin.localStorage?.length) continue;
-      await page.goto(origin.origin, { waitUntil: 'domcontentloaded' }).catch(() => undefined);
-      await page.evaluate((items) => {
-        for (const { name, value } of items) window.localStorage.setItem(name, value);
-      }, origin.localStorage);
+      await plantLocalStorage(context, page, origin.origin, origin.localStorage);
     }
     return true;
   }
