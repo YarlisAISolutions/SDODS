@@ -67,7 +67,7 @@ The evidence JSON of each recorded request carries `auth` (`none`, `bearer`, `ba
 
 `I should see the text` and `I should not see the text` are about what the user can see: the first passes when a visible element contains the text, the second when no visible element does. Text that is in the DOM but hidden (a closed FAQ answer with `hidden`, a collapsed panel, `display: none`) counts as not seen. Both match a substring, so `"already"` also matches "the clients you already serve".
 
-The `exact` variants match the whole text of an element (whitespace-normalised, case-sensitive) and are the fix for substring collisions. `the page should not contain the text` asserts that no element carries the text at all, hidden or not; it is the check `I should not see the text` made in `@sdods/core` 0.4.0 and earlier. To assert a value is absent from input values, placeholders, titles and alt text as well, use `the text {string} should not appear anywhere on the page`.
+The `exact` variants match the whole text of an element (whitespace-normalised, case-sensitive) and are the fix for substring collisions. `the page should not contain the text` asserts that no element carries the text at all, hidden or not; it is the check `I should not see the text` made in `@sdods/core` 0.5.0 and earlier. To assert a value is absent from input values, placeholders, titles and alt text as well, use `the text {string} should not appear anywhere on the page`.
 
 ## Data steps
 
