@@ -29,6 +29,7 @@ import {
 import { analyzeChangeImpact } from '@sdods/mcp';
 import { createContext } from '../context.js';
 import { browserStatuses } from './browsers.js';
+import { installedPlaywrightVersion, stepResultsWarning } from '../runner-compat.js';
 import { collect, json, out, parseIntFlag, warn } from '../ui.js';
 
 export interface RunFlags {
@@ -218,6 +219,9 @@ export async function runCommand(flags: RunFlags, cmd: Command): Promise<number>
       },
     );
   }
+
+  const stepResults = stepResultsWarning(installedPlaywrightVersion(ctx.rootDir));
+  if (stepResults) warn(stepResults);
 
   const runId = flags.runId ?? newRunId();
   const cli: CliOverrides = {
