@@ -27,7 +27,11 @@ export function installedPlaywrightVersion(rootDir: string): string | undefined 
 }
 
 function below(version: string, floor: string): boolean {
-  const parse = (v: string) => v.split('-')[0]!.split('.').map((n) => Number(n) || 0);
+  const parse = (v: string) =>
+    v
+      .split('-')[0]!
+      .split('.')
+      .map((n) => Number(n) || 0);
   const [a, b] = [parse(version), parse(floor)];
   for (let i = 0; i < 3; i++) {
     if ((a[i] ?? 0) !== (b[i] ?? 0)) return (a[i] ?? 0) < (b[i] ?? 0);

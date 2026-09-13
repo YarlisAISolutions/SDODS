@@ -17,7 +17,11 @@ function workspace(version?: string) {
     mkdirSync(pkg, { recursive: true });
     writeFileSync(
       join(pkg, 'package.json'),
-      JSON.stringify({ name: '@playwright/test', version, exports: { './package.json': './package.json' } }),
+      JSON.stringify({
+        name: '@playwright/test',
+        version,
+        exports: { './package.json': './package.json' },
+      }),
     );
   }
   return root;
@@ -31,7 +35,12 @@ describe('step results compatibility (#79)', () => {
   });
 
   it('is silent from 1.63.0 on, including prereleases of later minors', () => {
-    for (const v of [MIN_PLAYWRIGHT_FOR_STEP_RESULTS, '1.63.2', '1.64.0-alpha-2026-10-01', '2.0.0']) {
+    for (const v of [
+      MIN_PLAYWRIGHT_FOR_STEP_RESULTS,
+      '1.63.2',
+      '1.64.0-alpha-2026-10-01',
+      '2.0.0',
+    ]) {
       expect(stepResultsWarning(v), v).toBeUndefined();
     }
   });
@@ -44,7 +53,10 @@ describe('step results compatibility (#79)', () => {
 
   it('pins scaffolded workspaces at or above the floor', async () => {
     const { readFileSync } = await import('node:fs');
-    const init = readFileSync(join(import.meta.dirname, '..', 'src', 'commands', 'init.ts'), 'utf8');
+    const init = readFileSync(
+      join(import.meta.dirname, '..', 'src', 'commands', 'init.ts'),
+      'utf8',
+    );
     const pin = init.match(/'link:@playwright\/test' : '\^([\d.]+)'/)?.[1];
     expect(pin).toBeDefined();
     expect(stepResultsWarning(pin)).toBeUndefined();
