@@ -8,8 +8,9 @@ description: Generate BDD specs and run them for a project.
 ```text
 sdods run [-p <slug>] [-e <env>] [-t <expr>] [-l <layer>]... [-b <browser>]... [-m <module>]... [--process <name>]
             [--project-matrix] [--device <name>] [--headed] [-w <n>] [--shard <i/n>] [--retries <n>]
+            [--trace <mode>] [--video <mode>]
             [--grep <pattern>] [--feature <path>] [--scenario <name>] [--run-id <id>] [--artifacts-dir <dir>]
-            [--no-lint] [--ingest | --no-ingest] [--allure] [--har-update | --har-replay] [--strict]
+            [--no-lint] [--ingest | --no-ingest] [--no-notify] [--allure] [--har-update | --har-replay] [--strict]
             [--update-snapshots] [--ui] [--debug] [--list] [--repeat-each <n>] [--fail-on-flaky]
             [--max-failures <n>] [--timeout <ms>] [--reporter <name[=file]>]... [--reporter-mode <mode>] [--trigger <kind>]
 ```
@@ -29,6 +30,8 @@ sdods run [-p <slug>] [-e <env>] [-t <expr>] [-l <layer>]... [-b <browser>]... [
 | `-w, --workers <n>`        | parallel workers                                                                             |
 | `--shard <i/n>`            | shard, e.g. `1/3`                                                                            |
 | `--retries <n>`            | retries per test (default: `retries.ci` in CI, `retries.local` elsewhere)                    |
+| `--trace <mode>`           | Playwright trace mode, e.g. `on`, `retain-on-failure` (default: `evidence.trace`)            |
+| `--video <mode>`           | Playwright video mode (default: `evidence.video`)                                            |
 | `--grep <pattern>`         | filter tests by title (regular expression)                                                   |
 | `--feature <path>`         | only this feature file (relative to `features/`)                                             |
 | `--scenario <name>`        | only scenarios whose title contains this text                                                |
@@ -36,6 +39,7 @@ sdods run [-p <slug>] [-e <env>] [-t <expr>] [-l <layer>]... [-b <browser>]... [
 | `--artifacts-dir <dir>`    | artifacts root (default: `.sdods/runs`)                                                      |
 | `--no-lint`                | skip feature lint before running                                                             |
 | `--ingest` / `--no-ingest` | force or skip database ingest (default: ingest when a database is configured)                |
+| `--no-notify`              | do not publish the run to enabled integrations (default: notify when any is enabled)         |
 | `--allure`                 | also produce `allure-results`                                                                |
 | `--har-update`             | record or refresh HAR files for `@har` scenarios                                             |
 | `--har-replay`             | replay HAR files for `@har` scenarios                                                        |
@@ -55,8 +59,10 @@ Lifecycle:
 
 ```mermaid
 flowchart LR
-  A["mint runId · write run.json"] --> B["lint"] --> C["bddgen"] --> D["run suite --project ..."] --> E["summary.json"] --> F["ingest (optional)"] --> G["integrations notify (optional)"]
+  A["mint runId · write run.json"] --> B["lint"] --> C["bddgen"] --> D["run suite --project ..."] --> E["summary.json"] --> F["ingest (optional)"] --> G["integrations notify (when enabled)"]
 ```
+
+When the project enables an integration (`integrations.github`, `integrations.jira` or a custom provider), the run ends by publishing itself exactly as `sdods integrations notify --run-id <id>` does: check runs, the PR comment, and issues per `createIssueOnFailure`. A notify failure is printed as a warning and never changes the exit code; `--json` output carries the outcome under `notify`. Cancelled runs, runs with no scenario results and sharded runs (`--shard`) do not notify — notify once after merging shards. Pass `--no-notify` when a later CI step runs `sdods integrations notify` itself.
 
 Generated specs go to `.features-gen/<runId>/<slug>/<layer>/` and are removed after the run, so concurrent runs never race. When a tag expression matches no scenario the run exits `0` with a warning.
 

@@ -5,7 +5,7 @@ import type { HttpMethod } from '../api/client.js';
 import { tokenFileFor } from '../auth/capture.js';
 import type { AuthStrategy, PoolUserLike } from '../auth/index.js';
 import type { ResolvedConfig } from '../config/resolve.js';
-import { render } from '../api/template.js';
+import { renderStrict } from '../api/template.js';
 import { SdodsError } from '../errors.js';
 import { Logger } from '../logger.js';
 
@@ -217,7 +217,7 @@ function readCachedToken(file: string): string | undefined {
 When(
   'I register cleanup {method} {string}',
   async ({ data, api, apiContext, env }, method: HttpMethod, path: string) => {
-    const rendered = render(path, apiContext.vars.toObject(), env.vars);
+    const rendered = renderStrict(path, apiContext.vars.toObject(), env.vars);
     data.registerCleanup(async () => {
       await api.send(method, rendered, { silent: true });
     }, `${method} ${rendered}`);

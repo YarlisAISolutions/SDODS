@@ -637,7 +637,7 @@ describe('downloads', () => {
     const page = fakePage();
     page.setDownload(fakeDownload({ name: 'report.json.txt' }));
     await step('I click the element with test id {string} and capture the download')(
-      { page, heal, config },
+      { page, heal, config, apiContext: new ApiContext(), env: makeEnv() },
       'export',
     );
     await expect(
@@ -662,7 +662,7 @@ describe('downloads', () => {
       }),
     );
     await step('I click the element with test id {string} and capture the download')(
-      { page, heal, config },
+      { page, heal, config, apiContext: new ApiContext(), env: makeEnv() },
       'x',
     );
     const fx = { page, apiContext: new ApiContext(), env: makeEnv() };
@@ -696,7 +696,7 @@ describe('downloads', () => {
     const page = fakePage();
     page.setDownload(fakeDownload({ file: tmpFile('empty.csv', '') }));
     await step('I click the element with test id {string} and capture the download')(
-      { page, heal, config },
+      { page, heal, config, apiContext: new ApiContext(), env: makeEnv() },
       'x',
     );
     await expectSdodsError(
@@ -711,7 +711,7 @@ describe('downloads', () => {
     const page = fakePage();
     page.setDownload(fakeDownload({ file: undefined, failure: 'net::ERR_ABORTED' }));
     await step('I click the element with test id {string} and capture the download')(
-      { page, heal, config },
+      { page, heal, config, apiContext: new ApiContext(), env: makeEnv() },
       'x',
     );
     await expectSdodsError(
@@ -734,7 +734,7 @@ describe('downloads', () => {
       }),
     );
     await step('I click the element with test id {string} and capture the download')(
-      { page, heal, config },
+      { page, heal, config, apiContext: new ApiContext(), env: makeEnv() },
       'x',
     );
     const fx = { page, apiContext: new ApiContext(), env: makeEnv() };
@@ -762,7 +762,7 @@ describe('downloads', () => {
     const page = fakePage();
     page.setDownload(fakeDownload({ file: tmpFile('a.csv', 'a,b\n1,2\n') }));
     await step('I click the element with test id {string} and capture the download')(
-      { page, heal, config },
+      { page, heal, config, apiContext: new ApiContext(), env: makeEnv() },
       'x',
     );
     await expectSdodsError(

@@ -1,6 +1,6 @@
 {
   "name": "@sdods/core",
-  "version": "0.3.2",
+  "version": "0.4.0",
   "description": "SDODS runtime: configuration, project registry, fixtures, step libraries, data providers, screenshot narratives and self-healing locators.",
   "license": "Apache-2.0",
   "author": "SDODS <admin@sdods.com>",
@@ -61,11 +61,12 @@
     "node": ">=22"
   },
   "peerDependencies": {
-    "@playwright/test": ">=1.58",
+    "@playwright/test": ">=1.63",
     "playwright-bdd": ">=9"
   },
   "dependencies": {
     "@sdods/contracts": "workspace:*",
+    "@cucumber/cucumber-expressions": "19.0.0",
     "@cucumber/gherkin": "^42.0.1",
     "@cucumber/messages": "^34.2.1",
     "@faker-js/faker": "^10.6.0",
@@ -79,13 +80,14 @@
     "jsonpath-plus": "^10.4.0",
     "picocolors": "^1.1.1",
     "ts-morph": "^28.0.0",
+    "tsx": "^4.23.0",
     "yaml": "^2.9.0",
     "zod": "^4.5.4",
     "@sdods/db": "workspace:*"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.10.2",
-    "@playwright/test": "^1.62.1",
+    "@playwright/test": "^1.63.0",
     "playwright-bdd": "^9.2.0"
   },
   "homepage": "https://sdods.com",

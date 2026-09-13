@@ -85,6 +85,9 @@ for p in "${PKGS[@]}"; do
   fi
 done
 
+echo "Verifying the staged VERSION"
+node scripts/verify-staged-version.mjs "$STAGE"
+
 published=0 skipped=0
 for p in "${PKGS[@]}"; do
   dir="$STAGE/$p"

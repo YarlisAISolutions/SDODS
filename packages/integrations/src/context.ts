@@ -1,7 +1,8 @@
 import { existsSync } from 'node:fs';
-import { join } from 'node:path';
+import { isAbsolute, join, relative } from 'node:path';
 
 import { detectCi } from './secrets.js';
+import type { RunRecord } from '@sdods/contracts';
 import type {
   CiInfo,
   IntegrationContext,
@@ -55,6 +56,20 @@ export function createIntegrationContext(opts: CreateContextOptions): Integratio
       return existsSync(file) ? file : null;
     },
   };
+}
+
+/**
+ * Where a run file lives, for a person reading an issue: relative to the working directory when
+ * the run directory is inside it (`.sdods/runs/<id>/runner-output/...`, the layout CI uploads).
+ */
+export function artifactDisplayPath(
+  relPath: string,
+  run: Pick<RunRecord, 'id' | 'artifactsDir'>,
+): string {
+  const file = join(run.artifactsDir ?? run.id, relPath);
+  if (!isAbsolute(file)) return file.replace(/\\/g, '/');
+  const rel = relative(process.cwd(), file);
+  return (rel && !rel.startsWith('..') && !isAbsolute(rel) ? rel : file).replace(/\\/g, '/');
 }
 
 /** Pick the screenshots worth attaching to an issue: failure, scenario end, last before/after pair, diffs. */

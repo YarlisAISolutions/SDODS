@@ -6,14 +6,24 @@ export interface DedupeDecision {
   reason: string;
 }
 
+export interface IssueDedupeOptions {
+  reopenAfterDays?: number;
+  /**
+   * Look the fingerprint up in the issue tracker when no open link is stored locally, and return
+   * the (saved) link for an open issue. The local store does not survive a fresh CI runner.
+   */
+  findRemote?: (fingerprint: string) => Promise<IssueLink | undefined>;
+}
+
 /**
- * One issue per (project, provider, scenario fingerprint). An open link means "comment, don't create".
- * A closed link younger than `reopenAfterDays` is left alone (skip); older ones get a fresh issue.
+ * One issue per (project, provider, scenario fingerprint). An open link — stored locally or found
+ * by `findRemote` — means "comment, don't create". A closed link younger than `reopenAfterDays` is
+ * left alone (skip); older ones get a fresh issue.
  */
 export class IssueDedupe {
   constructor(
     private readonly store: IssueLinkStore,
-    private readonly opts: { reopenAfterDays?: number } = {},
+    private readonly opts: IssueDedupeOptions = {},
   ) {}
 
   async decide(
@@ -24,6 +34,13 @@ export class IssueDedupe {
     const open = await this.store.findOpen(projectSlug, provider, fingerprint);
     if (open)
       return { action: 'comment', link: open, reason: `open issue ${open.externalKey} exists` };
+    const remote = await this.opts.findRemote?.(fingerprint);
+    if (remote)
+      return {
+        action: 'comment',
+        link: remote,
+        reason: `open issue ${remote.externalKey} found by fingerprint`,
+      };
     const all = await this.store.list(projectSlug, provider);
     const closed = all
       .filter((l) => l.fingerprint === fingerprint && l.status === 'closed')
