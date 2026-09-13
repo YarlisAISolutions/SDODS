@@ -107,9 +107,7 @@ export class ApiClient {
     return this.deps.isolatedRequest();
   }
 
-  private async buildHeaders(
-    opts: ApiRequestOptions,
-  ): Promise<{ headers: Record<string, string>; auth: ApiContext['auth'] }> {
+  private buildHeaders(opts: ApiRequestOptions): Record<string, string> {
     const env = this.deps.config.env.api;
     const headers: Record<string, string> = {
       accept: 'application/json',
@@ -119,16 +117,12 @@ export class ApiClient {
     };
     if (opts.body !== undefined && !headers['content-type'] && !opts.form)
       headers['content-type'] = 'application/json';
-    const auth = await resolveAuth(opts.auth, this.deps.ctx.auth, env.auth);
-    applyAuth(headers, auth);
-    return { headers, auth };
+    return headers;
   }
 
   async send(method: HttpMethod, path: string, opts: ApiRequestOptions = {}): Promise<ApiSnapshot> {
     const url = this.resolveUrl(path, opts.query);
-    // Resolved before the attempt loop: a credential that cannot be obtained is a configuration
-    // failure, not a transient one to retry, and the request must not go out without it.
-    const { headers, auth } = await this.buildHeaders(opts);
+    const headers = this.buildHeaders(opts);
     const timeout = opts.timeout ?? this.deps.config.project.timeouts.api;
     const maxAttempts = 1 + (opts.retries ?? (this.deps.config.runtime.ci ? 1 : 0));
     const startedAt = new Date().toISOString();
@@ -142,9 +136,6 @@ export class ApiClient {
       query: opts.query
         ? Object.fromEntries(Object.entries(opts.query).map(([k, v]) => [k, String(v)]))
         : undefined,
-      // Which credential class went out, never its value — so a report shows at a glance
-      // whether a scenario sent a bearer, a key header, or nothing.
-      auth: describeAuth(auth),
       ...(this.deps.ctx.isolated ? { isolated: true } : {}),
     };
 
@@ -164,6 +155,17 @@ export class ApiClient {
       if (this.deps.har.strict)
         throw new Error(`HAR strict mode: no recorded entry for ${method} ${url}`);
     }
+
+    // Resolved after HAR replay (a replayed call sends nothing, so an offline replay must not need
+    // to mint a token) and before the attempt loop: a credential that cannot be obtained is a
+    // configuration failure, not a transient one to retry, and the request must not go out
+    // without it.
+    const auth = await resolveAuth(opts.auth, this.deps.ctx.auth, this.deps.config.env.api.auth);
+    applyAuth(headers, auth);
+    requestSnap.headers = redactHeaders(headers);
+    // Which credential class went out, never its value — so a report shows at a glance whether a
+    // scenario sent a bearer, a key header, or nothing.
+    requestSnap.auth = describeAuth(auth);
 
     const request = await this.requestContext();
     let lastError: unknown;

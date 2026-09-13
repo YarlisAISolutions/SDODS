@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { ProjectAuthSchema } from '@sdods/contracts';
 import { ApiContext } from '../src/fixtures/api-context.js';
 import { isSdodsError } from '../src/errors.js';
+import { getLogLevel, setLogJson, setLogLevel, type LogLevel } from '../src/logger.js';
 import '../src/steps/data.steps.js';
 
 /**
@@ -59,7 +60,13 @@ function fixtures(strategy: string, apiToken?: 'implicit' | 'explicit') {
 }
 
 let out: string[];
+let previousLevel: LogLevel;
 beforeEach(() => {
+  // The credential log line is part of the contract; pin the level so an ambient
+  // SDODS_LOG_LEVEL/SDODS_LOG_JSON cannot hide it.
+  previousLevel = getLogLevel();
+  setLogLevel('info');
+  setLogJson(false);
   out = [];
   vi.spyOn(process.stdout, 'write').mockImplementation((chunk: any) => {
     out.push(String(chunk));
@@ -68,6 +75,8 @@ beforeEach(() => {
 });
 afterEach(() => {
   vi.restoreAllMocks();
+  setLogLevel(previousLevel);
+  setLogJson(process.env.SDODS_LOG_JSON === '1');
 });
 
 describe('#87 — the leased user token is attached only when asked for', () => {

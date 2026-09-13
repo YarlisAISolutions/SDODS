@@ -410,6 +410,31 @@ describe('#84 — env.api.auth oauth-client-credentials', () => {
     }
   });
 
+  it('a HAR-replayed call mints no token (offline replay keeps working)', async () => {
+    const request = await playwrightRequest.newContext();
+    try {
+      const api = new ApiClient({
+        request,
+        config: config(oauth('cc-har')),
+        ctx: new ApiContext(),
+        har: {
+          replay: async () => ({
+            status: 200,
+            statusText: 'OK',
+            headers: {},
+            body: { replayed: true },
+            responseTime: 0,
+          }),
+        },
+      });
+      const snap = await api.get('/a', { silent: true });
+      expect(snap.replayedFromHar).toBe(true);
+      expect(tokenHits.get('cc-har')).toBeUndefined();
+    } finally {
+      await request.dispose();
+    }
+  });
+
   it('an auth type the client does not implement throws NOT_SUPPORTED', async () => {
     const request = await playwrightRequest.newContext();
     const before = received.length;
