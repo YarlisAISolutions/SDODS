@@ -144,8 +144,19 @@ export const RecordingModeSchema = z.enum([
 ]);
 export const EvidenceSchema = z.object({
   screenshot: ScreenshotModeSchema.default('off'),
+  /**
+   * Kept, and publishable by integrations: a video shows the screen, not request headers or
+   * storage. Password fields render masked; turn it off for apps that print secrets on screen.
+   */
   video: RecordingModeSchema.default('retain-on-failure'),
+  /** A trace records headers, cookies, storage and typed values: it is credential-bearing (#101). */
   trace: RecordingModeSchema.default('on-first-retry'),
+  /**
+   * After the run, rewrite every trace (`runner-output`, the HTML report's copies, the BASE64 bodies
+   * in `messages.ndjson`) with credential headers, cookies, storage and password values replaced by
+   * `[redacted]`. On by default; turn it off only when traces never leave a trusted machine.
+   */
+  redactTraces: z.boolean().default(true),
 });
 /**
  * The env-level patch. Not `EvidenceSchema.partial()`: zod still applies the inner defaults to
@@ -155,11 +166,13 @@ export const EvidencePatchSchema = z.object({
   screenshot: ScreenshotModeSchema.optional(),
   video: RecordingModeSchema.optional(),
   trace: RecordingModeSchema.optional(),
+  redactTraces: z.boolean().optional(),
 });
 export const EVIDENCE_DEFAULTS = {
   screenshot: 'off',
   video: 'retain-on-failure',
   trace: 'on-first-retry',
+  redactTraces: true,
 } as const;
 
 /**

@@ -1,7 +1,13 @@
 import { readFileSync, statSync } from 'node:fs';
 import { basename } from 'node:path';
 import type { RunRecord } from '@sdods/contracts';
-import { gherkinBlock, selectIssueScreenshots, truncate } from './context.js';
+import {
+  TRACE_CREDENTIALS_WARNING,
+  artifactDisplayPath,
+  gherkinBlock,
+  selectIssueScreenshots,
+  truncate,
+} from './context.js';
 import { IssueDedupe, fingerprintMarker, issueTitle } from './dedupe.js';
 import type {
   CreateIssueInput,
@@ -265,7 +271,11 @@ export class JiraProvider implements IntegrationProvider<JiraConfig> {
         `Run: ${run.id}${run.gitSha ? ` · Commit ${run.gitSha.slice(0, 10)}` : ''}`,
         ...(input.reportUrl ? [`Report: ${input.reportUrl}`] : []),
         ...(ctx.ci.runUrl ? [`CI run: ${ctx.ci.runUrl}`] : []),
+        ...(scenario.tracePath
+          ? [`Trace (local, not attached): ${artifactDisplayPath(scenario.tracePath, run)}`]
+          : []),
       ]),
+      ...(scenario.tracePath ? [paragraph(TRACE_CREDENTIALS_WARNING)] : []),
       paragraph(fingerprintMarker(scenario.fingerprint)),
     ];
     const created = await this.request<{ key: string; id: string }>('POST', '/rest/api/3/issue', {
@@ -318,21 +328,12 @@ export class JiraProvider implements IntegrationProvider<JiraConfig> {
         name: `${shot.phase ?? 'shot'}${shot.stepIndex != null ? `-step${shot.stepIndex}` : ''}-${basename(file)}`,
       });
     }
-    if (input.scenario.tracePath) {
-      const file = ctx.artifactPath({ relPath: input.scenario.tracePath }, input.run);
-      if (file && used + statSync(file).size <= capBytes)
-        files.push({ path: file, name: `trace-${basename(file)}` });
-    }
+    // trace.zip is deliberately not attached: it carries the session cookies, auth headers and
+    // storage of the account that ran the test (#101). The description names its local path.
     if (!files.length) return;
     const form = new FormData();
     for (const f of files) {
-      form.append(
-        'file',
-        new Blob([readFileSync(f.path)], {
-          type: f.name.endsWith('.zip') ? 'application/zip' : 'image/png',
-        }),
-        f.name,
-      );
+      form.append('file', new Blob([readFileSync(f.path)], { type: 'image/png' }), f.name);
     }
     await this.request('POST', `/rest/api/3/issue/${key}/attachments`, form, {
       'X-Atlassian-Token': 'no-check',
