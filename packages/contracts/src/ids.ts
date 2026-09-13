@@ -65,22 +65,37 @@ export interface RunnerProjectParts {
   project: string;
   layer: string;
   browser?: string;
+  /**
+   * `setup` for the companion target that runs a project's `setup:` scenarios before the target
+   * itself (`<project>--<layer>[--<browser>]--setup`). Absent for ordinary targets.
+   */
+  phase?: 'setup';
 }
 
 export const RUNNER_PROJECT_SEPARATOR = '--';
+export const RUNNER_SETUP_PHASE = 'setup';
 
 export function runnerProjectName(parts: RunnerProjectParts): string {
   const segs = [parts.project, parts.layer];
   if (parts.browser) segs.push(parts.browser);
+  if (parts.phase) segs.push(parts.phase);
   return segs.join(RUNNER_PROJECT_SEPARATOR);
 }
 
 export function parseRunnerProjectName(name: string): RunnerProjectParts | null {
   const segs = name.split(RUNNER_PROJECT_SEPARATOR);
+  // `setup` is neither a layer nor a browser name, so a trailing `setup` segment is unambiguous.
+  const phase = segs.length > 2 && segs[segs.length - 1] === RUNNER_SETUP_PHASE;
+  if (phase) segs.pop();
   if (segs.length < 2 || segs.length > 3) return null;
   const [project, layer, browser] = segs;
   if (!project || !layer) return null;
-  return browser ? { project, layer, browser } : { project, layer };
+  return {
+    project,
+    layer,
+    ...(browser ? { browser } : {}),
+    ...(phase ? { phase: RUNNER_SETUP_PHASE } : {}),
+  };
 }
 
 /** @deprecated Use {@link RunnerProjectParts}. Removed in the next minor. */
