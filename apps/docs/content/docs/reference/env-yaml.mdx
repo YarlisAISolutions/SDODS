@@ -43,6 +43,10 @@ description: Field reference for environment files.
       type: 'partial ScreenshotConfig',
       description: 'Overrides the project section for this environment.',
     },
+    evidence: {
+      type: '{ trace?, video?, screenshot? }',
+      description: 'Overrides single keys of the project `evidence` section for this environment.',
+    },
     heal: { type: 'partial HealConfig' },
     timeouts: { type: 'partial Timeouts' },
     'perf.budgets': { type: 'partial PerfBudgets' },

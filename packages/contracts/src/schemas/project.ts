@@ -118,6 +118,53 @@ export const TimeoutsSchema = z.object({
   api: z.number().int().positive().default(15_000),
 });
 
+/**
+ * Playwright's own artifacts per test: its trace, video and screenshot fixtures.
+ *
+ * Separate from `screenshots:` (SDODS's policy-driven scenario and step shots). Turning
+ * `screenshot` on here attaches Playwright's end-of-test screenshot as well, so most projects
+ * leave it `off` and set `trace`/`video` instead. The modes are Playwright's, verbatim.
+ */
+export const ScreenshotModeSchema = z.enum(['off', 'on', 'only-on-failure', 'on-first-failure']);
+export const RecordingModeSchema = z.enum([
+  'off',
+  'on',
+  'retain-on-failure',
+  'on-first-retry',
+  'on-all-retries',
+  'retain-on-first-failure',
+  'retain-on-failure-and-retries',
+]);
+export const EvidenceSchema = z.object({
+  screenshot: ScreenshotModeSchema.default('off'),
+  video: RecordingModeSchema.default('retain-on-failure'),
+  trace: RecordingModeSchema.default('on-first-retry'),
+});
+/**
+ * The env-level patch. Not `EvidenceSchema.partial()`: zod still applies the inner defaults to
+ * absent keys, so `evidence: { trace: on }` in an env file would reset the project's `video`.
+ */
+export const EvidencePatchSchema = z.object({
+  screenshot: ScreenshotModeSchema.optional(),
+  video: RecordingModeSchema.optional(),
+  trace: RecordingModeSchema.optional(),
+});
+export const EVIDENCE_DEFAULTS = {
+  screenshot: 'off',
+  video: 'retain-on-failure',
+  trace: 'on-first-retry',
+} as const;
+
+/**
+ * Scenarios that must pass before anything else in the run starts: probes, login, seeding.
+ *
+ * Each run target gets a `<target>--setup` companion that runs the scenarios matching `tags`
+ * (a Cucumber tag expression, applied regardless of `--tags`); the target depends on it, so when
+ * a setup scenario fails the target's scenarios are reported as skipped instead of failing one
+ * by one against a broken environment.
+ */
+export const SetupSchema = z.object({ tags: z.string().min(1) });
+
 export const RetriesSchema = z.object({
   ci: z.number().int().min(0).default(2),
   local: z.number().int().min(0).default(0),
@@ -329,6 +376,10 @@ export const ProcessSchema = z.object({
   workers: z.number().int().positive().optional(),
   retries: z.number().int().min(0).optional(),
   harMode: z.enum(['off', 'update', 'replay']).optional(),
+  /** Overrides the project's `fullyParallel` for this process. */
+  fullyParallel: z.boolean().optional(),
+  /** Overrides the project's `setup` for this process; `false` runs without a setup tier. */
+  setup: z.union([SetupSchema, z.literal(false)]).optional(),
   failOnFlaky: z.boolean().default(false),
   gates: z
     .object({
@@ -412,6 +463,13 @@ export const ProjectConfigSchema = z.object({
     api: 15_000,
   }),
   retries: RetriesSchema.default({ ci: 2, local: 0, byTag: {} }),
+  evidence: EvidenceSchema.default(EVIDENCE_DEFAULTS),
+  /**
+   * Run the tests inside each feature file in parallel (Playwright `fullyParallel`). `false` keeps
+   * scenarios of one file in order on one worker; files still spread across workers.
+   */
+  fullyParallel: z.boolean().default(true),
+  setup: SetupSchema.optional(),
   perf: z.object({ budgets: PerfBudgetsSchema.default({}) }).default({ budgets: {} }),
   integrations: IntegrationsSchema.default({ custom: [] }),
   mcp: McpConfigSchema.default({ servers: {} }),
@@ -473,6 +531,8 @@ export type TestingType = z.infer<typeof TestingTypeSchema>;
 export type ProjectConfig = z.infer<typeof ProjectConfigSchema>;
 export type ProjectConfigInput = z.input<typeof ProjectConfigSchema>;
 export type ScreenshotConfig = z.infer<typeof ScreenshotConfigSchema>;
+export type EvidenceConfig = z.infer<typeof EvidenceSchema>;
+export type SetupConfig = z.infer<typeof SetupSchema>;
 export type HealConfig = z.infer<typeof HealConfigSchema>;
 export type TimeoutsConfig = z.infer<typeof TimeoutsSchema>;
 export type ProjectAuthConfig = z.infer<typeof ProjectAuthSchema>;

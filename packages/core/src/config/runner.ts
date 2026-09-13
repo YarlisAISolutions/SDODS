@@ -2,7 +2,16 @@ import { existsSync } from 'node:fs';
 import { join, resolve as resolvePath } from 'node:path';
 import { devices, type PlaywrightTestConfig, type ReporterDescription } from '@playwright/test';
 import { cucumberReporter, defineBddConfig } from 'playwright-bdd';
-import { runnerProjectName, runFiles, type BrowserName, type Layer } from '@sdods/contracts';
+import {
+  EVIDENCE_DEFAULTS,
+  RUNNER_SETUP_PHASE,
+  runnerProjectName,
+  runFiles,
+  type BrowserName,
+  type Layer,
+  type ProjectConfig,
+  type SetupConfig,
+} from '@sdods/contracts';
 import { coreStepsPatterns } from '../steps/glob.js';
 import type { ProjectRegistry } from './registry.js';
 import type { ResolvedConfig } from './resolve.js';
@@ -19,7 +28,11 @@ export interface RunnerSelection {
   allure?: boolean;
   reporters?: string[];
   reporterMode?: 'default' | 'server' | 'quiet';
+  /** Named process (`--process`): its `fullyParallel` and `setup` override the project's. */
+  process?: string;
 }
+
+type RunnerProject = NonNullable<PlaywrightTestConfig['projects']>[number];
 
 export interface SdodsUseOption {
   project: string;
@@ -96,6 +109,7 @@ export function selectionFromEnv(env: NodeJS.ProcessEnv = process.env): RunnerSe
     allure: env.SDODS_ALLURE === '1',
     reporters: list(env.SDODS_REPORTERS),
     reporterMode: (env.SDODS_REPORTER_MODE as RunnerSelection['reporterMode']) || 'default',
+    process: env.SDODS_PROCESS || undefined,
   };
 }
 
@@ -183,6 +197,13 @@ export function buildRunnerConfig(
     };
     for (const k of Object.keys(envUse) as Array<keyof typeof envUse>)
       if (envUse[k] === undefined) delete envUse[k];
+    const { fullyParallel, setup } = runSettings(registry, entry.slug, p, sel.process);
+    // Playwright's own artifacts, per target so each project in a multi-project run keeps its own.
+    const evidenceUse = {
+      screenshot: p.evidence.screenshot,
+      video: p.evidence.video,
+      trace: p.evidence.trace,
+    };
 
     for (const layer of layers) {
       if (layer === 'recorded') {
@@ -193,6 +214,7 @@ export function buildRunnerConfig(
             name: runnerProjectName({ project: p.slug, layer, browser }),
             testDir: recordedDir,
             testMatch: '**/*.spec.ts',
+            fullyParallel,
             snapshotPathTemplate: join(
               p.root,
               'features',
@@ -206,6 +228,7 @@ export function buildRunnerConfig(
               baseURL: cfg.env.ui.baseUrl,
               testIdAttribute: p.testIdAttribute,
               ...envUse,
+              ...evidenceUse,
               sdods: { project: p.slug, layer, browser } satisfies SdodsUseOption,
             } as Record<string, unknown>,
           });
@@ -213,63 +236,97 @@ export function buildRunnerConfig(
         continue;
       }
 
-      const testDir = defineBddConfig({
-        features: `${toPosix(p.root)}/features/**/*.feature`,
-        steps: [
-          ...coreStepsPatterns(cfg.project.steps?.core?.exclude ?? []),
-          `${toPosix(p.root)}/steps/**/*.ts`,
-          `${toPosix(p.root)}/pages/**/*.ts`,
-        ],
-        // Each run generates into its own dir (cleaned by `sdods run`), lint/export into `.lint`,
-        // so concurrent runs and tooling never race on generated specs.
-        outputDir: `${toPosix(join(cfg.runtime.repoRoot, '.sdods/generated', sel.lint ? '.lint' : (sel.runId ?? 'adhoc'), p.slug, layer))}`,
-        featuresRoot: `${toPosix(p.root)}/features`,
-        // Explicit: scenarios that only use core steps cannot let bddgen guess the project test instance.
-        importTestFrom: `${toPosix(p.root)}/steps/fixtures.ts`,
-        disableWarnings: { importTestFrom: true },
-        tags: combineTagExpr(`@${layer}`, sel.tags),
-        examplesTitleFormat: 'Example #<_index_>',
-        missingSteps: sel.lint ? 'fail-on-gen' : 'fail-on-run',
-        aiFix: { promptAttachment: true },
-        quotes: 'single',
-      });
+      const generate = (tags: string, outDir: string) =>
+        defineBddConfig({
+          features: `${toPosix(p.root)}/features/**/*.feature`,
+          steps: [
+            ...coreStepsPatterns(cfg.project.steps?.core?.exclude ?? []),
+            `${toPosix(p.root)}/steps/**/*.ts`,
+            `${toPosix(p.root)}/pages/**/*.ts`,
+          ],
+          // Each run generates into its own dir (cleaned by `sdods run`), lint/export into `.lint`,
+          // so concurrent runs and tooling never race on generated specs.
+          outputDir: `${toPosix(join(cfg.runtime.repoRoot, '.sdods/generated', sel.lint ? '.lint' : (sel.runId ?? 'adhoc'), p.slug, outDir))}`,
+          featuresRoot: `${toPosix(p.root)}/features`,
+          // Explicit: scenarios that only use core steps cannot let bddgen guess the project test instance.
+          importTestFrom: `${toPosix(p.root)}/steps/fixtures.ts`,
+          disableWarnings: { importTestFrom: true },
+          tags,
+          examplesTitleFormat: 'Example #<_index_>',
+          missingSteps: sel.lint ? 'fail-on-gen' : 'fail-on-run',
+          aiFix: { promptAttachment: true },
+          quotes: 'single',
+        });
+
+      const layerExpr = combineTagExpr(`@${layer}`, sel.tags);
+      // Setup scenarios are generated on their own: whatever --tags selects, the gate still runs,
+      // and a scenario that is setup never runs a second time inside the target it gates.
+      const testDir = generate(setup ? `(${layerExpr}) and not (${setup.tags})` : layerExpr, layer);
       bddConfigs++;
+      const setupTestDir = setup
+        ? generate(combineTagExpr(`@${layer}`, setup.tags), `${layer}--${RUNNER_SETUP_PHASE}`)
+        : undefined;
+      if (setupTestDir) bddConfigs++;
+
+      /** Push a target, preceded by its setup companion when the project has a setup tier. */
+      const pushTarget = (
+        parts: { layer: Layer; browser?: BrowserName },
+        target: Omit<RunnerProject, 'name' | 'testDir'>,
+      ) => {
+        const name = runnerProjectName({ project: p.slug, ...parts });
+        if (setupTestDir) {
+          const setupName = runnerProjectName({
+            project: p.slug,
+            ...parts,
+            phase: RUNNER_SETUP_PHASE,
+          });
+          projects.push({ ...target, name: setupName, testDir: setupTestDir });
+          projects.push({ ...target, name, testDir, dependencies: [setupName] });
+        } else {
+          projects.push({ ...target, name, testDir });
+        }
+      };
 
       if (layer === 'api') {
-        projects.push({
-          name: runnerProjectName({ project: p.slug, layer }),
-          testDir,
-          use: { sdods: { project: p.slug, layer } satisfies SdodsUseOption } as Record<
-            string,
-            unknown
-          >,
-        });
+        pushTarget(
+          { layer },
+          {
+            fullyParallel,
+            use: {
+              ...evidenceUse,
+              sdods: { project: p.slug, layer } satisfies SdodsUseOption,
+            } as Record<string, unknown>,
+          },
+        );
         continue;
       }
 
       for (const browser of browsers) {
-        projects.push({
-          name: runnerProjectName({ project: p.slug, layer, browser }),
-          testDir,
-          // Baselines live with the project (generated specs are per-run and deleted):
-          // projects/<slug>/features/__screenshots__/<pw project>/<platform>/<name>.png
-          snapshotPathTemplate: join(
-            p.root,
-            'features',
-            '__screenshots__',
-            '{projectName}',
-            '{platform}',
-            '{arg}{ext}',
-          ),
-          use: {
-            ...browserUse(browser, p.channel),
-            baseURL: cfg.env.ui.baseUrl,
-            testIdAttribute: p.testIdAttribute,
-            viewport: browser.startsWith('mobile') ? undefined : p.screenshots.viewport,
-            ...envUse,
-            sdods: { project: p.slug, layer, browser } satisfies SdodsUseOption,
-          } as Record<string, unknown>,
-        });
+        pushTarget(
+          { layer, browser },
+          {
+            fullyParallel,
+            // Baselines live with the project (generated specs are per-run and deleted):
+            // projects/<slug>/features/__screenshots__/<pw project>/<platform>/<name>.png
+            snapshotPathTemplate: join(
+              p.root,
+              'features',
+              '__screenshots__',
+              '{projectName}',
+              '{platform}',
+              '{arg}{ext}',
+            ),
+            use: {
+              ...browserUse(browser, p.channel),
+              baseURL: cfg.env.ui.baseUrl,
+              testIdAttribute: p.testIdAttribute,
+              viewport: browser.startsWith('mobile') ? undefined : p.screenshots.viewport,
+              ...envUse,
+              ...evidenceUse,
+              sdods: { project: p.slug, layer, browser } satisfies SdodsUseOption,
+            } as Record<string, unknown>,
+          },
+        );
       }
     }
   }
@@ -335,13 +392,16 @@ export function buildRunnerConfig(
     expect: { timeout: timeouts.expect },
     retries,
     workers,
-    fullyParallel: true,
+    // Each generated project sets its own; this is the fallback for anything added by hand.
+    fullyParallel: first
+      ? runSettings(registry, first.project.slug, first.project, sel.process).fullyParallel
+      : true,
     outputDir: join(runDir, runFiles.output),
     reporter,
     use: {
-      screenshot: 'off',
-      video: 'retain-on-failure',
-      trace: 'on-first-retry',
+      screenshot: first?.project.evidence.screenshot ?? EVIDENCE_DEFAULTS.screenshot,
+      video: first?.project.evidence.video ?? EVIDENCE_DEFAULTS.video,
+      trace: first?.project.evidence.trace ?? EVIDENCE_DEFAULTS.trace,
       actionTimeout: timeouts.action,
       navigationTimeout: timeouts.navigation,
       // Playwright's own `--headed` flag still wins on the CLI; this is what makes the documented
@@ -355,6 +415,23 @@ export function buildRunnerConfig(
       sdodsRunDir: runDir,
     },
   };
+}
+
+/**
+ * `fullyParallel` and the setup tier for one project, with a named process taking precedence.
+ * A process that is not defined for this project (a multi-project run) leaves the project's own.
+ */
+function runSettings(
+  registry: ProjectRegistry,
+  slug: string,
+  project: ProjectConfig,
+  processName?: string,
+): { fullyParallel: boolean; setup?: SetupConfig } {
+  const proc = processName
+    ? registry.processesOf(slug).find((x) => x.name === processName)
+    : undefined;
+  const setup = proc?.setup === false ? undefined : (proc?.setup ?? project.setup);
+  return { fullyParallel: proc?.fullyParallel ?? project.fullyParallel, setup };
 }
 
 function parseEnvOverrides() {

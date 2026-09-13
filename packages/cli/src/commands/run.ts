@@ -4,6 +4,7 @@ import type { Command } from 'commander';
 import { execa } from 'execa';
 import pc from 'picocolors';
 import {
+  RecordingModeSchema,
   newRunId,
   runFiles,
   type BrowserName,
@@ -43,6 +44,8 @@ export interface RunFlags {
   workers?: number;
   shard?: string;
   retries?: number;
+  trace?: string;
+  video?: string;
   grep?: string;
   feature?: string;
   since?: string;
@@ -71,6 +74,25 @@ export interface RunFlags {
   allowEmpty?: boolean;
 }
 
+const RECORDING_MODES = RecordingModeSchema.options.join(' | ');
+
+/** `--trace`/`--video` take Playwright's modes; refuse anything else before specs are generated. */
+function recordingMode(flag: 'trace' | 'video', value?: string) {
+  if (value === undefined) return undefined;
+  const parsed = RecordingModeSchema.safeParse(value);
+  if (!parsed.success) {
+    throw new SdodsError(
+      'CONFIG_INVALID',
+      `--${flag} "${value}" is not a Playwright ${flag} mode.`,
+      {
+        hint: `Use one of: ${RECORDING_MODES}.`,
+        exitCode: 2,
+      },
+    );
+  }
+  return parsed.data;
+}
+
 function addRunOptions(cmd: Command): Command {
   return cmd
     .option('-p, --project <slug>', 'project slug (default: the only project, else required)')
@@ -94,6 +116,8 @@ function addRunOptions(cmd: Command): Command {
     .option('-w, --workers <n>', 'parallel workers', parseIntFlag('workers'))
     .option('--shard <i/n>', 'shard, e.g. 1/3')
     .option('--retries <n>', 'retries per test', parseIntFlag('retries'))
+    .option('--trace <mode>', `Playwright trace: ${RECORDING_MODES} (default: evidence.trace)`)
+    .option('--video <mode>', `Playwright video: ${RECORDING_MODES} (default: evidence.video)`)
     .option('--grep <pattern>', 'filter tests by title (regular expression)')
     .option('--feature <path>', 'only this feature file (relative to features/)')
     .option(
@@ -153,6 +177,9 @@ export async function runCommand(flags: RunFlags, cmd: Command): Promise<number>
   const tags = normalizeTagExpr(flags.tags ?? proc?.tags);
   // Fail on a malformed expression here, as a config error, rather than inside bddgen.
   if (tags) parseTagExpr(tags);
+  // Same for the setup tier the runner config will generate (`setup.tags`, or the process's own).
+  const setup = proc?.setup === false ? undefined : (proc?.setup ?? projectCfg.setup);
+  if (setup) parseTagExpr(setup.tags);
   const layers = (flags.layer.length ? flags.layer : (proc?.layers ?? [])) as Layer[];
   const browsers = (
     flags.projectMatrix
@@ -172,6 +199,8 @@ export async function runCommand(flags: RunFlags, cmd: Command): Promise<number>
     warn('Recording HAR fixtures runs with a single worker so shared files keep every request.');
   }
   const failOnFlaky = flags.failOnFlaky ?? proc?.failOnFlaky ?? false;
+  const trace = recordingMode('trace', flags.trace);
+  const video = recordingMode('video', flags.video);
 
   for (const l of layers) {
     if (!projectCfg.layers.includes(l)) {
@@ -231,6 +260,8 @@ export async function runCommand(flags: RunFlags, cmd: Command): Promise<number>
     harMode: harMode as CliOverrides['harMode'],
     offline: flags.strict && harMode === 'replay' ? true : undefined,
     updateSnapshots: flags.updateSnapshots,
+    trace,
+    video,
   };
   const cfg = ctx.registry.resolve(entry.slug, envName, cli);
   const runDir = cfg.runtime.runDir;
@@ -294,6 +325,7 @@ export async function runCommand(flags: RunFlags, cmd: Command): Promise<number>
     reporterMode:
       (flags.reporterMode as RunnerSelection['reporterMode']) ??
       (ctx.opts.quiet ? 'quiet' : 'default'),
+    process: proc?.name,
   };
   const childEnv: NodeJS.ProcessEnv = {
     ...process.env,
