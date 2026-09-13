@@ -2,11 +2,10 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Command } from 'commander';
 import pc from 'picocolors';
-import { SdodsError, DEFAULT_ARTIFACTS_DIR, Logger } from '@sdods/core';
+import { DEFAULT_ARTIFACTS_DIR } from '@sdods/core';
 import { createContext } from '../context.js';
+import { LINKS_FILE, notifyRun } from '../notify.js';
 import { json, ok, out, table, warn } from '../ui.js';
-
-const LINKS_FILE = ['.sdods', 'issue-links.json'] as const;
 
 /** `sdods integrations test|notify|sync|links` — GitHub and Jira without the server or a database. */
 export function register(program: Command) {
@@ -19,6 +18,7 @@ export function register(program: Command) {
     .description('Check credentials and reachability for each enabled provider')
     .requiredOption('-p, --project <slug>', 'project slug')
     .option('--provider <name>', 'only this provider (github|jira)')
+    .option('--create-labels', 'create configured GitHub labels the repository is missing')
     .action(async (opts, c) => {
       const ctx = createContext(c);
       const entry = ctx.registry.entry(opts.project);
@@ -49,13 +49,14 @@ export function register(program: Command) {
           });
           continue;
         }
-        const res = await p.provider.test();
+        const res = await p.provider.test({ createMissingLabels: Boolean(opts.createLabels) });
         rows.push({
           provider: p.name,
           enabled: true,
           ok: res.ok,
           detail: res.detail,
           secrets: fmtSecrets(p.secrets),
+          ...(ctx.opts.json && res.labels ? { labels: res.labels } : {}),
         });
       }
       if (ctx.opts.json) return json(rows);
@@ -87,55 +88,19 @@ export function register(program: Command) {
     .action(async (opts, c) => {
       const ctx = createContext(c);
       const {
-        buildRunSummaryFromFiles,
-        getProviders,
-        createIntegrationContext,
-        FileIssueLinkStore,
-      } = await import('@sdods/integrations');
-      const artifactsRoot = join(ctx.rootDir, opts.artifactsDir);
-      const runDir = join(artifactsRoot, opts.runId);
-      if (!existsSync(runDir)) {
-        throw new SdodsError('RUN_FAILED', `Run directory not found: ${runDir}`, {
-          hint: 'Pass --artifacts-dir or check the run id (sdods report --last).',
-          exitCode: 2,
-        });
-      }
-      const summary = buildRunSummaryFromFiles(runDir, {
+        summary,
+        slug,
+        actions: results,
+      } = await notifyRun({
+        rootDir: ctx.rootDir,
+        registry: ctx.registry,
+        artifactsRoot: join(ctx.rootDir, opts.artifactsDir),
+        runId: opts.runId,
         projectSlug: opts.project,
         reportUrl: opts.reportUrl,
-      });
-      const slug = summary.run.projectSlug;
-      const entry = ctx.registry.entry(slug);
-      const providers = await getProviders(entry.config, {
-        only: opts.provider ? [opts.provider] : undefined,
-        projectRoot: entry.root,
-      });
-      const ictx = createIntegrationContext({
-        store: new FileIssueLinkStore(join(ctx.rootDir, ...LINKS_FILE)),
-        logger: new Logger('integrations'),
         dryRun: Boolean(opts.dryRun),
-        artifactsRoot,
+        only: opts.provider ? [opts.provider] : undefined,
       });
-      const results: Array<{
-        provider: string;
-        kind: string;
-        target?: string;
-        url?: string;
-        detail?: string;
-      }> = [];
-      for (const p of providers) {
-        if (!p.enabled) continue;
-        if (p.initError) {
-          results.push({ provider: p.name, kind: 'skipped', detail: p.initError });
-          continue;
-        }
-        try {
-          const res = await p.provider.onRunFinished(summary, ictx);
-          results.push(...res.actions);
-        } catch (e) {
-          results.push({ provider: p.name, kind: 'error', detail: (e as Error).message });
-        }
-      }
       if (ctx.opts.json)
         return json({ run: summary.run, totals: summary.totals, actions: results });
       const t = summary.totals;

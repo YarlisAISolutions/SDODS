@@ -1,8 +1,8 @@
 import { readFileSync } from 'node:fs';
-import { basename } from 'node:path';
+import { basename, extname } from 'node:path';
 import { Octokit } from '@octokit/rest';
 import type { RunRecord } from '@sdods/contracts';
-import { gherkinBlock, selectIssueScreenshots, truncate } from './context.js';
+import { artifactDisplayPath, gherkinBlock, selectIssueScreenshots, truncate } from './context.js';
 import { IssueDedupe, fingerprintMarker, issueTitle } from './dedupe.js';
 import type {
   CreateIssueInput,
@@ -14,6 +14,7 @@ import type {
   IssueRef,
   NotifyAction,
   NotifyResult,
+  ProviderTestOptions,
   ProviderTestResult,
   RunSummaryInput,
   ScenarioSummary,
@@ -21,6 +22,8 @@ import type {
 
 export const PR_COMMENT_MARKER = '<!-- sdods:run-summary -->';
 const ANNOTATION_BATCH = 50;
+/** colour for labels created by `sdods integrations test --create-labels` */
+const LABEL_COLOR = 'd93f0b';
 
 export interface GitHubProviderOptions {
   baseUrl?: string;
@@ -55,16 +58,75 @@ export class GitHubProvider implements IntegrationProvider<GitHubConfig> {
       });
   }
 
-  async test(): Promise<ProviderTestResult> {
+  async test(opts: ProviderTestOptions = {}): Promise<ProviderTestResult> {
+    let detail: string;
     try {
       const { data } = await this.octokit.rest.repos.get({ owner: this.owner, repo: this.repo });
-      return {
-        ok: true,
-        detail: `repo ${data.full_name} reachable (${data.private ? 'private' : 'public'})`,
-      };
+      detail = `repo ${data.full_name} reachable (${data.private ? 'private' : 'public'})`;
     } catch (e) {
       return { ok: false, detail: (e as Error).message };
     }
+    return this.checkLabels(detail, opts);
+  }
+
+  /**
+   * Issues are created with `labels`; a label the repository lacks is a configuration error that
+   * nothing reported. Missing labels fail the test, and `createMissingLabels` creates them.
+   */
+  private async checkLabels(
+    detail: string,
+    opts: ProviderTestOptions,
+  ): Promise<ProviderTestResult> {
+    const wanted = [...new Set(this.config.labels ?? [])];
+    if (!wanted.length) return { ok: true, detail };
+    let existing: Array<{ name: string }>;
+    try {
+      existing = await this.octokit.paginate(this.octokit.rest.issues.listLabelsForRepo, {
+        owner: this.owner,
+        repo: this.repo,
+        per_page: 100,
+      });
+    } catch (e) {
+      return { ok: false, detail: `${detail}; cannot list labels: ${(e as Error).message}` };
+    }
+    const have = new Set(existing.map((l) => l.name.toLowerCase()));
+    const missing = wanted.filter((l) => !have.has(l.toLowerCase()));
+    if (!missing.length) return { ok: true, detail };
+    if (!opts.createMissingLabels) {
+      return {
+        ok: false,
+        detail: `${detail}; missing labels: ${missing.join(', ')} (create them, or run \`sdods integrations test --create-labels\`)`,
+        labels: { missing, created: [] },
+      };
+    }
+    const created: string[] = [];
+    const failed: string[] = [];
+    const errors: string[] = [];
+    for (const name of missing) {
+      try {
+        await this.octokit.rest.issues.createLabel({
+          owner: this.owner,
+          repo: this.repo,
+          name,
+          color: LABEL_COLOR,
+        });
+        created.push(name);
+      } catch (e) {
+        failed.push(name);
+        errors.push(`${name}: ${(e as Error).message}`);
+      }
+    }
+    return {
+      ok: failed.length === 0,
+      detail: [
+        detail,
+        created.length ? `created labels: ${created.join(', ')}` : '',
+        errors.length ? `cannot create labels: ${errors.join('; ')}` : '',
+      ]
+        .filter(Boolean)
+        .join('; '),
+      labels: { missing: failed, created },
+    };
   }
 
   async onRunFinished(summary: RunSummaryInput, ctx: IntegrationContext): Promise<NotifyResult> {
@@ -79,8 +141,14 @@ export class GitHubProvider implements IntegrationProvider<GitHubConfig> {
     }
 
     const candidates = this.failuresToReport(summary);
-    const dedupe = new IssueDedupe(ctx.store);
     for (const scenario of candidates) {
+      // The local link file does not survive a fresh CI runner, so an open issue carrying the
+      // fingerprint marker is looked up in the repository before creating another one.
+      const dedupe = new IssueDedupe(ctx.store, {
+        findRemote: ctx.dryRun
+          ? undefined
+          : () => this.findOpenIssueByFingerprint(scenario, run, ctx),
+      });
       const decision = await dedupe.decide(run.projectSlug, this.name, scenario.fingerprint);
       if (decision.action === 'create') {
         if (ctx.dryRun) {
@@ -111,6 +179,18 @@ export class GitHubProvider implements IntegrationProvider<GitHubConfig> {
         });
       } else if (decision.action === 'comment' && decision.link) {
         const link = decision.link;
+        if (link.lastRunId === run.id) {
+          // `sdods run` notifies, and a later `sdods integrations notify` for the same run must not
+          // add a second "failed again" comment.
+          actions.push({
+            provider: this.name,
+            kind: 'skipped',
+            target: link.externalKey,
+            fingerprint: scenario.fingerprint,
+            detail: `run ${run.id} already reported on ${link.externalKey}`,
+          });
+          continue;
+        }
         if (ctx.dryRun) {
           actions.push({
             provider: this.name,
@@ -148,11 +228,53 @@ export class GitHubProvider implements IntegrationProvider<GitHubConfig> {
     // scenarios that now pass but have an open issue
     for (const scenario of summary.passed) {
       const link = await ctx.store.findOpen(run.projectSlug, this.name, scenario.fingerprint);
-      if (!link || link.source === 'tag') continue;
+      if (!link || link.source === 'tag' || link.lastRunId === run.id) continue;
       const action = await this.onScenarioPassed(link, run, ctx);
       if (action) actions.push(action);
     }
     return { provider: this.name, actions };
+  }
+
+  /**
+   * Search the repository for an open issue whose body carries this scenario's fingerprint marker
+   * and record it as the scenario's link. A failed search falls back to the local links.
+   */
+  private async findOpenIssueByFingerprint(
+    scenario: ScenarioSummary,
+    run: RunRecord,
+    ctx: IntegrationContext,
+  ): Promise<IssueLink | undefined> {
+    const marker = fingerprintMarker(scenario.fingerprint);
+    try {
+      const { data } = await this.octokit.rest.search.issuesAndPullRequests({
+        q: `repo:${this.owner}/${this.repo} is:issue is:open in:body "${marker}"`,
+        per_page: 10,
+      });
+      // search matches words, not the exact marker: confirm it in the body
+      const exact = new RegExp(`${escapeRegExp(marker)}(?![\\w-])`);
+      const hit = data.items.find(
+        (i) => !i.pull_request && i.state === 'open' && exact.test(i.body ?? ''),
+      );
+      if (!hit) return undefined;
+      return await ctx.store.save({
+        projectSlug: run.projectSlug,
+        provider: this.name,
+        fingerprint: scenario.fingerprint,
+        scenarioName: scenario.scenarioName,
+        externalKey: `${this.owner}/${this.repo}#${hit.number}`,
+        externalUrl: hit.html_url,
+        status: 'open',
+        source: 'auto',
+        // the issue was opened by this very run (notified again from another machine)
+        lastRunId: (hit.body ?? '').includes(`**Run** \`${run.id}\``) ? run.id : undefined,
+        lastSyncedAt: new Date().toISOString(),
+      });
+    } catch (e) {
+      ctx.logger.warn(
+        `github: searching issues for ${marker} failed, using local issue links only: ${(e as Error).message}`,
+      );
+      return undefined;
+    }
   }
 
   private failuresToReport(summary: RunSummaryInput): ScenarioSummary[] {
@@ -375,6 +497,7 @@ export class GitHubProvider implements IntegrationProvider<GitHubConfig> {
       '```',
       '',
       ...(shotLines.length ? ['### Screenshots', ...shotLines, ''] : []),
+      ...(await this.mediaLines(scenario, run, ctx)),
       ...(input.reportUrl || ctx.ci.runUrl
         ? [
             '### Links',
@@ -384,6 +507,7 @@ export class GitHubProvider implements IntegrationProvider<GitHubConfig> {
           ]
         : []),
       `<!-- ${fingerprintMarker(scenario.fingerprint)} -->`,
+      `<sub>${fingerprintMarker(scenario.fingerprint)}</sub>`,
     ]
       .filter((l) => l !== undefined)
       .join('\n');
@@ -415,6 +539,43 @@ export class GitHubProvider implements IntegrationProvider<GitHubConfig> {
     return ref;
   }
 
+  /** Link the runner's video.webm and trace.zip, with the command that opens the trace. */
+  private async mediaLines(
+    scenario: ScenarioSummary,
+    run: RunRecord,
+    ctx: IntegrationContext,
+  ): Promise<string[]> {
+    const lines: string[] = [];
+    let traceTarget: string | undefined;
+    const media = [
+      ['Video', scenario.videoPath],
+      ['Trace', scenario.tracePath],
+    ] as const;
+    for (const [label, relPath] of media) {
+      if (!relPath) continue;
+      const local = artifactDisplayPath(relPath, run);
+      let url = ctx.artifactUrl({ relPath }, run);
+      let uploaded: string | null = null;
+      if (this.config.uploadToRelease) {
+        uploaded = await this.uploadReleaseAsset({ relPath }, run, ctx).catch(() => null);
+        if (uploaded) url = uploaded;
+      }
+      if (url && url !== ctx.ci.artifactUrl) lines.push(`- ${label}: ${url}`);
+      else if (url) lines.push(`- ${label}: \`${local}\` in the [CI run artifacts](${url})`);
+      else lines.push(`- ${label}: \`${local}\``);
+      if (label === 'Trace') traceTarget = uploaded ?? local;
+    }
+    if (!lines.length) return [];
+    return [
+      '### Video and trace',
+      ...lines,
+      ...(traceTarget
+        ? ['', '```bash', `npx playwright show-trace ${shellArg(traceTarget)}`, '```']
+        : []),
+      '',
+    ];
+  }
+
   private async uploadReleaseAsset(
     shot: { relPath: string; absPath?: string },
     run: RunRecord,
@@ -428,13 +589,14 @@ export class GitHubProvider implements IntegrationProvider<GitHubConfig> {
       tag: this.config.uploadToRelease,
     });
     const name = `${run.id}-${basename(file)}`;
+    const bytes = readFileSync(file);
     const { data } = await this.octokit.rest.repos.uploadReleaseAsset({
       owner: this.owner,
       repo: this.repo,
       release_id: release.id,
       name,
-      data: readFileSync(file) as unknown as string,
-      headers: { 'content-type': 'image/png', 'content-length': readFileSync(file).length },
+      data: bytes as unknown as string,
+      headers: { 'content-type': contentTypeOf(file), 'content-length': bytes.length },
     });
     return data.browser_download_url;
   }
@@ -527,6 +689,27 @@ export function issueNumber(key: string): number {
   const m = /#?(\d+)$/.exec(key.trim());
   if (!m) throw new Error(`Cannot parse GitHub issue number from "${key}"`);
   return Number(m[1]);
+}
+
+function contentTypeOf(file: string): string {
+  switch (extname(file).toLowerCase()) {
+    case '.png':
+      return 'image/png';
+    case '.webm':
+      return 'video/webm';
+    case '.zip':
+      return 'application/zip';
+    default:
+      return 'application/octet-stream';
+  }
+}
+
+function escapeRegExp(text: string): string {
+  return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function shellArg(value: string): string {
+  return /^[\w@%+=:,./-]+$/.test(value) ? value : `'${value.replace(/'/g, `'\\''`)}'`;
 }
 
 function firstLine(text: string): string {

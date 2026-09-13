@@ -29,7 +29,8 @@ import {
 import { analyzeChangeImpact } from '@sdods/mcp';
 import { createContext } from '../context.js';
 import { browserStatuses } from './browsers.js';
-import { collect, json, out, parseIntFlag, warn } from '../ui.js';
+import { maybeNotify, notifyRun, type AutoNotifyOutcome } from '../notify.js';
+import { collect, json, out, parseIntFlag, table, warn } from '../ui.js';
 
 export interface RunFlags {
   project?: string;
@@ -69,6 +70,7 @@ export interface RunFlags {
   reporterMode?: string;
   trigger?: string;
   allowEmpty?: boolean;
+  notify?: boolean;
 }
 
 function addRunOptions(cmd: Command): Command {
@@ -124,6 +126,10 @@ function addRunOptions(cmd: Command): Command {
     .option(
       '--allow-empty',
       'exit 0 when the selection matches no scenario (by default that is exit 2)',
+    )
+    .option(
+      '--no-notify',
+      'do not publish the run to enabled integrations (GitHub, Jira) after it finishes',
     );
 }
 
@@ -498,8 +504,43 @@ export async function runCommand(flags: RunFlags, cmd: Command): Promise<number>
     }
   }
 
+  // Enabled integrations (check runs, PR comment, issues) act on the run here, the same way
+  // `sdods integrations notify --run-id` does. Failures are reported and never change the exit code.
+  const notify: AutoNotifyOutcome = await maybeNotify({
+    flags,
+    integrations: projectCfg.integrations,
+    totals: summary?.totals,
+    exitCode,
+    shardTotal: cfg.runtime.shard?.total,
+    warn,
+    notify: () =>
+      notifyRun({
+        rootDir: ctx.rootDir,
+        registry: ctx.registry,
+        artifactsRoot: cfg.runtime.artifactsDir,
+        runId,
+        projectSlug: entry.slug,
+      }),
+  });
+  if (!ctx.opts.json && notify.ran && notify.actions.length) {
+    out('');
+    out(pc.bold('integrations'));
+    table(
+      notify.actions.map((a) => ({
+        provider: a.provider,
+        action: a.kind,
+        target: a.target ?? '',
+        url: a.url ?? '',
+        detail: a.detail ?? '',
+      })),
+    );
+  } else if (!ctx.opts.json && !notify.ran && notify.reason !== 'no integration enabled') {
+    // an enabled integration that did not act must say so: silence is what #81 was about
+    out(pc.dim(`integrations: not notified (${notify.reason})`));
+  }
+
   if (ctx.opts.json) {
-    json({ runId, runDir, exitCode: finalExit, summary, manifest });
+    json({ runId, runDir, exitCode: finalExit, summary, manifest, notify });
   } else {
     const t = summary?.totals;
     out('');
