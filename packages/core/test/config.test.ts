@@ -2,12 +2,13 @@ import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { parseRunnerProjectName, runnerProjectName } from '@sdods/contracts';
 import { deepMerge, coerceEnvValue, setPath, getAtPath } from '../src/config/merge.js';
 import { assertNoSecretLiterals, collectVarRefs, interpolate } from '../src/config/interpolate.js';
 import { combineTagExpr, normalizeTagExpr, parseTagValue } from '../src/config/tags.js';
 import { resolveConfig, serializeCliOverrides } from '../src/config/resolve.js';
 import { ProjectRegistry } from '../src/config/registry.js';
-import { buildRunnerConfig } from '../src/config/runner.js';
+import { buildRunnerConfig, setupTierOf } from '../src/config/runner.js';
 
 function scaffold(
   opts: { projectYaml?: string; envYaml?: string; dotenv?: Record<string, string> } = {},
@@ -258,5 +259,186 @@ describe('buildRunnerConfig browsers and channels', () => {
     const t = targets(yaml('firefox, webkit', 'chrome'));
     expect(t['shop--ui--firefox']).toBeUndefined();
     expect(t['shop--ui--webkit']).toBeUndefined();
+  });
+});
+
+describe('buildRunnerConfig evidence, parallelism and setup (#83)', () => {
+  // `fullyParallel: true` and `use: { screenshot: 'off', video: 'retain-on-failure',
+  // trace: 'on-first-retry' }` were literals in buildRunnerConfig. With `retries.local: 0` that meant
+  // no trace locally, ever, and no project could run its files in order or gate on a login first.
+  const base = (extra = '') =>
+    `slug: shop\nname: Shop\nlayers: [ui, api]\nbrowsers: [chromium, firefox]\nenvs: { default: staging, available: [staging, local] }\n${extra}`;
+
+  function build(
+    projectYaml: string,
+    opts: { localYaml?: string; sel?: Record<string, unknown>; env?: Record<string, string> } = {},
+  ) {
+    const { root, proj } = scaffold({ projectYaml });
+    if (opts.localYaml)
+      writeFileSync(
+        join(proj, 'envs', 'local.yaml'),
+        `ui: { baseUrl: http://localhost:3000 }\napi: { baseUrl: http://localhost:3000/api }\n${opts.localYaml}`,
+      );
+    mkdirSync(join(proj, 'features'), { recursive: true });
+    const saved: Record<string, string | undefined> = {};
+    for (const [k, v] of Object.entries(opts.env ?? {})) {
+      saved[k] = process.env[k];
+      process.env[k] = v;
+    }
+    try {
+      return buildRunnerConfig(ProjectRegistry.discover(root), { env: 'local', ...opts.sel });
+    } finally {
+      for (const [k, v] of Object.entries(saved)) {
+        if (v === undefined) delete process.env[k];
+        else process.env[k] = v;
+      }
+    }
+  }
+  const byName = (cfg: ReturnType<typeof buildRunnerConfig>) =>
+    Object.fromEntries((cfg.projects ?? []).map((p) => [String(p.name), p]));
+  const evidenceOf = (p: { use?: unknown }) => {
+    const u = p.use as Record<string, unknown>;
+    return { screenshot: u.screenshot, video: u.video, trace: u.trace };
+  };
+
+  it('keeps the previous defaults when nothing is configured', () => {
+    const cfg = build(base());
+    expect(cfg.fullyParallel).toBe(true);
+    expect(cfg.use).toMatchObject({
+      screenshot: 'off',
+      video: 'retain-on-failure',
+      trace: 'on-first-retry',
+    });
+    for (const p of cfg.projects ?? []) {
+      expect(evidenceOf(p)).toEqual({
+        screenshot: 'off',
+        video: 'retain-on-failure',
+        trace: 'on-first-retry',
+      });
+      expect(p.fullyParallel).toBe(true);
+      expect(p.dependencies ?? []).toEqual([]);
+    }
+  });
+
+  it('takes evidence modes from sdods.project.yaml', () => {
+    const cfg = build(base('evidence: { trace: on, video: off, screenshot: only-on-failure }\n'));
+    expect(evidenceOf(byName(cfg)['shop--ui--chromium']!)).toEqual({
+      screenshot: 'only-on-failure',
+      video: 'off',
+      trace: 'on',
+    });
+    expect(evidenceOf(byName(cfg)['shop--api']!).trace).toBe('on');
+    expect(cfg.use).toMatchObject({ trace: 'on', video: 'off', screenshot: 'only-on-failure' });
+  });
+
+  it('lets envs/<env>.yaml override single evidence keys', () => {
+    const cfg = build(base('evidence: { trace: on, video: off }\n'), {
+      localYaml: 'evidence: { trace: retain-on-failure }\n',
+    });
+    expect(evidenceOf(byName(cfg)['shop--ui--firefox']!)).toEqual({
+      screenshot: 'off',
+      video: 'off',
+      trace: 'retain-on-failure',
+    });
+  });
+
+  it('rejects modes Playwright does not accept', () => {
+    expect(() => build(base('evidence: { trace: sometimes }\n'))).toThrow(/evidence\.trace/);
+    expect(() => build(base(), { localYaml: 'evidence: { video: always }\n' })).toThrow(
+      /evidence\.video/,
+    );
+  });
+
+  it('lets the CLI (--trace/--video) and SDODS_TRACE win over the yaml', () => {
+    const { root, proj } = scaffold({ projectYaml: base('evidence: { trace: off }\n') });
+    const viaCli = resolveConfig({
+      rootDir: root,
+      projectRoot: proj,
+      env: 'local',
+      cliOverrides: { trace: 'on', video: 'on' },
+      processEnv: {} as any,
+    });
+    expect(viaCli.project.evidence).toMatchObject({ trace: 'on', video: 'on' });
+    expect(viaCli.provenance['project.evidence.trace']).toBe('cli');
+
+    const viaEnv = build(base('evidence: { trace: off }\n'), { env: { SDODS_TRACE: 'on' } });
+    expect(evidenceOf(byName(viaEnv)['shop--api']!).trace).toBe('on');
+  });
+
+  it('takes fullyParallel from the project, and a process overrides it', () => {
+    const serial = build(base('fullyParallel: false\n'));
+    expect(serial.fullyParallel).toBe(false);
+    for (const p of serial.projects ?? []) expect(p.fullyParallel).toBe(false);
+
+    const withProcess = base(
+      'processes:\n  - { name: release-gate, fullyParallel: false }\n  - { name: pr-check }\n',
+    );
+    const gate = build(withProcess, { sel: { project: 'shop', process: 'release-gate' } });
+    for (const p of gate.projects ?? []) expect(p.fullyParallel).toBe(false);
+    const pr = build(withProcess, { sel: { project: 'shop', process: 'pr-check' } });
+    for (const p of pr.projects ?? []) expect(p.fullyParallel).toBe(true);
+  });
+
+  it('turns setup: { tags } into setup run targets every other target depends on', () => {
+    const cfg = build(base('setup: { tags: "@setup" }\n'));
+    const p = byName(cfg);
+    expect(Object.keys(p).sort()).toEqual([
+      'shop--api',
+      'shop--api--setup',
+      'shop--ui--chromium',
+      'shop--ui--chromium--setup',
+      'shop--ui--firefox',
+      'shop--ui--firefox--setup',
+    ]);
+    expect(p['shop--ui--chromium']!.dependencies).toEqual(['shop--ui--chromium--setup']);
+    expect(p['shop--ui--firefox']!.dependencies).toEqual(['shop--ui--firefox--setup']);
+    expect(p['shop--api']!.dependencies).toEqual(['shop--api--setup']);
+    expect(p['shop--ui--chromium--setup']!.dependencies ?? []).toEqual([]);
+    // The setup scenarios are generated apart from the rest, so they neither run twice nor fall
+    // out of the selection when --tags does not match them.
+    expect(p['shop--ui--chromium--setup']!.testDir).not.toBe(p['shop--ui--chromium']!.testDir);
+    // A setup target launches the same browser as the target it gates.
+    expect((p['shop--ui--firefox--setup']!.use as any).defaultBrowserType).toBe('firefox');
+  });
+
+  it('lets a process choose its own setup tags or none', () => {
+    const yaml = base(
+      'setup: { tags: "@setup" }\nprocesses:\n  - { name: quick, setup: false }\n  - { name: gate, setup: { tags: "@probe or @auth" } }\n',
+    );
+    const quick = byName(build(yaml, { sel: { project: 'shop', process: 'quick' } }));
+    expect(Object.keys(quick).some((n) => n.endsWith('--setup'))).toBe(false);
+    const gate = byName(build(yaml, { sel: { project: 'shop', process: 'gate' } }));
+    expect(gate['shop--api']!.dependencies).toEqual(['shop--api--setup']);
+  });
+
+  it('normalises setup tags like --tags and lets a process turn the tier off', () => {
+    expect(setupTierOf({ setup: { tags: 'setup' } })).toEqual({ tags: '@setup' });
+    expect(setupTierOf({ setup: { tags: 'probe,auth' } })).toEqual({ tags: '@probe or @auth' });
+    expect(setupTierOf({ setup: { tags: '@setup' } }, { setup: false })).toBeUndefined();
+    expect(setupTierOf({}, { setup: { tags: '@gate' } })).toEqual({ tags: '@gate' });
+  });
+
+  it('names setup targets so reports still read their layer and browser', () => {
+    // Dashboard, ingest and scenario identity all parse the target name; a setup target must keep
+    // resolving to its real layer and browser rather than to null or a browser called "setup".
+    expect(parseRunnerProjectName('shop--ui--chromium--setup')).toEqual({
+      project: 'shop',
+      layer: 'ui',
+      browser: 'chromium',
+      phase: 'setup',
+    });
+    expect(parseRunnerProjectName('shop--api--setup')).toEqual({
+      project: 'shop',
+      layer: 'api',
+      phase: 'setup',
+    });
+    expect(parseRunnerProjectName('shop--ui--chromium')).toEqual({
+      project: 'shop',
+      layer: 'ui',
+      browser: 'chromium',
+    });
+    expect(runnerProjectName({ project: 'shop', layer: 'api', phase: 'setup' })).toBe(
+      'shop--api--setup',
+    );
   });
 });

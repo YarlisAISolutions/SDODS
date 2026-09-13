@@ -4,6 +4,7 @@ import type { Command } from 'commander';
 import { execa } from 'execa';
 import pc from 'picocolors';
 import {
+  RecordingModeSchema,
   newRunId,
   runFiles,
   type BrowserName,
@@ -23,14 +24,16 @@ import {
   normalizeTagExpr,
   parseTagExpr,
   serializeCliOverrides,
+  setupTierOf,
   type CliOverrides,
   type RunnerSelection,
 } from '@sdods/core';
 import { analyzeChangeImpact } from '@sdods/mcp';
 import { createContext } from '../context.js';
 import { browserStatuses } from './browsers.js';
+import { maybeNotify, notifyRun, type AutoNotifyOutcome } from '../notify.js';
 import { installedPlaywrightVersion, stepResultsWarning } from '../runner-compat.js';
-import { collect, json, out, parseIntFlag, warn } from '../ui.js';
+import { collect, json, out, parseIntFlag, table, warn } from '../ui.js';
 
 export interface RunFlags {
   project?: string;
@@ -44,6 +47,8 @@ export interface RunFlags {
   workers?: number;
   shard?: string;
   retries?: number;
+  trace?: string;
+  video?: string;
   grep?: string;
   feature?: string;
   since?: string;
@@ -70,6 +75,26 @@ export interface RunFlags {
   reporterMode?: string;
   trigger?: string;
   allowEmpty?: boolean;
+  notify?: boolean;
+}
+
+const RECORDING_MODES = RecordingModeSchema.options.join(' | ');
+
+/** `--trace`/`--video` take Playwright's modes; refuse anything else before specs are generated. */
+function recordingMode(flag: 'trace' | 'video', value?: string) {
+  if (value === undefined) return undefined;
+  const parsed = RecordingModeSchema.safeParse(value);
+  if (!parsed.success) {
+    throw new SdodsError(
+      'CONFIG_INVALID',
+      `--${flag} "${value}" is not a Playwright ${flag} mode.`,
+      {
+        hint: `Use one of: ${RECORDING_MODES}.`,
+        exitCode: 2,
+      },
+    );
+  }
+  return parsed.data;
 }
 
 function addRunOptions(cmd: Command): Command {
@@ -95,6 +120,8 @@ function addRunOptions(cmd: Command): Command {
     .option('-w, --workers <n>', 'parallel workers', parseIntFlag('workers'))
     .option('--shard <i/n>', 'shard, e.g. 1/3')
     .option('--retries <n>', 'retries per test', parseIntFlag('retries'))
+    .option('--trace <mode>', `Playwright trace: ${RECORDING_MODES} (default: evidence.trace)`)
+    .option('--video <mode>', `Playwright video: ${RECORDING_MODES} (default: evidence.video)`)
     .option('--grep <pattern>', 'filter tests by title (regular expression)')
     .option('--feature <path>', 'only this feature file (relative to features/)')
     .option(
@@ -125,6 +152,10 @@ function addRunOptions(cmd: Command): Command {
     .option(
       '--allow-empty',
       'exit 0 when the selection matches no scenario (by default that is exit 2)',
+    )
+    .option(
+      '--no-notify',
+      'do not publish the run to enabled integrations (GitHub, Jira) after it finishes',
     );
 }
 
@@ -154,6 +185,9 @@ export async function runCommand(flags: RunFlags, cmd: Command): Promise<number>
   const tags = normalizeTagExpr(flags.tags ?? proc?.tags);
   // Fail on a malformed expression here, as a config error, rather than inside bddgen.
   if (tags) parseTagExpr(tags);
+  // Same for the setup tier the runner config will generate (`setup.tags`, or the process's own).
+  const setup = setupTierOf(projectCfg, proc);
+  if (setup) parseTagExpr(setup.tags);
   const layers = (flags.layer.length ? flags.layer : (proc?.layers ?? [])) as Layer[];
   const browsers = (
     flags.projectMatrix
@@ -173,6 +207,8 @@ export async function runCommand(flags: RunFlags, cmd: Command): Promise<number>
     warn('Recording HAR fixtures runs with a single worker so shared files keep every request.');
   }
   const failOnFlaky = flags.failOnFlaky ?? proc?.failOnFlaky ?? false;
+  const trace = recordingMode('trace', flags.trace);
+  const video = recordingMode('video', flags.video);
 
   for (const l of layers) {
     if (!projectCfg.layers.includes(l)) {
@@ -235,6 +271,8 @@ export async function runCommand(flags: RunFlags, cmd: Command): Promise<number>
     harMode: harMode as CliOverrides['harMode'],
     offline: flags.strict && harMode === 'replay' ? true : undefined,
     updateSnapshots: flags.updateSnapshots,
+    trace,
+    video,
   };
   const cfg = ctx.registry.resolve(entry.slug, envName, cli);
   const runDir = cfg.runtime.runDir;
@@ -298,6 +336,7 @@ export async function runCommand(flags: RunFlags, cmd: Command): Promise<number>
     reporterMode:
       (flags.reporterMode as RunnerSelection['reporterMode']) ??
       (ctx.opts.quiet ? 'quiet' : 'default'),
+    process: proc?.name,
   };
   const childEnv: NodeJS.ProcessEnv = {
     ...process.env,
@@ -414,7 +453,11 @@ export async function runCommand(flags: RunFlags, cmd: Command): Promise<number>
 
   if (flags.list) {
     out(pc.bold('Run targets:'));
-    for (const p of runnerProjects) out(`  ${p.name}`);
+    for (const p of runnerProjects) {
+      // Playwright runs the setup companion as a dependency; list it so the targets match the tests.
+      if (setup && p.layer !== 'recorded') out(`  ${p.name}--setup`);
+      out(`  ${p.name}`);
+    }
     const listed = await execa('npx', args, {
       cwd: ctx.rootDir,
       env: childEnv,
@@ -502,8 +545,43 @@ export async function runCommand(flags: RunFlags, cmd: Command): Promise<number>
     }
   }
 
+  // Enabled integrations (check runs, PR comment, issues) act on the run here, the same way
+  // `sdods integrations notify --run-id` does. Failures are reported and never change the exit code.
+  const notify: AutoNotifyOutcome = await maybeNotify({
+    flags,
+    integrations: projectCfg.integrations,
+    totals: summary?.totals,
+    exitCode,
+    shardTotal: cfg.runtime.shard?.total,
+    warn,
+    notify: () =>
+      notifyRun({
+        rootDir: ctx.rootDir,
+        registry: ctx.registry,
+        artifactsRoot: cfg.runtime.artifactsDir,
+        runId,
+        projectSlug: entry.slug,
+      }),
+  });
+  if (!ctx.opts.json && notify.ran && notify.actions.length) {
+    out('');
+    out(pc.bold('integrations'));
+    table(
+      notify.actions.map((a) => ({
+        provider: a.provider,
+        action: a.kind,
+        target: a.target ?? '',
+        url: a.url ?? '',
+        detail: a.detail ?? '',
+      })),
+    );
+  } else if (!ctx.opts.json && !notify.ran && notify.reason !== 'no integration enabled') {
+    // an enabled integration that did not act must say so: silence is what #81 was about
+    out(pc.dim(`integrations: not notified (${notify.reason})`));
+  }
+
   if (ctx.opts.json) {
-    json({ runId, runDir, exitCode: finalExit, summary, manifest });
+    json({ runId, runDir, exitCode: finalExit, summary, manifest, notify });
   } else {
     const t = summary?.totals;
     out('');

@@ -107,6 +107,15 @@ description: Field-by-field reference for the project file and the workspace fil
     'processes[].workers': { type: 'number' },
     'processes[].retries': { type: 'number' },
     'processes[].harMode': { type: "'off'|'update'|'replay'" },
+    'processes[].fullyParallel': {
+      type: 'boolean',
+      description: 'Overrides the project `fullyParallel` for this process.',
+    },
+    'processes[].setup': {
+      type: '{ tags } | false',
+      description:
+        'Overrides the project `setup` for this process; `false` runs without a setup tier.',
+    },
     'processes[].failOnFlaky': { type: 'boolean', default: 'false' },
     'processes[].gates': {
       type: '{ minPassRate?, maxFlaky?, perfBudgets, a11y }',
@@ -171,6 +180,34 @@ description: Field-by-field reference for the project file and the workspace fil
       default: '{ 60000, 10000, 15000, 30000, 15000 }',
     },
     retries: { type: '{ ci, local, byTag }', default: '{ 2, 0, {} }' },
+    'evidence.trace': {
+      type: "'off'|'on'|'retain-on-failure'|'on-first-retry'|'on-all-retries'|'retain-on-first-failure'|'retain-on-failure-and-retries'",
+      default: "'on-first-retry'",
+      description:
+        'Playwright trace per test. With retries.local: 0 the default never records locally; use on or retain-on-failure, or `sdods run --trace on`.',
+    },
+    'evidence.video': {
+      type: 'same modes as evidence.trace',
+      default: "'retain-on-failure'",
+      description: 'Playwright video per test (browser targets).',
+    },
+    'evidence.screenshot': {
+      type: "'off'|'on'|'only-on-failure'|'on-first-failure'",
+      default: "'off'",
+      description:
+        "Playwright's end-of-test screenshot. Separate from `screenshots.policy`, which already attaches SDODS scenario and step shots; turning both on attaches twice.",
+    },
+    fullyParallel: {
+      type: 'boolean',
+      default: 'true',
+      description:
+        'Run the scenarios of one feature file in parallel. `false` keeps them in order on one worker; files still spread across workers.',
+    },
+    'setup.tags': {
+      type: 'string',
+      description:
+        'Tag expression for scenarios that must pass first (probes, login, seeding). See "Setup scenarios" below.',
+    },
     'perf.budgets': { type: '{ pageLoadMs?, lcpMs?, fcpMs?, ttfbMs?, apiP95Ms? }', default: '{}' },
   }}
 />
@@ -283,7 +320,34 @@ screenshots:
   mask: ['[data-test="shopping-cart-badge"]']
 heal: { enabled: true, primaryTimeoutMs: 3000, probeTimeoutMs: 1500, minScore: 0.6 }
 retries: { ci: 2, local: 0, byTag: { '@flaky': 2 } }
+evidence: { trace: retain-on-failure, video: retain-on-failure }
 perf: { budgets: { pageLoadMs: 4000, lcpMs: 3000, apiP95Ms: 1500 } }
+```
+
+### Setup scenarios
+
+`setup: { tags: '@setup' }` runs the scenarios matching `tags` before everything else in the run and
+skips the rest when one of them fails, instead of letting every scenario fail on its own against a
+broken environment or a login that does not work.
+
+- Every run target gets a companion target named `<target>--setup` (for example
+  `demo-shop--ui--chromium--setup`, `demo-shop--api--setup`) that runs that layer's setup scenarios in
+  the same browser, and the target depends on it (Playwright project `dependencies`). When a setup
+  scenario fails, Playwright reports the target's scenarios as "did not run".
+- Setup scenarios are selected by `setup.tags` alone: `--tags`, `--grep`, `--feature` and `--module`
+  narrow the target's own scenarios, never the setup tier. They are excluded from the target, so they
+  run once.
+- Setup scenarios are ordinary scenarios: they still carry one layer tag and one suite tag. Declare
+  the tag under `tags.extra` so lint does not warn about it.
+- A process can use other setup tags (`setup: { tags: '@probe or @auth' }`) or none (`setup: false`).
+- Recorded specs (`layer: recorded`) have no tags and get no setup tier.
+
+```yaml
+tags: { extra: [setup] }
+setup: { tags: '@setup' }
+processes:
+  - { name: release-gate, fullyParallel: false }
+  - { name: quick, setup: false }
 ```
 
 ## sdods.workspace.yaml

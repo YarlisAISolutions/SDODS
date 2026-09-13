@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import {
+  EvidencePatchSchema,
   HealConfigSchema,
   PerfBudgetsSchema,
   ScreenshotConfigSchema,
@@ -48,6 +49,7 @@ export const EnvConfigSchema = z.object({
   vars: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])).default({}),
   use: EnvUseSchema.default({}),
   screenshots: ScreenshotConfigSchema.partial().optional(),
+  evidence: EvidencePatchSchema.optional(),
   heal: HealConfigSchema.partial().optional(),
   timeouts: TimeoutsSchema.partial().optional(),
   perf: z.object({ budgets: PerfBudgetsSchema.partial() }).optional(),

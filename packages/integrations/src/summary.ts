@@ -1,7 +1,8 @@
 import { existsSync, readFileSync } from 'node:fs';
-import { basename, join } from 'node:path';
+import { basename, isAbsolute, join, relative } from 'node:path';
 import {
   fingerprint as makeFingerprint,
+  legacyRunFiles,
   parseAttachmentName,
   parseRunnerProjectName,
   runFiles,
@@ -29,6 +30,7 @@ export function buildRunSummaryFromFiles(
   const scenarios = ndjsonFiles.flatMap((f) =>
     parseMessages(readFileSync(f, 'utf8'), { runDir, projectSlug }),
   );
+  attachRunnerMedia(scenarios, runDir);
   const totals = computeTotals(scenarios, manifest);
   const run: RunRecord = {
     id: runId,
@@ -161,6 +163,7 @@ interface AttemptState {
   finishedAt?: number;
   screenshots: ScreenshotRef[];
   tracePath?: string;
+  videoPath?: string;
   willBeRetried?: boolean;
 }
 
@@ -302,8 +305,12 @@ export function parseMessages(
           relPath: env.attachment.url ?? 'screenshot.png',
           phase: 'failure',
         });
-      else if (parsed.kind === 'runner-builtin' && parsed.name === 'trace')
-        state.tracePath = env.attachment.url ?? 'trace.zip';
+      // The runner embeds video and trace bodies in the messages; only a `url` names a file.
+      // Without one the paths come from the runner's JSON results (attachRunnerMedia).
+      else if (parsed.kind === 'runner-builtin' && parsed.name === 'trace' && env.attachment.url)
+        state.tracePath = env.attachment.url;
+      else if (parsed.kind === 'runner-builtin' && parsed.name === 'video' && env.attachment.url)
+        state.videoPath = env.attachment.url;
     } else if (env.testCaseFinished) {
       const state = attempts.get(env.testCaseFinished.testCaseStartedId);
       if (!state) continue;
@@ -360,9 +367,109 @@ export function parseMessages(
         .filter((t) => /^@github:\d+$/.test(t))
         .map((t) => t.slice('@github:'.length)),
       tracePath: final.tracePath,
+      videoPath: final.videoPath,
     });
   }
   return out;
+}
+
+// ── runner JSON results: video.webm / trace.zip per test ─────────────────────
+
+interface RunnerJsonSuite {
+  title?: string;
+  file?: string;
+  specs?: Array<{
+    title?: string;
+    file?: string;
+    tests?: Array<{
+      projectName?: string;
+      results?: Array<{
+        retry?: number;
+        attachments?: Array<{ name?: string; path?: string; contentType?: string }>;
+      }>;
+    }>;
+  }>;
+  suites?: RunnerJsonSuite[];
+}
+
+/**
+ * Fill `videoPath` / `tracePath` (relative to the run directory) from `runner-results.json`.
+ * Cucumber messages carry the video inline and name no file, while the runner's JSON reporter
+ * records where it wrote `runner-output/<test>/video.webm` and `trace.zip`.
+ * A scenario matches a spec by runner project, feature file and title; a Scenario Outline row
+ * matches the spec at its example index inside the suite named after the outline.
+ */
+export function attachRunnerMedia(scenarios: ScenarioSummary[], runDir: string): void {
+  const file = [runFiles.results, legacyRunFiles.results]
+    .map((f) => join(runDir, f))
+    .find((f) => existsSync(f));
+  const report = file ? readJson<{ suites?: RunnerJsonSuite[] }>(file) : undefined;
+  if (!report?.suites?.length) return;
+
+  interface SpecEntry {
+    file: string;
+    parentTitle?: string;
+    title: string;
+    index: number;
+    tests: NonNullable<NonNullable<RunnerJsonSuite['specs']>[number]['tests']>;
+  }
+  const specs: SpecEntry[] = [];
+  const walk = (suite: RunnerJsonSuite, file: string | undefined) => {
+    const f = suite.file ?? file;
+    (suite.specs ?? []).forEach((spec, index) =>
+      specs.push({
+        file: (spec.file ?? f ?? '').replace(/\\/g, '/'),
+        parentTitle: suite.title,
+        title: spec.title ?? '',
+        index,
+        tests: spec.tests ?? [],
+      }),
+    );
+    for (const child of suite.suites ?? []) walk(child, f);
+  };
+  for (const suite of report.suites) walk(suite, suite.file);
+
+  for (const scenario of scenarios) {
+    if (scenario.videoPath && scenario.tracePath) continue;
+    const featureUri = `/${scenario.featureUri.replace(/\\/g, '/')}`;
+    const spec = specs.find((s) => {
+      const rel = s.file.replace(/\.spec\.[cm]?[jt]s$/, '');
+      const layerDir = `/${scenario.layer}/`;
+      const at = rel.indexOf(layerDir);
+      const featureTail = at >= 0 ? rel.slice(at + layerDir.length) : rel;
+      if (!featureUri.endsWith(`/${featureTail}`)) return false;
+      if (scenario.exampleIndex == null) return s.title === scenario.scenarioName;
+      return s.parentTitle === scenario.scenarioName && s.index === scenario.exampleIndex;
+    });
+    const test = spec?.tests.find((t) => t.projectName === scenario.runnerProject);
+    if (!test) continue;
+    const results = [...(test.results ?? [])].sort((a, b) => (a.retry ?? 0) - (b.retry ?? 0));
+    const latest = (name: string) => {
+      for (let i = results.length - 1; i >= 0; i--) {
+        const hit = results[i]!.attachments?.find((a) => a.name === name && a.path);
+        const rel = hit?.path ? runRelativePath(runDir, hit.path) : undefined;
+        if (rel) return rel;
+      }
+      return undefined;
+    };
+    scenario.videoPath ??= latest('video');
+    scenario.tracePath ??= latest('trace');
+  }
+}
+
+/**
+ * A runner attachment path relative to the run directory. The absolute path was written on the
+ * machine that ran the tests (often another CI job), so the `runner-output/` segment is used first.
+ */
+function runRelativePath(runDir: string, path: string): string | undefined {
+  const norm = path.replace(/\\/g, '/');
+  if (!isAbsolute(path) && !norm.startsWith('..')) return norm;
+  for (const dir of [runFiles.output, legacyRunFiles.output]) {
+    const at = norm.lastIndexOf(`/${dir}/`);
+    if (at >= 0) return norm.slice(at + 1);
+  }
+  const rel = relative(runDir, path).replace(/\\/g, '/');
+  return rel && !rel.startsWith('..') && !isAbsolute(rel) ? rel : undefined;
 }
 
 function relPathFor(

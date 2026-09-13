@@ -2,7 +2,7 @@ import { createServer, type IncomingMessage, type Server } from 'node:http';
 import { expect } from '@playwright/test';
 import './params.js';
 import { AfterScenario, Given, Then, When } from '../fixtures/test.js';
-import { render } from '../api/template.js';
+import { renderStrict } from '../api/template.js';
 import { SdodsError } from '../errors.js';
 
 /**
@@ -145,7 +145,7 @@ Then(
   'the callback receiver should receive a delivery containing {string}',
   async ({ apiContext, env }, text: string) => {
     const r = requireReceiver(key(apiContext));
-    const needle = render(
+    const needle = renderStrict(
       text,
       (apiContext as { vars: { toObject(): Record<string, unknown> } }).vars.toObject(),
       env.vars,
@@ -170,7 +170,9 @@ Then(
       env.vars,
     ];
     const last = r.deliveries[r.deliveries.length - 1]!;
-    expect(last.headers[render(header, ...scopes).toLowerCase()]).toBe(render(value, ...scopes));
+    expect(last.headers[renderStrict(header, ...scopes).toLowerCase()]).toBe(
+      renderStrict(value, ...scopes),
+    );
   },
 );
 

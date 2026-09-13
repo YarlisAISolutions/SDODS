@@ -34,6 +34,8 @@ export const ENV_TO_CONFIG_PATH: Record<string, string> = {
   SDODS_SHOT_POLICY: 'project.screenshots.policy.default',
   SDODS_SHOTS_ONLY_ON_FAILURE: 'project.screenshots.onlyOnFailure',
   SDODS_HEAL: 'project.heal.enabled',
+  SDODS_TRACE: 'project.evidence.trace',
+  SDODS_VIDEO: 'project.evidence.video',
   SDODS_HAR_MODE: 'runtime.harMode',
   SDODS_OFFLINE: 'runtime.offline',
   SDODS_UPDATE_SNAPSHOTS: 'runtime.updateSnapshots',

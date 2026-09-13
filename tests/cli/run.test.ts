@@ -80,7 +80,10 @@ describe('sdods CLI (end to end against projects/demo-shop)', () => {
       runDir: string;
       summary: { totals: { passed: number; failed: number } };
       manifest: { process?: string };
+      notify?: { ran: boolean; reason?: string };
     };
+    // demo-shop keeps its integrations disabled, so the run reports why it did not notify (#81)
+    expect(out.notify).toEqual({ ran: false, reason: 'no integration enabled' });
     expect(out.summary.totals.failed).toBe(0);
     expect(out.summary.totals.passed).toBeGreaterThanOrEqual(2);
     expect(existsSync(join(out.runDir, 'run.json'))).toBe(true);
