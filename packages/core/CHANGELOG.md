@@ -1,5 +1,45 @@
 # @sdods/core
 
+## 0.5.0
+
+### Minor Changes
+
+- f179b8e: Trace, video, parallelism and a setup tier are now configurable instead of hard-coded in the runner config.
+  
+  - `evidence: { trace, video, screenshot }` in `sdods.project.yaml`, overridable per key in `envs/<env>.yaml`, with `sdods run --trace <mode>` / `--video <mode>` and `SDODS_TRACE` / `SDODS_VIDEO` on top. Values are Playwright's modes and are validated. Defaults are unchanged (`on-first-retry`, `retain-on-failure`, `off`); with `retries.local: 0` the old default meant no trace locally, so `--trace on` is now the way to get one without forcing a retry.
+  - `fullyParallel` (default `true`) per project and per process. `false` keeps the scenarios of a feature file in order.
+  - `setup: { tags: '@setup' }` per project, or per process (`setup: false` to turn it off): each run target gets a `<target>--setup` companion that runs the matching scenarios first, in the same browser, and the target depends on it, so the rest of the run does not start when a probe or login fails. Setup scenarios ignore `--tags` and run once.
+  - `parseRunnerProjectName` reads the new `<project>--<layer>[--<browser>]--setup` names as their real layer and browser with `phase: 'setup'`.
+  - A config value that is invalid only after `${VAR}`, `SDODS_*` or CLI overrides now fails with a configuration error naming the path instead of a raw validation error.
+
+### Patch Changes
+
+- a6d6c99: `sdods auth capture` loads `steps/auth.ts` the same way `sdods run` does.
+  
+  - A project's `steps/auth.ts` that imports a sibling helper the conventional way (`import './helper.js'` for `helper.ts`) worked under `sdods run`, which goes through Playwright's TypeScript loader, and crashed `sdods auth capture` with `Cannot find module .../helper.js`: capture used a bare `import()`, so the published CLI handed the file to Node's native type stripping, which does not map `.js` to `.ts`. Capture now imports it through tsx, which maps `.js` to `.ts`, transpiles full TypeScript (enums included) and honours the project's module type, like Playwright's loader. The hooks are registered for that import only and removed afterwards. `tsx` is now a dependency of `@sdods/core`.
+  - A project without `"type": "module"` has its `auth` export read from the CommonJS module too, instead of silently falling back to the yaml strategy.
+- a6d6c99: `sdods lint` reports ambiguous step definitions instead of passing a suite bddgen cannot generate.
+  
+  - New `steps/ambiguous` error: a feature step matched by more than one definition, which makes bddgen fail with "Multiple definitions matched scenario step". Lint reads the definitions from the same files the runner loads (the core step libraries minus `steps.core.exclude`, plus the project's `steps/` and `pages/`, decorator steps included) and matches them against the scenario step text with the same Cucumber expression engine and rules as bddgen: keywords ignored, tag-scoped steps filtered, `@skip`/`@fixme` scenarios left out. Findings are grouped by where the definitions live, so 67 collisions with one library come back as one error. Each names both `file:line`s and, when a core library is involved, the `steps.core.exclude: [<library>]` that removes it. The check runs in `sdods lint` and in the lint step before `sdods run`.
+  - New `steps/duplicate` warning: the same phrasing defined twice with a project file involved, before any feature uses it.
+  - An unknown name in `steps.core.exclude` is a `steps/core-exclude` lint error instead of a crash at run time.
+  - `sdods lint --undefined-steps` no longer reports "no findings" when bddgen fails for a reason other than a missing step. An ambiguity bddgen reports is surfaced as `steps/ambiguous`; any other generation failure is `steps/bddgen`, with the end of its output.
+- 33416fd: Cucumber messages record which step passed or failed again.
+  
+  On Playwright below 1.63, a workspace that installs SDODS from npm recorded every Gherkin step `SKIPPED` in `messages.ndjson` (and the cucumber HTML report), with failures attached to a hook. playwright-bdd matches a step's result by its line in the generated spec, and those Playwright versions report the line in their transformed copy instead. Measured on 1.60.0, 1.61.1, 1.62.0 and 1.62.1 against 1.63.0.
+  
+  - `@playwright/test` 1.63.0 is now the floor: `sdods init` scaffolds `^1.63.0`, `@sdods/core` declares `>=1.63` as its peer range, and the server image uses `mcr.microsoft.com/playwright:v1.63.0-noble`.
+  - `sdods run` warns and `sdods doctor` fails a "step results" check when the workspace resolves an older `@playwright/test`, and both name the upgrade command.
+- 3f2b734: Built-in steps render every `{{variable}}` the same way, and field steps no longer trip over a control whose label merely contains the field's.
+  
+  - Every built-in step renders its string arguments through one shared helper, `renderStrict()`. `the page URL should contain`, `the page title should contain`, the test-id, dropdown, checkbox, upload, visual-baseline and mock steps rendered nothing before, so `"/workspace/{{fixtureWorkspaceId}}"` was matched with its braces and could never pass. The API steps now also render JSON paths, header names and values, regex patterns and schema names.
+  - A variable with no value now fails the step with `no such variable: <name>` instead of being matched as the literal `{{name}}`. For a negative assertion that is the difference between a check and a no-op: `I should not see the text "{{tenantBDatasetId}}"` used to pass whatever the page showed, and a request to `/datasets/{{tenantBDatasetId}}` used to go out and 404. Doc-string bodies (JSON, HTML, raw text) still render leniently, since free text may carry `{{…}}` of its own. Arguments that name the variable being written (`… as {string}`) are identifiers and are not rendered.
+  - `I fill the {string} field with {string}`, `I fill the form:`, `I select … dropdown`, `I check … checkbox` and `I upload …` prefer an exact label and a control whose role fits the action, then fall back to the partial label. `getByLabel('Password')` also matched a "Show password" toggle, and the fill failed on a strict-mode violation.
+  - `Healer.resolve()` treats a visible locator that matches several elements as a heal trigger for click, fill, select and check: it narrows to the one element whose role fits the action and records a HealEvent, or fails with `HEAL_FAILED` naming the match count. It used to return the ambiguous locator, so the action threw a strict-mode violation that healing never saw. Assertions and hovers are unchanged.
+- Updated dependencies [f179b8e]
+  - @sdods/contracts@0.5.0
+  - @sdods/db@0.5.0
+
 ## 0.4.0
 
 ### Minor Changes
