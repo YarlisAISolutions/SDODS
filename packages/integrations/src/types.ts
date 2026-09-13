@@ -91,7 +91,10 @@ export interface ScenarioSummary {
   screenshots: ScreenshotRef[];
   jiraKeys: string[];
   githubIssues: string[];
+  /** runner trace (`trace.zip`), relative to the run directory */
   tracePath?: string;
+  /** runner video (`video.webm`), relative to the run directory */
+  videoPath?: string;
 }
 
 export interface RunSummaryInput {
@@ -169,6 +172,13 @@ export interface NotifyResult {
 export interface ProviderTestResult {
   ok: boolean;
   detail: string;
+  /** configured labels the target is missing, and the ones this call created */
+  labels?: { missing: string[]; created: string[] };
+}
+
+export interface ProviderTestOptions {
+  /** create configured labels the target is missing (GitHub) */
+  createMissingLabels?: boolean;
 }
 
 export interface IntegrationSecrets {
@@ -179,7 +189,7 @@ export interface IntegrationSecrets {
 export interface IntegrationProvider<C = unknown> {
   readonly name: ProviderName;
   init(config: C, secrets: IntegrationSecrets): Promise<void>;
-  test(): Promise<ProviderTestResult>;
+  test(opts?: ProviderTestOptions): Promise<ProviderTestResult>;
   onRunFinished(summary: RunSummaryInput, ctx: IntegrationContext): Promise<NotifyResult>;
   createIssue(input: CreateIssueInput, ctx: IntegrationContext): Promise<IssueRef>;
   linkIssue(fingerprint: string, key: string): Promise<IssueRef>;
