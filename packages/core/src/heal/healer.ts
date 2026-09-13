@@ -4,7 +4,7 @@ import { attachmentNames, scenarioFiles, type HealConfig, type HealEvent } from 
 import { Logger } from '../logger.js';
 import { SdodsError } from '../errors.js';
 import type { ScenarioMeta } from '../fixtures/scenario.js';
-import { buildCandidates } from './strategies.js';
+import { buildCandidates, disambiguationCandidates, rolesFor } from './strategies.js';
 import type { HealAction, HealContext, HealProbe } from './types.js';
 import type { HealHistory } from './history.js';
 
@@ -99,59 +99,120 @@ export class Healer {
   }
 
   /**
+   * The first of `locators`, in preference order, that matches anything. Waits up to
+   * primaryTimeoutMs for the LAST one to attach — callers list the loosest locator last, a
+   * superset of the others — so an element that renders a moment late is still judged by the
+   * most precise locator. When nothing matches, the most precise one is returned for resolve()
+   * to wait on and heal from.
+   */
+  async prefer(...locators: [Locator, ...Locator[]]): Promise<Locator> {
+    const loosest = locators[locators.length - 1]!;
+    await loosest
+      .first()
+      .waitFor({ state: 'attached', timeout: this.deps.config.primaryTimeoutMs })
+      .catch(() => undefined);
+    for (const locator of locators) if ((await locator.count()) > 0) return locator;
+    return locators[0];
+  }
+
+  /**
    * Wait briefly for the primary locator; on failure probe all candidates in parallel,
-   * score them and pick the best above minScore. Records a HealEvent either way.
+   * score them and pick the best above minScore. A primary that is visible but matches several
+   * elements is healed too, for actions that have a role to prefer. Records a HealEvent whenever
+   * it heals.
    */
   async resolve(primary: Locator, ctx: HealContext, action: HealAction): Promise<Locator> {
     const cfg = this.deps.config;
+    const healable = cfg.enabled && cfg.actions.includes(action);
     try {
       await primary.first().waitFor({ state: 'visible', timeout: cfg.primaryTimeoutMs });
-      return primary;
     } catch (primaryError) {
-      if (!cfg.enabled || !cfg.actions.includes(action)) throw primaryError;
+      if (!healable) throw primaryError;
       const page = primary.page();
-      const t0 = Date.now();
       const candidates = buildCandidates(page, ctx);
       if (candidates.length === 0) throw primaryError;
-
-      const probes = await Promise.all(
-        candidates.map((c) => this.probe(c, cfg.probeTimeoutMs, action)),
-      );
-      const ranked = probes.sort((a, b) => b.score - a.score);
-      const best = ranked[0];
-      const event: HealEvent = {
-        fingerprint: this.deps.scenario?.fingerprint ?? '',
-        runId: this.deps.runId ?? '',
-        stepIndex: this.deps.stepIndex?.() ?? 0,
+      // The role filter goes first: a primary whose FIRST match is hidden (a collapsed toggle
+      // ahead of the field) never becomes visible, yet narrows to the visible element that fits.
+      return this.heal(
+        primary,
+        ctx,
         action,
-        description: ctx.description,
-        pageUrl: page.url(),
-        originalSelector: String(primary),
-        context: { ...ctx, name: ctx.name instanceof RegExp ? ctx.name.toString() : ctx.name },
-        strategyUsed: best && best.score >= cfg.minScore ? best.strategy : null,
-        healedSelector: best && best.score >= cfg.minScore ? best.selector : null,
-        candidates: ranked.map(({ locator: _l, baseScore: _b, ...rest }) => rest),
-        succeeded: Boolean(best && best.score >= cfg.minScore),
-        durationMs: Date.now() - t0,
-        at: new Date().toISOString(),
-      };
-      this.record(event);
-      if (!event.succeeded || !best) {
-        throw new SdodsError(
-          'HEAL_FAILED',
-          `Could not locate "${ctx.description}" (${String(primary)}) and no healing candidate scored ≥ ${cfg.minScore}.`,
-          {
-            hint: `Probed: ${ranked.map((p) => `${p.strategy}=${p.score.toFixed(2)}`).join(', ') || 'none'}. Add role/name/testId/label to the heal context or fix the locator.`,
-            details: { candidates: event.candidates },
-            cause: primaryError,
-          },
-        );
-      }
-      this.log.warn(
-        `healed "${ctx.description}": ${String(primary)} → ${best.selector} via ${best.strategy} (score ${best.score.toFixed(2)}, ${event.durationMs} ms). Update the page object.`,
+        [...disambiguationCandidates(page, primary, ctx, action), ...candidates],
+        { cause: primaryError },
       );
-      return best.locator.first();
     }
+    // Visible is not enough. A primary matching several elements makes the action throw a
+    // strict-mode violation after resolve() has returned, where healing never sees it. Assertions
+    // and hovers have no role to prefer, and their callers take .first() when they mean "any of
+    // them", so only role-bound actions are disambiguated.
+    if (!healable || rolesFor(action).length === 0) return primary;
+    const matched = await primary.count();
+    if (matched <= 1) return primary;
+    const page = primary.page();
+    return this.heal(
+      primary,
+      ctx,
+      action,
+      [...disambiguationCandidates(page, primary, ctx, action), ...buildCandidates(page, ctx)],
+      { matched },
+    );
+  }
+
+  private async heal(
+    primary: Locator,
+    ctx: HealContext,
+    action: HealAction,
+    candidates: ReturnType<typeof buildCandidates>,
+    why: { cause?: unknown; matched?: number },
+  ): Promise<Locator> {
+    const cfg = this.deps.config;
+    const page = primary.page();
+    const t0 = Date.now();
+    const probes = await Promise.all(
+      candidates.map((c) => this.probe(c, cfg.probeTimeoutMs, action)),
+    );
+    const ranked = probes.sort((a, b) => b.score - a.score);
+    // Healing an ambiguity onto another ambiguous locator would only move the strict-mode
+    // violation, so that heal accepts a unique candidate only.
+    const ambiguous = why.matched !== undefined;
+    const best = ranked.find((p) => p.score >= cfg.minScore && (!ambiguous || p.count === 1));
+    const event: HealEvent = {
+      fingerprint: this.deps.scenario?.fingerprint ?? '',
+      runId: this.deps.runId ?? '',
+      stepIndex: this.deps.stepIndex?.() ?? 0,
+      action,
+      description: ctx.description,
+      pageUrl: page.url(),
+      originalSelector: String(primary),
+      context: { ...ctx, name: ctx.name instanceof RegExp ? ctx.name.toString() : ctx.name },
+      strategyUsed: best ? best.strategy : null,
+      healedSelector: best ? best.selector : null,
+      candidates: ranked.map(({ locator: _l, baseScore: _b, ...rest }) => rest),
+      succeeded: Boolean(best),
+      durationMs: Date.now() - t0,
+      at: new Date().toISOString(),
+    };
+    this.record(event);
+    const probed = ranked.map((p) => `${p.strategy}=${p.score.toFixed(2)}`).join(', ') || 'none';
+    if (!best) {
+      throw new SdodsError(
+        'HEAL_FAILED',
+        ambiguous
+          ? `"${ctx.description}" (${String(primary)}) matched ${why.matched} elements and no healing candidate narrowed it to one that fits "${action}" with a score ≥ ${cfg.minScore}.`
+          : `Could not locate "${ctx.description}" (${String(primary)}) and no healing candidate scored ≥ ${cfg.minScore}.`,
+        {
+          hint: ambiguous
+            ? `Probed: ${probed}. Make the locator specific to one element: an exact name or label, a role, or a test id.`
+            : `Probed: ${probed}. Add role/name/testId/label to the heal context or fix the locator.`,
+          details: { candidates: event.candidates },
+          cause: why.cause,
+        },
+      );
+    }
+    this.log.warn(
+      `healed "${ctx.description}": ${String(primary)}${ambiguous ? ` (matched ${why.matched})` : ''} → ${best.selector} via ${best.strategy} (score ${best.score.toFixed(2)}, ${event.durationMs} ms). Update the page object.`,
+    );
+    return best.locator.first();
   }
 
   private async probe(

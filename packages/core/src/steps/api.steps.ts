@@ -3,7 +3,7 @@ import './params.js';
 import { Given, Then, When } from '../fixtures/test.js';
 import type { HttpMethod } from '../api/client.js';
 import { coerce, getPath } from '../api/json-path.js';
-import { render, renderJson } from '../api/template.js';
+import { renderJson, renderStrict } from '../api/template.js';
 import { pollUntil } from '../api/poll.js';
 import {
   loadJsonSchema,
@@ -19,7 +19,7 @@ import { SdodsError } from '../errors.js';
 When(
   'I send a {method} request to {string}',
   async ({ api, apiContext, env }, method: HttpMethod, path: string) => {
-    await api.send(method, render(path, apiContext.vars.toObject(), env.vars));
+    await api.send(method, renderStrict(path, apiContext.vars.toObject(), env.vars));
   },
 );
 
@@ -27,7 +27,7 @@ When(
   'I send a {method} request to {string} with body:',
   async ({ api, apiContext, env }, method: HttpMethod, path: string, body: string) => {
     const scopes = [apiContext.vars.toObject(), env.vars];
-    await api.send(method, render(path, ...scopes), { body: renderJson(body, ...scopes) });
+    await api.send(method, renderStrict(path, ...scopes), { body: renderJson(body, ...scopes) });
   },
 );
 
@@ -36,22 +36,23 @@ When(
   async ({ api, apiContext, env }, method: HttpMethod, path: string, table: any) => {
     const scopes = [apiContext.vars.toObject(), env.vars];
     const form: Record<string, string> = {};
-    for (const [k, v] of table.raw() as string[][]) form[k!] = render(String(v ?? ''), ...scopes);
-    await api.send(method, render(path, ...scopes), { form });
+    for (const [k, v] of table.raw() as string[][])
+      form[k!] = renderStrict(String(v ?? ''), ...scopes);
+    await api.send(method, renderStrict(path, ...scopes), { form });
   },
 );
 
 Given(
   'I set the request header {string} to {string}',
   async ({ apiContext, env }, name: string, value: string) => {
-    apiContext.headers.set(name, render(value, apiContext.vars.toObject(), env.vars));
+    apiContext.headers.set(name, renderStrict(value, apiContext.vars.toObject(), env.vars));
   },
 );
 
 Given(
   'I set the query parameter {string} to {string}',
   async ({ apiContext, env }, name: string, value: string) => {
-    apiContext.query.set(name, render(value, apiContext.vars.toObject(), env.vars));
+    apiContext.query.set(name, renderStrict(value, apiContext.vars.toObject(), env.vars));
   },
 );
 
@@ -75,8 +76,8 @@ Given(
     const scopes = [apiContext.vars.toObject(), env.vars];
     apiContext.auth = {
       type: 'basic',
-      username: render(username, ...scopes),
-      password: render(password, ...scopes),
+      username: renderStrict(username, ...scopes),
+      password: renderStrict(password, ...scopes),
     };
   },
 );
@@ -109,34 +110,43 @@ Then('the response status should be one of {string}', async ({ apiContext }, lis
 Then('the response should contain {string}', async ({ apiContext, env }, text: string) => {
   const body = apiContext.last().response.body;
   const haystack = typeof body === 'string' ? body : JSON.stringify(body);
-  expect(haystack).toContain(render(text, apiContext.vars.toObject(), env.vars));
+  expect(haystack).toContain(renderStrict(text, apiContext.vars.toObject(), env.vars));
 });
 
 Then(
   'the response JSON path {string} should equal {string}',
-  async ({ apiContext, env }, path: string, expected: string) => {
+  async ({ apiContext, env }, jsonPath: string, expected: string) => {
+    const scopes = [apiContext.vars.toObject(), env.vars];
+    const path = renderStrict(jsonPath, ...scopes);
     const actual = getPath(apiContext.last().response.body, path);
-    expect(actual, `JSON path ${path}`).toEqual(
-      coerce(render(expected, apiContext.vars.toObject(), env.vars)),
-    );
+    expect(actual, `JSON path ${path}`).toEqual(coerce(renderStrict(expected, ...scopes)));
   },
 );
 
-Then('the response JSON path {string} should exist', async ({ apiContext }, path: string) => {
-  expect(getPath(apiContext.last().response.body, path), `JSON path ${path}`).toBeDefined();
-});
+Then(
+  'the response JSON path {string} should exist',
+  async ({ apiContext, env }, jsonPath: string) => {
+    const path = renderStrict(jsonPath, apiContext.vars.toObject(), env.vars);
+    expect(getPath(apiContext.last().response.body, path), `JSON path ${path}`).toBeDefined();
+  },
+);
 
 Then(
   'the response JSON path {string} should match {string}',
-  async ({ apiContext }, path: string, pattern: string) => {
+  async ({ apiContext, env }, jsonPath: string, pattern: string) => {
+    const scopes = [apiContext.vars.toObject(), env.vars];
+    const path = renderStrict(jsonPath, ...scopes);
     const actual = getPath(apiContext.last().response.body, path);
-    expect(String(actual), `JSON path ${path}`).toMatch(new RegExp(pattern));
+    expect(String(actual), `JSON path ${path}`).toMatch(
+      new RegExp(renderStrict(pattern, ...scopes)),
+    );
   },
 );
 
 Then(
   'the response JSON path {string} should have {int} items',
-  async ({ apiContext }, path: string, count: number) => {
+  async ({ apiContext, env }, jsonPath: string, count: number) => {
+    const path = renderStrict(jsonPath, apiContext.vars.toObject(), env.vars);
     const actual = getPath(apiContext.last().response.body, path);
     expect(Array.isArray(actual) ? actual.length : -1, `JSON path ${path} length`).toBe(count);
   },
@@ -144,7 +154,8 @@ Then(
 
 Then(
   'the response JSON path {string} should have at least {int} items',
-  async ({ apiContext }, path: string, count: number) => {
+  async ({ apiContext, env }, jsonPath: string, count: number) => {
+    const path = renderStrict(jsonPath, apiContext.vars.toObject(), env.vars);
     const actual = getPath(apiContext.last().response.body, path);
     expect(
       Array.isArray(actual) ? actual.length : -1,
@@ -159,8 +170,12 @@ Then('the response body should be an array', async ({ apiContext }) => {
 
 Then(
   'the response header {string} should contain {string}',
-  async ({ apiContext }, name: string, value: string) => {
-    expect(apiContext.last().response.headers[name.toLowerCase()] ?? '').toContain(value);
+  async ({ apiContext, env }, name: string, value: string) => {
+    const scopes = [apiContext.vars.toObject(), env.vars];
+    const header = renderStrict(name, ...scopes).toLowerCase();
+    expect(apiContext.last().response.headers[header] ?? '').toContain(
+      renderStrict(value, ...scopes),
+    );
   },
 );
 
@@ -170,7 +185,8 @@ Then('the response time should be under {int} ms', async ({ apiContext }, maxMs:
 
 Then(
   'the response should match the JSON schema {string}',
-  async ({ apiContext, config }, file: string) => {
+  async ({ apiContext, config, env }, schemaFile: string) => {
+    const file = renderStrict(schemaFile, apiContext.vars.toObject(), env.vars);
     const result = validateJsonSchema(
       apiContext.last().response.body,
       loadJsonSchema(config, file),
@@ -181,7 +197,8 @@ Then(
 
 Then(
   'the response should match the zod schema {string}',
-  async ({ apiContext, config }, spec: string) => {
+  async ({ apiContext, config, env }, zodSpec: string) => {
+    const spec = renderStrict(zodSpec, apiContext.vars.toObject(), env.vars);
     const result = validateZod(apiContext.last().response.body, await loadZodSchema(config, spec));
     expect(result.ok, `zod schema ${spec} violations:\n${result.errors.join('\n')}`).toBe(true);
   },
@@ -189,7 +206,9 @@ Then(
 
 Then(
   'the response should match the OpenAPI schema for {method} {string}',
-  async ({ apiContext, config }, method: HttpMethod, path: string) => {
+  async ({ apiContext, config, env }, method: HttpMethod, openApiPath: string) => {
+    // Single-brace `{id}` path parameters are not placeholders, so they pass through untouched.
+    const path = renderStrict(openApiPath, apiContext.vars.toObject(), env.vars);
     const last = apiContext.last();
     const result = await validateAgainstOpenApi(
       config,
@@ -208,7 +227,9 @@ Then(
 
 When(
   'I save the response JSON path {string} as {string}',
-  async ({ apiContext }, path: string, name: string) => {
+  async ({ apiContext, env }, jsonPath: string, name: string) => {
+    // `name` is the variable being written, an identifier rather than a template.
+    const path = renderStrict(jsonPath, apiContext.vars.toObject(), env.vars);
     const value = getPath(apiContext.last().response.body, path);
     if (value === undefined)
       throw new SdodsError(
@@ -222,7 +243,7 @@ When(
 Given(
   'I set the variable {string} to {string}',
   async ({ apiContext, env }, name: string, value: string) => {
-    apiContext.vars.set(name, coerce(render(value, apiContext.vars.toObject(), env.vars)));
+    apiContext.vars.set(name, coerce(renderStrict(value, apiContext.vars.toObject(), env.vars)));
   },
 );
 
@@ -237,10 +258,13 @@ When(
     seconds: number,
   ) => {
     const scopes = [apiContext.vars.toObject(), env.vars];
-    const want = coerce(render(expected, ...scopes));
+    // Rendered before polling, so an unset variable fails at once rather than inside every attempt.
+    const want = coerce(renderStrict(expected, ...scopes));
+    const url = renderStrict(path, ...scopes);
+    const at = renderStrict(jsonPath, ...scopes);
     await pollUntil(
-      () => api.send(method, render(path, ...scopes)),
-      (snap) => JSON.stringify(getPath(snap.response.body, jsonPath)) === JSON.stringify(want),
+      () => api.send(method, url),
+      (snap) => JSON.stringify(getPath(snap.response.body, at)) === JSON.stringify(want),
       {
         timeoutMs: seconds * 1000,
         intervalMs: 1000,
@@ -260,7 +284,7 @@ When(
     seconds: number,
   ) => {
     await pollUntil(
-      () => api.send(method, render(path, apiContext.vars.toObject(), env.vars)),
+      () => api.send(method, renderStrict(path, apiContext.vars.toObject(), env.vars)),
       (snap) => snap.response.status === status,
       {
         timeoutMs: seconds * 1000,

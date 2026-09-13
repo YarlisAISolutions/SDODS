@@ -1,7 +1,7 @@
 import { expect, type FrameLocator, type Page } from '@playwright/test';
 import './params.js';
 import { Given, Then, When } from '../fixtures/test.js';
-import { render } from '../api/template.js';
+import { renderStrict } from '../api/template.js';
 import { SdodsError } from '../errors.js';
 
 /**
@@ -40,7 +40,7 @@ function currentFrame(page: Page): FrameLocator {
 /* ── entering and leaving ─────────────────────────────────────────────── */
 
 Given('I enter the frame {string}', async ({ page, apiContext, env }, selector: string) => {
-  const resolved = render(selector, ...scopesOf(apiContext, env));
+  const resolved = renderStrict(selector, ...scopesOf(apiContext, env));
   // A bare word is treated as a name/title/id, which is how frames are
   // usually identified in markup; anything else is a CSS selector.
   const css = /^[\w-]+$/.test(resolved)
@@ -70,23 +70,23 @@ When(
     const scopes = scopesOf(apiContext, env);
     const frame = currentFrame(page);
     await frame
-      .getByLabel(render(label, ...scopes))
-      .or(frame.getByPlaceholder(render(label, ...scopes)))
+      .getByLabel(renderStrict(label, ...scopes))
+      .or(frame.getByPlaceholder(renderStrict(label, ...scopes)))
       .first()
-      .fill(render(value, ...scopes));
+      .fill(renderStrict(value, ...scopes));
   },
 );
 
 When('I click the frame element {string}', async ({ page, apiContext, env }, selector: string) => {
   await currentFrame(page)
-    .locator(render(selector, ...scopesOf(apiContext, env)))
+    .locator(renderStrict(selector, ...scopesOf(apiContext, env)))
     .first()
     .click();
 });
 
 When('I click the frame {role} {string}', async ({ page, apiContext, env }, role, name: string) => {
   await currentFrame(page)
-    .getByRole(role, { name: render(name, ...scopesOf(apiContext, env)) })
+    .getByRole(role, { name: renderStrict(name, ...scopesOf(apiContext, env)) })
     .first()
     .click();
 });
@@ -98,7 +98,7 @@ Then(
   async ({ page, apiContext, env }, text: string) => {
     await expect(
       currentFrame(page)
-        .getByText(render(text, ...scopesOf(apiContext, env)))
+        .getByText(renderStrict(text, ...scopesOf(apiContext, env)))
         .first(),
     ).toBeVisible();
   },
@@ -109,7 +109,7 @@ Then(
   async ({ page, apiContext, env }, selector: string) => {
     await expect(
       currentFrame(page)
-        .locator(render(selector, ...scopesOf(apiContext, env)))
+        .locator(renderStrict(selector, ...scopesOf(apiContext, env)))
         .first(),
     ).toBeVisible();
   },

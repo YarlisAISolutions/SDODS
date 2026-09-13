@@ -1,7 +1,7 @@
 import { expect } from '@playwright/test';
 import './params.js';
 import { Given, Then } from '../fixtures/test.js';
-import { render } from '../api/template.js';
+import { renderStrict } from '../api/template.js';
 import { SdodsError } from '../errors.js';
 
 /**
@@ -49,7 +49,7 @@ Given('I install a fake clock', async ({ page }) => {
 });
 
 Given('I install a fake clock set to {string}', async ({ page, apiContext, env }, when: string) => {
-  const at = resolveTime(render(when, ...scopesOf(apiContext, env)), new Date());
+  const at = resolveTime(renderStrict(when, ...scopesOf(apiContext, env)), new Date());
   await page.clock.install({ time: at });
 });
 
@@ -59,13 +59,13 @@ Given('I install a fake clock set to {string}', async ({ page, apiContext, env }
  * hang the test rather than simulate it.
  */
 Given('the clock jumps to {string}', async ({ page, apiContext, env }, when: string) => {
-  const at = resolveTime(render(when, ...scopesOf(apiContext, env)), new Date());
+  const at = resolveTime(renderStrict(when, ...scopesOf(apiContext, env)), new Date());
   await page.clock.setFixedTime(at);
 });
 
 /** Runs timers as it goes, so polling and countdowns actually fire. */
 Given('the clock advances by {string}', async ({ page, apiContext, env }, amount: string) => {
-  const spec = render(amount, ...scopesOf(apiContext, env)).trim();
+  const spec = renderStrict(amount, ...scopesOf(apiContext, env)).trim();
   const normalised = /^[+-]/.test(spec) ? spec : `+${spec}`;
   const target = resolveTime(normalised, new Date(0));
   await page.clock.runFor(target.getTime());
@@ -76,7 +76,7 @@ Given('the clock resumes', async ({ page }) => {
 });
 
 Then('the page clock should read {string}', async ({ page, apiContext, env }, iso: string) => {
-  const expected = resolveTime(render(iso, ...scopesOf(apiContext, env)), new Date());
+  const expected = resolveTime(renderStrict(iso, ...scopesOf(apiContext, env)), new Date());
   const actual = await page.evaluate(() => Date.now());
   // A second of tolerance: the assertion is about which DAY or HOUR the page
   // believes it is, and demanding millisecond equality would make it flaky for
