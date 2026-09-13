@@ -1,5 +1,15 @@
 # @sdods/server
 
+## 0.5.2
+
+### Patch Changes
+
+- Updated dependencies [45a38a8]
+  - @sdods/core@0.5.2
+  - @sdods/contracts@0.5.2
+  - @sdods/db@0.5.2
+  - @sdods/mcp@0.5.2
+
 ## 0.5.1
 
 ### Patch Changes
