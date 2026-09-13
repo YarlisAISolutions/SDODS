@@ -1,4 +1,7 @@
+import { readdirSync } from 'node:fs';
 import { createRequire } from 'node:module';
+import { join } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { chromium, type Browser, type Page } from '@playwright/test';
 import type * as PlaywrightTestModule from '@playwright/test';
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -243,5 +246,113 @@ describe('field steps pick the labelled field, not a control whose label contain
     await setContent('<div id="notes" contenteditable="true" aria-label="Notes"></div>');
     await run('I fill the {string} field with {string}', 'Notes', 'hello');
     expect(await page.locator('#notes').textContent()).toBe('hello');
+  }, 60_000);
+});
+
+/* ── #100: text assertions check visibility, and can match exactly ────── */
+
+describe('text steps assert what the user can see', () => {
+  it('passes the negative step when the only match is hidden but still in the DOM', async () => {
+    // A closed FAQ answer: `hidden` keeps it in the DOM, and the user cannot see it.
+    await setContent(`
+      <button aria-expanded="false">Can I cancel?</button>
+      <p hidden>Yes, cancel any time from Billing.</p>
+      <p style="display:none">Refunds are pro-rated.</p>
+    `);
+    await run('I should not see the text {string}', 'cancel any time');
+    await run('I should not see the text {string}', 'Refunds are pro-rated');
+  }, 60_000);
+
+  it('fails the negative step when the text is visible, even beside a hidden copy', async () => {
+    await setContent(`
+      <p hidden>Yes, cancel any time from Billing.</p>
+      <p>Yes, cancel any time from Billing.</p>
+    `);
+    await failsWith('I should not see the text {string}', ['cancel any time'], /toHaveCount/);
+  }, 60_000);
+
+  it('sees visible text even when a hidden match comes first in the DOM', async () => {
+    await setContent(`
+      <p hidden>Plan saved</p>
+      <p>Plan saved</p>
+    `);
+    await run('I should see the text {string}', 'Plan saved');
+  }, 60_000);
+
+  it('still fails the positive step when every match is hidden', async () => {
+    await setContent('<p hidden>Plan saved</p>');
+    await failsWith('I should see the text {string}', ['Plan saved'], /toBeVisible/);
+  }, 60_000);
+
+  it('matches the whole text with the exact variants, so a substring does not collide', async () => {
+    await setContent(`
+      <h1>Automate the clients you already serve</h1>
+      <p>already</p>
+    `);
+    await run('I should see the exact text {string}', 'Automate the clients you already serve');
+    // "already" on its own is on the page too, so the exact negative must fail here...
+    await failsWith('I should not see the exact text {string}', ['already'], /toHaveCount/);
+    await setContent('<h1>Automate the clients you already serve</h1>');
+    // ...and once it is gone, the hero's substring no longer counts.
+    await run('I should not see the exact text {string}', 'already');
+    await failsWith('I should see the exact text {string}', ['already'], /toBeVisible/);
+    // The non-exact step keeps substring semantics.
+    await failsWith('I should not see the text {string}', ['already'], /toHaveCount/);
+  }, 60_000);
+
+  it('ignores hidden text with the exact negative variant too', async () => {
+    await setContent('<p hidden>already</p><p>Welcome back</p>');
+    await run('I should not see the exact text {string}', 'already');
+  }, 60_000);
+
+  it('keeps DOM absence available: the page should not contain the text', async () => {
+    await setContent('<p hidden>Yes, cancel any time from Billing.</p>');
+    await failsWith(
+      'the page should not contain the text {string}',
+      ['cancel any time'],
+      /toHaveCount/,
+    );
+    await setContent('<p>Welcome back</p>');
+    await run('the page should not contain the text {string}', 'cancel any time');
+  }, 60_000);
+
+  it('renders the new steps strictly: an unset variable fails instead of passing', async () => {
+    await setContent('<p>tenant A datasets only</p>');
+    await Promise.all([
+      failsWith('I should not see the exact text {string}', ['{{tenantB}}'], /no such variable/),
+      failsWith(
+        'the page should not contain the text {string}',
+        ['{{tenantB}}'],
+        /no such variable/,
+      ),
+      failsWith('I should see the exact text {string}', ['{{tenantB}}'], /no such variable/),
+    ]);
+  }, 60_000);
+
+  it('leaves none of the text phrasings ambiguous across the shipped step libraries', async () => {
+    // bddgen refuses a step whose TEXT matches more than one definition, so every library loads.
+    const dir = fileURLToPath(new URL('../src/steps/', import.meta.url));
+    const files = readdirSync(dir)
+      .filter((f) => f.endsWith('.steps.ts'))
+      .sort();
+    for (const file of files) await import(pathToFileURL(join(dir, file)).href);
+    const require = createRequire(import.meta.url);
+    const entry = require.resolve('playwright-bdd');
+    const { stepDefinitions } = require(entry.replace(/index\.js$/, 'steps/stepRegistry.js')) as {
+      stepDefinitions: Array<{ pattern: string | RegExp; matchStepText(text: string): unknown }>;
+    };
+    for (const pattern of [
+      'I should see the text {string}',
+      'I should not see the text {string}',
+      'I should see the exact text {string}',
+      'I should not see the exact text {string}',
+      'the page should not contain the text {string}',
+    ]) {
+      const text = pattern.replace('{string}', '"already"');
+      const matched = stepDefinitions
+        .filter((d) => Boolean(d.matchStepText(text)))
+        .map((d) => String(d.pattern));
+      expect(matched, `"${text}" must match exactly one definition`).toEqual([pattern]);
+    }
   }, 60_000);
 });

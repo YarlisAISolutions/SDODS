@@ -8,7 +8,7 @@ import { SdodsError } from '../errors.js';
 /**
  * DOM assertions the rest of the library cannot express.
  *
- * The library ships exactly one negative UI step (`I should not see the text`), so the deny
+ * Before this file the library's only negative UI step was `I should not see the text`, so the deny
  * direction of an authorisation scenario — the only direction worth asserting against a
  * default-allow policy — is unwritable. These steps close that, plus the ordinal, counting,
  * focus and overlay vocabulary that a real onboarding had to hand-write.

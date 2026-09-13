@@ -187,14 +187,43 @@ When('I wait for {int} seconds', async ({ page }, seconds: number) => {
 
 /* ── assertions ───────────────────────────────────────────────────────── */
 
+/*
+ * The text pair means "a visible element carries this text" / "no visible element does". A closed
+ * FAQ answer or a collapsed panel stays in the DOM, so the negative step filters on visibility
+ * rather than counting DOM matches, and the positive step looks past hidden matches instead of
+ * taking whichever comes first. `.filter({ visible: true })` + `toHaveCount(0)` is strict-mode
+ * safe and retries until the text is gone. The `exact` variants match the whole text of an
+ * element (whitespace-normalised, case-sensitive), so "already" does not collide with "you already
+ * serve". `the page should not contain the text` keeps the DOM-absence check for hidden text.
+ */
+const visibleText = (page: Page, text: string, exact: boolean) =>
+  page.getByText(text, { exact }).filter({ visible: true });
+
 Then('I should see the text {string}', async ({ page, apiContext, env }, text: string) => {
-  const t = arg({ apiContext, env }, text);
-  await expect(page.getByText(t, { exact: false }).first()).toBeVisible();
+  await expect(visibleText(page, arg({ apiContext, env }, text), false).first()).toBeVisible();
 });
 
 Then('I should not see the text {string}', async ({ page, apiContext, env }, text: string) => {
-  await expect(page.getByText(arg({ apiContext, env }, text), { exact: false })).toHaveCount(0);
+  await expect(visibleText(page, arg({ apiContext, env }, text), false)).toHaveCount(0);
 });
+
+Then('I should see the exact text {string}', async ({ page, apiContext, env }, text: string) => {
+  await expect(visibleText(page, arg({ apiContext, env }, text), true).first()).toBeVisible();
+});
+
+Then(
+  'I should not see the exact text {string}',
+  async ({ page, apiContext, env }, text: string) => {
+    await expect(visibleText(page, arg({ apiContext, env }, text), true)).toHaveCount(0);
+  },
+);
+
+Then(
+  'the page should not contain the text {string}',
+  async ({ page, apiContext, env }, text: string) => {
+    await expect(page.getByText(arg({ apiContext, env }, text), { exact: false })).toHaveCount(0);
+  },
+);
 
 Then(
   'the {string} {role} should be visible',
