@@ -6,6 +6,7 @@ import {
   runQuiet,
   writeTempJson,
   type CliAdapterContext,
+  REVIEW_ONLY_TOOLS,
 } from './cli-common.js';
 import {
   AgentsConfigError,
@@ -133,7 +134,19 @@ export class ClaudeCodeCliAdapter implements LlmAdapter {
     const bin = this.bin();
     const servers = mcpServerMap({ ...this.ctx, rootDir: this.ctx.rootDir ?? o.cwd }, o.mcpServers);
     const mcpFile = writeTempJson('sdods-claude-code-', { mcpServers: servers });
-    const allowed = ['Read', 'Glob', 'Grep', ...Object.keys(servers).map((n) => `mcp__${n}__*`)];
+    // The role's own tools when the runner passed them, not every tool the server offers.
+    const sdodsTools = o.tools.length
+      ? o.tools.map((t) => `mcp__sdods__${t.name}`)
+      : ['mcp__sdods__*'];
+    const allowed = [
+      'Read',
+      'Glob',
+      'Grep',
+      ...sdodsTools,
+      ...Object.keys(servers)
+        .filter((n) => n !== 'sdods')
+        .map((n) => `mcp__${n}__*`),
+    ];
     const args = [
       '-p',
       o.prompt,
@@ -155,6 +168,7 @@ export class ClaudeCodeCliAdapter implements LlmAdapter {
       'NotebookEdit',
       'WebFetch',
       'WebSearch',
+      ...REVIEW_ONLY_TOOLS.map((t) => `mcp__sdods__${t}`),
       '--max-turns',
       String(o.maxTurns ?? 40),
       ...this.modelArgs(o.model),

@@ -120,7 +120,8 @@ export class ClaudeAdapter implements LlmAdapter {
     const mcpServers: Record<string, unknown> = {
       sdods: sdk.createSdkMcpServer({ name: 'sdods', version: '0.1.0', tools }),
     };
-    if (this.opts.withPlaywrightMcp !== false)
+    // Off unless asked for: see CliAdapterContext.withPlaywrightMcp.
+    if (this.opts.withPlaywrightMcp === true)
       mcpServers.playwright = {
         type: 'stdio',
         command: 'npx',
@@ -154,8 +155,9 @@ export class ClaudeAdapter implements LlmAdapter {
           'Glob',
           'Grep',
           'mcp__sdods__*',
-          'mcp__playwright__*',
-          ...Object.keys(o.mcpServers ?? {}).map((n) => `mcp__${n}__*`),
+          ...Object.keys(mcpServers)
+            .filter((n) => n !== 'sdods')
+            .map((n) => `mcp__${n}__*`),
         ],
         disallowedTools: [
           'Bash',

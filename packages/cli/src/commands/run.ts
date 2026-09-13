@@ -1,5 +1,5 @@
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { join, relative, resolve as resolvePath } from 'node:path';
+import { existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { isAbsolute, join, relative, resolve as resolvePath } from 'node:path';
 import type { Command } from 'commander';
 import { execa } from 'execa';
 import pc from 'picocolors';
@@ -21,6 +21,7 @@ import {
   moduleByName,
   moduleDir,
   normalizeTagExpr,
+  parseTagExpr,
   serializeCliOverrides,
   type CliOverrides,
   type RunnerSelection,
@@ -67,6 +68,7 @@ export interface RunFlags {
   device?: string;
   reporterMode?: string;
   trigger?: string;
+  allowEmpty?: boolean;
 }
 
 function addRunOptions(cmd: Command): Command {
@@ -118,7 +120,11 @@ function addRunOptions(cmd: Command): Command {
     .option('--timeout <ms>', 'per-test timeout override', parseIntFlag('timeout'))
     .option('--reporter <name>', 'reporter override (repeatable, name=outputFile)', collect, [])
     .option('--reporter-mode <mode>', 'default | server | quiet')
-    .option('--trigger <kind>', 'cli | ui | ci | agent | mcp | schedule', 'cli');
+    .option('--trigger <kind>', 'cli | ui | ci | agent | mcp | schedule', 'cli')
+    .option(
+      '--allow-empty',
+      'exit 0 when the selection matches no scenario (by default that is exit 2)',
+    );
 }
 
 export function register(program: Command) {
@@ -145,6 +151,8 @@ export async function runCommand(flags: RunFlags, cmd: Command): Promise<number>
   const proc = flags.process ? ctx.registry.processOf(entry.slug, flags.process) : undefined;
   const envName = flags.env ?? proc?.env;
   const tags = normalizeTagExpr(flags.tags ?? proc?.tags);
+  // Fail on a malformed expression here, as a config error, rather than inside bddgen.
+  if (tags) parseTagExpr(tags);
   const layers = (flags.layer.length ? flags.layer : (proc?.layers ?? [])) as Layer[];
   const browsers = (
     flags.projectMatrix
@@ -226,6 +234,9 @@ export async function runCommand(flags: RunFlags, cmd: Command): Promise<number>
   };
   const cfg = ctx.registry.resolve(entry.slug, envName, cli);
   const runDir = cfg.runtime.runDir;
+  const featureRel = flags.feature
+    ? projectFeaturePath(cfg.project.root, ctx.rootDir, flags.feature)
+    : undefined;
   mkdirSync(runDir, { recursive: true });
 
   const manifest: RunManifest = {
@@ -369,7 +380,7 @@ export async function runCommand(flags: RunFlags, cmd: Command): Promise<number>
   const featureFilter = (rel: string) =>
     escapeRe(rel.replace(/^features\//, '').replace(/\.feature$/, '')) + '\\.feature\\.spec';
 
-  if (flags.feature) filters.push(featureFilter(flags.feature));
+  if (featureRel) filters.push(featureFilter(featureRel));
 
   // --since <range>: run only what the change could have broken.
   //
@@ -469,22 +480,61 @@ export async function runCommand(flags: RunFlags, cmd: Command): Promise<number>
     }
   }
 
-  if (summary && summary.totals.total === 0)
-    warn(`No scenarios matched the selection${tags ? ` (tags: ${tags})` : ''}.`);
+  // Zero scenarios with exit 0 is indistinguishable from a green run, so a typo in --tags or
+  // --feature used to keep CI passing while testing nothing. One shard of several can
+  // legitimately receive nothing, and --allow-empty opts out explicitly.
+  let finalExit = exitCode;
+  if (summary && summary.totals.total === 0) {
+    const emptyShard = (cfg.runtime.shard?.total ?? 1) > 1;
+    const message = `No scenarios matched the selection${tags ? ` (tags: ${tags})` : ''}${featureRel ? ` (feature: ${featureRel})` : ''}.`;
+    warn(message);
+    if (exitCode === 0 && !flags.allowEmpty && !emptyShard) {
+      finalExit = 2;
+      warn(
+        'Nothing was run, so this is not a pass. Pass --allow-empty if an empty run is expected.',
+      );
+      manifest.exitCode = finalExit;
+      writeManifest();
+    }
+  }
 
   if (ctx.opts.json) {
-    json({ runId, runDir, exitCode, summary, manifest });
+    json({ runId, runDir, exitCode: finalExit, summary, manifest });
   } else {
     const t = summary?.totals;
     out('');
     out(
-      `${exitCode === 0 ? pc.green('✔ passed') : exitCode === 130 ? pc.yellow('■ cancelled') : pc.red('✖ failed')}  ${t ? `${t.passed} passed, ${t.failed} failed, ${t.skipped} skipped, ${t.flaky} flaky` : ''}  ${pc.dim(`(${Math.round((Date.now() - started) / 1000)}s)`)}`,
+      `${finalExit === 0 ? pc.green('✔ passed') : finalExit === 130 ? pc.yellow('■ cancelled') : finalExit === 2 ? pc.yellow('■ nothing ran') : pc.red('✖ failed')}  ${t ? `${t.passed} passed, ${t.failed} failed, ${t.skipped} skipped, ${t.flaky} flaky` : ''}  ${pc.dim(`(${Math.round((Date.now() - started) / 1000)}s)`)}`,
     );
     out(pc.dim(`artifacts:   ${runDir}`));
     out(pc.dim(`html report: ${join(runDir, runFiles.htmlReport, 'index.html')}`));
     out(pc.dim(`dashboard:   ${join(runDir, runFiles.dashboard, 'index.html')}`));
   }
-  return exitCode;
+  return finalExit;
+}
+
+/**
+ * `--feature` accepts a path relative to features/, to the project, to the repo, or absolute. It is
+ * turned into one relative to the project, and must exist: a mistyped path used to select nothing
+ * and pass.
+ */
+function projectFeaturePath(projectRoot: string, repoRoot: string, input: string): string {
+  const candidates = isAbsolute(input)
+    ? [input]
+    : [
+        join(projectRoot, 'features', input),
+        join(projectRoot, input),
+        resolvePath(repoRoot, input),
+        resolvePath(process.cwd(), input),
+      ];
+  const found = candidates.find((c) => existsSync(c) && statSync(c).isFile());
+  const rel = found ? relative(projectRoot, found).replace(/\\/g, '/') : undefined;
+  if (!found || !rel || rel.startsWith('..') || !rel.startsWith('features/'))
+    throw new SdodsError('CONFIG_NOT_FOUND', `Feature file not found in this project: ${input}`, {
+      hint: `Give a path under ${relative(repoRoot, join(projectRoot, 'features')) || 'features'}/, e.g. --feature auth/login.feature.`,
+      exitCode: 2,
+    });
+  return rel;
 }
 
 function escapeRe(s: string) {

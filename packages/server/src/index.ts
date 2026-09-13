@@ -37,7 +37,8 @@ export async function buildServer(opts: BuildServerOptions = {}): Promise<Fastif
   const config = loadServerConfig(opts.config ?? {});
   const app = Fastify({
     logger: opts.logger ?? { level: process.env.SDODS_LOG_LEVEL === 'debug' ? 'debug' : 'info' },
-    trustProxy: true,
+    // A hop count is supported at runtime (proxy-addr) but missing from this overload's types.
+    trustProxy: config.trustProxy as boolean | string | string[],
     bodyLimit: config.ingestMaxMb * 1024 * 1024,
   });
   app.decorate('config', config);

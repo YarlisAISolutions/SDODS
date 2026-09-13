@@ -30,6 +30,7 @@ import { CompareQuery, RunListQuery, StartRunBody } from '../schemas/index.js';
 import { badRequest, forbidden, notFound, parse } from '../errors.js';
 import { diffPngs, pngSize } from '../services/image-diff.js';
 import { ArchiveTooLargeError, extractArtifacts } from '../services/artifacts-archive.js';
+import { assertRunAccess, hardenFileReply, projectOfRun, runDir } from '../services/run-access.js';
 import type { Principal, SseEvent } from '../types.js';
 
 /** Report and runner scratch directories are served or ignored elsewhere, never listed as run files. */
@@ -46,10 +47,7 @@ export async function runRoutes(app: FastifyInstance) {
   // multipart is normally registered by the projects routes; in minimal builds register it here
   if (!app.hasContentTypeParser('multipart/form-data'))
     await app.register(multipart, { limits: { fileSize: app.config.ingestMaxMb * 1024 * 1024 } });
-  const runDirOf = (runId: string) => {
-    if (!/^[A-Za-z0-9._-]+$/.test(runId)) throw badRequest('Invalid run id.');
-    return join(app.config.artifactsDir, runId);
-  };
+  const runDirOf = (runId: string) => runDir(app.config.artifactsDir, runId);
   const safeFile = (runId: string, rel: string) => {
     const base = runDirOf(runId);
     const abs = resolve(base, rel);
@@ -236,6 +234,7 @@ export async function runRoutes(app: FastifyInstance) {
     async (req, reply) => {
       const { id } = req.params as { id: string };
       runDirOf(id);
+      await assertRunAccess(app, req, id);
       return reply.redirect(`/reports/${id}/index.html`);
     },
   );
@@ -246,8 +245,10 @@ export async function runRoutes(app: FastifyInstance) {
     async (req, reply) => {
       const { id, '*': rest } = req.params as { id: string; '*': string };
       const abs = safeFile(id, rest);
+      await assertRunAccess(app, req, id);
       if (!existsSync(abs) || statSync(abs).isDirectory()) throw notFound('File');
       reply.type(mimeOf(abs));
+      hardenFileReply(reply, abs);
       return reply.send(createReadStream(abs));
     },
   );
@@ -258,6 +259,7 @@ export async function runRoutes(app: FastifyInstance) {
     async (req) => {
       const { id } = req.params as { id: string };
       const base = runDirOf(id);
+      await assertRunAccess(app, req, id);
       if (!existsSync(base)) throw notFound('Run directory');
       const out: Array<{ path: string; size: number }> = [];
       const walk = (dir: string) => {
@@ -287,8 +289,12 @@ export async function runRoutes(app: FastifyInstance) {
     { preHandler: [app.requireScope('runs:ingest')] },
     async (req) => {
       const { id } = req.params as { id: string };
-      if (!/^[A-Za-z0-9._-]+$/.test(id)) throw badRequest('Invalid run id.');
       const dir = runDirOf(id);
+      // Uploading into an existing run of a project the caller cannot see would overwrite it.
+      if (existsSync(dir)) {
+        const owner = await projectOfRun(app, id);
+        if (owner) await canSeeProject(req, owner);
+      }
       mkdirSync(dir, { recursive: true });
       const saved: string[] = [];
       let extracted: { files: number; bytes: number; skipped: number } | undefined;
@@ -329,6 +335,12 @@ export async function runRoutes(app: FastifyInstance) {
       const manifest = existsSync(manifestFile)
         ? JSON.parse(await import('node:fs/promises').then((m) => m.readFile(manifestFile, 'utf8')))
         : undefined;
+      // The project comes from the uploaded manifest; a token must not file results under a
+      // project its owner cannot edit.
+      if (typeof manifest?.projectSlug === 'string') {
+        const role = await canSeeProject(req, manifest.projectSlug);
+        if (role === 'viewer') throw forbidden('Editor role required to ingest runs.');
+      }
       // Files may arrive as separate parts or inside artifacts.tgz: ingest whatever is in the dir.
       const present = (await import('node:fs')).readdirSync(dir);
       const ndjsonPaths = present
@@ -367,8 +379,11 @@ export async function runRoutes(app: FastifyInstance) {
       const abs = resolve(app.config.artifactsDir, a.relPath);
       if (!abs.startsWith(app.config.artifactsDir) || !existsSync(abs))
         throw notFound('Artifact file');
+      await assertRunAccess(app, req, a.runId);
       reply.type(a.mediaType || mimeOf(abs));
-      if (!(a.mediaType ?? '').startsWith('image/'))
+      hardenFileReply(reply, abs);
+      // SVG is an image type that runs script when opened directly.
+      if (!(a.mediaType ?? '').startsWith('image/') || /svg/i.test(a.mediaType ?? ''))
         reply.header('content-disposition', `attachment; filename="${a.fileName}"`);
       return reply.send(createReadStream(abs));
     },
@@ -384,6 +399,8 @@ export async function runRoutes(app: FastifyInstance) {
         getArtifact(app.adb.db, q.after),
       ]);
       if (!a || !b) throw notFound('Artifact');
+      await assertRunAccess(app, req, a.runId);
+      await assertRunAccess(app, req, b.runId);
       const pa = resolve(app.config.artifactsDir, a.relPath);
       const pb = resolve(app.config.artifactsDir, b.relPath);
       const cacheDir = join(app.config.artifactsDir, a.runId, 'diff');
@@ -414,6 +431,7 @@ export async function runRoutes(app: FastifyInstance) {
         throw badRequest('before and after are required (paths relative to the run directory).');
       const pa = safeFile(id, q.before);
       const pb = safeFile(id, q.after);
+      await assertRunAccess(app, req, id);
       if (!existsSync(pa) || !existsSync(pb)) throw notFound('File');
       const cacheDir = join(runDirOf(id), 'diff');
       const diff = diffPngs(pa, pb, cacheDir, q.threshold ? Number(q.threshold) : 0.1);

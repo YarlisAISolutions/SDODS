@@ -12,7 +12,13 @@ const ORDER: Record<LogLevel, number> = {
 
 let globalLevel: LogLevel = (process.env.SDODS_LOG_LEVEL as LogLevel) || 'info';
 let jsonMode = process.env.SDODS_LOG_JSON === '1';
-const SECRET_KEY = /(password|secret|token|apikey|api_key|authorization|cookie)/i;
+/** Key names whose string values are credentials: config fields, header names, log fields. */
+const SECRET_KEY =
+  /(passw(or)?d|secret|token|api[-_]?key|[-_]key$|authorization|cookie|credential)/i;
+
+export function isSecretKey(name: string): boolean {
+  return SECRET_KEY.test(name);
+}
 
 export function setLogLevel(level: LogLevel) {
   globalLevel = level;
@@ -29,9 +35,11 @@ export function redact<T>(value: T, depth = 0): T {
   if (Array.isArray(value)) return value.map((v) => redact(v, depth + 1)) as T;
   if (value && typeof value === 'object') {
     const out: Record<string, unknown> = {};
+    // Header auth (`{ type: header, name, value }`) keeps its secret under a neutral key.
+    const headerAuth = (value as { type?: unknown }).type === 'header';
     for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
-      out[k] =
-        SECRET_KEY.test(k) && typeof v === 'string' && v.length > 0 ? '***' : redact(v, depth + 1);
+      const secret = SECRET_KEY.test(k) || (headerAuth && k === 'value');
+      out[k] = secret && typeof v === 'string' && v.length > 0 ? '***' : redact(v, depth + 1);
     }
     return out as T;
   }

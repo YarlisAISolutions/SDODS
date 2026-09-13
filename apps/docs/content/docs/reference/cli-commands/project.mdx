@@ -1,6 +1,6 @@
 ---
 title: sdods project
-description: Create and list projects.
+description: Create, import, list and delete projects.
 ---
 
 ## `project list`
@@ -19,8 +19,9 @@ bun run sdods project list --matrix --shards 2
 ## `project create`
 
 ```text
-sdods project create <slug> [--name <name>] [--layers ui,api,hybrid,recorded] [--browsers chromium,firefox,webkit]
-                      [--ui-url <url>] [--api-url <url>] [--env <name>] [--test-id <attr>] [--force]
+sdods project create <slug> [--name <name>] [--description <text>] [--layers ui,api,hybrid,recorded]
+                      [--browsers chromium,firefox,webkit] [--ui-url <url>] [--api-url <url>]
+                      [--env <name>] [--test-id <attr>] [--force]
 ```
 
 | Flag                     | Default                                               |
@@ -32,3 +33,43 @@ sdods project create <slug> [--name <name>] [--layers ui,api,hybrid,recorded] [-
 | `--test-id`              | `data-testid`                                         |
 
 Writes `sdods.project.yaml`, `envs/<env>.yaml`, `.env.example`, `steps/fixtures.ts`, `steps/auth.ts`, a project step file, `pages/HomePage.ts`, `features/health.feature`, `features/ui/home.feature`, `data/common/users.csv`, `data/factories.ts`, empty `recorded/` and `har/` folders and a README. The slug must be lowercase letters, digits and dashes.
+
+## `project import`
+
+```text
+sdods project import <source> [--slug <slug>] [--workspace <slug>] [--force] [--dry-run]
+```
+
+Registers a project that already exists. The source is a directory, a `.zip` archive or a git URL (cloned shallowly). The project file is found at the source root or one level below it, so a repository containing `projects/<slug>/` works without pointing at the subdirectory.
+
+| Flag          | Meaning                                                                      |
+| ------------- | ---------------------------------------------------------------------------- |
+| `--slug`      | import under a different slug — use it on a collision                        |
+| `--workspace` | workspace to re-home into (default: the workspace file's `defaultWorkspace`) |
+| `--force`     | replace an existing project of the same slug, moving it to trash first       |
+| `--dry-run`   | validate and report what would be imported, writing nothing                  |
+
+The imported `slug`, `organization` and `workspace` are rewritten to match this workspace. Without that re-homing the registry rejects **every** project, not just the imported one, because a project may not name a workspace `sdods.workspace.yaml` does not declare.
+
+`.auth/`, `.env`, `.env.*` (except `.env.example`), `node_modules/` and `.git/` are left behind — an import never carries someone else's credentials. The whole registry is re-read before the import is reported as successful, and rolled back if it does not load.
+
+```bash
+sdods project import ../acme-tests --dry-run
+sdods project import https://github.com/you/acme-tests.git --slug acme --workspace qa
+```
+
+## `project delete`
+
+```text
+sdods project delete <slug> --yes [--purge]
+```
+
+Moves `projects/<slug>` to `.sdods/trash/<slug>-<timestamp>`, which is outside `projects/` so it is not rediscovered, and prints the path to move it back. `--purge` deletes the directory outright instead.
+
+`--yes` is required: there is no interactive prompt, so a script cannot be surprised by one and a typo cannot delete a project.
+
+Run history is unaffected — runs, results and insights are keyed on the project row in the database, which is kept and flagged archived. Deleting through the web UI additionally removes the project's schedules, which the CLI does not touch.
+
+```bash
+sdods project delete acme-copy --yes
+```

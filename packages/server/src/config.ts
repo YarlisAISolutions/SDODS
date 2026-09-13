@@ -64,8 +64,25 @@ export interface ServerConfig {
   ingestMaxMb: number;
   allowedHosts: string[];
   cliBin: string;
-  /** login attempts per IP per minute (SDODS_LOGIN_RATE_LIMIT; test rigs raise it) */
+  /** login attempts per IP, and failed attempts per username, per minute (SDODS_LOGIN_RATE_LIMIT) */
   loginRateLimit: number;
+  /**
+   * Fastify `trustProxy` (SDODS_TRUST_PROXY): `false` by default, so X-Forwarded-For is ignored
+   * unless the server really sits behind a proxy. `true`, a hop count, or a comma list of
+   * addresses/CIDRs. It decides `req.ip` (rate limits, audit log) and `req.protocol` (Secure cookies).
+   */
+  trustProxy: boolean | number | string[];
+}
+
+export function parseTrustProxy(value: string | undefined): boolean | number | string[] {
+  const v = (value ?? '').trim();
+  if (!v || v === 'false' || v === '0') return false;
+  if (v === 'true') return true;
+  if (/^\d+$/.test(v)) return Number(v);
+  return v
+    .split(',')
+    .map((x) => x.trim())
+    .filter(Boolean);
 }
 
 /**
@@ -141,6 +158,7 @@ export function loadServerConfig(
       (env.SDODS_ALLOWED_HOSTS ? env.SDODS_ALLOWED_HOSTS.split(',') : ['*']),
     cliBin: overrides.cliBin ?? resolveCliBin(rootDir),
     loginRateLimit: overrides.loginRateLimit ?? Number(env.SDODS_LOGIN_RATE_LIMIT ?? 10),
+    trustProxy: overrides.trustProxy ?? parseTrustProxy(env.SDODS_TRUST_PROXY),
   };
 }
 

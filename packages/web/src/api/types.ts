@@ -69,6 +69,65 @@ export interface Member {
   role: OrgRole | WorkspaceRole;
 }
 
+/** What the CLI the server spawns can do. The two packages version independently. */
+export interface CliCapabilities {
+  version: string | null;
+  path: string;
+  projectDelete: boolean;
+  projectImport: boolean;
+}
+
+export interface Health {
+  ok: boolean;
+  version: string;
+  cli: CliCapabilities | null;
+  driver: string;
+  uptimeSec: number;
+}
+
+/** Fields `POST /api/projects` accepts. Strict server-side: an extra key is a 400. */
+export interface CreateProjectInput {
+  slug: string;
+  name?: string;
+  description?: string;
+  workspace?: string;
+  layers?: Layer[];
+  browsers?: BrowserName[];
+  uiUrl?: string;
+  apiUrl?: string;
+  env?: string;
+  testId?: string;
+}
+
+export type ImportSourceKind = 'path' | 'git' | 'zip';
+
+export interface ImportProjectInput {
+  kind: ImportSourceKind;
+  /** a path or git URL for 'path'/'git'; ignored for 'zip', which carries `file` */
+  source?: string;
+  file?: File | null;
+  slug?: string;
+  workspace?: string;
+  force?: boolean;
+  dryRun?: boolean;
+}
+
+/** What `dryRun` reports back, so the dialog can show what it found before committing. */
+export interface ImportPreview {
+  slug: string;
+  name: string;
+  description: string | null;
+  layers: Layer[];
+  browsers: BrowserName[];
+  envs: string[];
+  workspace: string;
+  organization: string;
+  source: string;
+  files: number;
+  root: string;
+  collides: boolean;
+}
+
 export interface Project {
   slug: string;
   name: string;

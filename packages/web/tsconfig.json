@@ -14,8 +14,7 @@
     "resolveJsonModule": true,
     "noEmit": true,
     "types": ["vite/client", "vitest/globals", "@testing-library/jest-dom"],
-    "baseUrl": ".",
-    "paths": { "@/*": ["src/*"] }
+    "paths": { "@/*": ["./src/*"] }
   },
   "include": ["src", "scripts", "vite.config.ts", "vitest.setup.ts"]
 }

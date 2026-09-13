@@ -4,6 +4,8 @@ import fp from 'fastify-plugin';
 import type { FastifyInstance } from 'fastify';
 import fastifyStatic from '@fastify/static';
 import { legacyRunFiles, runFiles } from '@sdods/contracts';
+import { forbidden, unauthorized } from '../errors.js';
+import { assertRunAccess, isRunId } from '../services/run-access.js';
 
 /**
  * Serves: the web app (SPA fallback), the HTML report per run, the trace viewer,
@@ -17,10 +19,18 @@ export default fp(async function staticPlugin(app: FastifyInstance) {
     decorateReply: true,
     serve: false,
   });
+  // Reports live outside /api/, so the auth gate never saw them: a run id was enough to read one.
+  // They are not sandboxed like other run files because the Playwright report needs
+  // localStorage; instead, uploads can never write into html-report/ (see artifacts-archive.ts).
   app.get('/reports/:runId/*', async (req, reply) => {
     const { runId, '*': rest } = req.params as { runId: string; '*': string };
-    if (!/^[A-Za-z0-9._-]+$/.test(runId) || rest.includes('..'))
+    if (!isRunId(runId) || rest.split(/[\\/]/).includes('..'))
       return reply.code(400).send({ error: { code: 'BAD_REQUEST', message: 'Invalid path' } });
+    if (!req.principal) throw unauthorized();
+    if (!req.principal.scopes.includes('artifacts:read'))
+      throw forbidden('Scope artifacts:read required.');
+    await assertRunAccess(app, req, runId);
+    reply.header('x-content-type-options', 'nosniff');
     // Run directories outlive releases: fall back to the pre-rename directory name so reports
     // recorded by an older version keep resolving.
     const candidates = [runFiles.htmlReport, legacyRunFiles.htmlReport].map((dir) =>

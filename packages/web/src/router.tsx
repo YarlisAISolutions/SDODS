@@ -30,7 +30,9 @@ export const router = createBrowserRouter([
       { index: true, element: <DashboardPage /> },
       { path: 'workspaces', element: <WorkspacesPage /> },
       { path: 'projects', element: <ProjectsPage /> },
-      { path: 'projects/new', element: <ProjectFormPage /> },
+      // Creating now happens in a dialog on the list. The old path stays resolvable so existing
+      // links and bookmarks land somewhere useful instead of the catch-all redirect.
+      { path: 'projects/new', element: <Navigate to="/projects?new=1" replace /> },
       { path: 'projects/:slug', element: <Navigate to="edit" replace /> },
       { path: 'projects/:slug/edit', element: <ProjectFormPage /> },
       { path: 'projects/:slug/envs', element: <EnvironmentsPage /> },

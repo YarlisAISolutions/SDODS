@@ -60,6 +60,16 @@ function prioritise(names: string[], limit: number): Set<string> {
   return new Set(ranked.slice(0, limit));
 }
 
+/**
+ * Tools dropped from the Playwright server this bridge attaches: they run arbitrary code (in the
+ * Node process, or in the page) with no scope check, and a page under test can ask for them.
+ */
+const UNSAFE_PLAYWRIGHT_TOOLS = new Set([
+  'browser_run_code_unsafe',
+  'browser_run_code',
+  'browser_evaluate',
+]);
+
 /** Playwright's own MCP server, so a role that must look at the application can. */
 const PLAYWRIGHT_SERVER: ExternalMcpServerConfig = {
   transport: 'stdio',
@@ -94,6 +104,7 @@ export async function bridgeMcpServers(opts: BridgeOptions): Promise<BridgedTool
           : undefined;
       for (const tool of listed.tools) {
         if (allowed && !allowed.has(tool.name)) continue;
+        if (cfg === PLAYWRIGHT_SERVER && UNSAFE_PLAYWRIGHT_TOOLS.has(tool.name)) continue;
         tools.push({
           name: `mcp__${name}__${tool.name}`,
           description: tool.description ?? `${name} ${tool.name}`,
