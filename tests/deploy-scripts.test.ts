@@ -29,7 +29,10 @@ describe('deploy scripts', () => {
       writeFileSync(join(bin, name), `#!/usr/bin/env bash\n${body}\n`);
       chmodSync(join(bin, name), 0o755);
     };
-    stub('gcloud', `printf '%s\\n' "$*" >> "${calls}"; [ "$2" = services ] && echo https://example.run.app; exit 0`);
+    stub(
+      'gcloud',
+      `printf '%s\\n' "$*" >> "${calls}"; [ "$2" = services ] && echo https://example.run.app; exit 0`,
+    );
     stub('curl', 'echo \'{"ok":true}\'');
 
     execFileSync('bash', [join(deployDir, 'deploy-cloud-run.sh'), 'abc123'], {
@@ -37,9 +40,13 @@ describe('deploy scripts', () => {
       stdio: 'pipe',
     });
 
-    const deploy = readFileSync(calls, 'utf8').split('\n').find((l) => l.startsWith('run deploy'));
+    const deploy = readFileSync(calls, 'utf8')
+      .split('\n')
+      .find((l) => l.startsWith('run deploy'));
     expect(deploy).toBeDefined();
-    expect(deploy).toContain('--image us-central1-docker.pkg.dev/automax-docs/sdods/automax-api:abc123');
+    expect(deploy).toContain(
+      '--image us-central1-docker.pkg.dev/automax-docs/sdods/automax-api:abc123',
+    );
     expect(deploy).toContain('--add-cloudsql-instances');
     expect(deploy).toContain('--set-secrets SESSION_SECRET=automax-session-secret:latest');
     expect(deploy).toContain('SDODS_TRUST_PROXY=true');
