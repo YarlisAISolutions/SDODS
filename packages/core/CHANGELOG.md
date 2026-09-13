@@ -1,5 +1,32 @@
 # @sdods/core
 
+## 0.5.1
+
+### Patch Changes
+
+- bd833e1: Make every credential an API call carries explicit, and wire two config fields that did nothing.
+  
+  - `I use an isolated API client` (or `apiContext.isolated = true`) sends the rest of the scenario's calls through a separate request context with an empty cookie jar, created on first use and disposed at teardown. On `@ui`/`@hybrid` the shared `request` context starts from the `@user:<role>` storageState, so "an invalid API key is refused" passed on the session cookie. The raw (`without following redirects`) and event-stream steps honour it. The step library reference documents which layers carry which jar.
+  - String bodies are sent as bytes. Playwright JSON-encodes a string that does not parse when the content-type is exactly `application/json`, so `{ this is not json` arrived as `"{ this is not json"`. New step `I send a {method} request to {string} with the raw body:` sends its doc string untouched (not parsed, not template-rendered).
+  - `I use a leased user with role {string} for API calls` no longer attaches the user's token behind the scenario's back for `custom` auth strategies, whose `token()` may mint a different credential class than the session. New project setting `auth.apiToken: implicit | explicit` (default: explicit for `custom`, implicit for every other strategy, unchanged) and new step `I authenticate the API with the leased user's token`. Which credential was attached, and from where, is logged at `info`. **Behaviour change** for `custom` strategies that relied on the implicit bearer: add the step, or set `auth.apiToken: implicit`.
+  - Recorded API evidence carries `request.auth` (`none`, `bearer`, `basic`, `header:<name>`, never the value) and `request.isolated`.
+  - `env.api.auth: { type: oauth-client-credentials }` is implemented: a `client_credentials` grant to `tokenUrl` (with `scope`/`audience` when set), sent as a bearer and cached per worker until 30 s before `expires_in`. A refused grant fails the call as `AUTH_FAILED` instead of sending it anonymous, and an auth type the client does not implement throws `NOT_SUPPORTED`. The `oauth-client-credentials` auth strategy's `token()` shares the implementation. Raw requests now resolve auth exactly like the client, which also makes `I use no authentication` apply to them (`null ?? env` used to fall back to the environment credential).
+  - `retries.byTag` reaches the runner. Each entry becomes a sibling runner project with the same name that greps the tag and carries its retries; the base project excludes those tags, and a scenario with several such tags runs once with the highest count. `--retries` still overrides it, and a scenario's own `@retries:N` tag overrides both.
+- 0dcaef8: Applying a cached session no longer navigates the page (#99).
+  
+  - `I use a leased user with role "…"` restored localStorage by `page.goto(origin)`. An app that sends a signed-in visitor away from `/` on the client then had a redirect chain still running when the step returned, and the scenario's first `page.goto` failed with `net::ERR_ABORTED` / "interrupted by another navigation". Cookies are still added to the context; localStorage is now planted by a context init script that runs before the app's own scripts, only on the matching origin (or written straight into the page when it is already on that origin). The page is left where it was.
+  - The localStorage is planted once per context: the init script is removed after the first document of that origin loads, so an app that signs out mid-scenario is not silently signed back in on the next navigation.
+- 0940ec6: `I should not see the text` checks what the user can see, and the text steps get exact variants.
+  
+  - `I should not see the text {string}` passes when no VISIBLE element contains the text. It used to assert that no element in the DOM contained it, so a closed FAQ answer (`hidden`) or a collapsed panel failed the step although nothing was on screen. It now filters on visibility (`getByText(...).filter({ visible: true })` + `toHaveCount(0)`), which is strict-mode safe and retries until the text goes away.
+  - `I should see the text {string}` looks past hidden matches: a hidden copy earlier in the DOM no longer fails the step when a visible copy is on the page.
+  - New `I should see the exact text {string}` and `I should not see the exact text {string}` match an element's whole text, so `"already"` no longer collides with "the clients you already serve".
+  - Migration: new `the page should not contain the text {string}` keeps the old DOM-absence check (substring, hidden elements included). A scenario that relied on `I should not see the text` failing for hidden text should switch to it.
+  - All new steps render `{{variables}}` through `renderStrict()`, so an unset variable fails the step instead of passing a negative check.
+- Updated dependencies [bd833e1]
+  - @sdods/contracts@0.5.1
+  - @sdods/db@0.5.1
+
 ## 0.5.0
 
 ### Minor Changes
