@@ -1,7 +1,7 @@
 import { expect } from '@playwright/test';
 import './params.js';
 import { Then, When } from '../fixtures/test.js';
-import { render } from '../api/template.js';
+import { renderStrict } from '../api/template.js';
 import { SdodsError } from '../errors.js';
 import type { DbHandle } from '../fixtures/types.js';
 
@@ -95,8 +95,8 @@ Then(
     const scopes = scopesOf(apiContext, env);
     const rows = await rowsWhere(
       requireDb(db),
-      render(table, ...scopes),
-      render(clause, ...scopes),
+      renderStrict(table, ...scopes),
+      renderStrict(clause, ...scopes),
     );
     expect(rows, `${table} where ${clause}`).toHaveLength(count);
   },
@@ -108,8 +108,8 @@ Then(
     const scopes = scopesOf(apiContext, env);
     const rows = await rowsWhere(
       requireDb(db),
-      render(table, ...scopes),
-      render(clause, ...scopes),
+      renderStrict(table, ...scopes),
+      renderStrict(clause, ...scopes),
     );
     expect(rows.length, `${table} where ${clause}`).toBeGreaterThan(0);
   },
@@ -121,8 +121,8 @@ Then(
     const scopes = scopesOf(apiContext, env);
     const rows = await rowsWhere(
       requireDb(db),
-      render(table, ...scopes),
-      render(clause, ...scopes),
+      renderStrict(table, ...scopes),
+      renderStrict(clause, ...scopes),
     );
     expect(rows, `${table} where ${clause}`).toHaveLength(0);
   },
@@ -134,8 +134,8 @@ Then(
     const scopes = scopesOf(apiContext, env);
     const rows = await rowsWhere(
       requireDb(db),
-      render(table, ...scopes),
-      render(clause, ...scopes),
+      renderStrict(table, ...scopes),
+      renderStrict(clause, ...scopes),
     );
     if (rows.length !== 1) {
       throw new SdodsError(
@@ -146,8 +146,8 @@ Then(
         },
       );
     }
-    expect(String(rows[0]![identifier('column', render(column, ...scopes))])).toBe(
-      render(value, ...scopes),
+    expect(String(rows[0]![identifier('column', renderStrict(column, ...scopes))])).toBe(
+      renderStrict(value, ...scopes),
     );
   },
 );
@@ -162,8 +162,8 @@ When(
   async ({ db, apiContext, env }, table: string, clause: string) => {
     const scopes = scopesOf(apiContext, env);
     const handle = requireDb(db);
-    const t = render(table, ...scopes);
-    const c = render(clause, ...scopes);
+    const t = renderStrict(table, ...scopes);
+    const c = renderStrict(clause, ...scopes);
     await expect
       .poll(async () => (await rowsWhere(handle, t, c)).length, {
         message: `${t} never got a row where ${c}`,

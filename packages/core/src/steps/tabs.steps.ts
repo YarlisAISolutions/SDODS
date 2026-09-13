@@ -1,7 +1,7 @@
 import { expect, type Page } from '@playwright/test';
 import './params.js';
 import { Given, Then, When } from '../fixtures/test.js';
-import { render } from '../api/template.js';
+import { renderStrict } from '../api/template.js';
 import { SdodsError } from '../errors.js';
 
 /**
@@ -56,7 +56,7 @@ async function openedBy(page: Page, action: () => Promise<void>, what: string): 
 When(
   'I open a new tab by clicking the {role} {string}',
   async ({ page, apiContext, env }, role, name: string) => {
-    const label = render(name, ...scopesOf(apiContext, env));
+    const label = renderStrict(name, ...scopesOf(apiContext, env));
     await openedBy(
       page,
       () => activePage(page).getByRole(role, { name: label }).first().click(),
@@ -68,7 +68,7 @@ When(
 When(
   'I open a new tab by clicking the element {string}',
   async ({ page, apiContext, env }, selector: string) => {
-    const sel = render(selector, ...scopesOf(apiContext, env));
+    const sel = renderStrict(selector, ...scopesOf(apiContext, env));
     await openedBy(page, () => activePage(page).locator(sel).first().click(), `clicking "${sel}"`);
   },
 );
@@ -78,7 +78,7 @@ When(
 Given(
   'I switch to the tab with URL containing {string}',
   async ({ page, apiContext, env }, part: string) => {
-    const needle = render(part, ...scopesOf(apiContext, env));
+    const needle = renderStrict(part, ...scopesOf(apiContext, env));
     const found = page
       .context()
       .pages()
@@ -135,7 +135,7 @@ Then('there should be {int} open tab(s)', async ({ page }, count: number) => {
 Then(
   'the current tab URL should contain {string}',
   async ({ page, apiContext, env }, part: string) => {
-    const needle = render(part, ...scopesOf(apiContext, env));
+    const needle = renderStrict(part, ...scopesOf(apiContext, env));
     await expect
       .poll(() => activePage(page).url(), { message: `the tab URL should contain "${needle}"` })
       .toContain(needle);
@@ -147,7 +147,7 @@ Then(
   async ({ page, apiContext, env }, text: string) => {
     await expect(
       activePage(page)
-        .getByText(render(text, ...scopesOf(apiContext, env)))
+        .getByText(renderStrict(text, ...scopesOf(apiContext, env)))
         .first(),
     ).toBeVisible();
   },
