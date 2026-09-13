@@ -1,0 +1,132 @@
+name: Human in the loop
+description: Work an agent cannot finish on its own — a decision, access it does not have, or an action only a person can take.
+title: '[HITL] '
+labels: ['human-in-the-loop']
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Agents (and people) file this when everything that can be automated is done and the rest needs **you**.
+        Fill it so the person picking it up never has to ask a question: what to do, in what order, and how to know it worked.
+
+        **How to react**
+        - 👀 on the issue: you are taking it.
+        - Tick the checklist in *Instructions to resolve* as you go.
+        - Comment `done` with the verification output, then close. Comment `blocked: <why>` if you cannot.
+
+  - type: dropdown
+    id: order
+    attributes:
+      label: Order
+      description: Where this sits in the queue. Do lower numbers first; a blocker stops release work.
+      options:
+        - 1 — Blocker (do now; production, security or a release is waiting)
+        - 2 — Next (unblocks open PRs or other issues)
+        - 3 — Planned (a design decision, no one is blocked yet)
+        - 4 — Housekeeping (follow-up in another repo, cleanup)
+    validations:
+      required: true
+
+  - type: input
+    id: blocks
+    attributes:
+      label: Blocks / blocked by
+      description: Issues and PRs that wait on this one, or that this one waits on.
+      placeholder: 'Blocks #91 · blocked by #93'
+
+  - type: dropdown
+    id: need
+    attributes:
+      label: Why a human
+      options:
+        - Decision (a design or product choice with trade-offs)
+        - Access (credentials, a private repo, a console the agent cannot reach)
+        - Approval (merge, release, deploy, spend, publish)
+        - Physical or manual action (device, signing certificate, account signup, verification)
+        - Other (explain in Context)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: app
+    attributes:
+      label: App name
+      options:
+        - sdods CLI (@sdods/cli)
+        - Runtime / step libraries (@sdods/core)
+        - Server / API (api.sdods.com)
+        - Web dashboard (@sdods/web)
+        - Integrations (@sdods/integrations — GitHub, Jira)
+        - MCP server / agents (@sdods/mcp, @sdods/agents)
+        - Desktop app (apps/desktop)
+        - Website (sdods.com)
+        - Docs (docs.sdods.com)
+        - Release and CI (npm, GHCR, workflows)
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: repo
+    attributes:
+      label: Repo name
+      description: Every repo the work touches, the first one being where the fix lands.
+      value: 'siri1410/SDODS'
+    validations:
+      required: true
+
+  - type: input
+    id: release
+    attributes:
+      label: Last release
+      description: '`gh release list -L 1` and `npm view @sdods/cli version`, plus the deployed revision when a hosted app is involved.'
+      placeholder: '@sdods/cli@0.3.2 (2026-09-09) · api revision automax-api-00055'
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: What is already done (PRs, commits, runs) and the one thing still needed. Link evidence rather than restating it.
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: Commands in their own code blocks, one per block, so they copy cleanly. Include the expected and actual result.
+      placeholder: |
+        1. `sdods run -p demo-shop -e staging -l ui -b chromium -t @smoke`
+        2. Open `runs/<id>/messages.ndjson`
+        Expected: … · Actual: …
+    validations:
+      required: true
+
+  - type: textarea
+    id: media
+    attributes:
+      label: Screenshots / videos
+      description: Drag files here, or link run artifacts (video.webm, trace.zip with `npx playwright show-trace <file>`). Write "n/a" for config-only work.
+    validations:
+      required: true
+
+  - type: textarea
+    id: instructions
+    attributes:
+      label: Instructions to resolve
+      description: A numbered checklist a person can follow without asking. For a decision, list the options with their trade-offs and a recommendation.
+      placeholder: |
+        - [ ] 1. …
+        - [ ] 2. …
+    validations:
+      required: true
+
+  - type: textarea
+    id: verify
+    attributes:
+      label: How to verify it is done
+      description: The command or check that proves it, and what its output should say.
+    validations:
+      required: true
