@@ -76,4 +76,85 @@ export async function runCliJson<T = unknown>(
   return { ok: exitCode === 0, exitCode, data, stdout, stderr, error };
 }
 
+export interface CliCapabilities {
+  /** version of the CLI the server actually spawns, which is not always this package's own */
+  version: string | null;
+  path: string;
+  projectDelete: boolean;
+  projectImport: boolean;
+}
+
+/** How long to wait before probing again after a probe that could not read the binary. */
+const RETRY_AFTER_MS = 30_000;
+
+let cached: CliCapabilities | null = null;
+let inFlight: Promise<CliCapabilities | null> | null = null;
+let retryAfter = 0;
+
+/**
+ * What the spawned CLI can do, if we already know.
+ *
+ * Non-blocking on purpose. `/api/health` is a liveness endpoint the desktop app polls every 400ms
+ * while the server boots (apps/desktop/src/main/server.ts), and probing costs two CLI processes
+ * that each pay tsx startup. Awaiting that would make every poll tick spawn a pair during exactly
+ * the moment the machine is busiest -- and a probe that loses that race reports a capable binary
+ * as incapable. So: answer with what is known, kick a probe off when nothing is, and let the next
+ * caller have the result. `null` means "not known yet", which callers treat as permissive.
+ */
+export function cliCapabilitiesNow(config: ServerConfig): CliCapabilities | null {
+  if (!cached && !inFlight && Date.now() >= retryAfter) void startProbe(config);
+  return cached;
+}
+
+/** Waits for the answer. Prefer `cliCapabilitiesNow` on anything latency-sensitive. */
+export async function cliCapabilities(config: ServerConfig): Promise<CliCapabilities | null> {
+  if (cached) return cached;
+  if (Date.now() < retryAfter) return null;
+  return (inFlight ??= startProbe(config));
+}
+
+/** Test seam — the probe is cached for the process lifetime. */
+export function resetCliCapabilities() {
+  cached = null;
+  inFlight = null;
+  retryAfter = 0;
+}
+
+function startProbe(config: ServerConfig): Promise<CliCapabilities | null> {
+  const run = probe(config)
+    .then((c) => {
+      // Never cache a failure as an answer, but do not retry it on every request either.
+      if (c.version) cached = c;
+      else retryAfter = Date.now() + RETRY_AFTER_MS;
+      return c.version ? c : null;
+    })
+    .catch(() => {
+      retryAfter = Date.now() + RETRY_AFTER_MS;
+      return null;
+    })
+    .finally(() => {
+      inFlight = null;
+    });
+  inFlight = run;
+  return run;
+}
+
+async function probe(config: ServerConfig): Promise<CliCapabilities> {
+  const [version, help] = await Promise.all([
+    runCliJson(config, ['--version'], {}, 20_000),
+    runCliJson(config, ['project', '--help'], {}, 20_000),
+  ]);
+  const subcommands = help.ok ? help.stdout : '';
+  // `project --help` lists every subcommand, so an empty read means the spawn failed rather than
+  // that the commands are missing. Report it as unknown (null version) so it is retried.
+  if (!subcommands.trim())
+    return { version: null, path: config.cliBin, projectDelete: false, projectImport: false };
+  return {
+    version: version.stdout.trim().match(/\d+\.\d+\.\d+[^\s]*/)?.[0] ?? null,
+    path: config.cliBin,
+    projectDelete: /\bdelete\b/.test(subcommands),
+    projectImport: /\bimport\b/.test(subcommands),
+  };
+}
+
 export { existsSync };

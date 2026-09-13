@@ -7,5 +7,13 @@
   "access": "public",
   "baseBranch": "main",
   "updateInternalDependencies": "patch",
-  "ignore": ["sdods-monorepo", "@sdods/web", "@sdods/docs", "@sdods/www", "@sdods/roadmap"]
+  "ignore": [
+    "sdods-monorepo",
+    "@sdods/web",
+    "@sdods/docs",
+    "@sdods/www",
+    "@sdods/roadmap",
+    "@sdods/desktop",
+    "@sdods/qa-archive"
+  ]
 }

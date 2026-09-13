@@ -1,7 +1,9 @@
+import { existsSync, realpathSync, statSync } from 'node:fs';
+import { isAbsolute, relative, resolve, sep } from 'node:path';
 import type { FastifyInstance } from 'fastify';
 import { audit } from '@sdods/db';
 import { AgentJobBody } from '../schemas/index.js';
-import { forbidden, notFound, parse } from '../errors.js';
+import { badRequest, forbidden, notFound, parse } from '../errors.js';
 import { runCliJson } from '../services/cli.js';
 import type { SseEvent } from '../types.js';
 
@@ -17,6 +19,10 @@ export async function agentRoutes(app: FastifyInstance) {
       const body = parse(AgentJobBody, req.body);
       const role = await app.workspaceRoleForProject(req.principal!, body.project);
       if (!role || role === 'viewer') throw forbidden('Editor role required to run agents.');
+      if (!app.registry.has(body.project)) throw notFound(`Project ${body.project}`);
+      const root = app.registry.entry(body.project).root;
+      if (body.plan) body.plan = projectFile(root, body.plan, 'plan');
+      if (body.spec) body.spec = projectFile(root, body.spec, 'spec');
       const job = app.agentManager.start(body, req.principal!.userId);
       await audit(app.adb.db, {
         actorUserId: req.principal!.userId,
@@ -125,4 +131,24 @@ function view(j: ReturnType<FastifyInstance['agentManager']['get']> & object) {
     exitCode: j.exitCode ?? null,
     proposalId: j.proposalId ?? null,
   };
+}
+
+/**
+ * `plan` and `spec` are handed to the CLI, which reads them from disk and streams the prompt (file
+ * included) back through the job log. Taken verbatim, `spec: "/proc/self/environ"` returned the
+ * server's secrets to any editor. Only a regular file inside the project, outside hidden
+ * directories and dotfiles such as `.env.*`, is accepted; symlinks are resolved before checking.
+ */
+function projectFile(projectRoot: string, input: string, field: string): string {
+  const reject = () =>
+    badRequest(`${field} must be a file inside the project (for example docs/test-plans/x.md).`);
+  const root = realpathSync(projectRoot);
+  const candidate = resolve(root, input);
+  if (!existsSync(candidate)) throw reject();
+  const real = realpathSync(candidate);
+  const rel = relative(root, real);
+  if (!rel || isAbsolute(rel) || rel.split(sep).some((seg) => seg === '..' || seg.startsWith('.')))
+    throw reject();
+  if (!statSync(real).isFile()) throw reject();
+  return real;
 }

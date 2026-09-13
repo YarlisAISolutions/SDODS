@@ -10,6 +10,7 @@ description: Work inside an SDODS repository — an automation and orchestration
 | Task | Command |
 |---|---|
 | See projects / hierarchy | `sdods project list`, `sdods workspace tree` |
+| Add / remove a project | `sdods project create <slug>`, `sdods project import <dir\|zip\|git-url>`, `sdods project delete <slug> --yes` |
 | Resolve config with provenance | `sdods config show -p <slug> -e <env> --explain` |
 | Validate features | `sdods lint -p <slug>` |
 | Run a slice | `sdods run -p <slug> -e <env> -l api` · `-l ui -b chromium -t @smoke` · `--process pr-check` |

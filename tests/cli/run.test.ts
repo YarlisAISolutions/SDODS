@@ -110,6 +110,69 @@ describe('sdods CLI (end to end against projects/demo-shop)', () => {
     expect(out.manifest.tagsExpr).toBe('@contract or @smoke');
   }, 120_000);
 
+  /**
+   * A selection that matches nothing used to exit 0, which reads exactly like a green run: a typo in
+   * `--tags` or `--feature` kept CI passing while running no tests at all.
+   */
+  it('fails a run whose selection matches no scenario, unless --allow-empty', async () => {
+    const base = ['run', '-p', 'demo-shop', '-e', 'staging', '-l', 'api', '--no-ingest'];
+    const empty = await cli(...base, '-t', '@no-such-tag', ...harFlags);
+    expect(empty.exitCode, explain(empty)).toBe(2);
+    expect(empty.stdout + empty.stderr).toMatch(/No scenarios matched/);
+    const allowed = await cli(...base, '-t', '@no-such-tag', '--allow-empty', ...harFlags);
+    expect(allowed.exitCode, explain(allowed)).toBe(0);
+  }, 120_000);
+
+  it('rejects a malformed tag expression before generating specs', async () => {
+    const r = await cli(
+      'run',
+      '-p',
+      'demo-shop',
+      '-e',
+      'staging',
+      '-l',
+      'api',
+      '-t',
+      '@smoke and (',
+    );
+    expect(r.exitCode).toBe(2);
+    expect(r.stderr + r.stdout).toMatch(/tag expression/i);
+    expect(r.stderr + r.stdout).not.toMatch(/^\s+at .+:\d+:\d+/m);
+  });
+
+  it('rejects a --feature that does not exist', async () => {
+    const r = await cli(
+      'run',
+      '-p',
+      'demo-shop',
+      '-e',
+      'staging',
+      '--feature',
+      'nope/missing.feature',
+    );
+    expect(r.exitCode).toBe(2);
+    expect(r.stderr + r.stdout).toMatch(/missing\.feature/);
+  });
+
+  it('features list evaluates boolean tag expressions', async () => {
+    const r = await cli(
+      '--json',
+      'features',
+      'list',
+      '-p',
+      'demo-shop',
+      '--scenarios',
+      '--tags',
+      '@ui and @smoke',
+    );
+    expect(r.exitCode, explain(r)).toBe(0);
+    const rows = JSON.parse(r.stdout) as Array<{ tags: string }>;
+    expect(rows.length).toBeGreaterThan(0);
+    for (const row of rows) expect(row.tags).toMatch(/@smoke/);
+    const bad = await cli('features', 'list', '-p', 'demo-shop', '--tags', '@smoke and (');
+    expect(bad.exitCode).toBe(2);
+  });
+
   it('rejects an unknown layer with a config error', async () => {
     const r = await cli('run', '-p', 'demo-shop', '-l', 'mobile');
     expect(r.exitCode).toBe(2);

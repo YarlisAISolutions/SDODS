@@ -169,7 +169,7 @@ export class CodexCliAdapter implements LlmAdapter {
       '-c',
       `mcp_servers.sdods.args=${tomlArray(sdods.args)}`,
     ];
-    if (this.ctx.withPlaywrightMcp !== false) {
+    if (this.ctx.withPlaywrightMcp === true) {
       const pw = playwrightMcpSpec();
       args.push(
         '-c',

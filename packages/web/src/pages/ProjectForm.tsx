@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router';
 import { useMutation } from '@tanstack/react-query';
 import { BrowserSchema } from '@sdods/contracts';
 import { api } from '../api/client';
-import { useInvalidate, useProject } from '../api/queries';
+import { useDeleteProject, useInvalidate, useProject } from '../api/queries';
 import type { Project } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
 import { useWorkspace } from '../context/WorkspaceContext';
@@ -21,6 +21,8 @@ import {
   Textarea,
 } from '../components/ui';
 import { useToast } from '../components/ui/Toast';
+import { DeleteProjectDialog } from './Projects';
+import { clearProjectPref } from '../lib/project-pref';
 
 const ALL_LAYERS = ['ui', 'api', 'hybrid', 'recorded'] as const;
 const ALL_BROWSERS = BrowserSchema.options;
@@ -41,63 +43,34 @@ const TESTING_TYPES = [
 const TRIGGERS = ['manual', 'pr', 'merge', 'nightly', 'release', 'schedule', 'webhook'] as const;
 const POLICIES = ['off', 'on-failure', 'scenario', 'step', 'visual'] as const;
 
-const blank = (workspace: string, organization: string): Project => ({
-  slug: '',
-  name: '',
-  workspace,
-  organization,
-  layers: ['ui', 'api', 'hybrid'],
-  browsers: ['chromium'],
-  testIdAttribute: 'data-testid',
-  envs: { default: 'local', available: ['local'] },
-  tags: { suites: ['smoke', 'regression', 'sanity'], extra: [], roles: [] },
-  routes: { home: '/' },
-  modules: [],
-  processes: [],
-  screenshots: {
-    policy: {
-      default: 'on-failure',
-      '@smoke': 'scenario',
-      '@regression': 'step',
-      '@visual': 'visual',
-    },
-    fullPage: false,
-    mask: [],
-    viewport: { width: 1280, height: 720 },
-    onlyOnFailure: false,
-  },
-  integrations: {},
-  mcp: { servers: {} },
-});
-
+/**
+ * Edits an existing project. Creating happens in a dialog on the projects list -- this page posted
+ * the whole Project object to `POST /api/projects`, which accepts a fraction of those fields, so
+ * everything the user typed beyond the slug was dropped without an error.
+ */
 export function ProjectFormPage() {
-  const { slug } = useParams();
-  const isNew = !slug;
+  const { slug = '' } = useParams();
   const nav = useNavigate();
-  const { workspace, org } = useWorkspace();
-  const { canEdit } = useAuth();
-  const q = useProject(slug ?? '');
+  const { canEdit, isAdmin } = useAuth();
+  const { workspaces } = useWorkspace();
+  const q = useProject(slug);
   const inv = useInvalidate();
   const { toast } = useToast();
-  const [form, setForm] = useState<Project | null>(
-    isNew ? blank(workspace?.slug ?? 'default', org?.slug ?? 'default') : null,
-  );
+  const [form, setForm] = useState<Project | null>(null);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const remove = useDeleteProject();
   useEffect(() => {
-    if (q.data && !isNew) setForm(q.data);
-  }, [q.data, isNew]);
+    if (q.data) setForm(q.data);
+  }, [q.data]);
   const save = useMutation({
-    mutationFn: (p: Project) =>
-      isNew
-        ? api<Project>('/api/projects', { json: p })
-        : api<Project>(`/api/projects/${p.slug}`, { method: 'PUT', json: p }),
+    mutationFn: (p: Project) => api<Project>(`/api/projects/${p.slug}`, { method: 'PUT', json: p }),
     onSuccess: (p) => {
       inv(['projects'], ['project', p.slug]);
       toast('Project saved', 'success');
-      if (isNew) nav(`/projects/${p.slug}/edit`);
     },
     onError: (e) => toast((e as Error).message, 'error'),
   });
-  if (!isNew && q.isLoading) return <Spinner />;
+  if (q.isLoading) return <Spinner />;
   if (q.error) return <ErrorBox error={q.error} retry={() => q.refetch()} />;
   if (!form) return null;
   const editable = canEdit(form.workspace, form.organization);
@@ -114,12 +87,8 @@ export function ProjectFormPage() {
       }}
     >
       <PageHeader
-        title={isNew ? 'New project' : form.name}
-        subtitle={
-          isNew
-            ? 'Writes projects/<slug>/sdods.project.yaml'
-            : `projects/${form.slug}/sdods.project.yaml · workspace ${form.workspace}`
-        }
+        title={form.name}
+        subtitle={`projects/${form.slug}/sdods.project.yaml · workspace ${form.workspace}`}
         actions={
           editable && (
             <Button variant="primary" disabled={save.isPending || !form.slug || !form.name}>
@@ -138,22 +107,32 @@ export function ProjectFormPage() {
           <Card title="Identity">
             <div className="grid gap-3 sm:grid-cols-2">
               <Field label="Slug">
-                <Input
-                  value={form.slug}
-                  disabled={!isNew}
-                  onChange={(e) =>
-                    set({ slug: e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, '-') })
-                  }
-                />
+                {/* The API refuses a slug change: it is the directory name and the key every
+                    run, report and schedule is filed under. */}
+                <Input value={form.slug} disabled />
               </Field>
               <Field label="Name">
                 <Input value={form.name} onChange={(e) => set({ name: e.target.value })} />
               </Field>
-              <Field label="Workspace">
-                <Input
-                  value={form.workspace}
-                  onChange={(e) => set({ workspace: e.target.value })}
-                />
+              <Field
+                label="Workspace"
+                hint="only workspaces declared in sdods.workspace.yaml are offered"
+              >
+                {/* Free text here was a trap: a workspace the workspace file does not declare
+                    makes the registry reject every project on the next reload, not just this one.
+                    The API refuses it now too; this stops the user reaching for it at all. */}
+                <Select value={form.workspace} onChange={(e) => set({ workspace: e.target.value })}>
+                  {workspaces.map((w) => (
+                    <option key={w.slug} value={w.slug}>
+                      {w.name}
+                    </option>
+                  ))}
+                  {/* A project already pointing somewhere unlisted must still render its value,
+                      or opening Settings would silently rewrite it on save. */}
+                  {!workspaces.some((w) => w.slug === form.workspace) && (
+                    <option value={form.workspace}>{form.workspace}</option>
+                  )}
+                </Select>
               </Field>
               <Field label="Test id attribute">
                 <Input
@@ -663,6 +642,47 @@ export function ProjectFormPage() {
           </Card>
         </div>
       </fieldset>
+
+      {isAdmin && (
+        <Card title="Danger zone">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="text-xs">
+              <div className="font-medium">Delete this project</div>
+              <div className="muted mt-0.5">
+                Moves <span className="mono">projects/{form.slug}</span> to{' '}
+                <span className="mono">.sdods/trash</span> and removes its schedules. Past runs stay
+                in history.
+              </div>
+            </div>
+            {/* type=button: this sits inside the settings form, and the default would submit it. */}
+            <Button
+              type="button"
+              variant="danger"
+              onClick={() => setConfirmingDelete(true)}
+              data-testid="delete-project"
+            >
+              Delete project
+            </Button>
+          </div>
+        </Card>
+      )}
+
+      <DeleteProjectDialog
+        project={confirmingDelete ? form : null}
+        onClose={() => setConfirmingDelete(false)}
+        pending={remove.isPending}
+        error={remove.error}
+        onConfirm={(s) =>
+          remove.mutate(s, {
+            onSuccess: () => {
+              toast(`Deleted ${s}`, 'success');
+              clearProjectPref(s);
+              setConfirmingDelete(false);
+              nav('/projects');
+            },
+          })
+        }
+      />
     </form>
   );
 }

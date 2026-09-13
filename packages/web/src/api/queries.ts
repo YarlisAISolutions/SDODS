@@ -4,9 +4,13 @@ import type {
   AgentJob,
   ApiToken,
   CompareResult,
+  CreateProjectInput,
   Dataset,
   Environment,
   FeatureFile,
+  Health,
+  ImportPreview,
+  ImportProjectInput,
   IntegrationView,
   McpInfo,
   Member,
@@ -72,6 +76,7 @@ export const keys = {
   users: ['users'] as const,
   tokens: ['tokens'] as const,
   mcpInfo: ['mcpInfo'] as const,
+  health: ['health'] as const,
   trends: (f: Record<string, unknown>) => ['trends', f] as const,
 };
 
@@ -293,6 +298,84 @@ export const useCancelRun = () => {
     onSuccess: () => inv(['runs'], ['run']),
   });
 };
+
+/** Includes the capabilities of the CLI the server spawns, which gates import and delete. */
+export const useHealth = () =>
+  useQuery({
+    queryKey: keys.health,
+    queryFn: () => api<Health>('/api/health'),
+    staleTime: 60_000,
+  });
+
+export const useCreateProject = () => {
+  const inv = useInvalidate();
+  return useMutation({
+    mutationFn: (input: CreateProjectInput) => api<Project>('/api/projects', { json: input }),
+    // `['project', slug]` too: the slug may have been deleted and re-created, and a stale entry
+    // from before the delete would render on the settings page this navigates to.
+    onSuccess: (_p, input) => inv(['projects'], [...keys.project(input.slug)]),
+  });
+};
+
+export const useDeleteProject = () => {
+  const inv = useInvalidate();
+  return useMutation({
+    // The confirmation is sent as well as typed: the server refuses a delete whose ?confirm does
+    // not equal the slug, so a mis-wired client cannot remove the wrong project.
+    mutationFn: (slug: string) =>
+      api<{ ok: true; slug: string; trashedTo: string | null; schedulesRemoved: number }>(
+        `/api/projects/${slug}?confirm=${encodeURIComponent(slug)}`,
+        { method: 'DELETE' },
+      ),
+    // Deliberately leaves the deleted project's own `['project', slug]` entry alone. The settings
+    // page is still mounted for the moment it takes to navigate away, so both invalidating and
+    // removing that key make it refetch a slug that no longer exists and log a 404. The stale
+    // entry harms nothing -- nothing renders it again, and re-creating the slug refetches it.
+    onSuccess: () => inv(['projects'], ['schedules']),
+  });
+};
+
+/** A zip goes up as multipart; a path or git URL as JSON. Same route either way. */
+function importRequest(input: ImportProjectInput) {
+  if (input.kind === 'zip') {
+    if (!input.file) throw new Error('Choose a .zip file to upload.');
+    const form = new FormData();
+    if (input.slug) form.set('slug', input.slug);
+    if (input.workspace) form.set('workspace', input.workspace);
+    if (input.force) form.set('force', 'true');
+    if (input.dryRun) form.set('dryRun', 'true');
+    // The file part goes last: @fastify/multipart streams fields in order, and req.file() stops
+    // at the first file, so anything after it would not be read.
+    form.set('file', input.file);
+    return { form };
+  }
+  return {
+    json: {
+      kind: input.kind,
+      source: input.source ?? '',
+      ...(input.slug ? { slug: input.slug } : {}),
+      ...(input.workspace ? { workspace: input.workspace } : {}),
+      ...(input.force ? { force: true } : {}),
+      ...(input.dryRun ? { dryRun: true } : {}),
+    },
+  };
+}
+
+export const useImportProject = () => {
+  const inv = useInvalidate();
+  return useMutation({
+    mutationFn: (input: ImportProjectInput) =>
+      api<Project>('/api/projects/import', importRequest(input)),
+    onSuccess: (project) => inv(['projects'], [...keys.project(project.slug)]),
+  });
+};
+
+/** Same route with dryRun, so the dialog can report what it found without writing. */
+export const useImportPreview = () =>
+  useMutation({
+    mutationFn: (input: ImportProjectInput) =>
+      api<ImportPreview>('/api/projects/import', importRequest({ ...input, dryRun: true })),
+  });
 /** The server answers `{ errors, warnings }` (LintResult); the editor works with flat diagnostics. */
 export function toDiagnostics(r: Rec | null | undefined): Diagnostic[] {
   if (!r) return [];
