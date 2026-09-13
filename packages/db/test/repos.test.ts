@@ -3,10 +3,13 @@ import { ProjectConfigSchema, WorkspaceFileSchema } from '@sdods/contracts/schem
 import type { SdodsDb } from '../src/create-db.js';
 import { computeInsights } from '../src/insights.js';
 import {
+  countUsers,
   createApiToken,
   createSession,
   createUser,
+  deleteAllUsers,
   deleteSession,
+  deleteSessionsForUser,
   ensureRoles,
   getSession,
   getUserByUsername,
@@ -397,5 +400,65 @@ describe('repos', () => {
     // 0.5*0.8 + 0.2*(1-0.5) + 0.2*(1-0.4) + 0.1*1 = 0.4 + 0.1 + 0.12 + 0.1 = 0.72
     expect(ins.suiteHealth).toBe(0.72);
     expect(ins.suiteHealthTrend).toHaveLength(10);
+  });
+});
+
+describe('users reset', () => {
+  let adb: SdodsDb;
+  beforeAll(async () => {
+    adb = await testDb();
+  });
+  afterAll(() => adb.close());
+
+  it('removes users and what hangs off them, and keeps the hierarchy', async () => {
+    const res = await syncHierarchy(adb.db, adb.driver, {
+      workspaceFile: WorkspaceFileSchema.parse({
+        organization: { slug: 'acme', name: 'Acme' },
+        workspaces: [{ slug: 'default', name: 'Default' }],
+        defaultWorkspace: 'default',
+      }),
+      projects: [],
+    });
+    const adminId = await createUser(adb.db, adb.driver, {
+      username: 'admin',
+      passwordHash: 'x',
+      role: 'admin',
+    });
+    const eveId = await createUser(adb.db, adb.driver, {
+      username: 'eve',
+      passwordHash: 'y',
+      role: 'editor',
+    });
+    await bootstrapOwner(adb.db, adminId);
+    await addWorkspaceMember(adb.db, res.workspaces.default!, eveId, 'editor');
+    const adminSession = await createSession(adb.db, { userId: adminId, ttlMs: 60_000 });
+    const eveSession = await createSession(adb.db, { userId: eveId, ttlMs: 60_000 });
+    const tok = await createApiToken(adb.db, {
+      userId: eveId,
+      name: 'ci',
+      scopes: ['runs:read'],
+      ownerRole: 'editor',
+    });
+
+    // a password change signs only that user out
+    await deleteSessionsForUser(adb.db, adminId);
+    expect(await getSession(adb.db, adminSession.token)).toBeNull();
+    expect((await getSession(adb.db, eveSession.token))?.userId).toBe(eveId);
+
+    expect(await deleteAllUsers(adb.db)).toBe(2);
+    expect(await countUsers(adb.db)).toBe(0);
+    expect(await getSession(adb.db, eveSession.token)).toBeNull();
+    expect(await resolveApiToken(adb.db, tok.token)).toBeNull();
+    expect(await (adb.db as any).selectFrom('org_members').selectAll().execute()).toEqual([]);
+    expect(await (adb.db as any).selectFrom('workspace_members').selectAll().execute()).toEqual([]);
+    expect((await listWorkspaces(adb.db)).map((w) => w.slug)).toEqual(['default']);
+
+    // the next admin takes over the organization left without an owner
+    const nextId = await createUser(adb.db, adb.driver, {
+      username: 'admin',
+      passwordHash: 'z',
+      role: 'admin',
+    });
+    expect(await bootstrapOwner(adb.db, nextId)).toEqual(['acme']);
   });
 });

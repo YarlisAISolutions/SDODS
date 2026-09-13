@@ -2,11 +2,20 @@ import type { Command } from 'commander';
 import { SdodsError } from '@sdods/core';
 import { MIN_PASSWORD_LENGTH } from '@sdods/contracts/names';
 import { createContext } from '../context.js';
-import { json, ok, table } from '../ui.js';
+import { info, json, ok, table, warn } from '../ui.js';
 
 async function openDb() {
   const db = await import('@sdods/db');
   return db.openDb();
+}
+
+function assertPassword(password: unknown) {
+  if (String(password).length < MIN_PASSWORD_LENGTH)
+    throw new SdodsError(
+      'CONFIG_INVALID',
+      `Password must be at least ${MIN_PASSWORD_LENGTH} characters.`,
+      { exitCode: 2 },
+    );
 }
 
 export function register(program: Command) {
@@ -25,10 +34,7 @@ export function register(program: Command) {
     .option('--org-owner', 'grant organization owner on orgs without an owner')
     .action(async (opts, cmd) => {
       const ctx = createContext(cmd);
-      if (String(opts.password).length < 8)
-        throw new SdodsError('CONFIG_INVALID', 'Password must be at least 8 characters.', {
-          exitCode: 2,
-        });
+      assertPassword(opts.password);
       const adb = await openDb();
       try {
         const db = await import('@sdods/db');
@@ -129,6 +135,82 @@ export function register(program: Command) {
         await db.updateUser(adb.db, adb.driver, u.id, { active: false });
         if (ctx.opts.json) return json({ id: u.id, username, active: false });
         ok(`${username} deactivated`);
+      } finally {
+        await adb.close();
+      }
+    });
+
+  users
+    .command('set-password <username>')
+    .description(
+      'Set a password and sign the user out everywhere; --activate re-enables the account',
+    )
+    .requiredOption('--password <password>', `new password (min ${MIN_PASSWORD_LENGTH} chars)`)
+    .option('--activate', 're-enable a deactivated account')
+    .action(async (username: string, opts, cmd) => {
+      const ctx = createContext(cmd);
+      assertPassword(opts.password);
+      const adb = await openDb();
+      try {
+        const db = await import('@sdods/db');
+        const { hashPassword } = await import('@sdods/server');
+        const u = await db.getUserByUsername(adb.db, username);
+        if (!u)
+          throw new SdodsError('CONFIG_NOT_FOUND', `User ${username} not found.`, {
+            exitCode: 2,
+          });
+        await db.updateUser(adb.db, adb.driver, u.id, {
+          passwordHash: await hashPassword(opts.password),
+          ...(opts.activate ? { active: true } : {}),
+        });
+        await db.deleteSessionsForUser(adb.db, u.id);
+        await db.audit(adb.db, {
+          actorType: 'cli',
+          action: 'user.password',
+          targetType: 'user',
+          targetId: u.id,
+          details: { username, activated: Boolean(opts.activate) },
+        });
+        const active = opts.activate ? true : u.active;
+        if (ctx.opts.json) return json({ id: u.id, username, active });
+        ok(`Password set for ${username}; existing sessions signed out`);
+        if (!active) warn(`${username} is deactivated; pass --activate to let them sign in`);
+      } finally {
+        await adb.close();
+      }
+    });
+
+  users
+    .command('reset')
+    .description(
+      'Remove every user, session, API token and membership; projects and runs stay (next serve offers /setup)',
+    )
+    .option('--yes', 'confirm')
+    .action(async (opts, cmd) => {
+      const ctx = createContext(cmd);
+      if (!opts.yes)
+        throw new SdodsError(
+          'NOT_SUPPORTED',
+          'users reset removes every user; pass --yes to confirm.',
+          { exitCode: 2 },
+        );
+      const adb = await openDb();
+      try {
+        const db = await import('@sdods/db');
+        const removed = await db.deleteAllUsers(adb.db);
+        await db.audit(adb.db, {
+          actorType: 'cli',
+          action: 'users.reset',
+          targetType: 'user',
+          details: { removed },
+        });
+        if (ctx.opts.json) return json({ removed });
+        ok(
+          `Removed ${removed} user${removed === 1 ? '' : 's'}; projects, runs and schedules are kept`,
+        );
+        info(
+          'Restart `sdods serve` for a one-time /setup link, or run: sdods users create --admin --username <name> --password <pw>',
+        );
       } finally {
         await adb.close();
       }
