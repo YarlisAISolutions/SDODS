@@ -185,7 +185,12 @@ description: Field-by-field reference for the project file and the workspace fil
       type: '{ test, expect, action, navigation, api }',
       default: '{ 60000, 10000, 15000, 30000, 15000 }',
     },
-    retries: { type: '{ ci, local, byTag }', default: '{ 2, 0, {} }' },
+    retries: {
+      type: '{ ci, local, byTag }',
+      default: '{ 2, 0, {} }',
+      description:
+        'byTag sets the retries of every scenario carrying the tag; with several such tags the highest wins. An explicit --retries overrides it, and a scenario @retries:N tag overrides both.',
+    },
     'evidence.trace': {
       type: "'off'|'on'|'retain-on-failure'|'on-first-retry'|'on-all-retries'|'retain-on-first-failure'|'retain-on-failure-and-retries'",
       default: "'on-first-retry'",
