@@ -1,5 +1,19 @@
 # @sdods/server
 
+## 0.5.0
+
+### Patch Changes
+
+- Updated dependencies [a6d6c99]
+- Updated dependencies [a6d6c99]
+- Updated dependencies [33416fd]
+- Updated dependencies [f179b8e]
+- Updated dependencies [3f2b734]
+  - @sdods/core@0.5.0
+  - @sdods/contracts@0.5.0
+  - @sdods/db@0.5.0
+  - @sdods/mcp@0.5.0
+
 ## 0.4.0
 
 ### Minor Changes
