@@ -66,6 +66,7 @@
   },
   "dependencies": {
     "@sdods/contracts": "workspace:*",
+    "@cucumber/cucumber-expressions": "19.0.0",
     "@cucumber/gherkin": "^42.0.1",
     "@cucumber/messages": "^34.2.1",
     "@faker-js/faker": "^10.6.0",
@@ -79,6 +80,7 @@
     "jsonpath-plus": "^10.4.0",
     "picocolors": "^1.1.1",
     "ts-morph": "^28.0.0",
+    "tsx": "^4.23.0",
     "yaml": "^2.9.0",
     "zod": "^4.5.4",
     "@sdods/db": "workspace:*"

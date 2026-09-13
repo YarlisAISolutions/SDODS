@@ -1,10 +1,10 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
-import { pathToFileURL } from 'node:url';
 import { join } from 'node:path';
 import { execa } from 'execa';
 import type { Browser } from '@playwright/test';
 import type { ResolvedConfig } from '../config/resolve.js';
 import { SdodsError } from '../errors.js';
+import { importProjectModule, namedExport } from '../load-module.js';
 import { Logger } from '../logger.js';
 import { CompositeDataProvider } from '../data/provider.js';
 import { AuthStateCache, type CachedState } from '../fixtures/auth.js';
@@ -99,11 +99,10 @@ export async function loadProjectAuth(config: ResolvedConfig): Promise<AuthStrat
   );
   for (const file of candidates) {
     if (!existsSync(file)) continue;
-    const mod = (await import(pathToFileURL(file).href)) as {
-      auth?: AuthStrategy;
-      default?: AuthStrategy;
-    };
-    const strategy = mod.auth ?? mod.default;
+    // Same module resolution as `sdods run` (#86): `import './helper.js'` must find helper.ts.
+    const mod = await importProjectModule(file);
+    const strategy =
+      namedExport<AuthStrategy>(mod, 'auth') ?? (mod.default as AuthStrategy | undefined);
     if (strategy && typeof strategy.login === 'function') return strategy;
   }
   const declared = config.project.auth.strategy;
