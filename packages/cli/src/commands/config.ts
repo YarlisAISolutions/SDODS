@@ -19,14 +19,17 @@ export function registerConfigCommands(program: Command) {
       const cfg = ctx.registry.resolve(opts.project, opts.env);
       const view = opts.showSecrets ? cfg : redact(cfg);
       if (opts.explain) {
-        const rows = explainConfig(cfg).map((r) => ({
-          path: r.path,
-          layer: r.layer,
-          value:
-            typeof r.value === 'object'
-              ? JSON.stringify(r.value)
-              : String(opts.showSecrets ? r.value : redactLeaf(r.path, r.value)),
-        }));
+        // Values come from the same redacted tree as the other views, so --explain can never show
+        // what plain `config show` hides (it used to apply a weaker regex of its own).
+        const tree = { project: view.project, env: view.env, runtime: view.runtime };
+        const rows = explainConfig(cfg).map((r) => {
+          const value = valueAt(tree, r.path);
+          return {
+            path: r.path,
+            layer: r.layer,
+            value: typeof value === 'object' ? JSON.stringify(value) : String(value),
+          };
+        });
         if (ctx.opts.json) return json(rows);
         return table(rows, ['path', 'layer', 'value']);
       }
@@ -79,8 +82,11 @@ export function registerConfigCommands(program: Command) {
     });
 }
 
-function redactLeaf(path: string, value: unknown): unknown {
-  return /(password|secret|token|apikey|api_key)/i.test(path) && typeof value === 'string' && value
-    ? '***'
-    : value;
+function valueAt(tree: unknown, path: string): unknown {
+  let cur: unknown = tree;
+  for (const seg of path.split('.')) {
+    if (cur === null || typeof cur !== 'object') return undefined;
+    cur = (cur as Record<string, unknown>)[seg];
+  }
+  return cur;
 }

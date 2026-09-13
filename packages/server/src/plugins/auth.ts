@@ -48,7 +48,9 @@ export default fp(async function authPlugin(app: FastifyInstance) {
 
   // Auth gate for /api/* (public paths exempt); static assets are open on localhost deployments.
   app.addHook('preHandler', async (req) => {
-    const path = req.url.split('?')[0]!;
+    // The routed pattern, not the raw URL: the router decodes `/%61pi/tokens` to `/api/tokens`, so a
+    // check on req.url let percent-encoded requests skip both authentication and the CSRF check.
+    const path = req.routeOptions.url ?? decodePath(req.url);
     if (!path.startsWith('/api/')) return;
     if (PUBLIC_PATHS.has(path)) return;
     if (path === LOGOUT_PATH && !req.principal) return;
@@ -196,4 +198,13 @@ function effectiveScopes(
   for (const r of Object.values(m.orgRoles))
     if (r === 'owner' || r === 'admin') set.add('workspaces:write').add('orgs:admin');
   return [...set];
+}
+
+function decodePath(url: string): string {
+  const path = url.split('?')[0]!;
+  try {
+    return decodeURIComponent(path);
+  } catch {
+    return path;
+  }
 }

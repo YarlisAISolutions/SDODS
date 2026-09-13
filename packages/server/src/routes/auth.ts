@@ -9,7 +9,7 @@ import {
   updateUser,
 } from '@sdods/db';
 import { LoginBody, SetupBody } from '../schemas/index.js';
-import { badRequest, forbidden, parse, unauthorized } from '../errors.js';
+import { HttpError, badRequest, forbidden, parse, unauthorized } from '../errors.js';
 import { SESSION_COOKIE } from '../plugins/auth.js';
 
 import { hashPassword, verifyPassword } from '../services/password.js';
@@ -18,16 +18,57 @@ import { hashPassword, verifyPassword } from '../services/password.js';
 // and the CLI's `users create` via @sdods/server).
 export { hashPassword, verifyPassword };
 
+/**
+ * Failed sign-ins per username. The per-IP limit below trusts whatever address the proxy settings
+ * produce, and a forged X-Forwarded-For used to give every guess a fresh address; counting against
+ * the account works whatever the network path. Only failures count, and a success clears them.
+ */
+export class LoginThrottle {
+  private readonly failures = new Map<string, { count: number; resetAt: number }>();
+  constructor(
+    private readonly max: number,
+    private readonly windowMs = 60_000,
+    private readonly now = () => Date.now(),
+  ) {}
+  blocked(username: string): boolean {
+    const e = this.failures.get(username.toLowerCase());
+    return !!e && e.resetAt > this.now() && e.count >= this.max;
+  }
+  fail(username: string): void {
+    const key = username.toLowerCase();
+    const now = this.now();
+    if (this.failures.size > 10_000)
+      for (const [k, v] of this.failures) if (v.resetAt <= now) this.failures.delete(k);
+    const e = this.failures.get(key);
+    if (!e || e.resetAt <= now) this.failures.set(key, { count: 1, resetAt: now + this.windowMs });
+    else e.count++;
+  }
+  clear(username: string): void {
+    this.failures.delete(username.toLowerCase());
+  }
+}
+
 export async function authRoutes(app: FastifyInstance) {
+  const throttle = new LoginThrottle(app.config.loginRateLimit);
   app.post(
     '/api/auth/login',
     // SDODS_LOGIN_RATE_LIMIT raises the per-IP limit for test rigs (dogfood runs sign in a lot).
     { config: { rateLimit: { max: app.config.loginRateLimit, timeWindow: '1 minute' } } },
     async (req, reply) => {
       const body = parse(LoginBody, req.body);
+      if (throttle.blocked(body.username))
+        throw new HttpError(
+          429,
+          'RATE_LIMITED',
+          'Too many failed sign-ins. Try again in a minute.',
+        );
       const user = await getUserByUsername(app.adb.db, body.username);
       const ok = user && user.active && (await verifyPassword(user.passwordHash, body.password));
-      if (!ok || !user) throw unauthorized('Invalid username or password.');
+      if (!ok || !user) {
+        throttle.fail(body.username);
+        throw unauthorized('Invalid username or password.');
+      }
+      throttle.clear(body.username);
       const session = await createSession(app.adb.db, {
         userId: user.id,
         ttlMs: app.config.sessionTtlMs,

@@ -133,9 +133,42 @@ describe('CLI adapters (claude-code, codex) against fake binaries', () => {
     expect(mcp.mcpServers.sdods.args).toEqual(
       expect.arrayContaining(['mcp', '--project', 'demo-shop', '--env', 'staging']),
     );
-    expect(mcp.mcpServers.playwright.args).toEqual(['playwright', 'mcp', '--headless']);
+    // An agent never gets the capability that accepts proposals, nor Playwright's unsafe server.
+    const caps = mcp.mcpServers.sdods.args[mcp.mcpServers.sdods.args.indexOf('--caps') + 1];
+    expect(caps.split(',')).not.toContain('agents');
+    expect(caps.split(',')).not.toContain('all');
+    expect(mcp.mcpServers.playwright).toBeUndefined();
+    expect(args.slice(args.indexOf('--disallowedTools'))).toContain('mcp__sdods__proposal_accept');
     // complete() reuses the same binary
     expect((await adapter.complete({ prompt: 'ping' })).text).toBe('pong');
+  });
+
+  it('claude-code: allows only the role tools the runner passed, never the review tools', async () => {
+    const adapter = new ClaudeCodeCliAdapter({ rootDir: process.cwd(), project: 'demo-shop' });
+    const tool = (name: string) => ({
+      name,
+      description: name,
+      inputSchema: {},
+      handler: async () => ({ content: [] }),
+    });
+    await adapter.runAgent({
+      system: 's',
+      prompt: 'p',
+      tools: [tool('feature_write'), tool('step_list')] as never,
+    });
+    const args = (await import('node:fs'))
+      .readFileSync(bins.claudeArgs, 'utf8')
+      .split('\0')
+      .slice(0, -1);
+    const allowed = args.slice(
+      args.indexOf('--allowedTools') + 1,
+      args.indexOf('--disallowedTools'),
+    );
+    expect(allowed).toEqual(
+      expect.arrayContaining(['mcp__sdods__feature_write', 'mcp__sdods__step_list']),
+    );
+    expect(allowed).not.toContain('mcp__sdods__*');
+    expect(allowed.some((t) => t.startsWith('mcp__playwright__'))).toBe(false);
   });
 
   it('codex: runs `codex exec --json` with MCP overrides, counts turns/tools, maps usage', async () => {
@@ -165,6 +198,10 @@ describe('CLI adapters (claude-code, codex) against fake binaries', () => {
     expect(args).toContain('--ephemeral');
     expect(args[args.indexOf('-s') + 1]).toBe('read-only');
     expect(args.some((a) => a.startsWith('mcp_servers.sdods.command='))).toBe(true);
+    const sdodsArgs = args.find((a) => a.startsWith('mcp_servers.sdods.args='))!;
+    expect(sdodsArgs).toContain('"--caps"');
+    expect(sdodsArgs).not.toMatch(/"all"|[",]agents[",]/);
+    expect(args.some((a) => a.startsWith('mcp_servers.playwright.'))).toBe(false);
     expect(
       args.some(
         (a) => a.startsWith('mcp_servers.sdods.args=[') && a.includes('"--project","demo-shop"'),

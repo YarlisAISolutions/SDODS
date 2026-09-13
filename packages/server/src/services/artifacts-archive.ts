@@ -1,5 +1,12 @@
 import { mkdirSync } from 'node:fs';
 import { isAbsolute, resolve, sep } from 'node:path';
+import { legacyRunFiles, runFiles } from '@sdods/contracts';
+
+/**
+ * `/reports/<run>/` serves html-report/ unsandboxed (the Playwright report needs localStorage), so
+ * nothing uploaded may land there: a planted index.html would run with the viewer's session.
+ */
+const SERVER_ONLY_DIRS = new Set<string>([runFiles.htmlReport, legacyRunFiles.htmlReport]);
 
 export interface ExtractResult {
   files: number;
@@ -19,7 +26,7 @@ export class ArchiveTooLargeError extends Error {
  *
  * Every entry is validated: only regular files and directories are accepted, paths must be
  * relative and resolve inside `dir` (no absolute paths, no `..`), symlinks and hard links are
- * skipped. Once the accepted bytes pass `maxBytes`, remaining entries are dropped and
+ * skipped, and so is anything under html-report/. Once the accepted bytes pass `maxBytes`, remaining entries are dropped and
  * ArchiveTooLargeError is thrown after extraction (tar's filter cannot abort the stream).
  */
 export async function extractArtifacts(
@@ -45,9 +52,11 @@ export async function extractArtifacts(
         return false;
       }
       const target = resolve(root, path);
+      const segments = path.split(/[\\/]/).filter((p) => p && p !== '.');
       if (
         isAbsolute(path) ||
-        path.split(/[\\/]/).includes('..') ||
+        segments.includes('..') ||
+        SERVER_ONLY_DIRS.has(segments[0] ?? '') ||
         !(target === root || target.startsWith(root + sep))
       ) {
         result.skipped++;
