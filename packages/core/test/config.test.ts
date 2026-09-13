@@ -342,6 +342,34 @@ describe('buildRunnerConfig evidence, parallelism and setup (#83)', () => {
     });
   });
 
+  it('redacts traces by default; the project or an env file can opt out (#101)', () => {
+    const resolveWith = (projectYaml: string, localYaml?: string) => {
+      const { root, proj } = scaffold({ projectYaml });
+      if (localYaml)
+        writeFileSync(
+          join(proj, 'envs', 'local.yaml'),
+          `ui: { baseUrl: http://localhost:3000 }\napi: { baseUrl: http://localhost:3000/api }\n${localYaml}`,
+        );
+      return resolveConfig({
+        rootDir: root,
+        projectRoot: proj,
+        env: 'local',
+        processEnv: {} as any,
+      }).project.evidence;
+    };
+    expect(resolveWith(base()).redactTraces).toBe(true);
+    expect(resolveWith(base('evidence: { trace: on }\n')).redactTraces).toBe(true);
+    expect(resolveWith(base('evidence: { redactTraces: false }\n')).redactTraces).toBe(false);
+    const envOptOut = resolveWith(
+      base('evidence: { trace: on }\n'),
+      'evidence: { redactTraces: false }\n',
+    );
+    expect(envOptOut).toMatchObject({ trace: 'on', redactTraces: false });
+    expect(() => resolveWith(base('evidence: { redactTraces: sometimes }\n'))).toThrow(
+      /redactTraces/,
+    );
+  });
+
   it('rejects modes Playwright does not accept', () => {
     expect(() => build(base('evidence: { trace: sometimes }\n'))).toThrow(/evidence\.trace/);
     expect(() => build(base(), { localYaml: 'evidence: { video: always }\n' })).toThrow(
