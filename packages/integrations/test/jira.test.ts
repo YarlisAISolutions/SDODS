@@ -201,6 +201,35 @@ describe('JiraProvider', () => {
     ]);
   });
 
+  it('never attaches trace.zip (it carries session cookies and tokens) and warns instead', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'sdods-jira-trace-'));
+    const runDir = join(dir, 'run-7');
+    const files = {
+      'shop/fp-cart/r0/scenario-failure.png': Buffer.alloc(64),
+      'runner-output/cart-chromium/trace.zip': Buffer.from('PK Cookie: __session=s3cr3t'),
+    };
+    for (const [rel, bytes] of Object.entries(files)) {
+      mkdirSync(join(runDir, rel, '..'), { recursive: true });
+      writeFileSync(join(runDir, rel), bytes);
+    }
+    const p = await provider({ linkTaggedScenarios: false });
+    const ctx = createIntegrationContext({
+      store: createMemoryStore(),
+      artifactsRoot: dir,
+      env: {} as any,
+    });
+    await p.onRunFinished(
+      summary([scenario({ jiraKeys: [], tracePath: 'runner-output/cart-chromium/trace.zip' })]),
+      ctx,
+    );
+    const attach = calls.find((c) => c.path.endsWith('/attachments'))!;
+    expect(attach.body).toEqual(['failure-scenario-failure.png']);
+    expect(attach.body.some((name: string) => /trace|\.zip$/.test(name))).toBe(false);
+    const description = JSON.stringify(calls.find((c) => c.path === 'issue')!.body.fields);
+    expect(description).toContain('run-7/runner-output/cart-chromium/trace.zip');
+    expect(description).toContain('contains credentials');
+  });
+
   it('falls back to JQL to find an existing issue and comments instead of creating', async () => {
     jqlIssues = [
       { key: 'SHOP-9', fields: { status: { statusCategory: { key: 'indeterminate' } } } },

@@ -195,7 +195,13 @@ description: Field-by-field reference for the project file and the workspace fil
       type: "'off'|'on'|'retain-on-failure'|'on-first-retry'|'on-all-retries'|'retain-on-first-failure'|'retain-on-failure-and-retries'",
       default: "'on-first-retry'",
       description:
-        'Playwright trace per test. With retries.local: 0 the default never records locally; use on or retain-on-failure, or `sdods run --trace on`.',
+        'Playwright trace per test. With retries.local: 0 the default never records locally; use on or retain-on-failure, or `sdods run --trace on`. Traces contain credentials (cookies, Authorization headers, browser storage, typed values): never attach or publish them.',
+    },
+    'evidence.redactTraces': {
+      type: 'boolean',
+      default: 'true',
+      description:
+        'After the run, rewrite every trace (runner-output, the HTML report copies, the bodies embedded in messages.ndjson) with credential headers, cookie, localStorage/sessionStorage/IndexedDB values and password inputs replaced by [redacted]. Request/response bodies and page text are not redacted. Set false only when traces never leave a trusted machine.',
     },
     'evidence.video': {
       type: 'same modes as evidence.trace',

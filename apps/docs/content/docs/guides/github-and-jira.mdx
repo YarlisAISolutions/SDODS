@@ -57,7 +57,7 @@ flowchart LR
   GH --> C["check run with failure annotations<br/>(in CI)"]
   GH --> PC["one PR comment, updated in place"]
   GH --> GI["issue per failing scenario fingerprint"]
-  JI --> JC["issue with steps, error, screenshots, trace"]
+  JI --> JC["issue with steps, error, screenshots"]
   JI --> JT["transition linked issue on pass"]
   GI & JC --> D{"open issue for this fingerprint?"}
   D -->|yes| CM["comment: failed again in run X"]
@@ -66,13 +66,28 @@ flowchart LR
 
 Before creating an issue, SDODS searches the repository for an open issue whose body carries the scenario's `sdods-fingerprint:<fingerprint>` marker, so a fresh CI runner without `.sdods/issue-links.json` comments on the existing issue instead of opening a duplicate. Notifying the same run twice does not comment twice.
 
-Issue bodies include the scenario, the error, screenshots, and the runner's `video.webm` and `trace.zip` for the failing attempt, with the command that opens the trace:
+Issue bodies include the scenario, the error, screenshots and the runner's `video.webm` for the failing attempt. Links point at `SDODS_PUBLIC_URL` when a server is configured, at release assets with `uploadToRelease`, and otherwise at the CI run's artifacts with the path inside them.
+
+### Traces are never attached
+
+<Callout type="warn">
+  A Playwright `trace.zip` contains credentials: every request's `Cookie` and `Authorization`
+  headers, `Set-Cookie` responses, the browser storage of the signed-in account (for Firebase, the
+  long-lived refresh token in localStorage/IndexedDB) and the values typed into forms. Do not attach
+  traces to issues, commit them, push them to an evidence branch or upload them as release assets.
+</Callout>
+
+Neither provider uploads, attaches or links `trace.zip`, with or without `uploadToRelease`. The issue names the trace's local path (or its path inside the CI run's artifacts) under a warning, with the command to open it on a machine that already has the run:
 
 ```bash
 npx playwright show-trace .sdods/runs/<runId>/runner-output/<test>/trace.zip
 ```
 
-Links point at `SDODS_PUBLIC_URL` when a server is configured, at release assets with `uploadToRelease`, and otherwise at the CI run's artifacts with the path inside them.
+`sdods run` also redacts every trace after the run (`evidence.redactTraces`, on by default): credential headers, cookies, storage and password values become `[redacted]`. Redaction does not cover request or response bodies, page text or screenshots, so a redacted trace is still not for publishing. On a public repository, anyone signed in to GitHub can download a workflow's artifacts; keep traces out of uploaded artifacts there, or set `evidence.trace: off` in CI.
+
+The video is still linked: it shows the screen, not headers or storage, and password fields render masked. If the application prints tokens or one-time codes on screen, set `evidence.video: off` as well.
+
+If a trace has already been published, revoke the sessions and refresh tokens of the accounts it recorded; deleting the file or rewriting history does not invalidate them.
 
 ## Link scenarios to issues
 
