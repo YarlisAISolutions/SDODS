@@ -64,6 +64,27 @@ export async function upsertProject(
   return id;
 }
 
+/**
+ * Flag a project as archived (or bring it back).
+ *
+ * Deleting a project removes its directory but keeps this row: runs, results and insights all
+ * reference `project_id`, so dropping it would erase the history the user came to the dashboard
+ * for. `upsertProject` only writes `archived` on insert, so an existing row keeps whatever flag it
+ * has -- which means re-creating a deleted slug has to clear it explicitly.
+ */
+export async function setProjectArchived(
+  db: Kysely<Database>,
+  driver: Driver,
+  id: string,
+  archived: boolean,
+): Promise<void> {
+  await db
+    .updateTable('projects')
+    .set({ archived: enc.bool(driver, archived) as number, updated_at: nowIso() })
+    .where('id', '=', id)
+    .execute();
+}
+
 /** Ensure a minimal project row exists (used by ingest when the registry is unavailable). */
 export async function ensureProject(
   db: Kysely<Database>,

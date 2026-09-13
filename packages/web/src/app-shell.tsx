@@ -4,8 +4,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from './auth/AuthContext';
 import { WorkspaceProvider, useWorkspace } from './context/WorkspaceContext';
 import { useProjects } from './api/queries';
-import { Badge, RoleBadge, Select, Skeleton, Spinner } from './components/ui';
+import { RoleBadge, Select, Skeleton, Spinner } from './components/ui';
 import { cn } from './lib/utils';
+import { readProjectPref, writeProjectPref } from './lib/project-pref';
 
 export function AppShell() {
   const { me, loading, needsSetup } = useAuth();
@@ -30,10 +31,31 @@ function Shell() {
   const ws = useWorkspace();
   const projectsQ = useProjects(ws.workspace?.slug);
   const loc = useLocation();
-  const currentProject = useMemo(() => {
+  const nav = useNavigate();
+  const projects = projectsQ.data ?? [];
+  const fromUrl = useMemo(() => {
     const m = /^\/projects\/([^/]+)/.exec(loc.pathname);
-    return m?.[1] && m[1] !== 'new' ? m[1] : projectsQ.data?.[0]?.slug;
-  }, [loc.pathname, projectsQ.data]);
+    return m?.[1] && m[1] !== 'new' ? m[1] : undefined;
+  }, [loc.pathname]);
+  // The URL wins, then the last project the user picked, then the first one on disk. Without the
+  // stored preference the sidebar always snapped back to whatever sorted first, which is what made
+  // the reference project look like a default that could not be changed.
+  const [preferred, setPreferred] = useState<string | null>(() => readProjectPref());
+  const currentProject =
+    fromUrl ??
+    (preferred && projects.some((p) => p.slug === preferred) ? preferred : projects[0]?.slug);
+
+  useEffect(() => {
+    if (currentProject) writeProjectPref(currentProject);
+  }, [currentProject]);
+
+  const goToProject = (slug: string) => {
+    setPreferred(slug);
+    // Keep the section the user is looking at when they switch project, so moving from one
+    // project's Runs to another's does not bounce back to Settings.
+    const section = fromUrl ? loc.pathname.replace(`/projects/${fromUrl}`, '') : '/edit';
+    nav(`/projects/${slug}${section || '/edit'}`);
+  };
 
   const item = (to: string, label: string, opts: { end?: boolean; hidden?: boolean } = {}) =>
     opts.hidden ? null : (
@@ -118,8 +140,25 @@ function Shell() {
           </div>
           {currentProject && (
             <div>
-              <div className="mb-1 flex items-center gap-1 px-2 text-[10px] uppercase tracking-wide muted">
-                Project <Badge>{currentProject}</Badge>
+              <div className="mb-1 px-2 text-[10px] uppercase tracking-wide muted">Project</div>
+              <div className="mb-1 px-2">
+                <Select
+                  value={currentProject}
+                  onChange={(e) => goToProject(e.target.value)}
+                  aria-label="Project"
+                  data-testid="project-switcher"
+                >
+                  {projects.map((p) => (
+                    <option key={p.slug} value={p.slug}>
+                      {p.name}
+                    </option>
+                  ))}
+                  {/* A project in the URL that is not in this workspace still has to render, or
+                      the select would silently show the wrong one. */}
+                  {!projects.some((p) => p.slug === currentProject) && (
+                    <option value={currentProject}>{currentProject}</option>
+                  )}
+                </Select>
               </div>
               <div className="space-y-0.5">
                 {item(`/projects/${currentProject}/edit`, 'Settings')}

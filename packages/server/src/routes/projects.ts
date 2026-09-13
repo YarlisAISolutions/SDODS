@@ -1,28 +1,35 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { FastifyInstance } from 'fastify';
+import type { Principal } from '../types.js';
 import multipart from '@fastify/multipart';
 import { parse as parseCsv } from 'csv-parse/sync';
 import { parse as parseYaml, stringify as toYaml } from 'yaml';
 import {
   audit,
+  deleteSchedule,
   getDatasetRows,
   getProjectBySlug,
   listDatasets,
   listIntegrations,
+  listSchedules,
   poolStatus,
+  setProjectArchived,
   upsertDataset,
   upsertIntegration,
+  upsertSchedule,
 } from '@sdods/db';
-import { PROJECT_FILE } from '@sdods/core/config';
+import { PROJECT_FILE, WORKSPACE_FILE } from '@sdods/core/config';
 import { ProjectConfigSchema } from '@sdods/contracts';
 import {
   CreateProjectBody,
   EnvBody,
   FeatureWriteBody,
+  ImportProjectBody,
   IntegrationsBody,
 } from '../schemas/index.js';
-import { badRequest, notFound, parse, unprocessable } from '../errors.js';
+import { badRequest, conflict, forbidden, notFound, parse, unprocessable } from '../errors.js';
 import { ProjectFs } from '../services/project-fs.js';
 import { runCliJson } from '../services/cli.js';
 import { StepCatalog } from '../services/step-catalog.js';
@@ -38,6 +45,35 @@ export async function projectRoutes(app: FastifyInstance) {
     return reg.entry(slug);
   };
   const fsOf = (slug: string) => new ProjectFs(entryOf(slug).root);
+
+  /**
+   * A workspace has to exist in *both* places to be usable. The DB check alone is not enough:
+   * `POST /api/workspaces` writes only the DB, while `ProjectRegistry.discover` throws
+   * CONFIG_INVALID when a project names a workspace that `sdods.workspace.yaml` does not declare.
+   * Assigning a project to a DB-only workspace therefore breaks the registry for *every* project
+   * on the next reload, not just this one.
+   */
+  const assertWorkspaceDeclared = (slug: string, fail = badRequest) => {
+    const declared = app.registry.workspaceFile.workspaces.map((w) => w.slug);
+    if (!declared.includes(slug))
+      throw fail(`Workspace "${slug}" is not declared in ${WORKSPACE_FILE}.`, { declared });
+  };
+
+  const assertCanWriteWorkspace = async (slug: string, principal: Principal) => {
+    assertWorkspaceDeclared(slug);
+    const ws = (await app.hierarchy.workspaces()).find((w) => w.slug === slug);
+    if (!ws) throw badRequest(`Unknown workspace ${slug}`);
+    const role = await app.workspaceRoleFor(principal, ws.id);
+    if (role !== 'admin' && role !== 'editor')
+      throw forbidden('Editor role in the target workspace required.');
+    return ws;
+  };
+
+  /** A slug that comes back after a delete must not stay flagged: `upsertProject` leaves it be. */
+  const unarchive = async (slug: string) => {
+    const row = await getProjectBySlug(app.adb.db, slug);
+    if (row?.archived) await setProjectArchived(app.adb.db, app.adb.driver, row.id, false);
+  };
 
   // ── projects (filtered by workspace access) ────────────────────────────
   app.get('/api/projects', { preHandler: [app.requireScope('projects:read')] }, async (req) => {
@@ -78,15 +114,10 @@ export async function projectRoutes(app: FastifyInstance) {
     { preHandler: [app.requireScope('projects:write')] },
     async (req, reply) => {
       const body = parse(CreateProjectBody, req.body);
-      if (body.workspace) {
-        const ws = (await app.hierarchy.workspaces()).find((w) => w.slug === body.workspace);
-        if (!ws) throw badRequest(`Unknown workspace ${body.workspace}`);
-        const role = await app.workspaceRoleFor(req.principal!, ws.id);
-        if (role !== 'admin' && role !== 'editor')
-          throw badRequest('Editor role in the target workspace required.');
-      }
+      if (body.workspace) await assertCanWriteWorkspace(body.workspace, req.principal!);
       const args = ['project', 'create', body.slug];
       if (body.name) args.push('--name', body.name);
+      if (body.description) args.push('--description', body.description);
       if (body.layers?.length) args.push('--layers', body.layers.join(','));
       if (body.browsers?.length) args.push('--browsers', body.browsers.join(','));
       if (body.uiUrl) args.push('--ui-url', body.uiUrl);
@@ -101,6 +132,7 @@ export async function projectRoutes(app: FastifyInstance) {
       }
       const registry = app.reloadRegistry();
       await app.hierarchy.sync(registry);
+      await unarchive(body.slug);
       await audit(app.adb.db, {
         actorUserId: req.principal!.userId,
         actorType: 'user',
@@ -145,12 +177,17 @@ export async function projectRoutes(app: FastifyInstance) {
         const parsed = ProjectConfigSchema.safeParse(parseYaml(body.yaml));
         if (!parsed.success) throw unprocessable('Invalid project yaml.', parsed.error.issues);
         if (parsed.data.slug !== slug) throw unprocessable('slug cannot change.');
+        if (parsed.data.workspace) assertWorkspaceDeclared(parsed.data.workspace, unprocessable);
         text = body.yaml;
       } else if (body?.config) {
         const parsed = ProjectConfigSchema.safeParse(body.config);
         if (!parsed.success) throw unprocessable('Invalid project config.', parsed.error.issues);
+        if (parsed.data.workspace) assertWorkspaceDeclared(parsed.data.workspace, unprocessable);
         text = toYaml(body.config, { lineWidth: 100 });
       } else throw badRequest('Provide yaml or config.');
+      // Checked before the write, not after: `reloadRegistry` throws CONFIG_INVALID for a project
+      // naming an undeclared workspace, and it throws for *every* project -- so saving one bad
+      // value here would empty the whole dashboard until someone fixed the yaml by hand.
       fs.write(PROJECT_FILE, text);
       const registry = app.reloadRegistry();
       await app.hierarchy.sync(registry);
@@ -163,6 +200,147 @@ export async function projectRoutes(app: FastifyInstance) {
         targetId: slug,
       });
       return { ok: true, config: registry.get(slug) };
+    },
+  );
+
+  app.delete(
+    '/api/projects/:slug',
+    // admin, not editor: this is the only project route that removes anything.
+    { preHandler: [app.requireScope('projects:write'), app.requireWorkspaceRole('admin')] },
+    async (req) => {
+      const { slug } = req.params as { slug: string };
+      const { confirm } = req.query as { confirm?: string };
+      const entry = entryOf(slug);
+      // Defence in depth behind the UI's type-the-slug dialog: a mistyped curl should not delete.
+      if (confirm !== slug)
+        throw badRequest(`Pass ?confirm=${slug} to delete this project.`, {
+          hint: 'The confirmation must equal the slug.',
+        });
+
+      const row = await getProjectBySlug(app.adb.db, slug);
+      // Tear the schedules down *before* the files. `Scheduler.syncFromRegistry` only ever upserts
+      // from the registry, and `reload()` arms every row `list()` returns without checking that
+      // the project still exists -- so schedules left behind would keep firing runs against a
+      // directory that is gone.
+      const schedules = row ? await listSchedules(app.adb.db, row.id) : [];
+      for (const s of schedules) await deleteSchedule(app.adb.db, s.id);
+      if (schedules.length) await app.scheduler.reload();
+
+      const res = await runCliJson<{ slug: string; from: string; to: string | null }>(app.config, [
+        'project',
+        'delete',
+        slug,
+        '--yes',
+      ]);
+      if (!res.ok) {
+        // Put the schedules back: nothing was removed, so leaving them deleted would silently
+        // stop a working project's cron.
+        for (const s of schedules) await upsertSchedule(app.adb.db, app.adb.driver, s);
+        if (schedules.length) await app.scheduler.reload();
+        throw badRequest(res.error?.message ?? 'project delete failed', res.error);
+      }
+
+      // Keep the row. Runs, results and insights reference project_id, and the whole point of
+      // trashing rather than purging is that the history survives.
+      if (row) await setProjectArchived(app.adb.db, app.adb.driver, row.id, true);
+      const registry = app.reloadRegistry();
+      await app.hierarchy.sync(registry);
+      await audit(app.adb.db, {
+        actorUserId: req.principal!.userId,
+        actorType: 'user',
+        action: 'project.delete',
+        targetType: 'project',
+        targetId: slug,
+      });
+      return {
+        ok: true,
+        slug,
+        from: entry.root,
+        trashedTo: res.data?.to ?? null,
+        schedulesRemoved: schedules.length,
+      };
+    },
+  );
+
+  /**
+   * Register a project that already exists: a directory on the server host, a git URL, or a
+   * multipart `.zip` upload. `dryRun` reports what would happen -- it is the same route rather
+   * than a GET because a GET that clones a repository is not a read, and could not carry a zip.
+   */
+  app.post(
+    '/api/projects/import',
+    { preHandler: [app.requireScope('projects:write')] },
+    async (req, reply) => {
+      const isMultipart = req.isMultipart();
+      let args: string[];
+      let dryRun = false;
+      let temp: string | null = null;
+
+      try {
+        if (isMultipart) {
+          const file = await req.file();
+          if (!file) throw badRequest('Upload the project archive as multipart field "file".');
+          if (!/\.zip$/i.test(file.filename))
+            throw badRequest('Only .zip archives can be uploaded.', {
+              filename: file.filename,
+            });
+          const fields = file.fields as Record<string, { value?: string } | undefined>;
+          const workspace = fields.workspace?.value;
+          // A zip is content the caller already has; editor in the target workspace is enough.
+          if (workspace) await assertCanWriteWorkspace(String(workspace), req.principal!);
+          temp = mkdtempSync(join(tmpdir(), 'sdods-upload-'));
+          const zip = join(temp, file.filename.replace(/[^\w.-]/g, '_'));
+          writeFileSync(zip, await file.toBuffer());
+          dryRun = fields.dryRun?.value === 'true';
+          args = ['project', 'import', zip];
+          if (fields.slug?.value) args.push('--slug', String(fields.slug.value));
+          if (workspace) args.push('--workspace', String(workspace));
+          if (fields.force?.value === 'true') args.push('--force');
+        } else {
+          const body = parse(ImportProjectBody, req.body);
+          // A path or git source is read with the *server's* credentials, so it is not something
+          // an editor should be able to aim anywhere on the host.
+          const principal = req.principal!;
+          if (principal.role !== 'admin')
+            throw forbidden(
+              `Importing from a ${body.kind} source requires an admin. Upload a .zip instead.`,
+            );
+          if (body.workspace) await assertCanWriteWorkspace(body.workspace, principal);
+          dryRun = body.dryRun === true;
+          args = ['project', 'import', body.source];
+          if (body.slug) args.push('--slug', body.slug);
+          if (body.workspace) args.push('--workspace', body.workspace);
+          if (body.force) args.push('--force');
+        }
+        if (dryRun) args.push('--dry-run');
+
+        const res = await runCliJson<{ slug: string; root: string; collides: boolean }>(
+          app.config,
+          args,
+        );
+        if (!res.ok) {
+          const message = res.error?.message ?? 'project import failed';
+          // A slug collision is the one failure a client can act on by renaming.
+          if (/already exists/i.test(message)) throw conflict(message);
+          throw badRequest(message, res.error);
+        }
+        if (dryRun) return res.data;
+
+        const registry = app.reloadRegistry();
+        await app.hierarchy.sync(registry);
+        if (res.data?.slug) await unarchive(res.data.slug);
+        await audit(app.adb.db, {
+          actorUserId: req.principal!.userId,
+          actorType: 'user',
+          action: 'project.import',
+          targetType: 'project',
+          targetId: res.data?.slug ?? 'unknown',
+        });
+        reply.code(201);
+        return res.data;
+      } finally {
+        if (temp) rmSync(temp, { recursive: true, force: true });
+      }
     },
   );
 

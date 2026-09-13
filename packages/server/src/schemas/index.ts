@@ -63,9 +63,17 @@ export const CreateWorkspaceBody = z.object({
   organization: z.string().optional(),
 });
 
-export const CreateProjectBody = z.object({
+/**
+ * Strict on purpose. This used to be a plain `z.object`, and because `parse()` strips unknown keys
+ * without complaining, the web form's `description`, `tags`, `routes`, `modules`, `processes`,
+ * `screenshots` and whole `envs` object were silently discarded on create -- and its
+ * `testIdAttribute` never matched this `testId`. A 400 naming the offending key is the only way
+ * that drift stays visible.
+ */
+export const CreateProjectBody = z.strictObject({
   slug: SlugSchema,
   name: z.string().optional(),
+  description: z.string().max(280).optional(),
   workspace: SlugSchema.optional(),
   layers: z.array(LayerSchema).optional(),
   browsers: z.array(BrowserSchema).optional(),
@@ -73,6 +81,20 @@ export const CreateProjectBody = z.object({
   apiUrl: z.string().url().optional(),
   env: z.string().default('local'),
   testId: z.string().optional(),
+});
+
+/** Import kinds. `zip` arrives as multipart instead of this body. */
+export const IMPORT_KINDS = ['path', 'git'] as const;
+
+export const ImportProjectBody = z.strictObject({
+  kind: z.enum(IMPORT_KINDS),
+  /** an absolute path on the server host, or a git URL */
+  source: z.string().min(1),
+  slug: SlugSchema.optional(),
+  workspace: SlugSchema.optional(),
+  force: z.boolean().optional(),
+  /** validate and report what would happen, without writing */
+  dryRun: z.boolean().optional(),
 });
 
 export const EnvBody = z.object({

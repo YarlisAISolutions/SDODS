@@ -2,13 +2,19 @@ import type { FastifyInstance } from 'fastify';
 import { migrationStatus } from '@sdods/db';
 import { VERSION } from '@sdods/core';
 import { SCOPES } from '@sdods/contracts';
+import { cliCapabilitiesNow } from '../services/cli.js';
 
 export async function miscRoutes(app: FastifyInstance) {
   app.get('/api/health', async () => {
     const status = await migrationStatus(app.adb).catch(() => null);
+    // The CLI is a separate package that a workspace installs and upgrades on its own schedule,
+    // so the dashboard has to know what the binary behind it can actually do. Read without
+    // awaiting: health is polled while the server boots, and probing costs two processes.
+    const cli = cliCapabilitiesNow(app.config);
     return {
       ok: true,
       version: VERSION,
+      cli,
       driver: app.adb.driver,
       migrations: status,
       runs: { active: app.runManager.list().filter((j) => j.status === 'running').length },
