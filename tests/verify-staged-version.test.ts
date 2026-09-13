@@ -11,7 +11,10 @@ function stage(versionJs: string, core: string, cli: string) {
   const dir = mkdtempSync(join(tmpdir(), 'sdods-stage-'));
   mkdirSync(join(dir, 'core', 'dist'), { recursive: true });
   mkdirSync(join(dir, 'cli'), { recursive: true });
-  writeFileSync(join(dir, 'core', 'package.json'), JSON.stringify({ type: 'module', version: core }));
+  writeFileSync(
+    join(dir, 'core', 'package.json'),
+    JSON.stringify({ type: 'module', version: core }),
+  );
   writeFileSync(join(dir, 'cli', 'package.json'), JSON.stringify({ version: cli }));
   writeFileSync(join(dir, 'core', 'dist', 'version.js'), versionJs);
   return dir;

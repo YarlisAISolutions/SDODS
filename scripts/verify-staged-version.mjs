@@ -17,8 +17,10 @@ const cli = manifest('cli').version;
 const { VERSION } = await import(pathToFileURL(join(stage, 'core', 'dist', 'version.js')).href);
 
 const problems = [];
-if (VERSION !== core) problems.push(`@sdods/core dist reports VERSION ${VERSION} but is staged as ${core}`);
-if (VERSION !== cli) problems.push(`@sdods/core VERSION ${VERSION} does not match @sdods/cli ${cli}`);
+if (VERSION !== core)
+  problems.push(`@sdods/core dist reports VERSION ${VERSION} but is staged as ${core}`);
+if (VERSION !== cli)
+  problems.push(`@sdods/core VERSION ${VERSION} does not match @sdods/cli ${cli}`);
 
 if (problems.length) {
   for (const p of problems) console.error(`  ! ${p}`);
