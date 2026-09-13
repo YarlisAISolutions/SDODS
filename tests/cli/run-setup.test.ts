@@ -80,8 +80,8 @@ beforeAll(() => {
 afterAll(() => rmSync(root, { recursive: true, force: true }));
 
 type Totals = { passed: number; failed: number; skipped: number; total: number };
-const run = async (gate: 'open' | 'closed') => {
-  const r = await cli({ GATE_STATE: gate }, '--json', 'run', '-p', 'gate', '--no-ingest');
+const run = async (gate: 'open' | 'closed', ...extra: string[]) => {
+  const r = await cli({ GATE_STATE: gate }, '--json', 'run', '-p', 'gate', '--no-ingest', ...extra);
   // The runner's own output (code frames included) precedes the JSON document on stdout.
   const body = r.stdout.slice(r.stdout.lastIndexOf('\n{\n') + 1);
   let totals: Totals | undefined;
@@ -109,5 +109,13 @@ describe('sdods run with setup: { tags } (Playwright project dependencies)', () 
     expect(r.stdout, explain(r)).toMatch(/1 did not run/);
     expect(r.stdout).toMatch(/\[gate--api--setup\].*gate probe/);
     expect(r.stdout).not.toMatch(/✓.*\[gate--api\].*real work/);
+  }, 180_000);
+
+  it('keeps the gate when --scenario narrows the run to other scenarios', async () => {
+    // Title and file filters apply to the targets named on the command line, not to their
+    // dependencies, so selecting one scenario cannot drop the setup tier.
+    const { r, totals } = await run('closed', '--scenario', 'real work');
+    expect(totals, explain(r)).toMatchObject({ passed: 0, failed: 1 });
+    expect(r.stdout, explain(r)).toMatch(/1 did not run/);
   }, 180_000);
 });

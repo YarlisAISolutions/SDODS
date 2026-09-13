@@ -8,7 +8,7 @@ import { assertNoSecretLiterals, collectVarRefs, interpolate } from '../src/conf
 import { combineTagExpr, normalizeTagExpr, parseTagValue } from '../src/config/tags.js';
 import { resolveConfig, serializeCliOverrides } from '../src/config/resolve.js';
 import { ProjectRegistry } from '../src/config/registry.js';
-import { buildRunnerConfig } from '../src/config/runner.js';
+import { buildRunnerConfig, setupTierOf } from '../src/config/runner.js';
 
 function scaffold(
   opts: { projectYaml?: string; envYaml?: string; dotenv?: Record<string, string> } = {},
@@ -409,6 +409,13 @@ describe('buildRunnerConfig evidence, parallelism and setup (#83)', () => {
     expect(Object.keys(quick).some((n) => n.endsWith('--setup'))).toBe(false);
     const gate = byName(build(yaml, { sel: { project: 'shop', process: 'gate' } }));
     expect(gate['shop--api']!.dependencies).toEqual(['shop--api--setup']);
+  });
+
+  it('normalises setup tags like --tags and lets a process turn the tier off', () => {
+    expect(setupTierOf({ setup: { tags: 'setup' } })).toEqual({ tags: '@setup' });
+    expect(setupTierOf({ setup: { tags: 'probe,auth' } })).toEqual({ tags: '@probe or @auth' });
+    expect(setupTierOf({ setup: { tags: '@setup' } }, { setup: false })).toBeUndefined();
+    expect(setupTierOf({}, { setup: { tags: '@gate' } })).toEqual({ tags: '@gate' });
   });
 
   it('names setup targets so reports still read their layer and browser', () => {

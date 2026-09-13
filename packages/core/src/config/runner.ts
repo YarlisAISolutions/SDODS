@@ -9,6 +9,7 @@ import {
   runFiles,
   type BrowserName,
   type Layer,
+  type ProcessConfig,
   type ProjectConfig,
   type SetupConfig,
 } from '@sdods/contracts';
@@ -430,8 +431,23 @@ function runSettings(
   const proc = processName
     ? registry.processesOf(slug).find((x) => x.name === processName)
     : undefined;
+  return {
+    fullyParallel: proc?.fullyParallel ?? project.fullyParallel,
+    setup: setupTierOf(project, proc),
+  };
+}
+
+/**
+ * The setup tier a run uses: the process's `setup` (`false` turns it off), else the project's.
+ * Tags are normalised like `--tags`, so `setup: { tags: setup }` means `@setup`.
+ */
+export function setupTierOf(
+  project: Pick<ProjectConfig, 'setup'>,
+  proc?: Pick<ProcessConfig, 'setup'>,
+): SetupConfig | undefined {
   const setup = proc?.setup === false ? undefined : (proc?.setup ?? project.setup);
-  return { fullyParallel: proc?.fullyParallel ?? project.fullyParallel, setup };
+  const tags = normalizeTagExpr(setup?.tags);
+  return tags ? { tags } : undefined;
 }
 
 function parseEnvOverrides() {

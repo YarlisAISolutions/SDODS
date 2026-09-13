@@ -24,6 +24,7 @@ import {
   normalizeTagExpr,
   parseTagExpr,
   serializeCliOverrides,
+  setupTierOf,
   type CliOverrides,
   type RunnerSelection,
 } from '@sdods/core';
@@ -178,7 +179,7 @@ export async function runCommand(flags: RunFlags, cmd: Command): Promise<number>
   // Fail on a malformed expression here, as a config error, rather than inside bddgen.
   if (tags) parseTagExpr(tags);
   // Same for the setup tier the runner config will generate (`setup.tags`, or the process's own).
-  const setup = proc?.setup === false ? undefined : (proc?.setup ?? projectCfg.setup);
+  const setup = setupTierOf(projectCfg, proc);
   if (setup) parseTagExpr(setup.tags);
   const layers = (flags.layer.length ? flags.layer : (proc?.layers ?? [])) as Layer[];
   const browsers = (
@@ -442,7 +443,11 @@ export async function runCommand(flags: RunFlags, cmd: Command): Promise<number>
 
   if (flags.list) {
     out(pc.bold('Run targets:'));
-    for (const p of runnerProjects) out(`  ${p.name}`);
+    for (const p of runnerProjects) {
+      // Playwright runs the setup companion as a dependency; list it so the targets match the tests.
+      if (setup && p.layer !== 'recorded') out(`  ${p.name}--setup`);
+      out(`  ${p.name}`);
+    }
     const listed = await execa('npx', args, {
       cwd: ctx.rootDir,
       env: childEnv,
