@@ -215,8 +215,9 @@ docker run --rm -v sdods-data:/data ghcr.io/siri1410/sdods-server users reset --
 </Tab>
 <Tab value="Desktop app">
 Quit the app, then delete **both** its data folder and the workspace state. The data folder holds
-the generated admin password, and the workspace holds the database it belongs to — removing only
-one of them leaves an app that cannot sign in.
+the generated admin password and the workspace holds the database it belongs to. Deleting only the
+data folder leaves an app that cannot sign in: it makes a new password the old database does not
+know.
 
 | OS      | App data folder                       | Workspace state              |
 | ------- | ------------------------------------- | ---------------------------- |
