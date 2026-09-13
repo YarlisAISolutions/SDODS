@@ -5,8 +5,10 @@
 // corrected in place. Imports the staged dist/ itself, so it checks what npm will receive.
 //
 //   node scripts/verify-staged-version.mjs <stage-dir>
+import console from 'node:console';
 import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
+import process from 'node:process';
 import { pathToFileURL } from 'node:url';
 
 const stage = resolve(process.argv[2] ?? '.publish-stage');
