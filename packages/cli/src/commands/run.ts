@@ -32,6 +32,7 @@ import { analyzeChangeImpact } from '@sdods/mcp';
 import { createContext } from '../context.js';
 import { browserStatuses } from './browsers.js';
 import { maybeNotify, notifyRun, type AutoNotifyOutcome } from '../notify.js';
+import { installedPlaywrightVersion, stepResultsWarning } from '../runner-compat.js';
 import { collect, json, out, parseIntFlag, table, warn } from '../ui.js';
 
 export interface RunFlags {
