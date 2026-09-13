@@ -7,6 +7,7 @@ import {
   ProjectConfigSchema,
   newRunId,
   type EnvConfig,
+  type EvidenceConfig,
   type ProjectConfig,
 } from '@sdods/contracts';
 import { SdodsConfigError } from '../errors.js';
@@ -61,6 +62,10 @@ export interface CliOverrides {
   shotPolicy?: string;
   shotsOnlyOnFailure?: boolean;
   heal?: boolean;
+  /** Playwright trace mode (`evidence.trace`), e.g. `on` to get a trace without a retry. */
+  trace?: EvidenceConfig['trace'];
+  /** Playwright video mode (`evidence.video`). */
+  video?: EvidenceConfig['video'];
 }
 
 export interface ResolvedConfig {
@@ -187,7 +192,7 @@ export function resolveConfig(opts: ResolveOptions): ResolvedConfig {
 
   // env-level overrides of project sections
   let projectMerged: ProjectConfig = project;
-  for (const section of ['screenshots', 'heal', 'timeouts', 'perf'] as const) {
+  for (const section of ['screenshots', 'heal', 'timeouts', 'perf', 'evidence'] as const) {
     const patch = (envYaml as Record<string, unknown>)[section];
     if (patch) {
       projectMerged = {
@@ -262,8 +267,18 @@ export function resolveConfig(opts: ResolveOptions): ResolvedConfig {
   rt.updateSnapshots = Boolean(rt.updateSnapshots);
 
   // final validation (env may have been overridden by process/cli)
-  const envFinal = EnvConfigSchema.parse(interpolated.env);
-  const projectFinal = ProjectConfigSchema.parse(interpolated.project);
+  let envFinal: EnvConfig;
+  let projectFinal: ProjectConfig;
+  try {
+    envFinal = EnvConfigSchema.parse(interpolated.env);
+    projectFinal = ProjectConfigSchema.parse(interpolated.project);
+  } catch (e) {
+    // ${VAR} values, SDODS_* variables and CLI flags land after the file validation
+    // (SDODS_TRACE=sometimes); name the path instead of throwing a raw ZodError.
+    if (e instanceof ZodError)
+      throw zodToConfigError(e, `${opts.projectRoot} after \${VAR}, SDODS_* and CLI overrides`);
+    throw e;
+  }
 
   return {
     project: { ...projectFinal, root: resolvePath(opts.projectRoot) },
@@ -313,6 +328,8 @@ function applyCli(
   set('project.screenshots.policy.default', cli.shotPolicy);
   set('project.screenshots.onlyOnFailure', cli.shotsOnlyOnFailure);
   set('project.heal.enabled', cli.heal);
+  set('project.evidence.trace', cli.trace);
+  set('project.evidence.video', cli.video);
 }
 
 /** Config paths that are booleans: `SDODS_X=1|true|yes|on` → true, `0|false|no|off` → false. */

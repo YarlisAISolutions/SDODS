@@ -8,6 +8,7 @@ description: Generate BDD specs and run them for a project.
 ```text
 sdods run [-p <slug>] [-e <env>] [-t <expr>] [-l <layer>]... [-b <browser>]... [-m <module>]... [--process <name>]
             [--project-matrix] [--device <name>] [--headed] [-w <n>] [--shard <i/n>] [--retries <n>]
+            [--trace <mode>] [--video <mode>]
             [--grep <pattern>] [--feature <path>] [--scenario <name>] [--run-id <id>] [--artifacts-dir <dir>]
             [--no-lint] [--ingest | --no-ingest] [--no-notify] [--allure] [--har-update | --har-replay] [--strict]
             [--update-snapshots] [--ui] [--debug] [--list] [--repeat-each <n>] [--fail-on-flaky]
@@ -29,6 +30,8 @@ sdods run [-p <slug>] [-e <env>] [-t <expr>] [-l <layer>]... [-b <browser>]... [
 | `-w, --workers <n>`        | parallel workers                                                                             |
 | `--shard <i/n>`            | shard, e.g. `1/3`                                                                            |
 | `--retries <n>`            | retries per test (default: `retries.ci` in CI, `retries.local` elsewhere)                    |
+| `--trace <mode>`           | Playwright trace mode, e.g. `on`, `retain-on-failure` (default: `evidence.trace`)            |
+| `--video <mode>`           | Playwright video mode (default: `evidence.video`)                                            |
 | `--grep <pattern>`         | filter tests by title (regular expression)                                                   |
 | `--feature <path>`         | only this feature file (relative to `features/`)                                             |
 | `--scenario <name>`        | only scenarios whose title contains this text                                                |
