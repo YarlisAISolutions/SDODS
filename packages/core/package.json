@@ -61,7 +61,7 @@
     "node": ">=22"
   },
   "peerDependencies": {
-    "@playwright/test": ">=1.58",
+    "@playwright/test": ">=1.63",
     "playwright-bdd": ">=9"
   },
   "dependencies": {
@@ -85,7 +85,7 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "4.10.2",
-    "@playwright/test": "^1.62.1",
+    "@playwright/test": "^1.63.0",
     "playwright-bdd": "^9.2.0"
   },
   "homepage": "https://sdods.com",
