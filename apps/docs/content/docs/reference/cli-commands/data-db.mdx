@@ -37,7 +37,7 @@ sdods db prune [--keep-runs <n>] [--keep-days <n>] [-p <slug>] [--dry-run]
 | `migrate` | apply pending migrations (creates the SQLite file on first use); `--to` targets one migration, `--down` rolls back one                                       |
 | `status`  | applied and pending migrations                                                                                                                               |
 | `sync`    | upsert organization, workspaces, projects, modules and processes from `sdods.workspace.yaml` and the project YAML files                                      |
-| `reset`   | drop every SDODS table (SQLite only)                                                                                                                         |
+| `reset`   | drop every SDODS table (SQLite only); see [Reinstall or reset](/docs/getting-started/web-ui#reinstall-or-reset)                                              |
 | `switch`  | migrate the target, copy every table, verify row counts and rewrite `DB_DRIVER` / `DATABASE_URL` / `SQLITE_PATH` in the env file (`--dry-run` only verifies) |
 | `export`  | one JSONL file per table                                                                                                                                     |
 | `import`  | load JSONL files with `ON CONFLICT DO NOTHING`                                                                                                               |

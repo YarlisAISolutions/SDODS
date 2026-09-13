@@ -137,6 +137,24 @@ export async function countUsers(db: Kysely<Database>): Promise<number> {
   return Number(r?.n ?? 0);
 }
 
+/**
+ * Remove every user and what hangs off them (sessions, API tokens, memberships), leaving
+ * organizations, workspaces, runs and schedules in place. Deleted explicitly rather than
+ * trusting ON DELETE CASCADE, which sqlite only honours with foreign_keys on.
+ * Returns how many users were removed.
+ */
+export async function deleteAllUsers(db: Kysely<Database>): Promise<number> {
+  const removed = await countUsers(db);
+  await db.transaction().execute(async (trx) => {
+    await trx.deleteFrom('sessions').execute();
+    await trx.deleteFrom('api_tokens').execute();
+    await trx.deleteFrom('org_members').execute();
+    await trx.deleteFrom('workspace_members').execute();
+    await trx.deleteFrom('users').execute();
+  });
+  return removed;
+}
+
 function mapUser(row: any) {
   return {
     id: row.id as string,
@@ -206,6 +224,11 @@ export async function touchSession(db: Kysely<Database>, token: string, ttlMs: n
 
 export async function deleteSession(db: Kysely<Database>, token: string) {
   await db.deleteFrom('sessions').where('id', '=', hashToken(token)).execute();
+}
+
+/** Sign a user out everywhere, e.g. after their password changes. */
+export async function deleteSessionsForUser(db: Kysely<Database>, userId: string) {
+  await db.deleteFrom('sessions').where('user_id', '=', userId).execute();
 }
 
 export async function purgeExpiredSessions(db: Kysely<Database>) {
