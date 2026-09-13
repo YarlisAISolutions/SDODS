@@ -1,6 +1,7 @@
 import { mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Browser, BrowserContext, Page } from '@playwright/test';
+import { clientCredentialsToken } from '../api/client.js';
 import type { ResolvedConfig } from '../config/resolve.js';
 import { SdodsError } from '../errors.js';
 
@@ -94,25 +95,11 @@ export function defineAuth(def: AuthDefinition): AuthStrategy {
       return {
         strategy: 'oauth-client-credentials',
         login: async () => undefined,
+        // One implementation (and one cache) shared with ApiClient's `env.api.auth`.
         token: async ({ config }) => {
           const auth = config.env.api.auth;
           if (auth.type !== 'oauth-client-credentials') return undefined;
-          const body = new URLSearchParams({
-            grant_type: 'client_credentials',
-            client_id: auth.clientId,
-            client_secret: auth.clientSecret,
-          });
-          if (auth.scope) body.set('scope', auth.scope);
-          if (auth.audience) body.set('audience', auth.audience);
-          const res = await fetch(auth.tokenUrl, {
-            method: 'POST',
-            headers: { 'content-type': 'application/x-www-form-urlencoded' },
-            body,
-          });
-          if (!res.ok)
-            throw new Error(`OAuth token request failed: ${res.status} ${res.statusText}`);
-          const json = (await res.json()) as { access_token?: string };
-          return json.access_token;
+          return clientCredentialsToken(auth);
         },
       };
     case 'sso':

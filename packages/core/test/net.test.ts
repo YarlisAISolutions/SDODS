@@ -287,7 +287,9 @@ describe('raw requests', () => {
       '{"tenant":"{{tenant}}"}',
     );
     expect(request.calls[0].url).toBe('http://api.test/v1/w/abc/run');
-    expect(request.calls[0].opts.data).toBe('{"tenant":"acme"}');
+    // Sent as bytes, so Playwright cannot JSON-encode a body that does not parse.
+    expect(Buffer.isBuffer(request.calls[0].opts.data)).toBe(true);
+    expect(String(request.calls[0].opts.data)).toBe('{"tenant":"acme"}');
 
     await step('I send a {method} request to {string} without following redirects with form:')(
       { request, apiContext, env, config },
@@ -839,7 +841,7 @@ describe('event stream steps', () => {
     );
     expect(request.calls[0].url).toBe('http://api.test/v1/chat/c1');
     expect(request.calls[0].opts.headers.accept).toBe('text/event-stream');
-    expect(request.calls[0].opts.data).toBe('{"q":"c1"}');
+    expect(String(request.calls[0].opts.data)).toBe('{"q":"c1"}');
   });
 
   it('asserts content type, first and last event in both directions', async () => {

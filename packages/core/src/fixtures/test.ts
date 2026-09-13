@@ -5,7 +5,7 @@ import { ProjectRegistry } from '../config/registry.js';
 import type { HarMode } from '../config/resolve.js';
 import { parseTagValue, scenarioSkipReason } from '../config/tags.js';
 import { noopAuth } from '../auth/index.js';
-import { ApiClient } from '../api/client.js';
+import { ApiClient, isolatedRequestFactory } from '../api/client.js';
 import { CompositeDataProvider } from '../data/provider.js';
 import { FileUserPool } from '../data/user-pool.js';
 import { apiHarForScenario } from '../har/hooks.js';
@@ -179,14 +179,20 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
     await use(new ApiContext());
   },
 
+  // `request` is Playwright's shared APIRequestContext. It is seeded from the test's context
+  // options, so on @ui/@hybrid it carries the leased role's storageState cookies (plus any cookie
+  // a response sets); on @api storageState is undefined and it starts empty. The isolated context
+  // behind `I use an isolated API client` is only created when a scenario asks for it.
   api: async (
-    { request, config, apiContext, scenario, harMode, $bddContext, $tags },
+    { request, playwright, config, apiContext, scenario, harMode, $bddContext, $tags },
     use,
     testInfo,
   ) => {
+    const isolated = isolatedRequestFactory(playwright.request);
     await use(
       new ApiClient({
         request,
+        isolatedRequest: isolated.get,
         config,
         ctx: apiContext,
         testInfo,
@@ -195,6 +201,7 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
         har: apiHarForScenario({ $tags, config, harMode }),
       }),
     );
+    await isolated.dispose();
   },
 
   data: async ({ config, scenario, apiContext }, use, testInfo) => {

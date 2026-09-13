@@ -180,6 +180,10 @@ export interface ApiSnapshot {
     headers: Record<string, string>;
     body?: unknown;
     query?: Record<string, string>;
+    /** Credential class the request carried (`none`, `bearer`, `basic`, `header:<name>`), never its value. */
+    auth?: string;
+    /** Sent through an isolated request context with no cookie jar. */
+    isolated?: boolean;
   };
   response: {
     status: number;
