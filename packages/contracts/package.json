@@ -1,6 +1,6 @@
 {
   "name": "@sdods/contracts",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "description": "Shared schemas, identifiers and DTO types for SDODS.",
   "license": "Apache-2.0",
   "type": "module",

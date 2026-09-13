@@ -1,5 +1,12 @@
 # @sdods/mcp
 
+## 0.5.2
+
+### Patch Changes
+
+- Updated dependencies [45a38a8]
+  - @sdods/contracts@0.5.2
+
 ## 0.5.1
 
 ### Patch Changes
