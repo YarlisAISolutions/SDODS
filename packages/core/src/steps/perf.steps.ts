@@ -8,7 +8,7 @@ import type { EnvConfig, PerformanceMetrics } from '@sdods/contracts';
 import type { ApiClient, HttpMethod } from '../api/client.js';
 import type { ApiContext } from '../fixtures/api-context.js';
 import type { ScenarioMeta } from '../fixtures/scenario.js';
-import { render, renderJson } from '../api/template.js';
+import { renderJson, renderStrict } from '../api/template.js';
 import { SdodsError } from '../errors.js';
 
 /**
@@ -469,7 +469,7 @@ export const assertVitalWithinBudget = async (
   metricName: string,
 ) => {
   const recording = lastRecording(scenario);
-  const metric = requireVitalKey(render(metricName, apiContext.vars.toObject(), env.vars));
+  const metric = requireVitalKey(renderStrict(metricName, apiContext.vars.toObject(), env.vars));
   const budget = requireBudget(config, metric);
   const value = measured(recording, metric);
   expect(
@@ -491,7 +491,7 @@ export const assertVitalUnderThreshold = async (
   maxMs: number,
 ) => {
   const recording = lastRecording(scenario);
-  const metric = requireVitalKey(render(metricName, apiContext.vars.toObject(), env.vars));
+  const metric = requireVitalKey(renderStrict(metricName, apiContext.vars.toObject(), env.vars));
   const value = measured(recording, metric);
   expect(
     value,
@@ -515,7 +515,7 @@ export const assertVitalNoWorseThanPrevious = async (
   metricName: string,
   toleranceMs: number,
 ) => {
-  const metric = requireVitalKey(render(metricName, apiContext.vars.toObject(), env.vars));
+  const metric = requireVitalKey(renderStrict(metricName, apiContext.vars.toObject(), env.vars));
   const recordings = perfStore(scenario).recordings;
   if (recordings.length < 2) {
     throw new SdodsError(
@@ -551,7 +551,7 @@ export const assertBudgetsConfigured = async (
   { config, apiContext, env }: AssertFixtures,
   names: string,
 ) => {
-  const wanted = render(names, apiContext.vars.toObject(), env.vars)
+  const wanted = renderStrict(names, apiContext.vars.toObject(), env.vars)
     .split(/[,\s]+/)
     .filter(Boolean);
   if (wanted.length === 0) {
@@ -602,7 +602,7 @@ async function collectSamples(
     });
   }
   const scopes = [fx.apiContext.vars.toObject(), fx.env.vars];
-  const path = render(pathTemplate, ...scopes);
+  const path = renderStrict(pathTemplate, ...scopes);
   const body = bodyTemplate === undefined ? undefined : renderJson(bodyTemplate, ...scopes);
 
   const samples: LatencySample[] = [];

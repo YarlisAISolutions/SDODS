@@ -7,7 +7,7 @@ import type { ResolvedConfig } from '../config/resolve.js';
 import type { ApiContext } from '../fixtures/api-context.js';
 import type { HttpMethod } from '../api/client.js';
 import { coerce, getPath } from '../api/json-path.js';
-import { render } from '../api/template.js';
+import { render, renderStrict } from '../api/template.js';
 import type { AriaRole } from '../heal/types.js';
 import { SdodsError } from '../errors.js';
 
@@ -31,10 +31,10 @@ import { SdodsError } from '../errors.js';
  *     was NOT called — the assertion behind "the client does not poll", "no third party was
  *     contacted" and "client-side validation refused before sending".
  *
- * Vacuity is the standing hazard in all four. Every negative assertion here refuses an argument
- * that still contains an unrendered `{{var}}`, because `render()` leaves a miss as the literal
- * `{{name}}`, and a URL glob carrying an unresolved id then matches nothing at all —
- * "no requests were made" would then pass green for ever.
+ * Vacuity is the standing hazard in all four. Every argument goes through `renderStrict()`, which
+ * refuses a `{{var}}` with no value instead of leaving it as the literal `{{name}}`: a URL glob
+ * carrying an unresolved id matches nothing at all, and "no requests were made" would then pass
+ * green for ever. Request bodies are the exception: they are free text and may carry `{{…}}`.
  */
 
 /* ── shared ───────────────────────────────────────────────────────────── */
@@ -46,18 +46,14 @@ const scopesOf = (apiContext: ApiContext, env: EnvConfig): Scopes => [
   env.vars,
 ];
 
-/**
- * Render, then refuse a surviving `{{var}}`. Used for every argument whose non-resolution would
- * produce a PASS rather than a failure: negative assertions, URL globs and request paths.
- */
-function renderStrict(value: string, what: string, ...scopes: Scopes): string {
-  const out = render(value, ...scopes);
-  if (out.includes('{{')) {
-    throw new SdodsError('CONFIG_UNRESOLVED_VAR', `${what} did not resolve: "${out}".`, {
-      hint: 'No scenario variable or env var of that name exists yet. Save it first (for example with "I save the response JSON path ... as ..."), or fix the spelling — an unresolved placeholder here would make the assertion pass without testing anything.',
-    });
+/** `renderStrict`, with the message naming which argument held the unresolved variable. */
+function renderArg(value: string, what: string, ...scopes: Scopes): string {
+  try {
+    return renderStrict(value, ...scopes);
+  } catch (e) {
+    if (e instanceof SdodsError) e.message = `${what}: ${e.message}`;
+    throw e;
   }
-  return out;
 }
 
 /** Comma-separated Gherkin list → trimmed, rendered, non-empty items. */
@@ -66,7 +62,7 @@ function renderList(raw: string, what: string, ...scopes: Scopes): string[] {
     .split(',')
     .map((s) => s.trim())
     .filter(Boolean)
-    .map((s) => renderStrict(s, what, ...scopes));
+    .map((s) => renderArg(s, what, ...scopes));
   if (items.length === 0)
     throw new SdodsError('RUN_FAILED', `${what} is empty.`, {
       hint: 'List at least one comma-separated value; an empty list would make this assertion pass over nothing.',
@@ -270,7 +266,7 @@ When(
     await sendRaw(
       { request, apiContext, env, config, testInfo: $testInfo },
       method,
-      renderStrict(path, 'the request path', ...scopesOf(apiContext, env)),
+      renderArg(path, 'the request path', ...scopesOf(apiContext, env)),
     );
   },
 );
@@ -289,7 +285,7 @@ When(
     await sendRaw(
       { request, apiContext, env, config, testInfo: $testInfo },
       method,
-      renderStrict(path, 'the request path', ...scopes),
+      renderArg(path, 'the request path', ...scopes),
       { body: render(body, ...scopes) },
     );
   },
@@ -308,11 +304,11 @@ When(
     const scopes = scopesOf(apiContext, env);
     const form: Record<string, string> = {};
     for (const row of table.raw())
-      form[String(row[0] ?? '')] = render(String(row[1] ?? ''), ...scopes);
+      form[String(row[0] ?? '')] = renderStrict(String(row[1] ?? ''), ...scopes);
     await sendRaw(
       { request, apiContext, env, config, testInfo: $testInfo },
       method,
-      renderStrict(path, 'the request path', ...scopes),
+      renderArg(path, 'the request path', ...scopes),
       { form },
     );
   },
@@ -345,7 +341,7 @@ Then(
     // `contains` check would pass on a truncated one that silently drops where the user came from.
     const snap = rawOf(apiContext);
     expect(snap.headers.location ?? '(no Location header)', `Location of ${snap.url}`).toBe(
-      render(expected, ...scopesOf(apiContext, env)),
+      renderStrict(expected, ...scopesOf(apiContext, env)),
     );
   },
 );
@@ -355,7 +351,7 @@ Then(
   async ({ apiContext, env }, expected: string) => {
     const snap = rawOf(apiContext);
     expect(snap.headers.location ?? '(no Location header)', `Location of ${snap.url}`).toContain(
-      render(expected, ...scopesOf(apiContext, env)),
+      renderStrict(expected, ...scopesOf(apiContext, env)),
     );
   },
 );
@@ -364,12 +360,12 @@ Then(
   'the raw response header {string} should contain {string}',
   async ({ apiContext, env }, name: string, value: string) => {
     const scopes = scopesOf(apiContext, env);
-    const wanted = render(name, ...scopes);
+    const wanted = renderStrict(name, ...scopes);
     const snap = rawOf(apiContext);
     expect(
       snap.headers[wanted.toLowerCase()] ?? `(no ${wanted} header)`,
       `${wanted} of ${snap.url}`,
-    ).toContain(render(value, ...scopes));
+    ).toContain(renderStrict(value, ...scopes));
   },
 );
 
@@ -378,7 +374,7 @@ Then(
   async ({ apiContext, env }, name: string) => {
     // The deny direction, and NOT the same as "does not contain": an `Allow` header present but
     // empty, or a `Set-Cookie` present but rejected, are both absences a contains-check would miss.
-    const wanted = renderStrict(name, 'the header name', ...scopesOf(apiContext, env));
+    const wanted = renderArg(name, 'the header name', ...scopesOf(apiContext, env));
     const snap = rawOf(apiContext);
     expect(
       snap.headers[wanted.toLowerCase()],
@@ -388,7 +384,7 @@ Then(
 );
 
 Then('the raw response body should contain {string}', async ({ apiContext, env }, text: string) => {
-  expect(rawOf(apiContext).body).toContain(render(text, ...scopesOf(apiContext, env)));
+  expect(rawOf(apiContext).body).toContain(renderStrict(text, ...scopesOf(apiContext, env)));
 });
 
 Then(
@@ -396,7 +392,7 @@ Then(
   async ({ apiContext, env }, name: string) => {
     // PROVES the credential was actually issued. Unreachable through the built-in header step,
     // which sees `set-cookie: ***` because the ApiSnapshot redacts it.
-    const wanted = renderStrict(name, 'the cookie name', ...scopesOf(apiContext, env));
+    const wanted = renderArg(name, 'the cookie name', ...scopesOf(apiContext, env));
     const snap = rawOf(apiContext);
     expect(
       snap.setCookies.some((c) => c.startsWith(`${wanted}=`)),
@@ -410,7 +406,7 @@ Then(
   async ({ apiContext, env }, name: string) => {
     // PROVES a refusal left no credential behind. A `Max-Age=0` line is a deletion, not a grant,
     // so it must not count as one — otherwise a correct sign-out would read as a session leak.
-    const wanted = renderStrict(name, 'the cookie name', ...scopesOf(apiContext, env));
+    const wanted = renderArg(name, 'the cookie name', ...scopesOf(apiContext, env));
     const snap = rawOf(apiContext);
     expect(
       snap.setCookies.filter((c) => c.startsWith(`${wanted}=`) && !isCleared(c)),
@@ -425,8 +421,8 @@ Then(
     // HttpOnly / Secure / SameSite=Lax / Path=/ — the session contract every downstream gate
     // reads. Matched case-insensitively because servers disagree on the casing of attributes.
     const scopes = scopesOf(apiContext, env);
-    const wanted = renderStrict(name, 'the cookie name', ...scopes);
-    const attr = render(attribute, ...scopes);
+    const wanted = renderArg(name, 'the cookie name', ...scopes);
+    const attr = renderStrict(attribute, ...scopes);
     const cookie = rawOf(apiContext).setCookies.find((c) => c.startsWith(`${wanted}=`));
     expect(cookie, `Set-Cookie for "${wanted}"`).toBeTruthy();
     expect(String(cookie).toLowerCase(), `attributes of the "${wanted}" cookie`).toContain(
@@ -440,7 +436,7 @@ Then(
   async ({ apiContext, env }, name: string) => {
     // PROVES sign-out server-side: a deletion is a Set-Cookie with an immediate expiry, which is
     // what "the browser no longer holds the credential" actually means over the wire.
-    const wanted = renderStrict(name, 'the cookie name', ...scopesOf(apiContext, env));
+    const wanted = renderArg(name, 'the cookie name', ...scopesOf(apiContext, env));
     const cookie = rawOf(apiContext).setCookies.find((c) => c.startsWith(`${wanted}=`));
     expect(cookie, `Set-Cookie clearing "${wanted}"`).toBeTruthy();
     expect(isCleared(String(cookie)), `expiry of the "${wanted}" cookie`).toBe(true);
@@ -527,7 +523,7 @@ When(
   async ({ page, heal, config, apiContext, env }, name: string, role: string) => {
     // PROVES an export produced a file at all. Without this the whole export feature can only be
     // asserted as "the click did not throw", which is true of a button wired to nothing.
-    const n = render(name, ...scopesOf(apiContext, env));
+    const n = renderStrict(name, ...scopesOf(apiContext, env));
     const loc = await heal.resolve(
       page.getByRole(role as AriaRole, { name: n }),
       { role: role as AriaRole, name: n, text: n, description: `${role} "${n}"` },
@@ -539,10 +535,11 @@ When(
 
 When(
   'I click the element with test id {string} and capture the download',
-  async ({ page, heal, config }, id: string) => {
+  async ({ page, heal, config, apiContext, env }, id: string) => {
+    const testId = renderStrict(id, ...scopesOf(apiContext, env));
     const loc = await heal.resolve(
-      page.getByTestId(id),
-      { testId: id, description: `test id "${id}"` },
+      page.getByTestId(testId),
+      { testId, description: `test id "${testId}"` },
       'click',
     );
     await captureDownload(page, config.project.timeouts.navigation, () => loc.click());
@@ -554,7 +551,7 @@ Then(
   async ({ page, apiContext, env }, suffix: string) => {
     // `endsWith`, not `contains`: a ".json" that appears mid-name (report.json.txt) is the exact
     // mis-typed export this assertion exists to catch.
-    const wanted = render(suffix, ...scopesOf(apiContext, env));
+    const wanted = renderStrict(suffix, ...scopesOf(apiContext, env));
     const actual = downloadOf(page).suggestedFilename();
     expect(
       actual.endsWith(wanted),
@@ -567,7 +564,7 @@ Then(
   'the downloaded file name should contain {string}',
   async ({ page, apiContext, env }, part: string) => {
     expect(downloadOf(page).suggestedFilename(), 'download filename').toContain(
-      render(part, ...scopesOf(apiContext, env)),
+      renderStrict(part, ...scopesOf(apiContext, env)),
     );
   },
 );
@@ -579,7 +576,7 @@ Then(
     // reordered or renamed column silently breaks every consumer of the file.
     const text = await downloadedText(page);
     expect(text.split(/\r?\n/)[0] ?? '', 'first line of the downloaded file').toBe(
-      render(expected, ...scopesOf(apiContext, env)),
+      renderStrict(expected, ...scopesOf(apiContext, env)),
     );
   },
 );
@@ -588,7 +585,7 @@ Then(
   'the downloaded text should contain {string}',
   async ({ page, apiContext, env }, text: string) => {
     expect(await downloadedText(page), 'downloaded file').toContain(
-      render(text, ...scopesOf(apiContext, env)),
+      renderStrict(text, ...scopesOf(apiContext, env)),
     );
   },
 );
@@ -633,7 +630,7 @@ Then(
     // export but never read what it exported proves only that a click did not throw.
     const actual = getPath(await downloadedJson(page), path);
     expect(actual, `downloaded JSON path ${path}`).toEqual(
-      coerce(render(expected, ...scopesOf(apiContext, env))),
+      coerce(renderStrict(expected, ...scopesOf(apiContext, env))),
     );
   },
 );
@@ -792,7 +789,7 @@ When(
     await readStream(
       { request, apiContext, env, config, testInfo: $testInfo },
       method,
-      renderStrict(path, 'the request path', ...scopesOf(apiContext, env)),
+      renderArg(path, 'the request path', ...scopesOf(apiContext, env)),
     );
   },
 );
@@ -809,7 +806,7 @@ When(
     await readStream(
       { request, apiContext, env, config, testInfo: $testInfo },
       method,
-      renderStrict(path, 'the request path', ...scopes),
+      renderArg(path, 'the request path', ...scopes),
       render(body, ...scopes),
     );
   },
@@ -829,7 +826,7 @@ Then(
     // JSON response still returns 200, and every event assertion below would then fail
     // confusingly.
     expect(streamOf(apiContext).contentType, 'stream content type').toContain(
-      render(expected, ...scopesOf(apiContext, env)),
+      renderStrict(expected, ...scopesOf(apiContext, env)),
     );
   },
 );
@@ -851,7 +848,7 @@ Then(
     const { events } = streamOf(apiContext);
     expect(events.length, 'the stream carried no events at all').toBeGreaterThan(0);
     expect(events[0]?.type, 'first stream event type').toBe(
-      render(expected, ...scopesOf(apiContext, env)),
+      renderStrict(expected, ...scopesOf(apiContext, env)),
     );
   },
 );
@@ -866,7 +863,7 @@ Then(
     expect(
       events[events.length - 1]?.type,
       'last stream event type — a 200 that never reaches this is a stream that died mid-flight',
-    ).toBe(render(expected, ...scopesOf(apiContext, env)));
+    ).toBe(renderStrict(expected, ...scopesOf(apiContext, env)));
   },
 );
 
@@ -919,7 +916,7 @@ export function globToRegExp(glob: string): RegExp {
  * whole section exists to prevent.
  */
 function urlGlob(raw: string, scopes: Scopes): RegExp {
-  const pattern = renderStrict(raw, 'the URL pattern', ...scopes);
+  const pattern = renderArg(raw, 'the URL pattern', ...scopes);
   if (!/[*?]/.test(pattern) && !/^(https?:\/\/|\/)/.test(pattern))
     throw new SdodsError('RUN_FAILED', `"${pattern}" cannot match a request URL.`, {
       hint: 'These steps use Playwright route globs, matched against the whole URL. Write "**analytics**" for a fragment, "**/api/users" for a path, or a full URL.',
@@ -961,11 +958,11 @@ When('I start counting requests to {string}', async ({ page, apiContext, env }, 
   // Start it before navigating if the initial page load's requests are part of the count.
   urlGlob(glob, scopesOf(apiContext, env));
   const log = ensureLog(page);
-  log.counters.set(render(glob, ...scopesOf(apiContext, env)), log.entries.length);
+  log.counters.set(renderStrict(glob, ...scopesOf(apiContext, env)), log.entries.length);
 });
 
 function counted(page: Page, glob: string, scopes: Scopes, why: string): number {
-  const rendered = renderStrict(glob, 'the URL pattern', ...scopes);
+  const rendered = renderArg(glob, 'the URL pattern', ...scopes);
   const log = logOf(page, why);
   const from = log.counters.get(rendered);
   if (from === undefined)
@@ -1058,7 +1055,7 @@ Then('the response should have no {string} header', async ({ apiContext, env }, 
   // Absence, which is NOT "does not contain": a header present with an empty or unexpected value
   // satisfies a contains-check written as a negative, and this is the assertion behind
   // "no cache header was set" and "the debug header never reaches production".
-  const wanted = renderStrict(name, 'the header name', ...scopesOf(apiContext, env));
+  const wanted = renderArg(name, 'the header name', ...scopesOf(apiContext, env));
   expect(
     apiContext.last().response.headers[wanted.toLowerCase()],
     `unexpected ${wanted} header`,
@@ -1070,7 +1067,7 @@ Then(
   async ({ apiContext, env }, path: string) => {
     // PROVES a field was withheld — the password hash, the internal id, the other tenant's row.
     // Strict rendering matters most here: an unresolved path would be absent by construction.
-    const wanted = renderStrict(path, 'the JSON path', ...scopesOf(apiContext, env));
+    const wanted = renderArg(path, 'the JSON path', ...scopesOf(apiContext, env));
     expect(getPath(apiContext.last().response.body, wanted), `JSON path ${wanted}`).toBeUndefined();
   },
 );
