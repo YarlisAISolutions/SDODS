@@ -23,6 +23,7 @@ import {
   moduleDir,
   normalizeTagExpr,
   parseTagExpr,
+  redactRunTraces,
   serializeCliOverrides,
   setupTierOf,
   type CliOverrides,
@@ -495,6 +496,21 @@ export async function runCommand(flags: RunFlags, cmd: Command): Promise<number>
   manifest.finishedAt = new Date().toISOString();
   manifest.exitCode = exitCode;
   writeManifest();
+
+  // Traces carry the session of the account that ran each test (cookies, Authorization headers,
+  // localStorage/IndexedDB tokens). Redact every copy before anything reads the run directory:
+  // ingest, integrations, and the CI step that uploads it as an artifact (#101).
+  if (cfg.project.evidence.redactTraces !== false) {
+    const redaction = redactRunTraces(runDir);
+    if (redaction.files.length)
+      out(
+        pc.dim(
+          `traces: redacted ${redaction.values} credential value(s) in ${redaction.files.length} file(s)`,
+        ),
+      );
+    for (const e of redaction.errors)
+      warn(`trace redaction failed for ${relative(ctx.rootDir, e.file)}: ${e.error}`);
+  }
 
   const summary = readSummary(runDir, runId, exitCode, Date.now() - started);
   if (summary) writeFileSync(join(runDir, runFiles.summary), JSON.stringify(summary, null, 2));

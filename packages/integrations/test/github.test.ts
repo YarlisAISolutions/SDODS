@@ -1,3 +1,5 @@
+import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { http, HttpResponse } from 'msw';
 import { setupServer } from 'msw/node';
@@ -181,6 +183,13 @@ async function provider(overrides: Record<string, unknown> = {}) {
   });
   await p.init(cfg, { token: 'ghp_test' });
   return p;
+}
+
+/** A trace may be named by its local path, never linked or uploaded anywhere a reader can fetch it. */
+function expectNoRemoteTrace(body: string) {
+  expect(body).not.toMatch(/https?:\/\/\S*trace[^\s)]*\.zip/);
+  expect(body).not.toMatch(/\]\([^)]*trace[^)]*\)/);
+  expect(body).not.toMatch(/show-trace\s+['"]?https?:/);
 }
 
 const ciEnv = {
@@ -403,7 +412,7 @@ describe('GitHubProvider', () => {
     expect(again.actions[0]).toMatchObject({ kind: 'skipped' });
   });
 
-  it('links video.webm and trace.zip with the show-trace command', async () => {
+  it('links video.webm but only names trace.zip locally, with a credentials warning', async () => {
     const p = await provider();
     const artifactsDir = join(process.cwd(), '.sdods', 'runs', 'run-1');
     const ctx = createIntegrationContext({
@@ -428,15 +437,15 @@ describe('GitHubProvider', () => {
     expect(body).toContain(
       '- Video: https://sdods.test/api/runs/run-1/files/runner-output/login-chromium/video.webm',
     );
-    expect(body).toContain(
-      '- Trace: https://sdods.test/api/runs/run-1/files/runner-output/login-chromium/trace.zip',
-    );
+    expect(body).toContain('`.sdods/runs/run-1/runner-output/login-chromium/trace.zip`');
+    expect(body).toContain('contains credentials');
     expect(body).toContain(
       'npx playwright show-trace .sdods/runs/run-1/runner-output/login-chromium/trace.zip',
     );
+    expectNoRemoteTrace(body);
   });
 
-  it('points at the CI run artifacts when no server URL is configured', async () => {
+  it('names the trace inside the CI run artifacts without linking it', async () => {
     const p = await provider();
     const ctx = createIntegrationContext({ store: createMemoryStore(), env: ciEnv as any });
     await p.onRunFinished(
@@ -444,12 +453,66 @@ describe('GitHubProvider', () => {
       { ...ctx, ci: { ...ctx.ci, isPullRequest: false, sha: undefined } },
     );
     const body: string = calls.find((c) => c.path === 'issues')!.body.body;
-    expect(body).toContain(
-      '- Trace: `run-1/runner-output/login-chromium/trace.zip` in the [CI run artifacts](https://github.test/acme/shop/actions/runs/555#artifacts)',
-    );
+    expect(body).toContain('`run-1/runner-output/login-chromium/trace.zip`');
+    expect(body).toContain('contains credentials');
     expect(body).toContain(
       'npx playwright show-trace run-1/runner-output/login-chromium/trace.zip',
     );
     expect(body).not.toContain('- Video:');
+    expectNoRemoteTrace(body);
+  });
+
+  it('never uploads trace.zip to a release, even with uploadToRelease set', async () => {
+    const uploads: string[] = [];
+    const record = ({ request }: { request: Request }) => {
+      const name = new URL(request.url).searchParams.get('name') ?? '';
+      uploads.push(name);
+      return HttpResponse.json(
+        {
+          browser_download_url: `https://github.test/acme/shop/releases/download/evidence/${name}`,
+        },
+        { status: 201 },
+      );
+    };
+    server.use(
+      http.get(`${API}/repos/acme/shop/releases/tags/evidence`, () => HttpResponse.json({ id: 5 })),
+      http.post(`${API}/repos/acme/shop/releases/5/assets`, record),
+      http.post('https://uploads.github.com/repos/acme/shop/releases/5/assets', record),
+    );
+    const artifactsDir = mkdtempSync(join(tmpdir(), 'sdods-gh-trace-'));
+    const media = {
+      'runner-output/login-chromium/video.webm': 'webm',
+      'runner-output/login-chromium/trace.zip': 'PK Cookie: __session=s3cr3t',
+      'shop/fp-login/r0/scenario-failure.png': 'png',
+    };
+    for (const [rel, text] of Object.entries(media)) {
+      mkdirSync(join(artifactsDir, rel, '..'), { recursive: true });
+      writeFileSync(join(artifactsDir, rel), text);
+    }
+    const p = await provider({ uploadToRelease: 'evidence' });
+    const ctx = createIntegrationContext({
+      store: createMemoryStore(),
+      env: {} as any,
+      publicUrl: 'https://sdods.test',
+    });
+    await p.onRunFinished(
+      {
+        ...summary([
+          scenario({
+            videoPath: 'runner-output/login-chromium/video.webm',
+            tracePath: 'runner-output/login-chromium/trace.zip',
+          }),
+        ]),
+        run: { ...run, artifactsDir },
+      },
+      ctx,
+    );
+    // The screenshot and the video are still published; the trace never is.
+    expect(uploads).toEqual(['run-1-scenario-failure.png', 'run-1-video.webm']);
+    const body: string = calls.find((c) => c.path === 'issues')!.body.body;
+    expect(body).toContain(
+      '- Video: https://github.test/acme/shop/releases/download/evidence/run-1-video.webm',
+    );
+    expectNoRemoteTrace(body);
   });
 });

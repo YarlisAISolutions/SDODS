@@ -2,7 +2,13 @@ import { readFileSync } from 'node:fs';
 import { basename, extname } from 'node:path';
 import { Octokit } from '@octokit/rest';
 import type { RunRecord } from '@sdods/contracts';
-import { artifactDisplayPath, gherkinBlock, selectIssueScreenshots, truncate } from './context.js';
+import {
+  TRACE_CREDENTIALS_WARNING,
+  artifactDisplayPath,
+  gherkinBlock,
+  selectIssueScreenshots,
+  truncate,
+} from './context.js';
 import { IssueDedupe, fingerprintMarker, issueTitle } from './dedupe.js';
 import type {
   CreateIssueInput,
@@ -539,41 +545,53 @@ export class GitHubProvider implements IntegrationProvider<GitHubConfig> {
     return ref;
   }
 
-  /** Link the runner's video.webm and trace.zip, with the command that opens the trace. */
+  /**
+   * Link the runner's video.webm; name trace.zip by its local path only.
+   *
+   * A Playwright trace records every request's `Cookie`/`Authorization` headers, `Set-Cookie`
+   * responses, the context's `storageState` (cookies, localStorage, IndexedDB — Firebase refresh
+   * tokens live there) and every typed value. Issues are read by far more people than the run's
+   * artifacts, and release assets and `SDODS_PUBLIC_URL` links outlive the tokens' rotation, so the
+   * trace is never uploaded or linked from here (#101), even after `evidence.redactTraces` has run:
+   * redaction covers headers and storage, not response bodies or typed passwords.
+   *
+   * The video is kept on purpose: it shows the screen, not headers or storage. Password fields
+   * render masked, but anything the application prints on screen (an OTP, a token in a URL bar
+   * shown in a page) is visible in it, so projects with such screens should set `evidence.video: off`.
+   */
   private async mediaLines(
     scenario: ScenarioSummary,
     run: RunRecord,
     ctx: IntegrationContext,
   ): Promise<string[]> {
     const lines: string[] = [];
-    let traceTarget: string | undefined;
-    const media = [
-      ['Video', scenario.videoPath],
-      ['Trace', scenario.tracePath],
-    ] as const;
-    for (const [label, relPath] of media) {
-      if (!relPath) continue;
+    if (scenario.videoPath) {
+      const relPath = scenario.videoPath;
       const local = artifactDisplayPath(relPath, run);
       let url = ctx.artifactUrl({ relPath }, run);
-      let uploaded: string | null = null;
       if (this.config.uploadToRelease) {
-        uploaded = await this.uploadReleaseAsset({ relPath }, run, ctx).catch(() => null);
+        const uploaded = await this.uploadReleaseAsset({ relPath }, run, ctx).catch(() => null);
         if (uploaded) url = uploaded;
       }
-      if (url && url !== ctx.ci.artifactUrl) lines.push(`- ${label}: ${url}`);
-      else if (url) lines.push(`- ${label}: \`${local}\` in the [CI run artifacts](${url})`);
-      else lines.push(`- ${label}: \`${local}\``);
-      if (label === 'Trace') traceTarget = uploaded ?? local;
+      if (url && url !== ctx.ci.artifactUrl) lines.push(`- Video: ${url}`);
+      else if (url) lines.push(`- Video: \`${local}\` in the [CI run artifacts](${url})`);
+      else lines.push(`- Video: \`${local}\``);
+    }
+    if (scenario.tracePath) {
+      const local = artifactDisplayPath(scenario.tracePath, run);
+      lines.push(
+        `- Trace: \`${local}\`${ctx.ci.artifactUrl ? " in the CI run's artifacts" : ' on the machine that ran the tests'}`,
+        '',
+        `> [!WARNING]`,
+        `> ${TRACE_CREDENTIALS_WARNING}`,
+        '',
+        '```bash',
+        `npx playwright show-trace ${shellArg(local)}`,
+        '```',
+      );
     }
     if (!lines.length) return [];
-    return [
-      '### Video and trace',
-      ...lines,
-      ...(traceTarget
-        ? ['', '```bash', `npx playwright show-trace ${shellArg(traceTarget)}`, '```']
-        : []),
-      '',
-    ];
+    return ['### Video and trace', ...lines, ''];
   }
 
   private async uploadReleaseAsset(

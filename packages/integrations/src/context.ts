@@ -72,6 +72,13 @@ export function artifactDisplayPath(
   return (rel && !rel.startsWith('..') && !isAbsolute(rel) ? rel : file).replace(/\\/g, '/');
 }
 
+/**
+ * Said wherever an issue names a trace. Playwright traces carry the session of the account that
+ * ran the test, so integrations name them by local path and never upload or link them (#101).
+ */
+export const TRACE_CREDENTIALS_WARNING =
+  'The trace contains credentials: session cookies, `Authorization` headers and browser storage of the account that ran the test. Open it locally; do not attach it to this issue or share it publicly.';
+
 /** Pick the screenshots worth attaching to an issue: failure, scenario end, last before/after pair, diffs. */
 export function selectIssueScreenshots(scenario: ScenarioSummary, max = 6): ScreenshotRef[] {
   const shots = scenario.screenshots;

@@ -15,7 +15,15 @@ sdods trace [zip] [--last] [--run <id>] [--artifacts-dir <dir>] [--list] [--json
 | `--artifacts-dir` | where runs live (default `.sdods/runs`, or `SDODS_ARTIFACTS_DIR`)                      |
 | `--list`          | print the trace files instead of opening them (`--json` prints `{ source, traces }`)   |
 
-Traces are recorded on the first retry and for failures (`trace: on-first-retry`), so a fully green run has none.
+Traces are recorded on the first retry (`evidence.trace: on-first-retry`), so a fully green run has none. Change it per project or environment with `evidence.trace`, or per run with `sdods run --trace <mode>` (`off` disables traces).
+
+<Callout type="warn">
+  A trace contains credentials: request cookies and `Authorization` headers, `Set-Cookie` responses,
+  the signed-in account's localStorage, sessionStorage and IndexedDB, and typed values. `sdods run`
+  redacts those after the run (`evidence.redactTraces: true`, the default), but not request or
+  response bodies or page text. Open traces locally; never attach them to issues, commit them or
+  upload them anywhere public.
+</Callout>
 
 ```bash
 sdods trace --last
