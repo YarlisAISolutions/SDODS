@@ -1,5 +1,5 @@
 import { readdirSync, statSync, existsSync } from 'node:fs';
-import { join, relative } from 'node:path';
+import { join, relative, resolve } from 'node:path';
 import { execa } from 'execa';
 import type { LintFinding, LintResult } from '@sdods/contracts';
 import type { ProjectConfig } from '@sdods/contracts';
@@ -12,7 +12,8 @@ import {
   taxonomyFromProject,
 } from '../config/tags.js';
 import { moduleForFeature } from '../config/workspace.js';
-import { parseFeatureFile, scenariosOf } from './gherkin.js';
+import { parseFeatureFile, scenariosOf, type ParsedFeature } from './gherkin.js';
+import { checkStepAmbiguity } from './steps.js';
 
 export * from './gherkin.js';
 
@@ -47,9 +48,11 @@ export async function lintProject(opts: LintOptions): Promise<LintResult> {
   const errors: LintFinding[] = [];
   const warnings: LintFinding[] = [];
   const rel = (f: string) => relative(project.root, f).replace(/\\/g, '/');
+  const parsedFeatures: ParsedFeature[] = [];
 
   for (const file of files) {
     const parsed = parseFeatureFile(file);
+    parsedFeatures.push(parsed);
     for (const e of parsed.errors)
       errors.push({
         severity: 'error',
@@ -236,16 +239,25 @@ export async function lintProject(opts: LintOptions): Promise<LintResult> {
     }
   }
 
+  // A phrasing matched by two definitions stops bddgen generating anything (#60).
+  const ambiguity = await checkStepAmbiguity({ project, features: parsedFeatures });
+  errors.push(...ambiguity.errors);
+  warnings.push(...ambiguity.warnings);
+
   if (opts.undefinedSteps && opts.repoRoot) {
     const found = await detectUndefinedSteps(project, opts.repoRoot);
-    for (const f of found)
+    for (const f of found) {
+      const rule = f.rule ?? 'steps/undefined';
+      // The static check above usually saw this ambiguity already; do not report it twice.
+      if (errors.some((e) => e.rule === rule && e.file === f.file && e.line === f.line)) continue;
       errors.push({
         severity: 'error',
-        rule: 'steps/undefined',
+        rule,
         message: f.message,
         file: f.file ?? '',
         line: f.line,
       });
+    }
   }
 
   return { errors, warnings, filesChecked: files.length };
@@ -255,7 +267,7 @@ export async function lintProject(opts: LintOptions): Promise<LintResult> {
 export async function detectUndefinedSteps(
   project: ProjectConfig & { root: string },
   repoRoot: string,
-): Promise<Array<{ message: string; file?: string; line?: number }>> {
+): Promise<Array<{ message: string; file?: string; line?: number; rule?: string }>> {
   const env = {
     ...process.env,
     SDODS_PROJECT: project.slug,
@@ -270,7 +282,7 @@ export async function detectUndefinedSteps(
   });
   if (result.exitCode === 0) return [];
   const text = result.all ?? '';
-  const out: Array<{ message: string; file?: string; line?: number }> = [];
+  const out: Array<{ message: string; file?: string; line?: number; rule?: string }> = [];
   let m: RegExpExecArray | null;
   const lines = text.split('\n');
   for (let i = 0; i < lines.length; i++) {
@@ -293,6 +305,34 @@ export async function detectUndefinedSteps(
         .slice(0, 10)
         .join(' | '),
     });
+  // bddgen stops at the first ambiguous step. This parser only knew the missing-step block, so an
+  // ambiguity (#60) — or any other generation failure — came back as "no findings".
+  const ambiguous = /^Step: (.+?) # (.+\.feature):(\d+)(?::\d+)?$/;
+  for (let i = 0; i < lines.length; i++) {
+    const s = ambiguous.exec(lines[i]!.trim());
+    if (!s || !/Multiple definitions matched/.test(lines[i - 1] ?? '')) continue;
+    const variants: string[] = [];
+    for (let j = i + 1; j < lines.length && lines[j]!.trim().startsWith('- '); j++)
+      variants.push(lines[j]!.trim().slice(2));
+    out.push({
+      rule: 'steps/ambiguous',
+      message: `Multiple definitions matched "${s[1]}": ${variants.join('; ')}`,
+      file: relative(project.root, resolve(repoRoot, s[2]!)).replace(/\\/g, '/'),
+      line: Number(s[3]),
+    });
+  }
+  if (!out.length) {
+    const tail = text
+      .split('\n')
+      .map((l) => l.trim())
+      .filter(Boolean)
+      .slice(-5)
+      .join(' | ');
+    out.push({
+      rule: 'steps/bddgen',
+      message: `bddgen failed to generate specs (exit ${result.exitCode}): ${tail || '(no output)'}`,
+    });
+  }
   return out;
 }
 
