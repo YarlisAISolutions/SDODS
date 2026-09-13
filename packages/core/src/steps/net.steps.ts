@@ -2,10 +2,16 @@ import { expect } from '@playwright/test';
 import './params.js';
 import { Given, Then, When } from '../fixtures/test.js';
 import type { APIRequestContext, Download, Page, TestInfo } from '@playwright/test';
-import type { ApiAuthConfig, EnvConfig } from '@sdods/contracts';
+import type { EnvConfig } from '@sdods/contracts';
 import type { ResolvedConfig } from '../config/resolve.js';
 import type { ApiContext } from '../fixtures/api-context.js';
-import type { HttpMethod } from '../api/client.js';
+import {
+  applyAuth,
+  encodeBody,
+  resolveAuth,
+  type ApiClient,
+  type HttpMethod,
+} from '../api/client.js';
 import { coerce, getPath } from '../api/json-path.js';
 import { render } from '../api/template.js';
 import type { AriaRole } from '../heal/types.js';
@@ -132,46 +138,49 @@ function savedBodies(apiContext: ApiContext): Map<string, string> {
   return bag;
 }
 
-/** The auth the ApiClient would have applied, so a raw request is not silently anonymous. */
-function envAuth(auth: ApiAuthConfig): ApiContext['auth'] {
-  switch (auth.type) {
-    case 'bearer':
-      return { type: 'bearer', token: auth.token };
-    case 'basic':
-      return { type: 'basic', username: auth.username, password: auth.password };
-    case 'header':
-      return { type: 'header', name: auth.name, value: auth.value };
-    default:
-      return undefined;
-  }
-}
-
 /**
- * Mirrors `ApiClient.buildHeaders` — env headers, then the scenario's pending headers, then auth.
- * A raw request that dropped auth would report the anonymous redirect instead of the
- * authenticated one, which is the same class of defect as a step that does not interpolate.
+ * Mirrors `ApiClient.buildHeaders` — env headers, then the scenario's pending headers, then auth,
+ * resolved by the same function the client uses (so `I use no authentication` and every
+ * `env.api.auth` type behave identically here). A raw request that dropped auth would report the
+ * anonymous redirect instead of the authenticated one, which is the same class of defect as a step
+ * that does not interpolate.
  * `accept: application/json` is the default; override it with
  * `Given I set the request header "accept" to "text/html"` when the gate under test negotiates
  * on content type.
  */
-function rawHeaders(
+async function rawHeaders(
   apiContext: ApiContext,
   env: EnvConfig,
   hasBody: boolean,
   isForm: boolean,
-): Record<string, string> {
+): Promise<Record<string, string>> {
   const headers: Record<string, string> = { accept: 'application/json' };
   for (const [k, v] of Object.entries(env.api.headers ?? {})) headers[k.toLowerCase()] = v;
   for (const [k, v] of apiContext.headers) headers[k.toLowerCase()] = v;
   if (hasBody && !isForm && !headers['content-type']) headers['content-type'] = 'application/json';
-  const auth = apiContext.auth ?? envAuth(env.api.auth);
-  if (auth) {
-    if (auth.type === 'bearer') headers.authorization = `Bearer ${auth.token}`;
-    else if (auth.type === 'basic')
-      headers.authorization = `Basic ${Buffer.from(`${auth.username}:${auth.password}`).toString('base64')}`;
-    else if (auth.type === 'header') headers[auth.name.toLowerCase()] = auth.value;
-  }
+  applyAuth(headers, await resolveAuth(undefined, apiContext.auth, env.api.auth));
   return headers;
+}
+
+interface RawDeps {
+  request: APIRequestContext;
+  /** The scenario's ApiClient; supplies the isolated request context when one is in use. */
+  api?: Pick<ApiClient, 'requestContext'>;
+  apiContext: ApiContext;
+  env: EnvConfig;
+  config: ResolvedConfig;
+  testInfo?: Pick<TestInfo, 'attach'>;
+}
+
+/** The shared `request` fixture, or the isolated context after `I use an isolated API client`. */
+async function rawRequest(deps: RawDeps): Promise<APIRequestContext> {
+  if (!deps.apiContext.isolated) return deps.request;
+  if (!deps.api) {
+    throw new SdodsError('NOT_SUPPORTED', 'No isolated request context is available here.', {
+      hint: 'Raw requests reach the isolated client through the `api` fixture; pass it in the step fixtures.',
+    });
+  }
+  return deps.api.requestContext();
 }
 
 /** Mirrors `ApiClient.resolveUrl`, so `Given I set the query parameter …` applies here too. */
@@ -194,28 +203,24 @@ export interface SendRawOptions {
  * and to keep `Set-Cookie` unredacted — the two things the recorded ApiSnapshot cannot carry.
  */
 export async function sendRaw(
-  deps: {
-    request: APIRequestContext;
-    apiContext: ApiContext;
-    env: EnvConfig;
-    config: ResolvedConfig;
-    testInfo?: Pick<TestInfo, 'attach'>;
-  },
+  deps: RawDeps,
   method: string,
   pathOrUrl: string,
   opts: SendRawOptions = {},
 ): Promise<RawSnapshot> {
   const url = rawUrl(deps.apiContext, deps.env, pathOrUrl);
-  const headers = rawHeaders(
+  const headers = await rawHeaders(
     deps.apiContext,
     deps.env,
     opts.body !== undefined || opts.form !== undefined,
     opts.form !== undefined,
   );
-  const res = await deps.request.fetch(url, {
+  const request = await rawRequest(deps);
+  const res = await request.fetch(url, {
     method,
     headers,
-    data: opts.form ? undefined : opts.body,
+    // A Buffer, so Playwright does not JSON-encode a body that does not parse.
+    data: opts.form ? undefined : encodeBody(opts.body),
     form: opts.form,
     maxRedirects: 0,
     failOnStatusCode: false,
@@ -264,11 +269,15 @@ export function redactForReport(headers: Record<string, string>): Record<string,
 
 When(
   'I send a {method} request to {string} without following redirects',
-  async ({ request, apiContext, env, config, $testInfo }, method: HttpMethod, path: string) => {
+  async (
+    { request, api, apiContext, env, config, $testInfo },
+    method: HttpMethod,
+    path: string,
+  ) => {
     // PROVES the edge itself answered. The built-in step would follow the 3xx and report the
     // page it landed on, so an auth/locale/maintenance gate is unobservable through it.
     await sendRaw(
-      { request, apiContext, env, config, testInfo: $testInfo },
+      { request, api, apiContext, env, config, testInfo: $testInfo },
       method,
       renderStrict(path, 'the request path', ...scopesOf(apiContext, env)),
     );
@@ -278,7 +287,7 @@ When(
 When(
   'I send a {method} request to {string} without following redirects with body:',
   async (
-    { request, apiContext, env, config, $testInfo },
+    { request, api, apiContext, env, config, $testInfo },
     method: HttpMethod,
     path: string,
     body: string,
@@ -287,7 +296,7 @@ When(
     // oracle for enumeration safety if nothing normalises whitespace or key order on the way in.
     const scopes = scopesOf(apiContext, env);
     await sendRaw(
-      { request, apiContext, env, config, testInfo: $testInfo },
+      { request, api, apiContext, env, config, testInfo: $testInfo },
       method,
       renderStrict(path, 'the request path', ...scopes),
       { body: render(body, ...scopes) },
@@ -298,7 +307,7 @@ When(
 When(
   'I send a {method} request to {string} without following redirects with form:',
   async (
-    { request, apiContext, env, config, $testInfo },
+    { request, api, apiContext, env, config, $testInfo },
     method: HttpMethod,
     path: string,
     table: { raw(): string[][] },
@@ -310,7 +319,7 @@ When(
     for (const row of table.raw())
       form[String(row[0] ?? '')] = render(String(row[1] ?? ''), ...scopes);
     await sendRaw(
-      { request, apiContext, env, config, testInfo: $testInfo },
+      { request, api, apiContext, env, config, testInfo: $testInfo },
       method,
       renderStrict(path, 'the request path', ...scopes),
       { form },
@@ -725,27 +734,22 @@ function streamOf(apiContext: ApiContext): StreamCapture {
 }
 
 async function readStream(
-  deps: {
-    request: APIRequestContext;
-    apiContext: ApiContext;
-    env: EnvConfig;
-    config: ResolvedConfig;
-    testInfo?: Pick<TestInfo, 'attach'>;
-  },
+  deps: RawDeps,
   method: string,
   pathOrUrl: string,
   body?: string,
 ): Promise<StreamCapture> {
-  const headers = rawHeaders(deps.apiContext, deps.env, body !== undefined, false);
+  const headers = await rawHeaders(deps.apiContext, deps.env, body !== undefined, false);
   headers.accept = 'text/event-stream';
   const url = rawUrl(deps.apiContext, deps.env, pathOrUrl);
   const timeout = STREAM_TIMEOUT.get(deps.apiContext) ?? deps.config.project.timeouts.api;
+  const request = await rawRequest(deps);
   let capture: StreamCapture;
   try {
-    const res = await deps.request.fetch(url, {
+    const res = await request.fetch(url, {
       method,
       headers,
-      data: body,
+      data: encodeBody(body),
       maxRedirects: 0,
       failOnStatusCode: false,
       timeout,
@@ -788,9 +792,13 @@ Given('I allow {int} seconds for the event stream', async ({ apiContext }, secon
 
 When(
   'I read the event stream from a {method} request to {string}',
-  async ({ request, apiContext, env, config, $testInfo }, method: HttpMethod, path: string) => {
+  async (
+    { request, api, apiContext, env, config, $testInfo },
+    method: HttpMethod,
+    path: string,
+  ) => {
     await readStream(
-      { request, apiContext, env, config, testInfo: $testInfo },
+      { request, api, apiContext, env, config, testInfo: $testInfo },
       method,
       renderStrict(path, 'the request path', ...scopesOf(apiContext, env)),
     );
@@ -800,14 +808,14 @@ When(
 When(
   'I read the event stream from a {method} request to {string} with body:',
   async (
-    { request, apiContext, env, config, $testInfo },
+    { request, api, apiContext, env, config, $testInfo },
     method: HttpMethod,
     path: string,
     body: string,
   ) => {
     const scopes = scopesOf(apiContext, env);
     await readStream(
-      { request, apiContext, env, config, testInfo: $testInfo },
+      { request, api, apiContext, env, config, testInfo: $testInfo },
       method,
       renderStrict(path, 'the request path', ...scopes),
       render(body, ...scopes),

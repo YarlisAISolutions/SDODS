@@ -183,13 +183,16 @@ export function buildRunnerConfig(
     };
     for (const k of Object.keys(envUse) as Array<keyof typeof envUse>)
       if (envUse[k] === undefined) delete envUse[k];
+    const byTag = p.retries?.byTag ?? {};
+    const pushProject = (project: RunnerProject) =>
+      projects.push(...withRetriesByTag(project, byTag));
 
     for (const layer of layers) {
       if (layer === 'recorded') {
         const recordedDir = join(p.root, 'recorded');
         if (!existsSync(recordedDir)) continue;
         for (const browser of browsers) {
-          projects.push({
+          pushProject({
             name: runnerProjectName({ project: p.slug, layer, browser }),
             testDir: recordedDir,
             testMatch: '**/*.spec.ts',
@@ -236,7 +239,7 @@ export function buildRunnerConfig(
       bddConfigs++;
 
       if (layer === 'api') {
-        projects.push({
+        pushProject({
           name: runnerProjectName({ project: p.slug, layer }),
           testDir,
           use: { sdods: { project: p.slug, layer } satisfies SdodsUseOption } as Record<
@@ -248,7 +251,7 @@ export function buildRunnerConfig(
       }
 
       for (const browser of browsers) {
-        projects.push({
+        pushProject({
           name: runnerProjectName({ project: p.slug, layer, browser }),
           testDir,
           // Baselines live with the project (generated specs are per-run and deleted):
@@ -355,6 +358,50 @@ export function buildRunnerConfig(
       sdodsRunDir: runDir,
     },
   };
+}
+
+type RunnerProject = NonNullable<PlaywrightTestConfig['projects']>[number];
+
+/**
+ * `retries.byTag` as runner projects.
+ *
+ * Retries are fixed when a test is collected: Playwright takes them from the enclosing
+ * `test.describe.configure` or the project, and offers no runtime setter; bddgen has no hook to
+ * add `@retries:N` to a scenario it did not read from the feature file. What Playwright does
+ * offer is project-level `grep`, matched against the title AND the tags. So each byTag entry
+ * becomes a sibling of the project — same name, so `--project <name>`, reports and dashboards are
+ * unchanged — that greps for the tag and carries its retries, and the base project inverts every
+ * byTag grep. Entries are ordered by retries, highest first, and each sibling also inverts the
+ * ones before it, so a scenario with two such tags runs exactly once, with the larger count.
+ *
+ * Explicit `--retries` on the CLI still overrides every project, these included. A scenario's own
+ * `@retries:N` tag (playwright-bdd) wins over all of it.
+ */
+export function withRetriesByTag(
+  project: RunnerProject,
+  byTag: Record<string, number>,
+): RunnerProject[] {
+  const entries = Object.entries(byTag)
+    .map(([tag, retries]) => ({ tag: tag.startsWith('@') ? tag : `@${tag}`, retries }))
+    .sort((a, b) => b.retries - a.retries);
+  if (!entries.length) return [project];
+  // Whitespace-delimited: Playwright joins the title path and tags with spaces, so `@flaky`
+  // must not match `@flakyish`. (A scenario TITLE containing the literal tag also matches.)
+  const tagRe = (tag: string) =>
+    new RegExp(`(^|\\s)${tag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(\\s|$)`);
+  const seen: RegExp[] = [];
+  const out: RunnerProject[] = [];
+  for (const { tag, retries } of entries) {
+    const re = tagRe(tag);
+    out.push({
+      ...project,
+      grep: re,
+      ...(seen.length ? { grepInvert: [...seen] } : {}),
+      retries,
+    });
+    seen.push(re);
+  }
+  return [{ ...project, grepInvert: seen }, ...out];
 }
 
 function parseEnvOverrides() {

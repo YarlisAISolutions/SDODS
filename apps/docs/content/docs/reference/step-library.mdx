@@ -11,9 +11,12 @@ Parameter types: `{string}`, `{int}`, `{method}` (GET, POST, PUT, PATCH, DELETE,
 | ---------------------------------------------------------------------------------------- | --------------------------------------------------------- |
 | `I send a {method} request to {string}`                                                  | request without body                                      |
 | `I send a {method} request to {string} with body:`                                       | request with a doc-string body (`json` media type parsed) |
+| `I send a {method} request to {string} with the raw body:`                               | doc string sent byte-for-byte: not parsed or rendered     |
 | `I set the request header {string} to {string}`                                          | header for the rest of the scenario                       |
 | `I set the query parameter {string} to {string}`                                         | query parameter for the rest of the scenario              |
 | `I authenticate with bearer token from {string}`                                         | bearer token from an environment variable                 |
+| `I use no authentication`                                                                | send without any credential, including `env.api.auth`     |
+| `I use an isolated API client`                                                           | later calls use a context with an empty cookie jar        |
 | `the response status should be {int}`                                                    | status assertion                                          |
 | `the response JSON path {string} should equal {string}`                                  | dot/bracket path or `$..` JSONPath, value coerced         |
 | `the response JSON path {string} should match {string}`                                  | regular expression                                        |
@@ -23,6 +26,20 @@ Parameter types: `{string}`, `{int}`, `{method}` (GET, POST, PUT, PATCH, DELETE,
 | `I save the response JSON path {string} as {string}`                                     | capture a variable                                        |
 | `I poll {method} {string} until JSON path {string} equals {string} within {int} seconds` | polling with 1 s interval                                 |
 | `the response time should be under {int} ms`                                             | latency assertion                                         |
+
+### Which credentials an API call carries
+
+The `api` client sends through Playwright's shared `request` context. That context is seeded from the test's context options, so what it carries depends on the layer:
+
+| Layer                                     | Cookie jar of the `api` client                                                                                        |
+| ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `@api`                                    | starts empty (no storageState); cookies set by earlier responses in the scenario are sent back                        |
+| `@ui`, `@hybrid`                          | starts with the `@user:<role>` storageState, that is the role's session cookie, plus cookies set by earlier responses |
+| any, after `I use an isolated API client` | a separate context with an empty jar, disposed at the end of the scenario; cookies set by its own responses are kept  |
+
+The jar comes from the scenario's storageState, not from the live browser page: cookies the page picks up after the scenario starts do not reach the `api` client. On `@ui` and `@hybrid`, a "credential X alone is refused" scenario needs `I use an isolated API client`, or the session cookie authenticates the request. The isolated client also drops `use.httpCredentials` and `use.extraHTTPHeaders`; `env.api.headers` and `env.api.auth` still apply. The raw (`without following redirects`) and event-stream steps honour it too.
+
+The evidence JSON of each recorded request carries `auth` (`none`, `bearer`, `basic` or `header:<name>`, never the value) and `isolated: true` when it went through the isolated client.
 
 ## UI steps
 
@@ -44,13 +61,15 @@ Parameter types: `{string}`, `{int}`, `{method}` (GET, POST, PUT, PATCH, DELETE,
 
 ## Data steps
 
-| Step                                                 | Effect                           |
-| ---------------------------------------------------- | -------------------------------- |
-| `I load dataset {string} row {int}`                  | columns become variables         |
-| `I load dataset {string} where {string} is {string}` | first matching row               |
-| `I use a leased user with role {string}`             | lease + apply storage state      |
-| `I generate a {string} from the factory as {string}` | deterministic faker object       |
-| `I register cleanup {method} {string}`               | request executed at scenario end |
+| Step                                                   | Effect                                                          |
+| ------------------------------------------------------ | --------------------------------------------------------------- |
+| `I load dataset {string} row {int}`                    | columns become variables                                        |
+| `I load dataset {string} where {string} is {string}`   | first matching row                                              |
+| `I use a leased user with role {string}`               | lease + apply storage state                                     |
+| `I use a leased user with role {string} for API calls` | lease; attaches its token only when `auth.apiToken` is implicit |
+| `I authenticate the API with the leased user's token`  | bearer token of the leased user (cached file, else `token()`)   |
+| `I generate a {string} from the factory as {string}`   | deterministic faker object                                      |
+| `I register cleanup {method} {string}`                 | request executed at scenario end                                |
 
 ## Hybrid steps
 

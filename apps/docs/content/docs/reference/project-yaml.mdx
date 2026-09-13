@@ -138,6 +138,12 @@ description: Field-by-field reference for the project file and the workspace fil
     },
     'auth.storageState': { type: 'boolean', default: 'true' },
     'auth.maxAgeMinutes': { type: 'number', default: '60' },
+    'auth.apiToken': {
+      type: "'implicit'|'explicit'",
+      default: "explicit for 'custom', implicit otherwise",
+      description:
+        "Whether `I use a leased user with role {string} for API calls` attaches the user's token. With explicit it only leases; add `I authenticate the API with the leased user's token`.",
+    },
     'auth.form': {
       type: '{ loginPath, usernameSelector, passwordSelector, submitSelector, readySelector?, readyUrl? }',
     },
@@ -170,7 +176,12 @@ description: Field-by-field reference for the project file and the workspace fil
       type: '{ test, expect, action, navigation, api }',
       default: '{ 60000, 10000, 15000, 30000, 15000 }',
     },
-    retries: { type: '{ ci, local, byTag }', default: '{ 2, 0, {} }' },
+    retries: {
+      type: '{ ci, local, byTag }',
+      default: '{ 2, 0, {} }',
+      description:
+        'byTag sets the retries of every scenario carrying the tag; with several such tags the highest wins. An explicit --retries overrides it, and a scenario @retries:N tag overrides both.',
+    },
     'perf.budgets': { type: '{ pageLoadMs?, lcpMs?, fcpMs?, ttfbMs?, apiP95Ms? }', default: '{}' },
   }}
 />
