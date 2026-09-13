@@ -1,6 +1,6 @@
 {
   "name": "@sdods/cli",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "description": "SDODS command line: run, record, analyze, agents, MCP server, scheduler and the web server.",
   "license": "Apache-2.0",
   "author": "SDODS <admin@sdods.com>",
