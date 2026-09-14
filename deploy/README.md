@@ -79,3 +79,56 @@ fresh set of secrets for no user-visible gain. Treat them as opaque identifiers,
 Notes: run artifacts written by UI-triggered runs live in `/tmp` and disappear with the instance; use
 `sdods report ingest --server` from CI for durable results, or mount a bucket later. Postgres is the
 only stateful component; `sdods db export` produces a JSONL backup.
+
+## Maxi, the docs assistant
+
+```
+docs.sdods.com/llms-full.txt ◄── refreshed hourly (ETag) ─┐
+                                                          │
+sdods.com / docs.sdods.com  ── POST /chat (SSE) ──►  Cloud Run `sdods-maxi` ──► Claude API (Sonnet 5)
+  chat widget (@sdods/site-kit)                          ├─ Secret Manager: maxi-anthropic-key
+                                                         └─ Firestore: maxiChats (anonymous logs), maxiUsage (daily spend)
+```
+
+Maxi is not trained or fine-tuned. Every request carries the published docs (`llms-full.txt`, built by
+`apps/docs`) as a cached system prompt, so answers follow the docs as soon as they deploy: no Maxi
+redeploy is needed for a docs change. The service is separate from `automax-api` so chat traffic
+never competes with test runs, and its Anthropic key is isolated.
+
+### One-time setup
+
+| Step | Command |
+| --- | --- |
+| Anthropic key | Create a key in its own Console workspace with a **monthly spend limit** (the hard stop), then `printf %s "$KEY" \| gcloud secrets create maxi-anthropic-key --data-file=- --project automax-docs` |
+| Runtime account | `gcloud iam service-accounts create maxi-runtime --project automax-docs` · grant `roles/datastore.user` on the project and `roles/secretmanager.secretAccessor` on `maxi-anthropic-key` |
+| CI account | `github-deploy-api@` already deploys `automax-api`; it also needs `iam.serviceAccountUser` on `maxi-runtime@` |
+| Firestore rules | `firebase deploy --only firestore:rules --project automax-docs` (adds the closed `maxiChats` and `maxiUsage` rules) |
+| First deploy | push to `main`, or run the `maxi` workflow by hand; then `curl "$(gcloud run services describe sdods-maxi --region us-central1 --format 'value(status.url)')/health"` |
+| Turn the widget on | set the repository variable `MAXI_URL` to the service URL, then rebuild www and docs. Unset, the widget renders nothing |
+
+Serving Maxi behind Firebase Hosting (a `maxi.sdods.com` rewrite like `api.sdods.com`) is only safe if
+Hosting streams the SSE response instead of buffering it; check on a preview channel first. Otherwise
+use the `run.app` URL or a Cloud Run domain mapping. Behind Hosting, deploy with
+`MAXI_TRUST_PROXY=2` so per-IP limits count the extra hop.
+
+### Operate
+
+| Task | How |
+| --- | --- |
+| Logs | `gcloud run services logs read sdods-maxi --region us-central1 --limit 100` (one `chat` line per answer with tokens and estimated cost) |
+| Switch model | `MAXI_MODEL=claude-opus-5 bun run maxi:deploy` (stronger scripts, about 2.5x the cost) |
+| Daily budget | `MAXI_DAILY_BUDGET_USD=40 bun run maxi:deploy`; past it Maxi says it's resting until tomorrow (UTC) |
+| Step catalog | `bun run maxi:steps` after changing demo-shop steps, then commit `packages/maxi/data/steps.json` |
+| Quality check | `ANTHROPIC_API_KEY=… bun run maxi:eval` (about $1; `MAXI_CORPUS_FILE=$PWD/apps/docs/out/llms-full.txt` checks a local docs build) |
+| Key without a workspace | the API rejects it unless requests name a workspace: deploy with `ANTHROPIC_WORKSPACE_ID=wrkspc_… bun run maxi:deploy` (and set it for `maxi:eval`), or use a key created inside a workspace |
+| Rotate the key | add a secret version, then `bun run maxi:deploy` |
+| Turn off | unset `MAXI_URL` and rebuild the sites; `gcloud run services delete sdods-maxi --region us-central1` |
+
+### Keeping answers relevant
+
+1. Fix the docs, not the prompt. A wrong or missing answer is almost always a docs gap; once the docs
+   deploy, Maxi picks the change up within the hour.
+2. Each week, read the 👎 votes and "I'm not sure" answers in Firestore `maxiChats` (the console, or
+   any reader signed in as the moderator), fix the docs they point at, and add the question to
+   `packages/maxi/evals/golden.yaml`.
+3. Run `bun run maxi:eval` after persona, model or large docs changes and compare with the last run.

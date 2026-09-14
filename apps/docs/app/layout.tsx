@@ -2,6 +2,7 @@ import { RootProvider } from 'fumadocs-ui/provider/next';
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import { basePath, siteUrl, withBase } from '@/lib/base-path';
+import { Maxi } from '@/components/maxi';
 import '@sdods/site-kit/styles.css';
 import './global.css';
 
@@ -26,6 +27,7 @@ export default function Layout({ children }: { children: ReactNode }) {
       <body className="flex min-h-screen flex-col">
         <RootProvider search={{ options: { type: 'static', api: withBase('/api/search') } }}>
           {children}
+          <Maxi />
         </RootProvider>
       </body>
     </html>

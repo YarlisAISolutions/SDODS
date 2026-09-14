@@ -9,6 +9,8 @@
   --card: #ffffff;
   --line: #e2e8f0;
   --brand: #4f46e5;
+  /* Text on a brand-coloured fill: white on indigo-600, near-black on the lighter dark-mode indigo. */
+  --brand-fg: #ffffff;
   --brand-2: #2dd4bf;
   /* The gradient that carries white text, or is read as text itself, needs its own stops:
      teal-400 against white is 1.7:1, which is unreadable however pretty it looks. */
@@ -23,6 +25,7 @@
   --card: #111a2e;
   --line: #1e293b;
   --brand: #818cf8;
+  --brand-fg: #0b1220;
   --brand-2: #5eead4;
   --grad-from: #5eead4;
   --grad-to: #a5b4fc;
@@ -36,6 +39,7 @@
   --sk-card: var(--card);
   --sk-line: var(--line);
   --sk-accent: var(--brand);
+  --sk-accent-fg: var(--brand-fg);
   --sk-code-bg: var(--bg);
   --sk-hover-bg: var(--line);
 }

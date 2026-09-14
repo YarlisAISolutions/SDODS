@@ -24,3 +24,7 @@ export {
   type SupportProvider,
   type SupportProviderId,
 } from './support/providers';
+export { MaxiChat, historyFor, type MaxiChatProps } from './maxi/MaxiChat';
+export { parseInline, parseMarkdown, safeHref, type Block, type Inline } from './maxi/markdown';
+export { createSseParser, type SseMessage } from './maxi/sse';
+export { TutorAvatar, type TutorMood } from './maxi/TutorAvatar';
