@@ -12,7 +12,7 @@ Parameter types: `{string}`, `{int}`, `{method}` (GET, POST, PUT, PATCH, DELETE,
 | `I send a {method} request to {string}`                                                  | request without body                                      |
 | `I send a {method} request to {string} with body:`                                       | request with a doc-string body (`json` media type parsed) |
 | `I send a {method} request to {string} with the raw body:`                               | doc string sent byte-for-byte: not parsed or rendered     |
-| `I set the request header {string} to {string}`                                          | header for the rest of the scenario                       |
+| `I set the request header {string} to {string}`                                          | header for rest of scenario; name is case-insensitive     |
 | `I set the query parameter {string} to {string}`                                         | query parameter for the rest of the scenario              |
 | `I authenticate with bearer token from {string}`                                         | bearer token from an environment variable                 |
 | `I use no authentication`                                                                | send without any credential, including `env.api.auth`     |
