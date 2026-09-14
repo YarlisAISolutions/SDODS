@@ -608,14 +608,22 @@ interface TreeEntry {
   sha: string;
 }
 
-/** `14d`, `36h`, `2w`, `90m` or a bare number of days → milliseconds. */
+/**
+ * `90min`, `36h`, `14d`, `2w` or a bare number of days → milliseconds. A bare `m` is refused: it
+ * reads as months to some people and minutes to others, and `3m` meant as months prunes nearly
+ * everything.
+ */
 export function parseAge(text: string): number {
-  const m = /^\s*(\d+(?:\.\d+)?)\s*([mhdw]?)\s*$/i.exec(text);
-  if (!m) throw new Error(`Cannot parse age "${text}" (use e.g. 14d, 36h, 2w)`);
-  const unit = { m: 60_000, h: 3_600_000, d: 86_400_000, w: 604_800_000 }[
-    (m[2] || 'd').toLowerCase() as 'm' | 'h' | 'd' | 'w'
-  ];
-  return Number(m[1]) * unit;
+  const m = /^\s*(\d+(?:\.\d+)?)\s*(min|[a-z]*)\s*$/i.exec(text);
+  const unit = (m?.[2] || 'd').toLowerCase();
+  if (m && unit === 'm')
+    throw new Error(
+      `Cannot parse age "${text}": "m" is ambiguous: use ${m[1]}min for minutes or ${Math.round(Number(m[1]) * 30)}d for about ${m[1]} month(s)`,
+    );
+  const ms = { min: 60_000, h: 3_600_000, d: 86_400_000, w: 604_800_000 }[unit];
+  if (!m || ms === undefined)
+    throw new Error(`Cannot parse age "${text}" (use e.g. 90min, 36h, 14d, 2w)`);
+  return Number(m[1]) * ms;
 }
 
 /** A path segment safe in a git tree and a URL. */

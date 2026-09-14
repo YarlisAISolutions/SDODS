@@ -214,7 +214,10 @@ export function register(program: Command) {
       'Rewrite the evidence branch without runs uploaded before the cutoff (a new orphan commit, force-pushed)',
     )
     .requiredOption('-p, --project <slug>', 'project slug')
-    .option('--older-than <age>', 'e.g. 14d, 36h, 2w (default: evidence.retainDays)')
+    .option(
+      '--older-than <age>',
+      '90min, 36h, 14d or 2w; a bare number is days (default: evidence.retainDays)',
+    )
     .option('--dry-run', 'list the runs that would be removed without rewriting the branch')
     .action(async (opts, c) => {
       const ctx = createContext(c);

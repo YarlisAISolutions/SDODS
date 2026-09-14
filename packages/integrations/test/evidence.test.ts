@@ -474,6 +474,12 @@ describe('integrations.github.evidence config', () => {
     expect(parseAge('36h')).toBe(36 * 3_600_000);
     expect(parseAge('2w')).toBe(14 * 86_400_000);
     expect(parseAge('7')).toBe(7 * 86_400_000);
+    expect(parseAge('90min')).toBe(90 * 60_000);
+    // `m` reads as months to some and minutes to others; `3m` meant as months pruned nearly everything.
+    for (const ambiguous of ['3m', '3M'])
+      expect(() => parseAge(ambiguous), ambiguous).toThrow(
+        /"m" is ambiguous: use 3min for minutes or 90d for about 3 month\(s\)/,
+      );
     expect(() => parseAge('soon')).toThrow(/Cannot parse age/);
     expect(scenarioSlug('Checkout › pays with "Visa" (EU)', 'a1b2c3d4e5f6a7b8')).toBe(
       'checkout-pays-with-visa-eu-a1b2c3d4e5',
