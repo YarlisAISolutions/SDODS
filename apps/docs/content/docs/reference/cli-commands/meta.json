@@ -21,7 +21,7 @@
     "users-tokens-schedule-integrations",
     "completion",
     "upgrade",
-    "matrix"
+    "matrix",
     "load"
   ]
 }
