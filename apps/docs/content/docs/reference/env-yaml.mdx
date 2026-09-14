@@ -52,6 +52,21 @@ description: Field reference for environment files.
     timeouts: { type: 'partial Timeouts' },
     'perf.budgets': { type: 'partial PerfBudgets' },
     ci: { type: 'boolean', description: 'Treat this environment as CI (retries.ci applies).' },
+    'load.allowed': {
+      type: 'boolean',
+      default: 'false',
+      description:
+        'Opt this environment in to `sdods load`. Without it every load run is refused. Only for an environment you own and that is sized for load; never production.',
+    },
+    'load.maxVus': {
+      type: 'number',
+      description: 'Refuse load profiles whose peak virtual users exceed this.',
+    },
+    'load.allowWrites': {
+      type: 'boolean',
+      default: 'false',
+      description: 'Allow load profiles that send POST, PUT, PATCH or DELETE requests.',
+    },
   }}
 />
 
@@ -69,4 +84,14 @@ vars:
 use: { locale: en-US, timezoneId: America/New_York }
 screenshots: { onlyOnFailure: false }
 perf: { budgets: { pageLoadMs: 5000 } }
+```
+
+A load-test environment opts in explicitly. See [Load testing](/docs/guides/load-testing).
+
+```yaml title="projects/demo-shop/envs/perf.yaml"
+ui: { baseUrl: https://perf.shop.example.com }
+api:
+  baseUrl: https://api.perf.shop.example.com
+  auth: { type: bearer, token: '${PERF_API_TOKEN}' }
+load: { allowed: true, maxVus: 50, allowWrites: false }
 ```

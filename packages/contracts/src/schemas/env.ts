@@ -6,6 +6,7 @@ import {
   ScreenshotConfigSchema,
   TimeoutsSchema,
 } from './project.js';
+import { EnvLoadSchema } from './load.js';
 
 export const ApiAuthSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('none') }),
@@ -54,6 +55,8 @@ export const EnvConfigSchema = z.object({
   timeouts: TimeoutsSchema.partial().optional(),
   perf: z.object({ budgets: PerfBudgetsSchema.partial() }).optional(),
   ci: z.boolean().optional(),
+  /** Opt-in for `sdods load`; absent means load tests are refused. */
+  load: EnvLoadSchema.optional(),
 });
 
 export type EnvConfig = z.infer<typeof EnvConfigSchema>;
