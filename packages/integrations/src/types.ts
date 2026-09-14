@@ -146,6 +146,36 @@ export interface CreateIssueInput {
   screenshots: ScreenshotRef[];
   diffUrl?: string;
   reportUrl?: string;
+  /** files already committed to the evidence branch for this run (`integrations.github.evidence`) */
+  evidence?: PublishedEvidence;
+}
+
+/** One local file offered to an evidence host. */
+export interface EvidenceFile {
+  /** lookup key for the issue body: `evidenceKey(fingerprint, relPath)` */
+  key: string;
+  fingerprint: string;
+  /** directory under `runs/<runId>/` */
+  scenarioDir: string;
+  name: string;
+  localPath: string;
+  kind: 'screenshot' | 'preview' | 'video';
+  bytes: number;
+}
+
+export interface SkippedEvidence {
+  key: string;
+  fingerprint: string;
+  name: string;
+  bytes: number;
+  reason: string;
+}
+
+export interface PublishedEvidence {
+  /** evidence key → link that renders inline for readers of the evidence repository */
+  urls: Map<string, string>;
+  skipped: SkippedEvidence[];
+  commitSha?: string;
 }
 
 export interface NotifyAction {
@@ -174,6 +204,8 @@ export interface ProviderTestResult {
   detail: string;
   /** configured labels the target is missing, and the ones this call created */
   labels?: { missing: string[]; created: string[] };
+  /** the evidence host, when `integrations.github.evidence.host` is `branch` */
+  evidence?: { ok: boolean; detail: string };
 }
 
 export interface ProviderTestOptions {
@@ -184,6 +216,8 @@ export interface ProviderTestOptions {
 export interface IntegrationSecrets {
   token?: string;
   email?: string;
+  /** token for `integrations.github.evidence.tokenEnv`, when set */
+  evidenceToken?: string;
 }
 
 export interface IntegrationProvider<C = unknown> {

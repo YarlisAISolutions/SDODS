@@ -20,6 +20,7 @@
     "skills",
     "users-tokens-schedule-integrations",
     "completion",
-    "upgrade"
+    "upgrade",
+    "load"
   ]
 }

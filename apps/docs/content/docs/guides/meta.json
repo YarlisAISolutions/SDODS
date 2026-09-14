@@ -19,6 +19,7 @@
     "hosting",
     "github-and-jira",
     "database",
+    "email",
     "self-healing",
     "insights-and-flaky",
     "agents",
@@ -28,6 +29,7 @@
     "local-models",
     "scheduling",
     "security",
-    "migrating"
+    "migrating",
+    "load-testing"
   ]
 }

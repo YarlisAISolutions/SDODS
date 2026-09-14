@@ -12,7 +12,7 @@ Parameter types: `{string}`, `{int}`, `{method}` (GET, POST, PUT, PATCH, DELETE,
 | `I send a {method} request to {string}`                                                  | request without body                                      |
 | `I send a {method} request to {string} with body:`                                       | request with a doc-string body (`json` media type parsed) |
 | `I send a {method} request to {string} with the raw body:`                               | doc string sent byte-for-byte: not parsed or rendered     |
-| `I set the request header {string} to {string}`                                          | header for the rest of the scenario                       |
+| `I set the request header {string} to {string}`                                          | header for rest of scenario; name is case-insensitive     |
 | `I set the query parameter {string} to {string}`                                         | query parameter for the rest of the scenario              |
 | `I authenticate with bearer token from {string}`                                         | bearer token from an environment variable                 |
 | `I use no authentication`                                                                | send without any credential, including `env.api.auth`     |
@@ -40,6 +40,20 @@ The `api` client sends through Playwright's shared `request` context. That conte
 The jar comes from the scenario's storageState, not from the live browser page: cookies the page picks up after the scenario starts do not reach the `api` client. On `@ui` and `@hybrid`, a "credential X alone is refused" scenario needs `I use an isolated API client`, or the session cookie authenticates the request. The isolated client also drops `use.httpCredentials` and `use.extraHTTPHeaders`; `env.api.headers` and `env.api.auth` still apply. The raw (`without following redirects`) and event-stream steps honour it too.
 
 The evidence JSON of each recorded request carries `auth` (`none`, `bearer`, `basic` or `header:<name>`, never the value) and `isolated: true` when it went through the isolated client.
+
+### JSON paths that match nothing
+
+A path is either dotted (`data.items[0].id`) or a JSONPath (`$.data.items[*].id`, `$..id`). Both read the same way:
+
+| The path matches              | Value read                           |
+| ----------------------------- | ------------------------------------ |
+| nothing                       | nothing: the path is absent          |
+| one value                     | that value, including `null` or `[]` |
+| two or more values (JSONPath) | an array of the matches              |
+
+So on a missing key, `the response JSON path {string} should exist` fails and `the response JSON path {string} should not exist` passes, whichever syntax the path uses. `I save the response JSON path {string} as {string}`, `the response JSON path {string} should have {int} items` (and `at least`) and `the UI should show the text from JSON path {string}` fail with `RUN_FAILED` instead of storing or comparing an empty value. A key that is present with the value `null` or `[]` still saves.
+
+A wildcard over an empty array matches nothing: `$.items[*]` on `{ "items": [] }` is absent. To count or save the array itself, point at `$.items`.
 
 ## UI steps
 

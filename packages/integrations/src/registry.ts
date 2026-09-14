@@ -35,15 +35,19 @@ export async function getProviders(
   const gh = project.integrations.github;
   if (gh && want('github')) {
     const provider = new GitHubProvider();
+    const names = {
+      tokenEnv: gh.tokenEnv,
+      evidenceTokenEnv: gh.evidence?.host === 'branch' ? gh.evidence.tokenEnv : undefined,
+    };
     const entry: ProviderEntry = {
       name: 'github',
       provider,
       enabled: gh.enabled,
-      secrets: secretPresence({ tokenEnv: gh.tokenEnv }, env),
+      secrets: secretPresence(names, env),
     };
     if (gh.enabled && opts.init !== false) {
       try {
-        await provider.init(gh, readSecrets({ tokenEnv: gh.tokenEnv }, env));
+        await provider.init(gh, readSecrets(names, env));
       } catch (e) {
         entry.initError = (e as Error).message;
       }
