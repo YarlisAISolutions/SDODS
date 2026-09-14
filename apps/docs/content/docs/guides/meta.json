@@ -29,6 +29,7 @@
     "local-models",
     "scheduling",
     "security",
-    "migrating"
+    "migrating",
+    "load-testing"
   ]
 }

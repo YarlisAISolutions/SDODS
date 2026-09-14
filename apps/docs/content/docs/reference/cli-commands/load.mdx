@@ -1,0 +1,55 @@
+---
+title: sdods load
+description: Generate a k6 script from a load profile and run it against an environment that opted in.
+---
+
+```text
+sdods load [profile] -p <project> -e <env> [--dry-run] [--out <dir>] [--runner auto|k6|docker] [--image <image>] [--list] [--json]
+```
+
+| Argument / flag        | Meaning                                                                                                |
+| ---------------------- | ------------------------------------------------------------------------------------------------------ |
+| `profile`              | profile name: `projects/<slug>/load/<profile>.yaml`                                                    |
+| `-p, --project <slug>` | project slug                                                                                           |
+| `-e, --env <name>`     | environment; it must set `load.allowed: true` for a real run                                           |
+| `--dry-run`            | write the k6 script and stop; k6 is not needed and the opt-in is only reported                         |
+| `--out <dir>`          | where to write `script.js`, `summary.json` and `load.json` (default `.sdods/runs/<id>/load/<profile>`) |
+| `--runner <runner>`    | `auto` (default) uses `k6` on `PATH`; `k6` requires it; `docker` runs the `grafana/k6` image           |
+| `--image <image>`      | image for `--runner docker` (default `grafana/k6:latest`)                                              |
+| `--list`               | list the profiles of the project                                                                       |
+| `--json`               | print the result object; k6's own output goes to stderr                                                |
+
+`sdods load` is a thin adapter over [k6](https://grafana.com/docs/k6/latest/). It reads the profile, builds a k6 script against the environment's `api.baseUrl`, prints the target URL and the peak virtual users, then runs `k6 run --summary-export <out>/summary.json <out>/script.js`.
+
+Before anything runs it checks the environment:
+
+- `load.allowed: true` must be set in `envs/<env>.yaml`, otherwise the run is refused.
+- `load.maxVus`, when set, caps the profile's peak virtual users.
+- Profiles that send `POST`, `PUT`, `PATCH` or `DELETE` need `load.allowWrites: true`.
+
+Authentication comes from the environment's `api.auth` and `api.headers`. `${VAR}` references become `__ENV.VAR` lookups in the script, so secret values are never written to `script.js`; k6 receives them through its process environment (with `--runner docker`, as `-e NAME` without a value). A variable with no default that is unset stops the run before k6 starts.
+
+The demo project ships a read-only profile. Its `staging` environment is a public sandbox and does not opt in, so only the dry run works there:
+
+```bash sdods-verify
+sdods load -p demo-shop --list
+sdods load -p demo-shop -e staging posts --dry-run
+```
+
+For your own environment that opted in:
+
+```bash
+sdods load -p demo-shop -e perf browse --dry-run
+```
+
+```bash
+sdods load -p demo-shop -e perf browse
+```
+
+| Exit code | Meaning                                                                                                                  |
+| --------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `0`       | k6 finished and every threshold passed (or `--dry-run`)                                                                  |
+| `1`       | thresholds failed (k6 exit `99`), or k6 failed for another reason                                                        |
+| `2`       | refused: environment not opted in, above `maxVus`, writes not allowed, unset variable, k6 not installed, invalid profile |
+
+When k6 is not installed the command stops with the install link: [grafana.com/docs/k6/latest/set-up/install-k6](https://grafana.com/docs/k6/latest/set-up/install-k6/). See [Load testing](/docs/guides/load-testing) for the profile format.
