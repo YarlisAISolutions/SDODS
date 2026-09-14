@@ -40,3 +40,12 @@ The runner's own `trace`, `screenshot`, `video` and `<name>-expected.png`/`-actu
 - `runId`: UUID v7, sortable by time; `--run-id` overrides (CI uses `gh-<run id>`).
 - Fingerprint: `sha256(project, featureUri, scenarioName, exampleIndex, layer)` truncated to 16 hex characters.
 - Run target: `<slug>--<layer>--<browser>` or `<slug>--api`.
+
+## Project files
+
+| Path                                                        | Content                                                                                                                                                    |
+| ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `projects/<slug>/sdods.project.yaml`                        | the project definition                                                                                                                                     |
+| `projects/<slug>/envs/<env>.yaml`                           | one environment                                                                                                                                            |
+| `projects/<slug>/roles.matrix.yaml`                         | role × surface matrices referenced by `@matrix:<name>`; see [Role matrices](/docs/guides/role-matrix)                                                      |
+| `# sdods:matrix:begin <name>` … `# sdods:matrix:end <name>` | comments in a feature file around the Examples blocks `sdods matrix expand` generates; the lines between them are rewritten, everything else is left alone |

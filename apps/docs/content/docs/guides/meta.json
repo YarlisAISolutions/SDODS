@@ -28,6 +28,7 @@
     "local-models",
     "scheduling",
     "security",
-    "migrating"
+    "migrating",
+    "role-matrix"
   ]
 }

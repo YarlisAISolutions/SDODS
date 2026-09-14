@@ -424,3 +424,46 @@ defaults:
         gates: { minPassRate: 100, maxFlaky: 0, perfBudgets: true, a11y: true },
       }
 ```
+
+## roles.matrix.yaml
+
+An optional file next to `sdods.project.yaml`, validated by `RolesMatrixFileSchema` in `@sdods/contracts`. It declares role × surface matrices that `sdods matrix expand` turns into the Examples of `@matrix:<name>` outlines. The format and workflow are in [Role matrices](/docs/guides/role-matrix).
+
+<TypeTable
+  type={{
+    'matrices.<name>.roles': {
+      type: 'string[]',
+      required: true,
+      description:
+        'Actors, each declared under tags.roles; one Examples block per role, tagged @user:<role>.',
+    },
+    'matrices.<name>.rows': {
+      type: 'Row[]',
+      required: true,
+      description:
+        'Every key other than expect and default is an Examples column; all rows share the same columns.',
+    },
+    'matrices.<name>.rows[].expect': {
+      type: 'string | Record<role, string>',
+      description: 'One outcome for every role, or per role.',
+    },
+    'matrices.<name>.rows[].default': {
+      type: 'string',
+      description: 'Outcome for roles the row does not name.',
+    },
+    'matrices.<name>.default': {
+      type: 'string',
+      description: 'Outcome for roles a row does not name and that have no row default.',
+    },
+    'matrices.<name>.outcomes': {
+      type: 'string[]',
+      description: 'When set, every outcome must be one of these.',
+    },
+    'matrices.<name>.title': {
+      type: 'string',
+      default: "'<role>: <column…> → <expect>'",
+      description: 'Title format of each generated example.',
+    },
+    'matrices.<name>.description': { type: 'string' },
+  }}
+/>

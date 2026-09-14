@@ -1,6 +1,6 @@
 ---
 title: MCP tools
-description: The 84 tools, prompts and resources of the SDODS MCP server.
+description: The 85 tools, prompts and resources of the SDODS MCP server.
 ---
 
 Tools are grouped by capability (`sdods mcp --caps core,analyze,run,data,browser,agents,issues,schedules`; default `core,analyze,run,data,browser,schedules`). Access levels map to scopes: `read` needs the matching `*:read` scope, `run` needs `runs:write`, `write` produces proposals and needs `features:write`. Print the live catalogue with `sdods mcp --list-tools`.
@@ -10,7 +10,7 @@ Tools are grouped by capability (`sdods mcp --caps core,analyze,run,data,browser
 | `project_list`, `project_get_config`, `project_list_envs`, `project_validate_config`, `project_doctor`                                                                         | core       | read       | projects, resolved configuration (secrets redacted), environments, health                                   |
 | `workspace_tree`, `process_list`                                                                                                                                               | core       | read       | organization → workspaces → projects → modules → processes                                                  |
 | `feature_list`, `feature_read`, `feature_parse`, `feature_lint`, `step_list`, `step_find`                                                                                      | core       | read       | features, Gherkin parsing, lint, step catalogue and fuzzy step reuse                                        |
-| `feature_write`                                                                                                                                                                | core       | write      | validated feature staged as a proposal (never the working tree)                                             |
+| `feature_write`, `matrix_expand`                                                                                                                                               | core       | write      | validated feature, or role-matrix Examples, staged as a proposal (never the working tree)                   |
 | `proposal_list`, `proposal_get`                                                                                                                                                | core       | read       | review proposals written by agents and write tools                                                          |
 | `run_tests`, `run_tests_async`                                                                                                                                                 | run        | run        | execute a project slice through `sdods run`, with progress                                                  |
 | `run_list`, `run_get`, `run_get_scenario`, `run_last_failed`                                                                                                                   | run        | read       | runs, scenario detail with `sdods://screenshot/…` URIs and API snapshots                                    |
