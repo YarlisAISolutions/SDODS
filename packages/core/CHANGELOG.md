@@ -1,5 +1,57 @@
 # @sdods/core
 
+## 0.8.0
+
+### Minor Changes
+
+- 4c00473: Canvas steps for graph and node editors (`canvas.steps.ts`): drag an element onto another or by an offset, drag a node by id, connect a handle of one node to a handle of another, select a node, set a field inside a node, and assert the node count, an edge from one node to another (or its absence), a node's visibility and a badge inside a node.
+  
+  - Drags are real pointer gestures (press, nudge, multi-step moves, a final move onto the target, release), so React Flow, d3-drag and native HTML5 `draggable` palettes all react. The press lands on a plain part of the element, never on a field or handle inside it.
+  - New project key `canvas` in `@sdods/contracts`: CSS selector templates for `root`, `nodes`, `node`, `handle`, `edge`, `field`, `badge` and `selected`, defaulting to React Flow's DOM. Templates are validated for their required placeholders (`{id}`, `{handle}`, `{source}`/`{target}`, `{field}`, `{badge}`), and `{testIdAttribute}` expands to the project's attribute.
+  - A project whose own steps already use these phrasings can keep them with `steps.core.exclude: [canvas]`.
+- 842a700: Email assertions over Mailpit. A new `mail` block in the environment yaml (`provider: mailpit`, `url`, optional basic `auth` with a `${VAR}` password) enables seven steps: clear the inbox for an address, wait for an email with a subject within N seconds, assert the latest email's text or sender, save a link or a one-time code from it, and open its link. "The latest email" is scoped to the scenario: only mail received after the scenario started or after the last clear counts, and the wait step pins the message it matched. `@sdods/core` also exports the `MailInbox` interface and `MailpitInbox` adapter.
+- 00930d0: `sdods load -p <project> -e <env> <profile>` runs API load tests through k6. A profile in `projects/<slug>/load/<profile>.yaml` lists requests (method, path relative to `api.baseUrl`, headers, body, expected status and body checks) with k6 `stages` or `vus`/`duration` and `thresholds`. SDODS generates a k6 script whose credentials come from the environment's `api.auth` as `__ENV` lookups, never inlined, prints the target URL and peak virtual users, runs `k6 run --summary-export` (or the `grafana/k6` image with `--runner docker`) and exits `1` when thresholds fail. Load is opt-in: an environment must set `load.allowed: true`, `load.maxVus` caps the peak, and write methods need `load.allowWrites: true`. `--dry-run` writes the script without k6. Results land in `.sdods/runs/<id>/load/<profile>/`.
+- 0cc05cb: Per-scenario browser emulation: `@locale:<bcp47>`, `@timezone:<IANA>`, `@theme:<light|dark|no-preference>`, `@viewport:<W>x<H>` and `@device:<name>` set the browser context before it opens, over the environment's `use:` block, on a Scenario, a Feature, a Rule or one `Examples:` block. `sdods lint` validates the values. New steps: `I use the locale {string}`, `I use the timezone {string}`, `I use the {string} color scheme`, `I use the viewport {int} by {int}`, `I use the device {string}`, `the page should reflow without horizontal scrolling`, `the page should have no untranslated keys` and `the page should have no untranslated keys matching {string}`.
+  
+  Fix: `mobile-chrome` and `mobile-safari` run targets ran in a 1280x720 window instead of the device's viewport, because the generated project set `viewport: undefined`, which Playwright reads as "use the default".
+  
+  The agent rule lines (`CONVENTIONS` in `@sdods/mcp`, the `sdods` skill in `@sdods/cli`) list the new tags.
+- 509b2c8: Role matrices (#118): declare an actor × surface grid once in `projects/<slug>/roles.matrix.yaml` and generate the Scenario Outline examples from it.
+  
+  - `@sdods/contracts`: `RolesMatrixFileSchema` and `ROLES_MATRIX_FILE`. A matrix lists its `roles`, a `default` outcome, optional `outcomes` and `title`, and `rows` whose extra keys are Examples columns; `expect` is one outcome or a per-role map.
+  - `@sdods/core`: `loadRolesMatrices`, `expandFeatureText` and `planMatrixExpansion`. A `Scenario Outline` tagged `@matrix:<name>` gets one `Examples:` block per role, tagged `@user:<role>`, between `# sdods:matrix:begin/end` markers; re-running is idempotent and hand-written Examples are kept. `sdods lint` accepts `@matrix:<name>` and reports an unknown matrix (`tags/matrix`), an invalid matrix file or undeclared role, a misplaced template or unknown placeholder, an out-of-date feature (`matrix/stale`, warning), and a matrix role with no user-pool account in an environment (`matrix/unseeded-role`, warning).
+  - `@sdods/cli`: `sdods matrix expand [-p <slug>] [--check] [--dry-run]`; `--check` exits 3 when a feature is out of date, for CI.
+  - `@sdods/mcp`: `matrix_expand` stages the expanded features as a proposal instead of writing them. The conventions list `@matrix:<name>` among the value tags.
+- 85ac708: Requirement traceability (#119). A new value tag `@req:<id>` links a scenario to a requirement; it may repeat, and on a `Feature` or `Rule` it applies to every scenario under it. The id is opaque. An optional `traceability:` block in `sdods.project.yaml` (`requirements`: a YAML or CSV list of ids and titles, `link`: a URL template with `{id}`, `require`: boolean) makes lint reject ids missing from the list (`tags/req`) and, with `require: true`, scenarios without a `@req:` tag (`tags/req-missing`).
+  
+  `sdods report traceability -p <slug> [-e <env>] [--run <id> | --last] [--format json|csv|md|html] [-o <file>]` exports requirement → scenarios (feature, line, name, tags) → final result per runner project in the chosen run (status, browser, attempts, flaky, duration, timestamps), with the run's id, environment, commit and SDODS version, a coverage summary (passed / failed / not run / not covered) and an empty sign-off block that SDODS never fills in. It reads `messages.ndjson` from the run directory, falling back to per-scenario `meta.json`; no database or server is needed. `@sdods/core/analyze` exports `buildTraceabilityReport` and `renderTraceability`.
+  
+  The agent conventions (`@sdods/mcp` `CONVENTIONS`) list `@req:<id>` among the optional value tags.
+
+### Patch Changes
+
+- 8611552: Canvas steps: `the canvas should not contain an edge from … to …` no longer passes on a canvas that has not finished rendering. React Flow keeps unmeasured nodes in the DOM with `visibility: hidden` and draws edges only after measuring them, so right after a reload every edge looked absent. The step now needs at least one visible node, waits until every node is visible and the editor has painted, and only then checks the edge is absent.
+- 8611552: Canvas steps: `{testIdAttribute}` in `canvas.root` and `canvas.nodes` is now expanded, as it already was in the other selectors. The schema accepted it, but the node count, the absent-edge check and every lookup scoped to the root used the template as-is and failed with an invalid selector.
+- 8611552: `sdods load` refuses a `SDODS_API_BASE_URL` that differs from the environment's `api.baseUrl`, because the opt-in (`load.allowed`) belongs to that environment file and a stray override sent the load to another host. `--dry-run` reports it as a guard problem. An environment whose URL is meant to change per run sets `load.allowBaseUrlOverride: true`.
+- 8611552: `sdods load` no longer passes `K6_*` environment variables to k6. k6 reads `K6_VUS`, `K6_STAGES`, `K6_DURATION`, `K6_ITERATIONS`, `K6_SCENARIOS` and the rest as options that override the script, so a stray one bypassed the profile and `load.maxVus`. The run prints a warning naming the variables it left out.
+- 8611552: Mailpit: a message read in full now has a real `receivedAt`. Mailpit's full `Message` object carries `Date` and no `Created` (only the search summary has `Created`), so `receivedAt` was always 1970-01-01.
+- 8611552: Role matrices: placeholders are checked per `Examples:` block, the way Gherkin fills them. A column that only a hand-written block has is now reported for the generated blocks (it stayed a literal `<column>` in every generated row), and a hand-written block that lacks a placeholder the outline uses is reported on that block.
+- 8611552: Role matrices: a custom `title` must use `<role>` and every row column. A title such as `'<surface> → <expect>'` gave two roles with the same outcome the same test title, and Playwright refuses to load duplicate titles. A title that still renders the same text twice (adjacent placeholders) is reported too.
+- 8611552: A scenario that called `test.skip()` part-way is recorded as skipped, not passed, by run ingest and by `sdods report traceability`. playwright-bdd reports the steps before the skip as PASSED and the rest as SKIPPED, and both readers counted any passed step as a pass; the worst step result now wins, as in Cucumber.
+- Updated dependencies [4c00473]
+- Updated dependencies [8611552]
+- Updated dependencies [842a700]
+- Updated dependencies [8611552]
+- Updated dependencies [f950986]
+- Updated dependencies [8611552]
+- Updated dependencies [00930d0]
+- Updated dependencies [8611552]
+- Updated dependencies [509b2c8]
+- Updated dependencies [8611552]
+- Updated dependencies [85ac708]
+  - @sdods/contracts@0.8.0
+  - @sdods/db@0.8.0
+
 ## 0.7.3
 
 ### Patch Changes

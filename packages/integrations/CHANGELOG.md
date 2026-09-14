@@ -1,5 +1,27 @@
 # @sdods/integrations
 
+## 0.8.0
+
+### Minor Changes
+
+- f950986: GitHub issues can embed evidence that renders inline in private repositories (#82). With `integrations.github.evidence.host: branch` (off by default), screenshots, `video.webm` and a GIF preview (when ffmpeg is on PATH) go to an orphan `sdods-evidence` branch through the git data API, in one fast-forward commit per run that is retried when another job moved the branch first, and are embedded as `blob/<branch>/<path>?raw=true`. The evidence can go to a separate repository with its own token (`evidence.repo`, `evidence.tokenEnv`). Per-file and per-run size caps apply (`maxFileBytes` 5 MB, `maxRunBytes` 25 MB), and files over them are listed in the issue. `sdods integrations test` checks that the token can push to the evidence repository, and `sdods integrations evidence prune [--older-than 14d]` rewrites the branch without old runs. Traces are never uploaded.
+
+### Patch Changes
+
+- 8611552: GitHub evidence host: `evidence prune` can no longer erase a real branch. Uploads, prune and `sdods integrations test` refuse the repository's default branch; prune also refuses a branch SDODS did not create (its root README must be the `# SDODS evidence` one the orphan commit writes); and `integrations.github.evidence.branch` rejects `main`, `master`, `develop`, `development`, `trunk` and `gh-pages`. Before, `evidence.branch: main` committed evidence onto main and prune then force-updated main to an orphan commit.
+- 8611552: GitHub evidence host: an empty evidence repository is reported as "is empty: create it with a README" by `sdods integrations test`, uploads and prune. GitHub answers 409, not 404, when reading a branch of a repository without a commit, and that raw 409 was surfaced instead.
+- 8611552: `sdods integrations evidence prune --older-than` accepts `min`, `h`, `d` and `w` (a bare number is days) and refuses `m`, which read as minutes: `--older-than 3m` meant as three months pruned almost every run. The error suggests `min` or `d`.
+- Updated dependencies [4c00473]
+- Updated dependencies [842a700]
+- Updated dependencies [8611552]
+- Updated dependencies [f950986]
+- Updated dependencies [8611552]
+- Updated dependencies [00930d0]
+- Updated dependencies [8611552]
+- Updated dependencies [509b2c8]
+- Updated dependencies [85ac708]
+  - @sdods/contracts@0.8.0
+
 ## 0.7.3
 
 ### Patch Changes
