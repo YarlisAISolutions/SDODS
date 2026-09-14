@@ -823,6 +823,7 @@ next_steps() {
   say "  ${C_BOLD}Check the setup${C_RESET}     sdods doctor"
   say "  ${C_BOLD}Docs${C_RESET}                ${DOCS_URL}"
   say "  ${C_BOLD}Request a feature${C_RESET}   sdods feedback --feature"
+  say "  ${C_BOLD}Sponsor SDODS${C_RESET}       ${SITE_URL}/sponsor/"
   say ''
 }
 

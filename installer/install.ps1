@@ -533,6 +533,7 @@ function Show-NextSteps {
   Say "  Check the setup     sdods doctor"
   Say "  Docs                $DocsUrl"
   Say "  Request a feature   sdods feedback --feature"
+  Say "  Sponsor SDODS       https://sdods.com/sponsor/"
   Say ''
 }
 

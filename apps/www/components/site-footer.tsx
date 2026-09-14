@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { SdodsMark } from '@/components/sdods-mark';
 import { DISCUSSIONS_URL, DOCS_URL, LICENSE_URL, REPO_PUBLIC, REPO_URL } from '@/lib/links';
+import { SPONSOR_PAGE, SPONSOR_PUBLIC } from '@/lib/sponsor';
 
 export function SiteFooter() {
   return (
@@ -75,6 +76,13 @@ export function SiteFooter() {
                 Feedback and feature requests
               </Link>
             </li>
+            {SPONSOR_PUBLIC && (
+              <li>
+                <Link href={SPONSOR_PAGE} className="inline-block py-1 hover:underline">
+                  Sponsor SDODS
+                </Link>
+              </li>
+            )}
           </ul>
         </div>
         <div>
