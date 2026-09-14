@@ -58,7 +58,8 @@
 
 - id: mcp-claude
   question: How do I connect SDODS to Claude Code?
-  include: ['sdods mcp install claude']
+  # The docs offer the plugin, `claude mcp add` and `sdods mcp install claude`; any of them is right.
+  include: ['sdods mcp install claude|claude mcp add sdods|/plugin install sdods']
 
 - id: proposals
   question: An agent wrote a proposal. How do I apply it?
@@ -109,7 +110,8 @@
   question: Write a UI smoke scenario for demo-shop where a standard user logs in and lands on the inventory page.
   feature: true
   include: ['@ui', '@smoke']
-  exclude: ['xpath', 'secret_sauce']
+  # Inside the feature only: explaining the env file's default password in prose is fine.
+  featureExclude: ['xpath', 'secret_sauce']
 
 - id: write-cart
   question: Write a regression feature for demo-shop that adds "Sauce Labs Backpack" to the cart and checks the badge shows 1 item.

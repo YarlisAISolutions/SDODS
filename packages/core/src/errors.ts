@@ -14,6 +14,8 @@ export type SdodsErrorCode =
   | 'RUN_FAILED'
   | 'HAR_MISS'
   | 'DB_REQUIRED'
+  | 'MAIL_REQUIRED'
+  | 'MAIL_NOT_RECEIVED'
   | 'AUTH_FAILED'
   | 'NOT_SUPPORTED'
   | 'INTERNAL';

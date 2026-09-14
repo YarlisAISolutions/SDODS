@@ -1,5 +1,25 @@
 # @sdods/mcp
 
+## 0.7.3
+
+### Patch Changes
+
+- @sdods/contracts@0.7.3
+
+## 0.7.2
+
+### Patch Changes
+
+- 0865fee: Add `@sdods/mcp/gherkin`: `parseGherkin`, `basicTagCheck` and `similarity` without the CLI, file system or tool registry, for code that checks a feature it was handed. The root export is unchanged.
+- @sdods/contracts@0.7.2
+
+## 0.7.1
+
+### Patch Changes
+
+- Updated dependencies [805752a]
+  - @sdods/contracts@0.7.1
+
 ## 0.7.0
 
 ### Minor Changes

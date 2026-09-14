@@ -2,7 +2,7 @@ import { expect } from '@playwright/test';
 import './params.js';
 import { Then, When } from '../fixtures/test.js';
 import type { HttpMethod } from '../api/client.js';
-import { getPath } from '../api/json-path.js';
+import { matchedPath } from '../api/json-path.js';
 import { renderJson, renderStrict } from '../api/template.js';
 
 /* Hybrid glue: seed through the API, verify in the browser. */
@@ -19,7 +19,7 @@ Then(
   'the UI should show the text from JSON path {string}',
   async ({ page, apiContext, env }, jsonPath: string) => {
     const path = renderStrict(jsonPath, apiContext.vars.toObject(), env.vars);
-    const value = getPath(apiContext.last().response.body, path);
+    const value = matchedPath(apiContext.last().response.body, path);
     await expect(page.getByText(String(value), { exact: false }).first()).toBeVisible();
   },
 );

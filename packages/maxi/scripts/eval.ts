@@ -28,6 +28,7 @@ interface Case {
   include?: string[];
   exclude?: string[];
   feature?: boolean;
+  featureExclude?: string[];
 }
 
 const here = dirname(fileURLToPath(import.meta.url));

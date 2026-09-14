@@ -1,5 +1,24 @@
 # @sdods/integrations
 
+## 0.7.3
+
+### Patch Changes
+
+- @sdods/contracts@0.7.3
+
+## 0.7.2
+
+### Patch Changes
+
+- @sdods/contracts@0.7.2
+
+## 0.7.1
+
+### Patch Changes
+
+- Updated dependencies [805752a]
+  - @sdods/contracts@0.7.1
+
 ## 0.7.0
 
 ### Patch Changes

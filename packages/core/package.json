@@ -1,6 +1,6 @@
 {
   "name": "@sdods/core",
-  "version": "0.7.0",
+  "version": "0.7.3",
   "description": "SDODS runtime: configuration, project registry, fixtures, step libraries, data providers, screenshot narratives and self-healing locators.",
   "license": "Apache-2.0",
   "author": "SDODS <admin@sdods.com>",
@@ -21,6 +21,7 @@
     "./analyze": "./src/analyze/index.ts",
     "./recorder": "./src/recorder/index.ts",
     "./har": "./src/har/index.ts",
+    "./load": "./src/load/index.ts",
     "./auth": "./src/auth/index.ts",
     "./insights": "./src/insights/index.ts",
     "./reporters/dashboard": "./src/reporters/dashboard.ts",
@@ -45,6 +46,7 @@
       "./analyze": "./dist/analyze/index.js",
       "./recorder": "./dist/recorder/index.js",
       "./har": "./dist/har/index.js",
+      "./load": "./dist/load/index.js",
       "./auth": "./dist/auth/index.js",
       "./insights": "./dist/insights/index.js",
       "./reporters/dashboard": "./dist/reporters/dashboard.js",

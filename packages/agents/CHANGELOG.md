@@ -1,5 +1,28 @@
 # @sdods/agents
 
+## 0.7.3
+
+### Patch Changes
+
+- @sdods/contracts@0.7.3
+  - @sdods/mcp@0.7.3
+
+## 0.7.2
+
+### Patch Changes
+
+- Updated dependencies [0865fee]
+  - @sdods/mcp@0.7.2
+  - @sdods/contracts@0.7.2
+
+## 0.7.1
+
+### Patch Changes
+
+- Updated dependencies [805752a]
+  - @sdods/contracts@0.7.1
+  - @sdods/mcp@0.7.1
+
 ## 0.7.0
 
 ### Patch Changes

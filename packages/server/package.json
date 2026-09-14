@@ -1,6 +1,6 @@
 {
   "name": "@sdods/server",
-  "version": "0.7.0",
+  "version": "0.7.3",
   "description": "SDODS server: REST API, live run streaming, MCP over HTTP, scheduler and the web UI.",
   "license": "Apache-2.0",
   "author": "SDODS <admin@sdods.com>",

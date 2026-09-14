@@ -2,22 +2,24 @@ import type { CiInfo, IntegrationSecrets } from './types.js';
 
 /** Read secrets by env var NAME from the given environment; values are never logged. */
 export function readSecrets(
-  names: { tokenEnv?: string; emailEnv?: string },
+  names: { tokenEnv?: string; emailEnv?: string; evidenceTokenEnv?: string },
   env: NodeJS.ProcessEnv = process.env,
 ): IntegrationSecrets {
   return {
     token: names.tokenEnv ? env[names.tokenEnv] : undefined,
     email: names.emailEnv ? env[names.emailEnv] : undefined,
+    ...(names.evidenceTokenEnv ? { evidenceToken: env[names.evidenceTokenEnv] } : {}),
   };
 }
 
 export function secretPresence(
-  names: { tokenEnv?: string; emailEnv?: string },
+  names: { tokenEnv?: string; emailEnv?: string; evidenceTokenEnv?: string },
   env: NodeJS.ProcessEnv = process.env,
 ): Record<string, boolean> {
   const out: Record<string, boolean> = {};
   if (names.tokenEnv) out[names.tokenEnv] = Boolean(env[names.tokenEnv]);
   if (names.emailEnv) out[names.emailEnv] = Boolean(env[names.emailEnv]);
+  if (names.evidenceTokenEnv) out[names.evidenceTokenEnv] = Boolean(env[names.evidenceTokenEnv]);
   return out;
 }
 

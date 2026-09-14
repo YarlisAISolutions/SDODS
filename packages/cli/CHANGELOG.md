@@ -1,5 +1,45 @@
 # @sdods/cli
 
+## 0.7.3
+
+### Patch Changes
+
+- Updated dependencies [ffbf50f]
+  - @sdods/core@0.7.3
+  - @sdods/server@0.7.3
+  - @sdods/agents@0.7.3
+  - @sdods/contracts@0.7.3
+  - @sdods/db@0.7.3
+  - @sdods/integrations@0.7.3
+  - @sdods/mcp@0.7.3
+
+## 0.7.2
+
+### Patch Changes
+
+- Updated dependencies [0865fee]
+  - @sdods/mcp@0.7.2
+  - @sdods/agents@0.7.2
+  - @sdods/server@0.7.2
+  - @sdods/contracts@0.7.2
+  - @sdods/core@0.7.2
+  - @sdods/db@0.7.2
+  - @sdods/integrations@0.7.2
+
+## 0.7.1
+
+### Patch Changes
+
+- 805752a: Sponsorship is behind one switch, `SPONSOR_ENABLED` in `@sdods/contracts/sponsor`, and it is off. While off, `sdods --help`, the web UI sidebar, the desktop menu and the installers no longer link to the sponsor page, and sdods.com serves its sponsor pages as not found.
+- Updated dependencies [805752a]
+  - @sdods/contracts@0.7.1
+  - @sdods/agents@0.7.1
+  - @sdods/core@0.7.1
+  - @sdods/db@0.7.1
+  - @sdods/integrations@0.7.1
+  - @sdods/mcp@0.7.1
+  - @sdods/server@0.7.1
+
 ## 0.7.0
 
 ### Minor Changes
