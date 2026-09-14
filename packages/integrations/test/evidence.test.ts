@@ -199,6 +199,8 @@ class FakeGit {
       ),
       http.get(`${base}/git/ref/*`, ({ request }) => {
         call('getRef');
+        // GitHub answers 409, not 404, for any ref of a repository without a commit
+        if (this.empty) return emptyRepo();
         const ref = decodeURIComponent(new URL(request.url).pathname.split('/git/ref/')[1]!);
         const branch = ref.replace(/^heads\//, '');
         const sha = this.refs.get(branch);
@@ -797,6 +799,9 @@ describe('sdods integrations test with evidence.host: branch', () => {
     expect(issues[0]!.body).not.toContain('blob/');
     expect(lines.warn.join('\n')).toContain('is empty: create it with a README');
     expect(git.calls).not.toContain('createBlob');
+    await expect(p.pruneEvidence({ dryRun: true })).rejects.toThrow(
+      'evidence repo acme/shop is empty: create it with a README',
+    );
   });
 
   it('reports a missing evidence token without breaking issue creation', async () => {

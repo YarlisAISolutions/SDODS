@@ -374,6 +374,8 @@ export class GitHubBranchEvidence {
       return data.object.sha;
     } catch (e) {
       if (statusOf(e) === 404) return null;
+      // GitHub answers 409 ("repository is empty"), not 404, for a ref of a repo without a commit
+      if (statusOf(e) === 409) throw new Error(this.emptyRepoMessage());
       throw e;
     }
   }
@@ -567,7 +569,14 @@ export class GitHubBranchEvidence {
     }
     let branch: string;
     try {
-      const head = await this.headSha();
+      let head: string | null;
+      try {
+        head = await this.headSha();
+      } catch (e) {
+        if ((e as Error).message === this.emptyRepoMessage())
+          return { ok: false, detail: this.emptyRepoMessage() };
+        throw e;
+      }
       if (!head && (await this.isEmptyRepo()))
         return { ok: false, detail: this.emptyRepoMessage() };
       branch = head
