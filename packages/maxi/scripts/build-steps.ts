@@ -1,6 +1,6 @@
 /**
  * Writes data/steps.json: the step catalog Maxi's find_steps and validate_feature use. It is the
- * demo-shop template project, the one the docs teach with.
+ * demo-shop project (projects/demo-shop), the one the docs teach with.
  *
  *   bun run --filter @sdods/maxi steps
  */
