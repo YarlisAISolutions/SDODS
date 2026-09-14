@@ -1,0 +1,291 @@
+{
+  "kind": "sdods-traceability",
+  "version": 1,
+  "project": "shop",
+  "projectName": "Shop",
+  "generatedAt": "2026-09-02T08:00:00.000Z",
+  "requirementsFile": "requirements.yaml",
+  "run": {
+    "id": "run-1",
+    "env": "staging",
+    "trigger": "ci",
+    "command": "run -p shop -e staging",
+    "tagsExpr": "@smoke or @regression",
+    "startedAt": "2026-09-01T09:59:00.000Z",
+    "finishedAt": "2026-09-01T10:00:00.000Z",
+    "exitCode": 1,
+    "git": {
+      "sha": "0123456789abcdef0123456789abcdef01234567",
+      "branch": "main",
+      "dirty": false
+    },
+    "ci": {
+      "provider": "github",
+      "runId": "42",
+      "url": "https://ci.example.com/runs/42"
+    },
+    "sdodsVersion": "0.7.2",
+    "resultsSource": "cucumber-messages"
+  },
+  "requirements": [
+    {
+      "id": "AUTH-1",
+      "title": "A registered user can sign in",
+      "url": "https://jira.example.com/browse/AUTH-1",
+      "declared": true,
+      "status": "failed",
+      "scenarios": [
+        {
+          "feature": "features/auth/login.feature",
+          "featureName": "Login",
+          "line": 5,
+          "name": "Valid login",
+          "tags": [
+            "@ui",
+            "@req:AUTH-1",
+            "@smoke"
+          ],
+          "requirements": [
+            "AUTH-1"
+          ],
+          "status": "passed",
+          "results": [
+            {
+              "runnerProject": "shop--ui--chromium",
+              "layer": "ui",
+              "browser": "chromium",
+              "exampleIndex": null,
+              "status": "passed",
+              "attempts": 1,
+              "flaky": false,
+              "durationMs": 1200,
+              "startedAt": "2026-09-01T10:00:00.000Z",
+              "finishedAt": "2026-09-01T10:00:01.200Z"
+            },
+            {
+              "runnerProject": "shop--ui--firefox",
+              "layer": "ui",
+              "browser": "firefox",
+              "exampleIndex": null,
+              "status": "passed",
+              "attempts": 1,
+              "flaky": false,
+              "durationMs": 1500,
+              "startedAt": "2026-09-01T10:00:02.000Z",
+              "finishedAt": "2026-09-01T10:00:03.500Z"
+            }
+          ]
+        },
+        {
+          "feature": "features/auth/login.feature",
+          "featureName": "Login",
+          "line": 11,
+          "name": "Locked user",
+          "tags": [
+            "@ui",
+            "@req:AUTH-1",
+            "@regression",
+            "@req:AUTH-2"
+          ],
+          "requirements": [
+            "AUTH-1",
+            "AUTH-2"
+          ],
+          "status": "failed",
+          "results": [
+            {
+              "runnerProject": "shop--ui--chromium",
+              "layer": "ui",
+              "browser": "chromium",
+              "exampleIndex": null,
+              "status": "passed",
+              "attempts": 2,
+              "flaky": true,
+              "durationMs": 800,
+              "startedAt": "2026-09-01T10:00:06.000Z",
+              "finishedAt": "2026-09-01T10:00:06.800Z"
+            },
+            {
+              "runnerProject": "shop--ui--firefox",
+              "layer": "ui",
+              "browser": "firefox",
+              "exampleIndex": null,
+              "status": "failed",
+              "attempts": 1,
+              "flaky": false,
+              "durationMs": 1000,
+              "startedAt": "2026-09-01T10:00:08.000Z",
+              "finishedAt": "2026-09-01T10:00:09.000Z",
+              "error": "expected \"locked\" to be visible"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "AUTH-2",
+      "title": "A locked account cannot sign in",
+      "url": "https://jira.example.com/browse/AUTH-2",
+      "declared": true,
+      "status": "failed",
+      "scenarios": [
+        {
+          "feature": "features/auth/login.feature",
+          "featureName": "Login",
+          "line": 11,
+          "name": "Locked user",
+          "tags": [
+            "@ui",
+            "@req:AUTH-1",
+            "@regression",
+            "@req:AUTH-2"
+          ],
+          "requirements": [
+            "AUTH-1",
+            "AUTH-2"
+          ],
+          "status": "failed",
+          "results": [
+            {
+              "runnerProject": "shop--ui--chromium",
+              "layer": "ui",
+              "browser": "chromium",
+              "exampleIndex": null,
+              "status": "passed",
+              "attempts": 2,
+              "flaky": true,
+              "durationMs": 800,
+              "startedAt": "2026-09-01T10:00:06.000Z",
+              "finishedAt": "2026-09-01T10:00:06.800Z"
+            },
+            {
+              "runnerProject": "shop--ui--firefox",
+              "layer": "ui",
+              "browser": "firefox",
+              "exampleIndex": null,
+              "status": "failed",
+              "attempts": 1,
+              "flaky": false,
+              "durationMs": 1000,
+              "startedAt": "2026-09-01T10:00:08.000Z",
+              "finishedAt": "2026-09-01T10:00:09.000Z",
+              "error": "expected \"locked\" to be visible"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ORD-1",
+      "title": "A customer can place an order",
+      "url": "https://jira.example.com/browse/ORD-1",
+      "declared": true,
+      "status": "passed",
+      "scenarios": [
+        {
+          "feature": "features/api/orders.feature",
+          "featureName": "Orders",
+          "line": 6,
+          "name": "Create order",
+          "tags": [
+            "@api",
+            "@smoke",
+            "@req:ORD-1"
+          ],
+          "requirements": [
+            "ORD-1"
+          ],
+          "status": "passed",
+          "results": [
+            {
+              "runnerProject": "shop--api",
+              "layer": "api",
+              "exampleIndex": 1,
+              "status": "passed",
+              "attempts": 1,
+              "flaky": false,
+              "durationMs": 300,
+              "startedAt": "2026-09-01T10:00:10.000Z",
+              "finishedAt": "2026-09-01T10:00:10.300Z"
+            },
+            {
+              "runnerProject": "shop--api",
+              "layer": "api",
+              "exampleIndex": 2,
+              "status": "passed",
+              "attempts": 1,
+              "flaky": false,
+              "durationMs": 350,
+              "startedAt": "2026-09-01T10:00:11.000Z",
+              "finishedAt": "2026-09-01T10:00:11.350Z"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ORD-2",
+      "title": "A customer can cancel an order",
+      "url": "https://jira.example.com/browse/ORD-2",
+      "declared": true,
+      "status": "not-run",
+      "scenarios": [
+        {
+          "feature": "features/api/orders.feature",
+          "featureName": "Orders",
+          "line": 16,
+          "name": "Cancel order",
+          "tags": [
+            "@api",
+            "@regression",
+            "@req:ORD-2"
+          ],
+          "requirements": [
+            "ORD-2"
+          ],
+          "status": "not-run",
+          "results": []
+        }
+      ]
+    },
+    {
+      "id": "PAY-1",
+      "title": "Card payments are captured",
+      "url": "https://jira.example.com/browse/PAY-1",
+      "declared": true,
+      "status": "not-covered",
+      "scenarios": []
+    }
+  ],
+  "untraced": [
+    {
+      "feature": "features/api/orders.feature",
+      "line": 21,
+      "name": "Health",
+      "status": "skipped"
+    }
+  ],
+  "summary": {
+    "requirements": 5,
+    "covered": 4,
+    "passed": 1,
+    "failed": 2,
+    "notRun": 1,
+    "notCovered": 1,
+    "undeclared": 0,
+    "scenarios": 5,
+    "tracedScenarios": 4,
+    "untracedScenarios": 1
+  },
+  "signOff": {
+    "signedBy": null,
+    "role": null,
+    "date": null,
+    "decision": null,
+    "notes": null
+  },
+  "notes": [
+    "A requirement passes only when every scenario that covers it passed in this run; skipped or missing results count as not run.",
+    "The sign-off block is filled in by a person. SDODS never writes it: sign-off authority is human."
+  ]
+}
