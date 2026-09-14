@@ -12,7 +12,9 @@ import {
   taxonomyFromProject,
 } from '../config/tags.js';
 import { moduleForFeature } from '../config/workspace.js';
+import { emulationTagProblem } from '../config/emulation.js';
 import { parseFeatureFile, scenariosOf, type ParsedFeature } from './gherkin.js';
+import { projectRequirements } from '../analyze/traceability.js';
 import { checkStepAmbiguity } from './steps.js';
 import { ROLES_MATRIX_FILE, planMatrixExpansion } from '../matrix/index.js';
 
@@ -51,6 +53,19 @@ export async function lintProject(opts: LintOptions): Promise<LintResult> {
   const rel = (f: string) => relative(project.root, f).replace(/\\/g, '/');
   const parsedFeatures: ParsedFeature[] = [];
   const matrixPlan = planMatrixExpansion(project, files);
+  // `@req:<id>` is opaque unless the project lists its requirements; then an id must be in the list.
+  let declaredReqs: Set<string> | null = null;
+  try {
+    const defs = projectRequirements(project);
+    declaredReqs = defs ? new Set(defs.map((d) => d.id)) : null;
+  } catch (e) {
+    errors.push({
+      severity: 'error',
+      rule: 'traceability/requirements',
+      message: (e as Error).message,
+      file: 'sdods.project.yaml',
+    });
+  }
 
   for (const file of files) {
     const parsed = parseFeatureFile(file);
@@ -198,6 +213,15 @@ export async function lintProject(opts: LintOptions): Promise<LintResult> {
                   ...loc,
                 });
               break;
+            case 'req':
+              if (declaredReqs && !declaredReqs.has(value))
+                errors.push({
+                  severity: 'error',
+                  rule: 'tags/req',
+                  message: `@req:${value} is not listed in ${project.traceability?.requirements}.`,
+                  ...loc,
+                });
+              break;
             case 'skip':
               if (!(BROWSERS_FOR_SKIP as readonly string[]).includes(value))
                 errors.push({
@@ -207,6 +231,28 @@ export async function lintProject(opts: LintOptions): Promise<LintResult> {
                   ...loc,
                 });
               break;
+            case 'locale':
+            case 'timezone':
+            case 'theme':
+            case 'viewport':
+            case 'device': {
+              const problem = emulationTagProblem(key, value);
+              if (problem)
+                errors.push({ severity: 'error', rule: `tags/${key}`, message: problem, ...loc });
+              // One browser context per scenario, so one value per key (Feature tags included).
+              // Outlines are exempt: their tag list folds in every Examples block, and one block
+              // per locale (`@locale:fr` / `@locale:de`) is exactly the pattern these tags enable.
+              // The runner still refuses a real conflict on a single example.
+              const distinct = [...new Set(sc.tags.filter((t) => t.startsWith(`@${key}:`)))];
+              if (!sc.isOutline && distinct.length > 1 && distinct[0] === tag)
+                errors.push({
+                  severity: 'error',
+                  rule: `tags/${key}`,
+                  message: `Conflicting ${distinct.join(' and ')}: a scenario takes one @${key}: value.`,
+                  ...loc,
+                });
+              break;
+            }
             default:
               if (!(KNOWN_VALUE_TAGS as readonly string[]).includes(key))
                 warnings.push({
@@ -222,6 +268,15 @@ export async function lintProject(opts: LintOptions): Promise<LintResult> {
           severity: 'warning',
           rule: 'tags/unknown',
           message: `Unknown tag ${tag}. Declare it under tags.extra or a module's tags in sdods.project.yaml.`,
+          ...loc,
+        });
+      }
+      if (project.traceability?.require && !sc.tags.some((t) => t.startsWith('@req:'))) {
+        errors.push({
+          severity: 'error',
+          rule: 'tags/req-missing',
+          message:
+            'Scenario carries no @req:<id> tag (traceability.require is on). Tag the scenario, or its Feature to cover every scenario in the file.',
           ...loc,
         });
       }

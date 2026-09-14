@@ -24,6 +24,9 @@ Rules:
 | not exactly one suite tag from `tags.suites`                                | error                                |
 | `@user:`, `@data:`, `@env:`, `@har:`, `@skip:` value unknown to the project | error                                |
 | `@jira:` / `@github:` pattern invalid                                       | error                                |
+| `@req:` id not in `traceability.requirements` (when set)                    | error                                |
+| scenario without `@req:` while `traceability.require` is true               | error                                |
+| `traceability.requirements` file missing or unreadable                      | error                                |
 | duplicate scenario titles in a feature                                      | error                                |
 | undefined step                                                              | error, only with `--undefined-steps` |
 | Scenario Outline without a `# title-format:` comment                        | warning                              |

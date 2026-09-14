@@ -364,6 +364,46 @@ Load profiles are not part of this file: each lives in `projects/<slug>/load/<na
   }}
 />
 
+### Traceability
+
+`@req:<id>` tags link scenarios to requirements; this block makes the ids checkable and feeds [`sdods report traceability`](/docs/reference/cli-commands/report-heal-insights#report-traceability). Every key is optional, and without the block any id is accepted.
+
+<TypeTable
+  type={{
+    'traceability.requirements': {
+      type: 'string',
+      description:
+        'YAML or CSV file (relative to the project root) listing requirement ids and titles. When set, lint rejects `@req:` ids not in it and `sdods report traceability` lists requirements no scenario covers.',
+    },
+    'traceability.link': {
+      type: 'string',
+      description:
+        'URL template for a requirement; `{id}` is replaced by the id, e.g. `https://jira.example.com/browse/{id}`.',
+    },
+    'traceability.require': {
+      type: 'boolean',
+      default: 'false',
+      description:
+        'Lint fails every scenario that carries no `@req:` tag (its own, or its Feature or Rule).',
+    },
+  }}
+/>
+
+```yaml
+traceability:
+  requirements: requirements.yaml # or requirements.csv with an id,title header
+  link: https://jira.example.com/browse/{id}
+  require: false
+```
+
+```yaml
+# requirements.yaml: a list, a map (AUTH-1: Title), or either under `requirements:`
+- id: AUTH-1
+  title: A registered user can sign in
+- id: AUTH-2
+  title: A locked account cannot sign in
+```
+
 ### The demo project
 
 ```yaml

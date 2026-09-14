@@ -324,7 +324,10 @@ export function buildRunnerConfig(
               ...browserUse(browser, p.channel),
               baseURL: cfg.env.ui.baseUrl,
               testIdAttribute: p.testIdAttribute,
-              viewport: browser.startsWith('mobile') ? undefined : p.screenshots.viewport,
+              // Mobile targets keep their device descriptor's viewport. The key must be ABSENT, not
+              // `undefined`: Playwright treats an explicit undefined option as "use the default",
+              // so `viewport: undefined` reset Pixel 7 and iPhone 15 to a 1280x720 desktop window.
+              ...(browser.startsWith('mobile') ? {} : { viewport: p.screenshots.viewport }),
               ...envUse,
               ...evidenceUse,
               sdods: { project: p.slug, layer, browser } satisfies SdodsUseOption,

@@ -18,7 +18,7 @@ over shelling out.
 
 - Every scenario carries exactly one layer tag (`@ui`, `@api`, `@hybrid`) and exactly one suite tag
   (`@smoke`, `@regression`, `@sanity`). Optional: `@visual @a11y @perf @mock @data-driven @pool`,
-  and value tags `@user:<role> @data:<dataset> @har:<name> @jira:KEY @skip:<browser> @matrix:<name>`.
+  and value tags `@user:<role> @data:<dataset> @har:<name> @jira:KEY @skip:<browser> @matrix:<name> @req:<id>`, and per-scenario emulation `@locale:<bcp47> @theme:<light|dark|no-preference> @timezone:<IANA> @viewport:<W>x<H> @device:<name>`.
 - Reuse existing steps first (`sdods steps list -p <slug>`, or `step_find`). Add a step only when no
   phrasing fits, and name it in the same style.
 - Locator priority: role + name > label > test id > placeholder > text > CSS. Never XPath.

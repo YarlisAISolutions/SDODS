@@ -290,6 +290,7 @@ data:
 | `@user:<role>` `@data:<dataset>` `@har:<name>` `@env:<name>` | values validated against the project yaml |
 | `@jira:PROJ-123` `@github:123` | issue links shown in the run viewer |
 | `@skip:webkit` | per-browser exclusion, never a silent branch in code |
+| `@locale:fr-FR` `@timezone:Asia/Tokyo` `@theme:dark` `@viewport:320x640` `@device:iPhone-15` | per-scenario browser emulation, over the env's `use:` block |
 | `@retries:2` `@timeout:60000` `@slow` `@mode:serial` `@skip` `@fixme` | runner control tags, passed through |
 
 Filter with Cucumber expressions: `sdods run -t "@smoke and not @mock"`.

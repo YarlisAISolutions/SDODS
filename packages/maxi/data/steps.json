@@ -656,7 +656,32 @@
   },
   {
     "keyword": "Given",
+    "pattern": "I use the {string} color scheme",
+    "source": "project"
+  },
+  {
+    "keyword": "Given",
+    "pattern": "I use the device {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Given",
+    "pattern": "I use the locale {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Given",
+    "pattern": "I use the timezone {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Given",
     "pattern": "I use the user {string} from the pool",
+    "source": "project"
+  },
+  {
+    "keyword": "Given",
+    "pattern": "I use the viewport {int} by {int}",
     "source": "project"
   },
   {
@@ -1181,6 +1206,16 @@
   },
   {
     "keyword": "Then",
+    "pattern": "the page should have no untranslated keys",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the page should have no untranslated keys matching {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
     "pattern": "the page should match the visual baseline {string}",
     "source": "project"
   },
@@ -1192,6 +1227,11 @@
   {
     "keyword": "Then",
     "pattern": "the page should not scroll horizontally",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the page should reflow without horizontal scrolling",
     "source": "project"
   },
   {

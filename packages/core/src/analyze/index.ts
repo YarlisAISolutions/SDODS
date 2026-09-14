@@ -9,3 +9,23 @@ export {
 } from './apply.js';
 export { computeCoverage, parseFeatures, pomRouteSteps, type CoverageOptions } from './coverage.js';
 export * from './detectors.js';
+export {
+  REQ_TAG,
+  buildTraceabilityReport,
+  latestRunFor,
+  loadRequirements,
+  projectRequirements,
+  readRunManifest,
+  readRunResults,
+  requirementUrl,
+  traceScenarios,
+  type RequirementDef,
+  type RunAttempt,
+  type RunResults,
+  type TraceabilityOptions,
+} from './traceability.js';
+export {
+  TRACEABILITY_FORMATS,
+  renderTraceability,
+  type TraceabilityFormat,
+} from './traceability-render.js';
