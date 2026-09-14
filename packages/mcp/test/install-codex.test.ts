@@ -57,7 +57,7 @@ url = "https://mcp.perplexity.ai"
     expect(parsed.mcp_servers.perplexity).toEqual({ url: 'https://mcp.perplexity.ai' });
     expect(parsed.mcp_servers.sdods).toEqual({
       command: 'npx',
-      args: ['sdods', 'mcp', '--project', 'demo-shop', '--env', 'staging'],
+      args: ['-y', '@sdods/cli', 'mcp', '--project', 'demo-shop', '--env', 'staging'],
     });
     // The raw upstream browser server is no longer registered alongside: the sdods server wraps
     // every one of its tools as browser_*, and a second ungoverned path to the same browser would
@@ -78,16 +78,16 @@ url = "https://mcp.perplexity.ai"
     const r = installClientConfig('/unused-root', 'codex', { project: 'shop' });
     expect(r.created).toBe(true);
     const parsed = parseToml(readFileSync(r.file, 'utf8')) as any;
-    expect(parsed.mcp_servers.sdods.args).toEqual(['sdods', 'mcp', '--project', 'shop']);
+    expect(parsed.mcp_servers.sdods.args).toEqual(['-y', '@sdods/cli', 'mcp', '--project', 'shop']);
   });
 
   it('exposes snippets and CLI commands for codex', () => {
     const s = snippets({ project: 'shop' });
     expect(s.codex.toml).toContain('[mcp_servers.sdods]');
-    expect(s.codex.cli).toBe('codex mcp add sdods -- npx sdods mcp --project shop');
+    expect(s.codex.cli).toBe('codex mcp add sdods -- npx -y @sdods/cli mcp --project shop');
     expect(cliCommands({ httpUrl: 'https://x/mcp' }).codex).toContain('--url https://x/mcp');
     expect(cliCommands({ project: 'shop' }).claude).toBe(
-      'claude mcp add sdods -- npx sdods mcp --project shop',
+      'claude mcp add sdods -- npx -y @sdods/cli mcp --project shop',
     );
     expect(Object.keys(codexTomlEntries({ withPlaywright: false }))).toEqual(['sdods']);
   });

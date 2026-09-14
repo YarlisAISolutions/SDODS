@@ -20,7 +20,8 @@
   "files": [
     "dist",
     "bin",
-    "templates"
+    "templates",
+    "skills"
   ],
   "engines": {
     "node": ">=22"

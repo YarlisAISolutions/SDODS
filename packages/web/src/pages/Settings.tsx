@@ -295,16 +295,34 @@ function McpTab() {
       code: `claude mcp add --transport http sdods ${url} --header "Authorization: Bearer ${token}"`,
     },
     {
-      label: 'Claude Code (local stdio)',
-      code: `claude mcp add sdods -- npx sdods mcp --project demo-shop --env staging`,
+      label: 'Codex (remote)',
+      code: `codex mcp add sdods --url ${url} --bearer-token-env-var SDODS_TOKEN`,
     },
     {
-      label: 'JSON config (Claude Desktop, Cursor, Windsurf)',
+      label: 'Gemini CLI (remote)',
+      code: `gemini mcp add --transport http sdods ${url} --header "Authorization: Bearer ${token}"`,
+    },
+    {
+      label: 'Claude Code (local stdio)',
+      code: `claude mcp add sdods -- npx -y @sdods/cli mcp --project <slug> --env <env>`,
+    },
+    {
+      label: 'Cursor .cursor/mcp.json',
       code: JSON.stringify(
         {
           mcpServers: {
             sdods: { type: 'http', url, headers: { Authorization: `Bearer ${token}` } },
           },
+        },
+        null,
+        2,
+      ),
+    },
+    {
+      label: 'Windsurf ~/.codeium/windsurf/mcp_config.json',
+      code: JSON.stringify(
+        {
+          mcpServers: { sdods: { serverUrl: url, headers: { Authorization: `Bearer ${token}` } } },
         },
         null,
         2,
@@ -337,7 +355,11 @@ function McpTab() {
     {
       label: 'Local stdio (any client)',
       code: JSON.stringify(
-        { mcpServers: { sdods: { command: 'npx', args: ['sdods', 'mcp'], cwd: '<repo>' } } },
+        {
+          mcpServers: {
+            sdods: { command: 'npx', args: ['-y', '@sdods/cli', '--cwd', '<workspace>', 'mcp'] },
+          },
+        },
         null,
         2,
       ),
@@ -348,8 +370,8 @@ function McpTab() {
       <Card title="Endpoint">
         <div className="mono text-sm">{url}</div>
         <div className="muted mt-1 text-xs">
-          Streamable HTTP with bearer tokens. Tools are filtered by the token's scopes. Browser
-          driving stays with the bundled Playwright MCP (`npx playwright mcp`), installed alongside.
+          Streamable HTTP with bearer tokens. Tools are filtered by the token's scopes, and browser
+          driving is built in as the governed browser_* tools.
         </div>
         <div className="mt-2 flex flex-wrap gap-1">
           {info.isLoading && <Skeleton className="h-5 w-64" />}
