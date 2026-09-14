@@ -30,6 +30,7 @@
     "scheduling",
     "security",
     "migrating",
+    "role-matrix"
     "load-testing"
   ]
 }

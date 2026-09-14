@@ -19,6 +19,7 @@ export const KNOWN_VALUE_TAGS = [
   'skip',
   'title',
   'flag',
+  'matrix',
   'locale',
   'timezone',
   'theme',

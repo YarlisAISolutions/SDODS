@@ -1,0 +1,39 @@
+---
+title: sdods matrix
+description: Expand role × surface matrices from roles.matrix.yaml into the Examples of @matrix outlines.
+---
+
+```text
+sdods matrix expand [-p <slug>] [--check] [--dry-run] [--file <path>]...
+```
+
+For every `Scenario Outline` tagged `@matrix:<name>`, writes one `Examples:` block per role of that matrix in `roles.matrix.yaml`, tagged `@user:<role>`, between `# sdods:matrix:begin <name>` and `# sdods:matrix:end <name>` comments. Only the lines between the markers are rewritten, so hand-written `Examples:` blocks and everything else in the file are kept. Running it again with an unchanged matrix changes nothing. See [Role matrices](/docs/guides/role-matrix) for the file format.
+
+| Flag                   | Meaning                                                                                       |
+| ---------------------- | --------------------------------------------------------------------------------------------- |
+| `-p, --project <slug>` | project slug (default: every project)                                                         |
+| `--check`              | write nothing; exit `3` when a feature is out of date or a template is invalid (use it in CI) |
+| `--dry-run`            | write nothing; with `--json`, each file entry carries the expanded `content`                  |
+| `--file <path>`        | expand only this feature file; repeatable                                                     |
+
+Output lists each matrix feature as `updated`, `out of date` (`--check`, `--dry-run`) or `up to date`, with the number of generated examples, and every finding with its rule name:
+
+| Rule                   | Severity | Meaning                                                                                         |
+| ---------------------- | -------- | ----------------------------------------------------------------------------------------------- |
+| `matrix/config`        | error    | `roles.matrix.yaml` does not parse, or a row cannot become an Examples table                    |
+| `matrix/role`          | error    | a matrix role is not in `tags.roles` (a warning when the project declares no roles)             |
+| `matrix/template`      | error    | `@matrix:` on a Feature or Rule, two `@matrix:` tags on one outline, or `@user:` on the outline |
+| `matrix/placeholder`   | error    | the outline uses a `<placeholder>` the matrix does not provide                                  |
+| `matrix/markers`       | error    | a begin marker without an end marker, or the reverse; the file is left alone                    |
+| `matrix/unseeded-role` | warning  | a matrix role has no account in the user pool dataset for an environment, or there is no pool   |
+
+Exit codes: `0` success, `2` when `roles.matrix.yaml` is invalid (nothing is written), `3` on template errors (a feature with a template error is reported and left unwritten), or with `--check` when any feature is out of date. `--dry-run` alone always exits `0` so its JSON can be read.
+
+`sdods lint` reports the same findings, plus `matrix/stale` (warning) for a feature whose generated rows no longer match the matrix, and `tags/matrix` (error) for an unknown `@matrix:<name>`.
+
+The MCP tool `matrix_expand` runs `--dry-run` and stages the changed features as a proposal instead of writing them.
+
+```bash
+sdods matrix expand -p demo-shop
+sdods matrix expand -p demo-shop --check
+```

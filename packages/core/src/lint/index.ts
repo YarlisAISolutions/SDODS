@@ -15,6 +15,7 @@ import { moduleForFeature } from '../config/workspace.js';
 import { emulationTagProblem } from '../config/emulation.js';
 import { parseFeatureFile, scenariosOf, type ParsedFeature } from './gherkin.js';
 import { checkStepAmbiguity } from './steps.js';
+import { ROLES_MATRIX_FILE, planMatrixExpansion } from '../matrix/index.js';
 
 export * from './gherkin.js';
 
@@ -50,6 +51,7 @@ export async function lintProject(opts: LintOptions): Promise<LintResult> {
   const warnings: LintFinding[] = [];
   const rel = (f: string) => relative(project.root, f).replace(/\\/g, '/');
   const parsedFeatures: ParsedFeature[] = [];
+  const matrixPlan = planMatrixExpansion(project, files);
 
   for (const file of files) {
     const parsed = parseFeatureFile(file);
@@ -181,6 +183,22 @@ export async function lintProject(opts: LintOptions): Promise<LintResult> {
                   ...loc,
                 });
               break;
+            case 'matrix':
+              if (!matrixPlan.loaded)
+                errors.push({
+                  severity: 'error',
+                  rule: 'tags/matrix',
+                  message: `@matrix:${value} needs a ${ROLES_MATRIX_FILE} in the project.`,
+                  ...loc,
+                });
+              else if (!matrixPlan.loaded.declared.includes(value))
+                errors.push({
+                  severity: 'error',
+                  rule: 'tags/matrix',
+                  message: `@matrix:${value} is not a matrix in ${ROLES_MATRIX_FILE} (${matrixPlan.loaded.declared.join(', ') || 'none'}).`,
+                  ...loc,
+                });
+              break;
             case 'skip':
               if (!(BROWSERS_FOR_SKIP as readonly string[]).includes(value))
                 errors.push({
@@ -261,6 +279,20 @@ export async function lintProject(opts: LintOptions): Promise<LintResult> {
       else seen.set(key, sc.line);
     }
   }
+
+  // Role matrix (#118): the yaml, its roles and pool accounts, template placement, and staleness.
+  for (const p of [...matrixPlan.problems, ...matrixPlan.files.flatMap((f) => f.problems)]) {
+    const { severity, rule, message, file, line } = p;
+    (severity === 'error' ? errors : warnings).push({ severity, rule, message, file, line });
+  }
+  for (const f of matrixPlan.files.filter((x) => x.changed))
+    warnings.push({
+      severity: 'warning',
+      rule: 'matrix/stale',
+      message: `Generated Examples are out of date with ${ROLES_MATRIX_FILE}; run \`sdods matrix expand -p ${project.slug}\`.`,
+      file: f.path,
+      line: 1,
+    });
 
   // A phrasing matched by two definitions stops bddgen generating anything (#60).
   const ambiguity = await checkStepAmbiguity({ project, features: parsedFeatures });

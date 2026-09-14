@@ -21,6 +21,7 @@ description: The tag taxonomy SDODS enforces and how tags select layers, suites,
 | `@env:<name>`                                                             | must be in `envs.available`                         | restricts a scenario to one environment              |
 | `@jira:PROJ-123` `@github:123`                                            | pattern-checked                                     | links the scenario to an issue                       |
 | `@skip:<browser>`                                                         | browser must be supported                           | excludes the scenario from that engine               |
+| `@matrix:<name>`                                                          | matrix must exist in `roles.matrix.yaml`            | generates one tagged Examples block per role         |
 | `@locale:<bcp47>`                                                         | valid BCP 47 locale (`fr`, `fr-FR`)                 | browser context locale, over `use.locale`            |
 | `@timezone:<IANA>`                                                        | valid IANA zone (`Europe/Paris`, `UTC`)             | browser context time zone, over `use.timezoneId`     |
 | `@theme:<light\|dark\|no-preference>`                                     | one of the three                                    | `prefers-color-scheme`, over `use.colorScheme`       |

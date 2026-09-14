@@ -31,6 +31,13 @@ Rules:
 | feature outside every declared module directory                             | warning                              |
 | scenario lacks a tag its module expects                                     | warning                              |
 | unused step definition                                                      | warning                              |
+| `@matrix:<name>` unknown, or no `roles.matrix.yaml`                         | error                                |
+| `roles.matrix.yaml` invalid, or a matrix role not in `tags.roles`           | error                                |
+| `@matrix:` template misplaced, or uses a placeholder the matrix lacks       | error                                |
+| matrix feature out of date (`matrix/stale`)                                 | warning                              |
+| matrix role with no user-pool account for an environment                    | warning                              |
+
+Matrix rules are described in [`sdods matrix`](/docs/reference/cli-commands/matrix).
 
 `sdods run` lints first unless `--no-lint` is given. Exit code `3` on errors.
 
