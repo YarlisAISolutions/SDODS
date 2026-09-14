@@ -250,7 +250,11 @@ export class IngestSession {
     const status = cucumberStatus(result.status);
     const message: string | null = result.exception?.message ?? firstLine(result.message) ?? null;
     const stack: string | null = result.exception?.stackTrace ?? result.message ?? null;
-    a.statuses.push(status);
+    // A failing hook fails the scenario, but a passing one proves nothing: before and after hooks
+    // run and pass on a scenario whose steps were all skipped (`@skip:<browser>`), which must stay
+    // skipped. Hooks decide the outcome only for a scenario without Gherkin steps.
+    if (testStep.pickleStepId || status === 'failed' || a.pickle.steps.length === 0)
+      a.statuses.push(status);
     if (status === 'failed' && !a.firstError) a.firstError = { message, stack };
     const startedAt =
       this.pendingStepStart.get(`${tsf.testCaseStartedId}|${tsf.testStepId}`) ?? null;
@@ -492,13 +496,17 @@ export class IngestSession {
     const a = this.attempts.get(tcf.testCaseStartedId);
     if (!a) return;
     const { db, driver } = this.ctx.adb;
+    // The worst step result wins, as in Cucumber: a scenario that called test.skip() part-way has
+    // PASSED steps before the SKIPPED ones, and it was skipped, not passed.
     const status: SuiteStatus = a.statuses.includes('failed')
       ? 'failed'
-      : a.statuses.some((s) => s === 'passed')
-        ? 'passed'
-        : a.statuses.length
-          ? 'skipped'
-          : 'unknown';
+      : a.statuses.includes('skipped')
+        ? 'skipped'
+        : a.statuses.includes('passed')
+          ? 'passed'
+          : a.statuses.length
+            ? 'skipped'
+            : 'unknown';
     const finishedAt = tsToIso(tcf.timestamp) ?? a.lastStepEndIso;
     const durationMs =
       a.startedAtIso && finishedAt

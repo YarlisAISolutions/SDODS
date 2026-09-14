@@ -36,7 +36,7 @@ export const RolesMatrixSchema = z
     default: z.string().min(1).optional(),
     /** When set, every outcome must be one of these (catches `alowed`). */
     outcomes: z.array(z.string().min(1)).min(1).optional(),
-    /** Example title, written as the `# title-format:` of each generated block. */
+    /** Example title, written as the `# title-format:` of each generated block. Must use `<role>` and every row column, so titles are unique. */
     title: z.string().min(1).optional(),
     rows: z.array(RolesMatrixRowSchema).min(1),
   })

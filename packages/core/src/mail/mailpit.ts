@@ -11,15 +11,19 @@ interface MailpitAddress {
   Address?: string;
 }
 
+/** Mailpit's `MessageSummary` (search results). */
 interface MailpitSummary {
   ID: string;
   From?: MailpitAddress | null;
   To?: MailpitAddress[] | null;
   Subject?: string;
+  /** When Mailpit received the message. Only the summary has it. */
   Created?: string;
 }
 
+/** Mailpit's full `Message` (`GET /api/v1/message/{ID}`): `Date`, and no `Created`. */
 interface MailpitMessage extends MailpitSummary {
+  /** The message's Date header, or when it was received if the header is absent. */
   Date?: string;
   Text?: string;
   HTML?: string;
@@ -154,12 +158,12 @@ function toDate(s: string | undefined): Date {
   return Number.isNaN(d.getTime()) ? new Date(0) : d;
 }
 
-function toSummary(m: MailpitSummary): MailSummary {
+function toSummary(m: MailpitSummary & { Date?: string }): MailSummary {
   return {
     id: m.ID,
     from: toAddress(m.From),
     to: (m.To ?? []).map(toAddress),
     subject: m.Subject ?? '',
-    receivedAt: toDate(m.Created),
+    receivedAt: toDate(m.Created ?? m.Date),
   };
 }

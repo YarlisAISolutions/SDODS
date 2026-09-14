@@ -7,7 +7,13 @@ import { DEFAULT_ARTIFACTS_DIR } from '../config/defaults.js';
 import { loadDotEnvLayer } from '../config/env-files.js';
 import { assertNoSecretLiterals, interpolateString } from '../config/interpolate.js';
 import { loadEnvFile, loadProjectFile } from '../config/resolve.js';
-import { assertLoadAllowed, loadGuardProblems, peakVus, readLoadProfile } from './profile.js';
+import {
+  assertLoadAllowed,
+  baseUrlOverrideProblems,
+  loadGuardProblems,
+  peakVus,
+  readLoadProfile,
+} from './profile.js';
 import { generateK6Script } from './script.js';
 
 export const K6_INSTALL_URL = 'https://grafana.com/docs/k6/latest/set-up/install-k6/';
@@ -230,13 +236,16 @@ export async function runLoad(opts: RunLoadOptions): Promise<LoadRunResult> {
     ...loadDotEnvLayer(opts.rootDir, opts.projectRoot, envName).values,
     ...(processEnv as Record<string, string | undefined>),
   };
-  const target = interpolateString(
-    processEnv.SDODS_API_BASE_URL || env.api.baseUrl,
+  const envBaseUrl = interpolateString(
+    env.api.baseUrl,
     { vars, onUnresolved: 'throw' },
     'env.api.baseUrl',
   ).replace(/\/+$/, '');
+  const override = processEnv.SDODS_API_BASE_URL || undefined;
+  const overrideProblems = baseUrlOverrideProblems(env, envBaseUrl, override);
+  const target = (override ?? envBaseUrl).trim().replace(/\/+$/, '');
   const peak = peakVus(profile);
-  const guardProblems = loadGuardProblems(env, profile);
+  const guardProblems = [...loadGuardProblems(env, profile), ...overrideProblems];
 
   const { script, requiredEnv } = generateK6Script({
     project: project.slug,
@@ -252,7 +261,7 @@ export async function runLoad(opts: RunLoadOptions): Promise<LoadRunResult> {
     for (const p of guardProblems) log(`warning: a real run would be refused: ${p}`);
   } else {
     // Refuse before writing anything: a refused run leaves no run directory behind.
-    assertLoadAllowed(env, profile);
+    assertLoadAllowed(env, profile, overrideProblems);
     const missing = requiredEnv.filter((name) => !vars[name]);
     if (missing.length) {
       throw new SdodsConfigError(
@@ -314,6 +323,16 @@ export async function runLoad(opts: RunLoadOptions): Promise<LoadRunResult> {
     .sort();
   const k6Env: NodeJS.ProcessEnv = { ...processEnv };
   for (const name of referenced) k6Env[name] = vars[name];
+  // k6 reads K6_VUS, K6_STAGES, K6_DURATION, K6_ITERATIONS, K6_SCENARIOS and the rest as options that
+  // override the script, which would bypass the profile and load.maxVus. None are passed through.
+  const stripped = Object.keys(k6Env)
+    .filter((name) => /^K6_/i.test(name))
+    .sort();
+  for (const name of stripped) delete k6Env[name];
+  if (stripped.length)
+    log(
+      `warning: not passing ${stripped.join(', ')} to k6: k6 reads K6_* variables as options that override the profile and load.maxVus`,
+    );
   const run = await runK6({
     outDir,
     scriptFile,
@@ -321,7 +340,7 @@ export async function runLoad(opts: RunLoadOptions): Promise<LoadRunResult> {
     runner: opts.runner,
     image: opts.image,
     env: k6Env,
-    passEnv: referenced,
+    passEnv: referenced.filter((name) => !stripped.includes(name)),
     stdio: opts.stdio,
   });
   const mapped = mapK6ExitCode(run.k6ExitCode);

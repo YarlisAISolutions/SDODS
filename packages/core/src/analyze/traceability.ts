@@ -347,13 +347,17 @@ async function readMessagesFile(file: string): Promise<RunAttempt[]> {
         name: scenario?.name || pickle.name,
         exampleIndex: row ?? null,
         attempt: s.attempt,
+        // The worst step result wins, as in Cucumber: a scenario that called test.skip() part-way
+        // has PASSED steps before the SKIPPED ones, and it was skipped, not passed.
         status: s.statuses.includes('failed')
           ? 'failed'
-          : s.statuses.includes('passed')
-            ? 'passed'
-            : s.statuses.length
-              ? 'skipped'
-              : 'unknown',
+          : s.statuses.includes('skipped')
+            ? 'skipped'
+            : s.statuses.includes('passed')
+              ? 'passed'
+              : s.statuses.length
+                ? 'skipped'
+                : 'unknown',
         durationMs:
           s.startedAt && finishedAt
             ? Math.max(0, Date.parse(finishedAt) - Date.parse(s.startedAt))

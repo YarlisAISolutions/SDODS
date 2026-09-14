@@ -46,6 +46,8 @@ export interface ScenarioSpec {
   /** attempts: each entry gives the statuses of the steps for that attempt (default: one attempt from step.status) */
   attempts?: Array<Array<'PASSED' | 'FAILED' | 'SKIPPED'>>;
   exampleRows?: number; // > 0 → scenario outline with N example rows
+  /** add an AFTER_TEST_CASE hook step with this result (after-hooks run even when steps are skipped) */
+  afterHook?: 'PASSED' | 'FAILED';
 }
 
 export interface FeatureSpec {
@@ -88,6 +90,15 @@ export function buildMessages(features: FeatureSpec[], opts: BuildOptions): stri
       type: 'BEFORE_TEST_CASE',
       name: 'BeforeScenario',
       sourceReference: { uri: 'packages/core/src/shots/hooks.ts', location: { line: 10 } },
+    },
+  });
+  const hookAfter = nid('hook');
+  lines.push({
+    hook: {
+      id: hookAfter,
+      type: 'AFTER_TEST_CASE',
+      name: 'AfterScenario',
+      sourceReference: { uri: 'packages/core/src/shots/hooks.ts', location: { line: 20 } },
     },
   });
 
@@ -192,6 +203,7 @@ export function buildMessages(features: FeatureSpec[], opts: BuildOptions): stri
             pickleStepId: ps.id,
             stepDefinitionIds: [],
           })),
+          ...(sc.afterHook ? [{ id: `${testCaseId}-after-0`, hookId: hookAfter }] : []),
         ];
         lines.push({ testCase: { id: testCaseId, pickleId, testSteps } });
         const attempts = sc.attempts ?? [sc.steps.map((s) => s.status ?? 'PASSED')];
@@ -260,6 +272,31 @@ export function buildMessages(features: FeatureSpec[], opts: BuildOptions): stri
               },
             });
           });
+          if (sc.afterHook) {
+            const stepId = `${testCaseId}-after-0`;
+            lines.push({
+              testStepStarted: {
+                testCaseStartedId: tcsId,
+                testStepId: stepId,
+                timestamp: ts(clock),
+              },
+            });
+            clock += 1;
+            const result: any = { duration: dur(1), status: sc.afterHook };
+            if (sc.afterHook === 'FAILED') {
+              failed = true;
+              result.message = 'Error: after hook failed';
+              result.exception = { type: 'Error', message: 'Error: after hook failed' };
+            }
+            lines.push({
+              testStepFinished: {
+                testCaseStartedId: tcsId,
+                testStepId: stepId,
+                testStepResult: result,
+                timestamp: ts(clock),
+              },
+            });
+          }
           clock += 2;
           const willBeRetried = failed && attempt < attempts.length - 1;
           lines.push({

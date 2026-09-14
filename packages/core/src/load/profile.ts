@@ -93,13 +93,37 @@ export function loadGuardProblems(env: EnvConfig, profile: LoadProfile): string[
   return problems;
 }
 
-export function assertLoadAllowed(env: EnvConfig, profile: LoadProfile): void {
-  const problems = loadGuardProblems(env, profile);
+/**
+ * The load goes to `SDODS_API_BASE_URL` when it is set. The opt-in is for the environment file, so
+ * an override that points at another host is refused unless that file sets
+ * `load.allowBaseUrlOverride: true`. Both URLs are compared without trailing slashes.
+ */
+export function baseUrlOverrideProblems(
+  env: EnvConfig,
+  envBaseUrl: string,
+  override: string | undefined,
+): string[] {
+  const norm = (u: string) => u.trim().replace(/\/+$/, '');
+  if (!override || norm(override) === norm(envBaseUrl) || env.load?.allowBaseUrlOverride) return [];
+  return [
+    `SDODS_API_BASE_URL (${norm(override)}) is not the api.baseUrl of "${env.name}" (${norm(envBaseUrl)}), and envs/${env.name}.yaml does not set load.allowBaseUrlOverride: true`,
+  ];
+}
+
+export function assertLoadAllowed(
+  env: EnvConfig,
+  profile: LoadProfile,
+  extraProblems: string[] = [],
+): void {
+  const problems = [...loadGuardProblems(env, profile), ...extraProblems];
   if (!problems.length) return;
   throw new SdodsConfigError(`Refusing to run a load test: ${problems.join('; ')}.`, {
     hint:
       `Only opt in an environment you own and that is sized for load — never production. ` +
       `In envs/${env.name}.yaml: load: { allowed: true, maxVus: 50, allowWrites: false }. ` +
+      (extraProblems.length
+        ? 'Unset SDODS_API_BASE_URL, or set load.allowBaseUrlOverride: true in the environment file if the override is intended. '
+        : '') +
       '`--dry-run` writes the script without running it.',
     docsPath: '/docs/guides/load-testing',
     details: { problems },

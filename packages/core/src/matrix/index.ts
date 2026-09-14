@@ -167,11 +167,37 @@ export function parseRolesMatrices(text: string, file = ROLES_MATRIX_FILE): Load
     });
 
     const title = m.title ?? defaultTitle(columns);
-    for (const p of placeholders(title))
+    const titleUses = placeholders(title);
+    for (const p of titleUses)
       if (!['role', 'expect', ...columns].includes(p))
         at(
           `title uses <${p}>, which is not a column (role, expect${columns.map((c) => `, ${c}`).join('')}).`,
         );
+    // Every generated test is titled from this format, and Playwright refuses to load two tests with
+    // the same title. Rows are unique by their columns, so <role> plus every column makes each title
+    // unique; `<expect>` does not, since two roles often share an outcome.
+    const leftOut = ['role', ...columns].filter((c) => !titleUses.includes(c));
+    if (leftOut.length)
+      at(
+        `title "${title}" leaves out ${leftOut.map((c) => `<${c}>`).join(', ')}; a custom title needs <role> and every column (${columns.join(', ')}), or two generated tests can share a title and Playwright refuses to load them.`,
+      );
+    else if (problems.length === before) {
+      // Adjacent placeholders can still collide (`<x><y>`: "ab"+"c" and "a"+"bc").
+      const seenTitles = new Set<string>();
+      titles: for (const role of m.roles)
+        for (const row of rows) {
+          const rendered = title.replace(/<([^<>\s]+)>/g, (whole, p: string) =>
+            p === 'role' ? role : p === 'expect' ? row.expect[role]! : (row.values[p] ?? whole),
+          );
+          if (seenTitles.has(rendered)) {
+            at(
+              `title "${title}" renders "${rendered}" for more than one generated test; separate the placeholders so every title is unique.`,
+            );
+            break titles;
+          }
+          seenTitles.add(rendered);
+        }
+    }
 
     if (problems.length === before)
       matrices.set(name, {
@@ -327,28 +353,42 @@ export function expandFeatureText(
         ownUser.location.line,
       );
 
-    // Placeholders the template uses must come from the matrix or a hand-written Examples block.
+    // Gherkin fills a placeholder only from the Examples block its row belongs to, so each block is
+    // checked on its own: the generated blocks supply role, expect and the matrix columns; every
+    // hand-written block must supply every placeholder itself.
     const generatedExamples = (ex: Scenario['examples'][number]) =>
       inside.some((p) => ex.location.line > p.begin && ex.location.line < p.end);
-    const handColumns = sc.examples
-      .filter((ex) => !generatedExamples(ex))
-      .flatMap((ex) => ex.tableHeader?.cells.map((c) => c.value) ?? []);
-    const available = new Set(['role', 'expect', ...matrix.columns, ...handColumns]);
-    const used = new Set<string>([
-      ...placeholders(sc.name),
-      ...sc.steps.flatMap((s) => [
-        ...placeholders(s.text),
-        ...placeholders(s.docString?.content ?? ''),
-        ...(s.dataTable?.rows.flatMap((r) => r.cells.flatMap((c) => placeholders(c.value))) ?? []),
+    const used = [
+      ...new Set<string>([
+        ...placeholders(sc.name),
+        ...sc.steps.flatMap((s) => [
+          ...placeholders(s.text),
+          ...placeholders(s.docString?.content ?? ''),
+          ...(s.dataTable?.rows.flatMap((r) => r.cells.flatMap((c) => placeholders(c.value))) ??
+            []),
+        ]),
       ]),
-    ]);
-    const unknown = [...used].filter((p) => !available.has(p));
+    ];
+    const generated = ['role', 'expect', ...matrix.columns];
+    const unknown = used.filter((p) => !generated.includes(p));
     if (unknown.length)
       problem(
         'matrix/placeholder',
-        `${unknown.map((p) => `<${p}>`).join(', ')} not provided by matrix "${name}" (columns: ${[...available].join(', ')}).`,
+        `${unknown.map((p) => `<${p}>`).join(', ')} not provided by matrix "${name}" (columns: ${generated.join(', ')}).`,
         line,
       );
+    for (const ex of sc.examples.filter((e) => !generatedExamples(e))) {
+      // A block without a table produces no rows, so nothing to fill.
+      if (!ex.tableHeader) continue;
+      const header = ex.tableHeader.cells.map((c) => c.value);
+      const missing = used.filter((p) => !header.includes(p));
+      if (missing.length)
+        problem(
+          'matrix/placeholder',
+          `Examples${ex.name ? ` "${ex.name}"` : ''} does not supply ${missing.map((p) => `<${p}>`).join(', ')}; Gherkin fills a placeholder only from the Examples block its row is in.`,
+          ex.location.line,
+        );
+    }
 
     const indent = sc.steps[0]
       ? ' '.repeat(sc.steps[0].location.column! - 1)
