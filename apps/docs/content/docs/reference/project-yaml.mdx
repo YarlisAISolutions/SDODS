@@ -304,7 +304,7 @@ Load profiles are not part of this file: each lives in `projects/<slug>/load/<na
       type: "{ host: 'none'|'branch', repo?, branch, tokenEnv?, maxFileBytes, maxRunBytes, retainDays, gifPreview }",
       default: "absent (host 'none')",
       description:
-        'Commit issue screenshots, video and a GIF preview to a branch so they render inline in private repos. Defaults with host branch: branch sdods-evidence, 5 MB per file, 25 MB per run, retainDays 14, gifPreview true. Needs contents: write on the evidence repo.',
+        'Commit issue screenshots, video and a GIF preview to a branch so they render inline in private repos. Defaults with host branch: branch sdods-evidence, 5 MB per file, 25 MB per run, retainDays 14, gifPreview true. Needs contents: write on the evidence repo. branch must be a branch of its own: main, master, develop, development, trunk and gh-pages are rejected, and the repository default branch is refused at upload and prune time.',
     },
     'integrations.jira': {
       type: '{ enabled, baseUrl, projectKey, issueType, authMode, emailEnv, tokenEnv, createIssueOnFailure, transitionOnPass, linkTaggedScenarios, labels, maxAttachmentMb }',

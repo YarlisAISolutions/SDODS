@@ -44,9 +44,15 @@ class FakeGit {
   refs = new Map<string, string>();
   calls: string[] = [];
   updates: Array<{ sha: string; force: boolean; status: number }> = [];
-  repo: { full_name: string; private: boolean; permissions?: { push: boolean } } = {
+  repo: {
+    full_name: string;
+    private: boolean;
+    default_branch?: string;
+    permissions?: { push: boolean };
+  } = {
     full_name: 'acme/shop',
     private: true,
+    default_branch: 'main',
     permissions: { push: true },
   };
   blobWritesAllowed = true;
@@ -430,6 +436,8 @@ function expectNoRemoteTrace(body: string) {
 }
 
 const BLOB = 'https://github.com/acme/shop/blob/sdods-evidence/runs/run-1';
+/** the first line of the README the orphan branch is created with */
+const SDODS_README = '# SDODS evidence\n\nScreenshots, videos and GIF previews.\n';
 
 describe('integrations.github.evidence config', () => {
   it('is off unless configured, with documented defaults when host is branch', () => {
@@ -445,6 +453,18 @@ describe('integrations.github.evidence config', () => {
     expect(() =>
       GitHubIntegrationSchema.parse({ evidence: { host: 'branch', repo: 'no-slash' } }),
     ).toThrow(/owner\/name/);
+  });
+
+  it('refuses a protected branch name as the evidence branch', () => {
+    for (const branch of ['main', 'master', 'develop', 'trunk', 'gh-pages', 'Main'])
+      expect(
+        () => GitHubIntegrationSchema.parse({ evidence: { host: 'branch', branch } }),
+        branch,
+      ).toThrow(/rewritten by evidence prune/);
+    expect(
+      GitHubIntegrationSchema.parse({ evidence: { host: 'branch', branch: 'qa-evidence' } })
+        .evidence?.branch,
+    ).toBe('qa-evidence');
   });
 
   it('parses prune ages and builds readable, unique scenario directories', () => {
@@ -809,6 +829,82 @@ describe('sdods integrations test with evidence.host: branch', () => {
   });
 });
 
+describe('the evidence branch is never a branch people work on', () => {
+  const now = new Date('2026-09-14T12:00:00Z');
+  const old = new Date(now.getTime() - 30 * 86_400_000).toISOString();
+
+  function host() {
+    return new GitHubBranchEvidence({
+      octokit: new Octokit({ auth: 'ghp_test', baseUrl: API }),
+      owner: 'acme',
+      repo: 'shop',
+      branch: 'sdods-evidence',
+      now: () => now,
+      sleep: noSleep,
+    });
+  }
+
+  it('refuses to upload onto the repository default branch, and the issue keeps the old links', async () => {
+    git.repo.default_branch = 'sdods-evidence';
+    const before = git.seed('sdods-evidence', { 'README.md': '# Shop\n', 'src/app.ts': 'code' });
+    useFake();
+    const { logger, lines } = recordingLogger();
+    const p = await provider({ host: 'branch' });
+    await p.onRunFinished(
+      summary(artifacts(), [scenario('fp-login', 'Successful login')]),
+      createIntegrationContext({ store: createMemoryStore(), env: {} as never, logger }),
+    );
+    expect(issues).toHaveLength(1);
+    expect(issues[0]!.body).not.toContain('blob/');
+    expect(lines.warn.join('\n')).toContain("is the repository's default branch");
+    expect(git.refs.get('sdods-evidence')).toBe(before);
+    expect(git.calls).not.toContain('createBlob');
+  });
+
+  it('sdods integrations test fails when the evidence branch is the default branch', async () => {
+    git.repo.default_branch = 'sdods-evidence';
+    git.seed('sdods-evidence', { 'README.md': '# Shop\n' });
+    useFake();
+    const res = await (await provider({ host: 'branch' })).test();
+    expect(res.ok).toBe(false);
+    expect(res.evidence?.detail).toContain("is the repository's default branch");
+  });
+
+  it('refuses to prune the default branch', async () => {
+    git.repo.default_branch = 'sdods-evidence';
+    const before = git.seed('sdods-evidence', {
+      'README.md': SDODS_README,
+      'runs/old-run/login/scenario-failure.png': 'old',
+      'runs/index.json': JSON.stringify({
+        runs: { 'old-run': { uploadedAt: old, files: 1, bytes: 3 } },
+      }),
+    });
+    useFake();
+    await expect(host().prune({ olderThanMs: parseAge('14d') })).rejects.toThrow(/default branch/);
+    expect(git.refs.get('sdods-evidence')).toBe(before);
+    expect(git.updates).toEqual([]);
+  });
+
+  it('refuses to prune a branch SDODS did not create, even one holding a runs index', async () => {
+    // e.g. evidence.branch pointed at a release branch that uploads then committed onto
+    const before = git.seed('sdods-evidence', {
+      'README.md': '# Shop\n\nThe storefront.\n',
+      'src/app.ts': 'code with years of history',
+      'runs/old-run/login/scenario-failure.png': 'old',
+      'runs/index.json': JSON.stringify({
+        runs: { 'old-run': { uploadedAt: old, files: 1, bytes: 3 } },
+      }),
+    });
+    useFake();
+    for (const dryRun of [true, false])
+      await expect(host().prune({ olderThanMs: parseAge('14d'), dryRun })).rejects.toThrow(
+        /was not created by SDODS/,
+      );
+    expect(git.refs.get('sdods-evidence')).toBe(before);
+    expect(git.updates).toEqual([]);
+  });
+});
+
 describe('sdods integrations evidence prune', () => {
   const now = new Date('2026-09-14T12:00:00Z');
   const daysAgo = (d: number) => new Date(now.getTime() - d * 86_400_000).toISOString();
@@ -817,7 +913,7 @@ describe('sdods integrations evidence prune', () => {
     daysAgo = (d: number) => new Date(now.getTime() - d * 86_400_000).toISOString(),
   ) {
     git.seed('sdods-evidence', {
-      'README.md': 'readme',
+      'README.md': SDODS_README,
       'runs/old-run/login/scenario-failure.png': 'old',
       'runs/new-run/login/scenario-failure.png': 'new',
       'runs/stray-run/login/scenario-failure.png': 'unknown age',

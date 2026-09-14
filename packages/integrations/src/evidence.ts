@@ -23,7 +23,9 @@ import type {
  */
 
 export const EVIDENCE_INDEX = 'runs/index.json';
-const README = `# SDODS evidence
+/** The first line of the README the orphan branch is created with; prune requires it. */
+const README_MARKER = '# SDODS evidence';
+const README = `${README_MARKER}
 
 Screenshots, videos and GIF previews linked from issues that SDODS opened for failing scenarios.
 Files live under \`runs/<runId>/<scenario>/\`; \`runs/index.json\` records when each run was uploaded.
@@ -159,7 +161,8 @@ export class GitHubBranchEvidence {
     const urls = new Map<string, string>();
     if (!upload.length) return { urls, skipped };
 
-    // first, so an empty repository fails with a clear message before any upload
+    // first, so a default branch or an empty repository fails with a clear message before any upload
+    await this.assertNotDefaultBranch();
     await this.ensureBranch();
     const runDir = `runs/${safeSegment(run.id)}`;
     const entries: TreeEntry[] = [];
@@ -297,6 +300,52 @@ export class GitHubBranchEvidence {
     }
   }
 
+  private defaultBranch?: Promise<string | undefined>;
+
+  /** The repository's default branch, read once. */
+  private async repoDefaultBranch(): Promise<string | undefined> {
+    this.defaultBranch ??= this.octokit.rest.repos
+      .get({ owner: this.owner, repo: this.repo })
+      .then(({ data }) => (data as { default_branch?: string }).default_branch)
+      .catch((e: unknown) => {
+        this.defaultBranch = undefined;
+        throw e;
+      });
+    return this.defaultBranch;
+  }
+
+  private defaultBranchMessage(): string {
+    return `github evidence: ${this.fullName}@${this.branch} is the repository's default branch; evidence is committed to an orphan branch that \`evidence prune\` rewrites, so set integrations.github.evidence.branch to a branch of its own (default sdods-evidence)`;
+  }
+
+  /** Uploads and prune never touch the default branch: prune would erase its history. */
+  private async assertNotDefaultBranch(): Promise<void> {
+    if ((await this.repoDefaultBranch()) === this.branch)
+      throw new Error(this.defaultBranchMessage());
+  }
+
+  /**
+   * Prune force-rewrites the branch, so it only runs on a branch SDODS created: one whose root
+   * README.md is the one written with the orphan commit.
+   */
+  private async assertCreatedBySdods(root: TreeEntry[]): Promise<void> {
+    const readme = root.find((e) => e.path === 'README.md' && e.type === 'blob');
+    let text = '';
+    if (readme?.sha) {
+      const { data } = await this.octokit.rest.git.getBlob({
+        owner: this.owner,
+        repo: this.repo,
+        file_sha: readme.sha,
+      });
+      text = Buffer.from(data.content, 'base64').toString('utf8');
+    }
+    if (!text.startsWith(README_MARKER)) {
+      throw new Error(
+        `github evidence: refusing to prune ${this.fullName}@${this.branch}: it was not created by SDODS (its README.md does not start with "${README_MARKER}"), and prune replaces the branch with a new orphan commit, erasing its history. Point integrations.github.evidence.branch at a branch SDODS creates.`,
+      );
+    }
+  }
+
   private async isEmptyRepo(): Promise<boolean> {
     try {
       await this.octokit.rest.repos.listCommits({
@@ -390,6 +439,7 @@ export class GitHubBranchEvidence {
    * that linked them stop rendering those images.
    */
   async prune(opts: PruneOptions): Promise<PruneResult> {
+    await this.assertNotDefaultBranch();
     for (let attempt = 1; ; attempt++) {
       const head = await this.headSha();
       const result: PruneResult = {
@@ -406,6 +456,7 @@ export class GitHubBranchEvidence {
         commit_sha: head,
       });
       const { root, runs, index } = await this.readLayout(commit.tree.sha);
+      await this.assertCreatedBySdods(root);
       const cutoff = this.now().getTime() - opts.olderThanMs;
       const keptDirs: TreeEntry[] = [];
       for (const entry of runs) {
@@ -478,7 +529,12 @@ export class GitHubBranchEvidence {
    * whose repository response has no `permissions` is checked by writing one unreferenced blob.
    */
   async check(issueRepoPrivate?: boolean): Promise<EvidenceCheckResult> {
-    let repoData: { full_name: string; private: boolean; permissions?: { push?: boolean } };
+    let repoData: {
+      full_name: string;
+      private: boolean;
+      default_branch?: string;
+      permissions?: { push?: boolean };
+    };
     try {
       ({ data: repoData } = await this.octokit.rest.repos.get({
         owner: this.owner,
@@ -487,6 +543,8 @@ export class GitHubBranchEvidence {
     } catch (e) {
       return { ok: false, detail: `evidence repo ${this.fullName}: ${(e as Error).message}` };
     }
+    if (repoData.default_branch === this.branch)
+      return { ok: false, detail: this.defaultBranchMessage().replace(/^github evidence: /, '') };
     const push = repoData.permissions?.push;
     let writable: string;
     if (push === false) {
