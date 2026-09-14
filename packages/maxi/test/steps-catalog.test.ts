@@ -31,7 +31,7 @@ describe('data/steps.json', () => {
 
   it('recognises every step the docs teach with in the demo-shop login feature', () => {
     const feature = readFileSync(
-      join(repoRoot, 'packages/cli/templates/projects/demo-shop/features/auth/login.feature'),
+      join(repoRoot, 'projects/demo-shop/features/auth/login.feature'),
       'utf8',
     );
     const report = validateFeature(feature, new StepCatalog(loadSteps(catalogFile)));
