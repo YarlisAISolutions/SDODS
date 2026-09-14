@@ -1,6 +1,6 @@
 {
   "name": "@sdods/core",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "description": "SDODS runtime: configuration, project registry, fixtures, step libraries, data providers, screenshot narratives and self-healing locators.",
   "license": "Apache-2.0",
   "author": "SDODS <admin@sdods.com>",
