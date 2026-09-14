@@ -4,6 +4,8 @@ export * from './dedupe.js';
 export * from './secrets.js';
 export * from './context.js';
 export * from './github.js';
+export * from './evidence.js';
+export * from './gif.js';
 export * from './jira.js';
 export * from './registry.js';
 export * from './summary.js';

@@ -1,0 +1,62 @@
+---
+title: Email (Mailpit)
+description: Assert on the emails an application sends, and follow their links and codes.
+---
+
+<Learn>
+  How to point an environment at Mailpit, wait for a verification email, open its link or read a
+  one-time code, and keep scenarios from reading each other's mail.
+</Learn>
+
+Signup verification, invitations, password reset and emailed 2FA all go through an inbox. The email steps read a [Mailpit](https://mailpit.axllent.org) mail catcher: the application under test sends SMTP to Mailpit, and the steps read Mailpit's REST API.
+
+## Set up
+
+Run Mailpit next to the application and point the application's SMTP settings at port 1025:
+
+```bash
+docker run -d --name mailpit -p 8025:8025 -p 1025:1025 axllent/mailpit
+```
+
+Declare it in the environment yaml. `url` is the web/API port, not SMTP:
+
+```yaml title="projects/my-app/envs/local.yaml"
+mail:
+  provider: mailpit
+  url: http://localhost:8025
+```
+
+A Mailpit started with `--ui-auth-file` needs `auth: { type: basic, username: qa, password: '${MAILPIT_PASSWORD}' }`. The password is refused as a literal. `pollIntervalMs`, `clockSkewMs` and `timeoutSeconds` are in the [env yaml reference](/docs/reference/env-yaml).
+
+## Verify a signup
+
+```gherkin
+@hybrid @regression
+Scenario: A new user verifies their email
+  Given I generate a "user" from the factory as "user"
+  And I clear the inbox for "{{user.email}}"
+  And I navigate to the "signup" page
+  When I fill the "Email" field with "{{user.email}}"
+  And I click the "Create account" button
+  Then the inbox for "{{user.email}}" should receive an email with subject containing "Verify" within 30 seconds
+  And the latest email to "{{user.email}}" should have been sent from "no-reply@my-app.test"
+  When I open the link "Verify email" from the latest email to "{{user.email}}"
+  Then I should see the text "Your email is verified"
+```
+
+For an emailed one-time code, save it with a capture group and type it in:
+
+```gherkin
+  Then the inbox for "{{user.email}}" should receive an email with subject containing "sign-in code" within 30 seconds
+  When I save the code matching "code is (\d{6})" from the latest email to "{{user.email}}" as "otp"
+  And I fill the "Code" field with "{{otp}}"
+```
+
+`I save the link matching` saves a URL instead, for an API step to call or a later step to open.
+
+## Keep scenarios independent
+
+- Each scenario only sees mail received after it started, and "the latest email" is the one the last `should receive` step matched. The full rules are under [Which email is "the latest"](/docs/reference/step-library#which-email-is-the-latest).
+- Use a unique address per scenario where the application allows it. Factories are seeded per scenario, so a **retry regenerates the same address**: start with `I clear the inbox for` so a retry cannot read the first attempt's email.
+- A fixed address shared between scenarios, such as a seeded account, needs `I clear the inbox for` and a run that does not use that address in parallel.
+- There are no sleeps: every wait polls Mailpit and returns as soon as the email is there.

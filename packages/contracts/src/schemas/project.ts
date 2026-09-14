@@ -176,6 +176,84 @@ export const EVIDENCE_DEFAULTS = {
 } as const;
 
 /**
+ * Selectors the canvas steps (`canvas.steps.ts`) use to find nodes, handles, edges, node fields and
+ * badges on a graph editor. The defaults are the DOM React Flow (v11 and v12) renders; a project on
+ * another editor, or with its own markers, overrides only the keys that differ.
+ *
+ * Values are CSS selector templates. `{id}`, `{handle}`, `{source}`, `{target}`, `{field}` and
+ * `{badge}` are replaced by the step argument, escaped for a quoted CSS string, so write them inside
+ * quotes: `[data-id="{id}"]`. `{testIdAttribute}` is replaced by the project's attribute name.
+ */
+export const CANVAS_DEFAULTS = {
+  /** The editor surface; every other lookup is scoped inside it. */
+  root: '.react-flow',
+  /** Every node, for counting. */
+  nodes: '.react-flow__node',
+  /** One node by id. */
+  node: '.react-flow__node[data-id="{id}"]',
+  /** A handle, searched inside its node. */
+  handle: '.react-flow__handle[data-handleid="{handle}"]',
+  /** An edge by source and target node id. React Flow's default edge aria-label. */
+  edge: '.react-flow__edge[aria-label="Edge from {source} to {target}"]',
+  /** A field, searched inside its node. A wrapper is fine: the editable control inside it is filled. */
+  field: '[name="{field}"], [aria-label="{field}"], [{testIdAttribute}="{field}"]',
+  /** A badge, searched inside its node. */
+  badge: '[{testIdAttribute}="{badge}"]',
+  /** What a node matches once selected; `I select the node` waits for it. Empty skips the check. */
+  selected: '.selected',
+} as const;
+
+const CANVAS_PLACEHOLDERS = [
+  'id',
+  'handle',
+  'source',
+  'target',
+  'field',
+  'badge',
+  'testIdAttribute',
+];
+
+/** A selector template that must use `required` and may use nothing but the known placeholders. */
+const canvasTemplate = (fallback: string, required: string[]) =>
+  z
+    .string()
+    .superRefine((value, ctx) => {
+      for (const name of required) {
+        if (!value.includes(`{${name}}`)) {
+          ctx.addIssue({
+            code: 'custom',
+            message: `must contain the {${name}} placeholder, or every lookup matches the same element`,
+          });
+        }
+      }
+      for (const [, name] of value.matchAll(/\{(\w+)\}/g)) {
+        if (
+          !CANVAS_PLACEHOLDERS.includes(name!) ||
+          (name !== 'testIdAttribute' && !required.includes(name!))
+        ) {
+          ctx.addIssue({
+            code: 'custom',
+            message: `{${name}} is not a placeholder here; use ${required.map((r) => `{${r}}`).join(', ') || 'none'}${required.length ? ' or ' : ''}{testIdAttribute}`,
+          });
+        }
+      }
+    })
+    .default(fallback);
+
+export const CanvasConfigSchema = z
+  .object({
+    root: canvasTemplate(CANVAS_DEFAULTS.root, []),
+    nodes: canvasTemplate(CANVAS_DEFAULTS.nodes, []),
+    node: canvasTemplate(CANVAS_DEFAULTS.node, ['id']),
+    handle: canvasTemplate(CANVAS_DEFAULTS.handle, ['handle']),
+    edge: canvasTemplate(CANVAS_DEFAULTS.edge, ['source', 'target']),
+    field: canvasTemplate(CANVAS_DEFAULTS.field, ['field']),
+    badge: canvasTemplate(CANVAS_DEFAULTS.badge, ['badge']),
+    selected: z.string().default(CANVAS_DEFAULTS.selected),
+  })
+  .default({ ...CANVAS_DEFAULTS });
+
+/**
  * Scenarios that must pass before anything else in the run starts: probes, login, seeding.
  *
  * Each run target gets a `<target>--setup` companion that runs the scenarios matching `tags`
@@ -210,6 +288,36 @@ export const GitHubIntegrationSchema = z.object({
   labels: z.array(z.string()).default(['sdods']),
   tokenEnv: z.string().default('GITHUB_TOKEN'),
   uploadToRelease: z.string().optional(),
+  /**
+   * Where issue evidence (screenshots, video, GIF preview) is hosted so it renders inline in a
+   * private repository. Absent or `host: none` keeps the links described above.
+   */
+  evidence: z
+    .object({
+      host: z.enum(['none', 'branch']).default('none'),
+      /** `owner/name`; default: the issue repository */
+      repo: z
+        .string()
+        .regex(/^[\w.-]+\/[\w.-]+$/, 'must be owner/name')
+        .optional(),
+      branch: z.string().min(1).default('sdods-evidence'),
+      /** env var NAME of a token for the evidence repo; default: `tokenEnv` */
+      tokenEnv: z.string().optional(),
+      maxFileBytes: z
+        .number()
+        .int()
+        .positive()
+        .default(5 * 1024 * 1024),
+      maxRunBytes: z
+        .number()
+        .int()
+        .positive()
+        .default(25 * 1024 * 1024),
+      retainDays: z.number().int().positive().default(14),
+      /** an inline GIF of the video's last seconds when ffmpeg is on PATH */
+      gifPreview: z.boolean().default(true),
+    })
+    .optional(),
 });
 
 export const JiraIntegrationSchema = z.object({
@@ -445,6 +553,8 @@ export const ProjectConfigSchema = z.object({
     })
     .default({ core: { exclude: [] } }),
   routes: z.record(z.string(), z.string()).default({}),
+  /** Selectors for the graph-editor steps in `canvas.steps.ts`; React Flow's DOM by default. */
+  canvas: CanvasConfigSchema,
   tags: z
     .object({
       suites: z.array(z.string()).min(1).default(['smoke', 'regression', 'sanity']),
@@ -552,6 +662,7 @@ export type ProjectConfig = z.infer<typeof ProjectConfigSchema>;
 export type ProjectConfigInput = z.input<typeof ProjectConfigSchema>;
 export type ScreenshotConfig = z.infer<typeof ScreenshotConfigSchema>;
 export type EvidenceConfig = z.infer<typeof EvidenceSchema>;
+export type CanvasConfig = z.infer<typeof CanvasConfigSchema>;
 export type SetupConfig = z.infer<typeof SetupSchema>;
 export type HealConfig = z.infer<typeof HealConfigSchema>;
 export type TimeoutsConfig = z.infer<typeof TimeoutsSchema>;

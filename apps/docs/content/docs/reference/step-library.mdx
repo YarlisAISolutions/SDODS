@@ -102,3 +102,25 @@ The `exact` variants match the whole text of an element (whitespace-normalised, 
 | `I seed via {method} {string} with body:`             | API request reported as a seed           |
 | `the UI should show the text from JSON path {string}` | asserts a captured API value in the page |
 | `I replay HAR {string} for {string}`                  | `routeFromHAR` for a URL glob            |
+
+## Canvas steps
+
+Graph and node editors: workflow builders, pipelines, diagrams. Nodes, handles, edges, fields and badges are found through the project's [`canvas` selectors](/docs/reference/project-yaml#canvas), which default to React Flow's DOM. Handles, fields and badges are looked up inside their node, so another node cannot satisfy the step. Exclude the library with `steps.core.exclude: [canvas]`.
+
+| Step                                                                                     | Effect                                                                 |
+| ---------------------------------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| `I drag the element with test id {string} onto the element with test id {string}`        | pointer drag onto the target's centre; also drops `draggable` palettes |
+| `I drag the element with test id {string} by {int} and {int}`                            | pointer drag by screen pixels, right/down positive                     |
+| `I drag the node {string} by {int} and {int}`                                            | same, for a node addressed by id                                       |
+| `I connect the {string} handle of node {string} to the {string} handle of node {string}` | pointer drag from the source handle onto the target handle             |
+| `I select the node {string}`                                                             | clicks the node and waits until it matches `canvas.selected`           |
+| `I set the {string} field of node {string} to {string}`                                  | fills (or selects an option in) a field inside the node                |
+| `the canvas should contain {int} node(s)`                                                | exact node count                                                       |
+| `the canvas should contain an edge from {string} to {string}`                            | an edge in that direction exists                                       |
+| `the canvas should not contain an edge from {string} to {string}`                        | no such edge; fails on a canvas with no nodes rather than passing      |
+| `the node {string} should be visible`                                                    | node rendered and shown                                                |
+| `the node {string} should show the {string} badge`                                       | badge visible inside that node                                         |
+
+Drags are real pointer gestures: press, a short nudge, a dozen intermediate moves, a last move onto the target, release. Editors read the moves, not only the press and release: React Flow ignores a press that never crosses its drag threshold and picks the connection target from the handle the last move was over, so `locator.dragTo()` can report success while the canvas does not change. The press lands on a plain part of the element, not on a field, button or handle inside it, because editors ignore presses there (React Flow's `nodrag`). A drag that would start or end outside the viewport fails; scroll or zoom the canvas first. On a zoomed canvas a node moves by the offset divided by the zoom.
+
+None of these steps self-heal. A node id is the node's identity, so healing onto a similar node would move, connect or check the wrong block and report success.
