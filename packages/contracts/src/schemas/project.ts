@@ -431,6 +431,28 @@ export const ScheduleSchema = z.object({
 });
 
 /**
+ * Requirement traceability (`@req:<id>` tags → `sdods report traceability`).
+ *
+ * The id is opaque: SDODS does not decide whether it names a Jira story, a line in a requirements
+ * document or a clause of a regulation. That choice belongs to whoever signs the export.
+ */
+export const TraceabilitySchema = z.object({
+  /**
+   * A YAML or CSV file (relative to the project root) listing the requirement ids and titles.
+   * When set, lint rejects ids that are not in it and the export lists requirements no scenario
+   * covers.
+   */
+  requirements: z.string().min(1).optional(),
+  /** URL template for a requirement, `{id}` replaced by the id: `https://jira.example.com/browse/{id}`. */
+  link: z
+    .string()
+    .refine((s) => s.includes('{id}'), 'link must contain the {id} placeholder')
+    .optional(),
+  /** Lint fails a scenario that carries no `@req:` tag (directly or from its Feature/Rule). */
+  require: z.boolean().default(false),
+});
+
+/**
  * Hierarchy: organization → workspace → project → module.
  * A module is a feature area of an application (auth, inventory, checkout …) that owns a
  * features directory, default tags and an owner. A process is a named, repeatable run recipe
@@ -620,6 +642,8 @@ export const ProjectConfigSchema = z.object({
       junit: z.boolean().default(false),
     })
     .default({ cucumberHtml: false, allure: false, junit: false }),
+  /** Requirement traceability: `@req:<id>` validation and the `sdods report traceability` export. */
+  traceability: TraceabilitySchema.optional(),
   /** How the CI matrix (`sdods project list --matrix`) treats this project. */
   ci: z
     .object({
@@ -664,6 +688,7 @@ export type ScreenshotConfig = z.infer<typeof ScreenshotConfigSchema>;
 export type EvidenceConfig = z.infer<typeof EvidenceSchema>;
 export type CanvasConfig = z.infer<typeof CanvasConfigSchema>;
 export type SetupConfig = z.infer<typeof SetupSchema>;
+export type TraceabilityConfig = z.infer<typeof TraceabilitySchema>;
 export type HealConfig = z.infer<typeof HealConfigSchema>;
 export type TimeoutsConfig = z.infer<typeof TimeoutsSchema>;
 export type ProjectAuthConfig = z.infer<typeof ProjectAuthSchema>;

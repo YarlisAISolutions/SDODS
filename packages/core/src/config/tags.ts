@@ -20,6 +20,7 @@ export const KNOWN_VALUE_TAGS = [
   'title',
   'flag',
   'matrix',
+  'req',
   'locale',
   'timezone',
   'theme',

@@ -1,6 +1,6 @@
 ---
 title: sdods report, show-report, heal, insights
-description: Open reports, ingest results and inspect self-healing events.
+description: Open reports, ingest results, export requirement traceability and inspect self-healing events.
 ---
 
 ## `report`
@@ -8,10 +8,51 @@ description: Open reports, ingest results and inspect self-healing events.
 ```text
 sdods report [--last | --run <id>] [--open] [--html] [--dashboard]
 sdods report ingest [files...] --run-id <id> [-p <slug>] [-e <env>] [--manifest <file>] [--format auto|cucumber|runner-json] [--artifacts-dir <dir>] [--replace]
+sdods report traceability -p <slug> [-e <env>] [--run <id> | --last] [--format json|csv|md|html] [-o <file>]
 sdods show-report [--run <id>]
 ```
 
 `report` prints the summary of a run (totals, failed and flaky scenarios, report paths); `--open` opens the HTML report and the SDODS dashboard, `--html` / `--dashboard` open one of them. `report ingest` loads cucumber messages NDJSON and runner JSON results into the database (`sdods run` does this automatically when a database is configured); `--replace` deletes previously ingested rows of the run first. `show-report` opens the HTML report of the latest or a given run.
+
+## `report traceability`
+
+```text
+sdods report traceability -p <slug> [-e <env>] [--run <id> | --last] [--format json|csv|md|html] [-o <file>]
+```
+
+Exports, for one run, every requirement named by an `@req:<id>` tag (or listed in `traceability.requirements`), the scenarios that cover it (feature file, line, name, effective tags) and each scenario's final attempt in every runner project it ran in (status, browser, attempts, flaky, duration, timestamps). The header carries the run id, environment, commit and branch, SDODS version and CI link from `run.json`. It reads the run directory only; no database or server is needed.
+
+| Flag                   | Default                                                       | Meaning                                                                                    |
+| ---------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `-p, --project <slug>` | required                                                      | project whose features and runs are read                                                   |
+| `-e, --env <name>`     |                                                               | only runs against this environment                                                         |
+| `--run <id>`           | latest run of the project                                     | run directory under `.sdods/runs` (exit 2 if it belongs to another project or environment) |
+| `--last`               |                                                               | the latest run, and exit 2 when there is none                                              |
+| `--format <fmt>`       | from the `-o` extension, else `json` with `--json`, else `md` | `json`, `csv` (one row per requirement × scenario × result), `md`, `html`                  |
+| `-o, --output <file>`  | stdout                                                        | write the export to a file                                                                 |
+
+With no run at all the export is still written, as a static requirement → scenario matrix with every scenario `not-run`.
+
+| Requirement status | Meaning                                                                                       |
+| ------------------ | --------------------------------------------------------------------------------------------- |
+| `passed`           | every scenario that covers it passed in the run (a pass on retry counts, and is marked flaky) |
+| `failed`           | at least one covering scenario failed                                                         |
+| `not-run`          | covered, but at least one covering scenario has no result or was only skipped                 |
+| `not-covered`      | listed in the requirements file, and no scenario carries its tag                              |
+
+Ids tagged on scenarios but missing from the requirements file are kept, with `declared: false`. Without a requirements file `notCovered` is `null`: requirements nobody tagged cannot be known.
+
+Results come from the run's cucumber messages (`messages.ndjson` and its shard files), which record every attempt in every browser. Runs without them fall back to the per-scenario `meta.json` files, which keep one browser per scenario; the export says which source it used.
+
+### Sign-off
+
+Every export ends with a sign-off block (signed by, role, date, decision, notes) that is **always empty**. SDODS never fills it in: sign-off authority is human and not delegable. In JSON the fields are `null`; a person completes the Markdown, HTML or CSV copy they sign.
+
+```bash
+bun run sdods report traceability -p demo-shop -e staging -o traceability.html
+bun run sdods report traceability -p demo-shop --run <run-id> --format csv -o release-1.4.csv
+bun run sdods --json report traceability -p demo-shop --last
+```
 
 ## `heal report`
 

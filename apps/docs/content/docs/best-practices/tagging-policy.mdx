@@ -15,4 +15,5 @@ description: A small, enforced vocabulary keeps suites selectable and reports me
 - **Feature tags describe mechanics** (`@visual`, `@a11y`, `@perf`, `@mock`, `@pool`), not teams. Put ownership on modules (`owner`, `jiraComponent`).
 - **Value tags carry facts** (`@user:admin`, `@data:orders`, `@har:checkout`, `@jira:SHOP-42`); lint validates them against the project.
 - **Prefer `@skip:<browser>` to code branches.** The exclusion stays visible in reports.
+- **Put `@req:<id>` where the requirement lives.** A requirement a whole feature verifies goes on the `Feature`; one scenario's goes on the scenario. Whoever signs the traceability export decides what the ids point at.
 - **Retire tags.** Remove entries from `tags.extra` when nothing uses them; unknown tags warn, so drift is visible.
