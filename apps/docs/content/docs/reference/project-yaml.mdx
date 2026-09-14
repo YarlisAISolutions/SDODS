@@ -229,6 +229,68 @@ description: Field-by-field reference for the project file and the workspace fil
   }}
 />
 
+### Canvas
+
+Selectors for the [canvas steps](/docs/reference/step-library#canvas-steps). The defaults match the DOM React Flow renders; override only the keys your editor does differently. Each value is a CSS selector template: `{id}`, `{handle}`, `{source}`, `{target}`, `{field}` and `{badge}` are replaced by the step argument, escaped for a quoted CSS string, so keep them inside quotes. `{testIdAttribute}` is replaced by the project's `testIdAttribute`. A template without its required placeholder, or with an unknown one, fails config validation.
+
+<TypeTable
+  type={{
+    'canvas.root': {
+      type: 'string',
+      default: "'.react-flow'",
+      description: 'The editor surface. Node, edge and count lookups are scoped inside it.',
+    },
+    'canvas.nodes': {
+      type: 'string',
+      default: "'.react-flow__node'",
+      description: 'Every node, for `the canvas should contain {int} node(s)`.',
+    },
+    'canvas.node': {
+      type: 'string',
+      default: `'.react-flow__node[data-id="{id}"]'`,
+      description: 'One node by id. Requires `{id}`.',
+    },
+    'canvas.handle': {
+      type: 'string',
+      default: `'.react-flow__handle[data-handleid="{handle}"]'`,
+      description: 'A handle, searched inside its node. Requires `{handle}`.',
+    },
+    'canvas.edge': {
+      type: 'string',
+      default: `'.react-flow__edge[aria-label="Edge from {source} to {target}"]'`,
+      description:
+        "An edge by source and target node id. React Flow's default edge `aria-label`; set it when the app passes its own `ariaLabel` on edges. Requires `{source}` and `{target}`.",
+    },
+    'canvas.field': {
+      type: 'string',
+      default: `'[name="{field}"], [aria-label="{field}"], [{testIdAttribute}="{field}"]'`,
+      description:
+        'A field, searched inside its node. It may match the control or a wrapper; for a wrapper the first visible input, textarea, select or contenteditable inside it is filled. Requires `{field}`.',
+    },
+    'canvas.badge': {
+      type: 'string',
+      default: `'[{testIdAttribute}="{badge}"]'`,
+      description: 'A badge, searched inside its node. Requires `{badge}`.',
+    },
+    'canvas.selected': {
+      type: 'string',
+      default: "'.selected'",
+      description:
+        'What a selected node matches. `I select the node` waits for it after the click; an empty string skips the check.',
+    },
+  }}
+/>
+
+A workflow builder that marks its blocks with its own attributes overrides only those keys:
+
+```yaml
+canvas:
+  field: '[data-subblock-id="{field}"]'
+  badge: '[{testIdAttribute}="block-{badge}"]'
+```
+
+With that block, `Then the node "agent-1" should show the "error-badge" badge` looks for `[data-testid="block-error-badge"]` inside the node `.react-flow__node[data-id="agent-1"]`.
+
 ### Integrations, MCP, agents, schedules, reports
 
 <TypeTable

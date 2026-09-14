@@ -17,6 +17,7 @@ import './browser.steps.js';
 import './dom.steps.js';
 import './net.steps.js';
 import './perf.steps.js';
+import './canvas.steps.js';
 import '../shots/hooks.js';
 
 export { coreStepsGlob, coreStepsPatterns, coreStepNames, coreStepsDir } from './glob.js';
