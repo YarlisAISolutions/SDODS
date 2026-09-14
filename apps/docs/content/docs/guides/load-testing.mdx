@@ -1,0 +1,101 @@
+---
+title: Load testing
+description: Run k6 load profiles against an API environment that has opted in.
+---
+
+<Learn>
+  How to describe a load profile, opt an environment in, run it with k6, and read the result. SDODS
+  generates and runs the k6 script; it is not a load framework of its own.
+</Learn>
+
+<Callout type="warn">
+  Load is destructive. Point it only at an environment you own and that is sized for it, never
+  production. Load against an environment that caps writes (a free-tier plan, a rate limit) measures
+  the cap rather than the system, so get the functional suite green first.
+</Callout>
+
+## 1. Opt the environment in
+
+```yaml title="projects/demo-shop/envs/perf.yaml"
+ui: { baseUrl: https://perf.shop.example.com }
+api:
+  baseUrl: https://api.perf.shop.example.com
+  headers: { Accept: application/json }
+  auth: { type: bearer, token: '${PERF_API_TOKEN}' }
+load:
+  allowed: true # without this, sdods load refuses to run
+  maxVus: 50 # refuse profiles that go higher
+  allowWrites: false # refuse POST, PUT, PATCH and DELETE
+```
+
+Add the environment to `envs.available` in `sdods.project.yaml` like any other.
+
+## 2. Write a profile
+
+```yaml title="projects/demo-shop/load/browse.yaml"
+description: Browse the catalogue
+thinkTimeSeconds: 1
+stages:
+  - { duration: 30s, target: 10 }
+  - { duration: 2m, target: 25 }
+  - { duration: 30s, target: 0 }
+thresholds:
+  http_req_duration: ['p(95)<500']
+  http_req_failed: ['rate<0.01']
+  checks: ['rate>0.99']
+requests:
+  - name: list products
+    path: /products?limit=${PAGE_SIZE:-20}
+    expect: { status: 200, bodyContains: title, maxDurationMs: 800 }
+  - name: product detail
+    path: /products/1
+```
+
+| Field                           | Meaning                                                                                                       |
+| ------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `description`                   | free text                                                                                                     |
+| `auth`                          | `env` (default) sends the environment's `api.auth` and `api.headers`; `none` sends neither                    |
+| `thinkTimeSeconds`              | pause after each iteration of one virtual user (default `1`)                                                  |
+| `stages`                        | k6 ramping stages: `{ duration, target }`                                                                     |
+| `vus` + `duration`/`iterations` | a constant load instead of `stages` (use one or the other)                                                    |
+| `thresholds`                    | k6 thresholds by metric; a failing threshold fails the run                                                    |
+| `requests[].name`               | label in k6 output and the `name` tag (default `METHOD path`)                                                 |
+| `requests[].method`             | `GET` (default), `HEAD`, `OPTIONS`, `POST`, `PUT`, `PATCH`, `DELETE`                                          |
+| `requests[].path`               | relative to `api.baseUrl`; must start with `/` (absolute URLs are refused, so load stays on the opted-in env) |
+| `requests[].headers`            | extra headers                                                                                                 |
+| `requests[].body`               | a string is sent as-is; an object or array is sent as JSON with `Content-Type: application/json`              |
+| `requests[].expect`             | k6 checks: `status` (number or list, default `200`), `bodyContains`, `maxDurationMs`                          |
+
+Each iteration of a virtual user sends the requests in order. `${VAR}` works in paths, headers and bodies and is read from the environment when k6 runs; `${VAR:-default}` falls back to the default. Secret-looking keys must use `${VAR}`, as everywhere else in SDODS.
+
+## 3. Check the script, then run it
+
+```bash
+sdods load -p demo-shop -e perf browse --dry-run
+```
+
+The dry run writes `script.js` without needing k6 and reports whether a real run would be refused. Read it: it is plain k6 JavaScript, and it contains `__ENV.PERF_API_TOKEN`, never the token.
+
+```bash
+sdods load -p demo-shop -e perf browse
+```
+
+The command prints the target URL and the peak virtual users, then runs `k6`. Install k6 from [grafana.com/docs/k6/latest/set-up/install-k6](https://grafana.com/docs/k6/latest/set-up/install-k6/), or use Docker:
+
+```bash
+sdods load -p demo-shop -e perf browse --runner docker
+```
+
+Inside the container `localhost` is the container itself; point a local environment at `host.docker.internal` instead.
+
+## 4. Read the result
+
+Everything lands in `.sdods/runs/<id>/load/<profile>/` (or `--out`):
+
+| File           | Content                                                                        |
+| -------------- | ------------------------------------------------------------------------------ |
+| `script.js`    | the generated k6 script                                                        |
+| `summary.json` | k6's `--summary-export` output: every metric and threshold                     |
+| `load.json`    | what SDODS ran: project, env, target, peak VUs, k6 exit code, headline numbers |
+
+The exit code is `0` when every threshold passed and `1` when k6 reports failed thresholds (its exit code `99`) or fails otherwise, so a CI job can gate on it. Load runs are not recorded in the results database or shown in the web UI yet.
