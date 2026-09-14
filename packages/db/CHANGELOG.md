@@ -1,5 +1,12 @@
 # @sdods/db
 
+## 0.7.1
+
+### Patch Changes
+
+- Updated dependencies [805752a]
+  - @sdods/contracts@0.7.1
+
 ## 0.7.0
 
 ### Patch Changes
