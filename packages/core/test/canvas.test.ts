@@ -507,6 +507,41 @@ describe('connect', () => {
     expect(error).toBeInstanceOf(SdodsError);
   }, 60_000);
 
+  it('waits for unmeasured nodes before proving an edge is absent, as React Flow renders after a reload', async () => {
+    // React Flow keeps unmeasured nodes in the DOM with visibility: hidden and draws edges only once
+    // the nodes are measured, so right after a reload every edge is "absent".
+    await openEditor([
+      { id: 'a', x: 100, y: 100, hidden: true },
+      { id: 'b', x: 600, y: 300, hidden: true },
+    ]);
+    await page.evaluate(() =>
+      setTimeout(() => {
+        document
+          .querySelectorAll<HTMLElement>('.react-flow__node')
+          .forEach((n) => (n.style.visibility = ''));
+        requestAnimationFrame(() => (window as any).seedEdge('a', 'out', 'b', 'in'));
+      }, 400),
+    );
+    await failsWith(
+      'the canvas should not contain an edge from {string} to {string}',
+      ['a', 'b'],
+      /edge from "a" to "b"/,
+    );
+    await pw(page.locator('.react-flow__edge')).toHaveCount(1);
+  }, 60_000);
+
+  it('refuses an absent-edge check while every node is still hidden', async () => {
+    await openEditor([
+      { id: 'a', x: 100, y: 100, hidden: true },
+      { id: 'b', x: 600, y: 300, hidden: true },
+    ]);
+    await failsWith(
+      'the canvas should not contain an edge from {string} to {string}',
+      ['a', 'b'],
+      /no nodes/i,
+    );
+  }, 60_000);
+
   it('fails naming the handle when it does not exist', async () => {
     await openEditor([
       { id: 'a', x: 100, y: 100 },

@@ -411,8 +411,11 @@ Then(
   },
 );
 
-// Proves an edge is gone, or was never drawn. Refuses a canvas with no nodes: on an editor that
-// has not rendered, every edge in existence is absent, which is not an assertion.
+// Proves an edge is gone, or was never drawn. Refuses a canvas with no visible nodes: on an editor
+// that has not rendered, every edge in existence is absent, which is not an assertion. React Flow
+// keeps unmeasured nodes in the DOM with `visibility: hidden` and draws edges only once the nodes
+// are measured, so right after a load a node being attached proves nothing: the step waits until
+// every node is visible and the editor has painted, and only then checks that the edge is absent.
 Then(
   'the canvas should not contain an edge from {string} to {string}',
   async ({ page, config, apiContext, env }, source: string, target: string) => {
@@ -420,13 +423,32 @@ Then(
     const s = arg({ apiContext, env }, source);
     const t = arg({ apiContext, env }, target);
     const root = rootOf(page, c);
+    const nodes = allNodes(page, c);
     try {
-      await expect(allNodes(page, c).first()).toBeAttached();
+      await expect(nodes.filter({ visible: true }).first()).toBeVisible();
     } catch {
-      throw new SdodsError('RUN_FAILED', 'The canvas has rendered no nodes at all.', {
-        hint: `Asserting there is no edge from "${s}" to "${t}" on an empty or unrendered canvas proves nothing. Check canvas.root and canvas.nodes, or assert a node first.`,
+      throw new SdodsError('RUN_FAILED', 'The canvas has rendered no nodes, or none is visible.', {
+        hint: `Asserting there is no edge from "${s}" to "${t}" on an empty or unrendered canvas proves nothing: editors such as React Flow draw edges only after their nodes are measured and shown. Check canvas.root and canvas.nodes, or assert a node first.`,
       });
     }
+    await expect
+      .poll(async () => (await nodes.count()) - (await nodes.filter({ visible: true }).count()), {
+        message: `nodes on the canvas are still hidden (not yet measured), so its edges may not be drawn yet; the absent-edge check from "${s}" to "${t}" waits for them`,
+      })
+      .toBe(0);
+    // Edges are drawn in the render that follows the measurement: let the editor paint first.
+    await page.evaluate(
+      () =>
+        new Promise<void>((done) => {
+          const timer = setTimeout(done, 250);
+          requestAnimationFrame(() =>
+            requestAnimationFrame(() => {
+              clearTimeout(timer);
+              done();
+            }),
+          );
+        }),
+    );
     const edges = root.locator(
       expandCanvasSelector('edge', c.config.edge, { source: s, target: t }, c.testIdAttribute),
     );
