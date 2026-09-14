@@ -12,8 +12,9 @@
  *   plugins/sdods/hooks/                   plugin/hooks
  *
  * Usage: bun run plugin:build [--out <dir>] [--sponsor-url <https url>]
- * The default output is dist/sdods-skills. Copy it over a checkout of the public repository and
- * commit; see apps/docs/content/docs/guides/ai-coding-tools.mdx for what users run.
+ * The default output is dist/sdods-skills. After each release, publish it with
+ * scripts/push-agent-plugin.mjs; see apps/docs/content/docs/guides/ai-coding-tools.mdx for what
+ * users run.
  */
 import {
   cpSync,
