@@ -91,6 +91,8 @@ sdods load -p demo-shop -e perf browse --runner docker
 
 Inside the container `localhost` is the container itself; point a local environment at `host.docker.internal` instead.
 
+k6 reads environment variables such as `K6_VUS`, `K6_STAGES`, `K6_DURATION`, `K6_ITERATIONS` and `K6_SCENARIOS` as options that override the script, which would bypass the profile and `load.maxVus`. `sdods load` passes no `K6_*` variable to k6 (outputs such as `K6_OUT` included) and prints a warning naming the ones it left out.
+
 ## 4. Read the result
 
 Everything lands in `.sdods/runs/<id>/load/<profile>/` (or `--out`):

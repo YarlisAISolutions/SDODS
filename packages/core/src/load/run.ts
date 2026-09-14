@@ -323,6 +323,16 @@ export async function runLoad(opts: RunLoadOptions): Promise<LoadRunResult> {
     .sort();
   const k6Env: NodeJS.ProcessEnv = { ...processEnv };
   for (const name of referenced) k6Env[name] = vars[name];
+  // k6 reads K6_VUS, K6_STAGES, K6_DURATION, K6_ITERATIONS, K6_SCENARIOS and the rest as options that
+  // override the script, which would bypass the profile and load.maxVus. None are passed through.
+  const stripped = Object.keys(k6Env)
+    .filter((name) => /^K6_/i.test(name))
+    .sort();
+  for (const name of stripped) delete k6Env[name];
+  if (stripped.length)
+    log(
+      `warning: not passing ${stripped.join(', ')} to k6: k6 reads K6_* variables as options that override the profile and load.maxVus`,
+    );
   const run = await runK6({
     outDir,
     scriptFile,
@@ -330,7 +340,7 @@ export async function runLoad(opts: RunLoadOptions): Promise<LoadRunResult> {
     runner: opts.runner,
     image: opts.image,
     env: k6Env,
-    passEnv: referenced,
+    passEnv: referenced.filter((name) => !stripped.includes(name)),
     stdio: opts.stdio,
   });
   const mapped = mapK6ExitCode(run.k6ExitCode);
