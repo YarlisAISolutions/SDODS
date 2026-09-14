@@ -68,10 +68,7 @@ api:
   headers: { Accept: application/json }
   auth: { type: none }
 users: { poolSize: 4 }
-mail:
-  provider: mailpit
-  url: http://localhost:8025
-  auth: { type: basic, username: qa, password: '${MAILPIT_PASSWORD}' }
+mail: { provider: mailpit, url: http://localhost:8025 }
 vars:
   defaultProduct: Sauce Labs Backpack
   standardPassword: '${DEMO_SHOP_PASSWORD:-secret_sauce}'
