@@ -88,3 +88,29 @@ The `exact` variants match the whole text of an element (whitespace-normalised, 
 | `I seed via {method} {string} with body:`             | API request reported as a seed           |
 | `the UI should show the text from JSON path {string}` | asserts a captured API value in the page |
 | `I replay HAR {string} for {string}`                  | `routeFromHAR` for a URL glob            |
+
+## Locale, theme, timezone and viewport steps
+
+The per-scenario emulation axis. The tags `@locale:<bcp47>`, `@timezone:<IANA>`, `@theme:<light|dark|no-preference>`, `@viewport:<W>x<H>` and `@device:<name>` set the browser context before it opens; see [Tags and suites](/docs/guides/tags-and-suites#per-scenario-locale-theme-timezone-and-viewport).
+
+| Step                                                          | Effect                                                                              |
+| ------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `I use the locale {string}`                                   | passes when the context locale is that locale; otherwise fails naming `@locale:`    |
+| `I use the timezone {string}`                                 | passes when the context time zone is that zone; otherwise fails naming `@timezone:` |
+| `I use the device {string}`                                   | passes when `@device:` emulates that device; otherwise fails naming the tag         |
+| `I use the {string} color scheme`                             | `light`, `dark` or `no-preference`, applied to the open page                        |
+| `I use the viewport {int} by {int}`                           | resizes the open page                                                               |
+| `the html lang attribute should be {string}`                  | `<html lang>` equals the value                                                      |
+| `the page should reflow without horizontal scrolling`         | the document is no wider than the viewport; fails on an empty body                  |
+| `the page should have no untranslated keys`                   | no visible untranslated key (defaults below); fails when the page shows no text     |
+| `the page should have no untranslated keys matching {string}` | no visible text node matches the regular expression, which replaces the defaults    |
+
+Locale, time zone and device cannot change on an open browser context, and the context is open before the first step runs. The steps for them therefore never switch anything: they state the scenario's intent and fail when the tag (or the environment's `use:` block) did not set the value.
+
+By default, a visible text node counts as an untranslated key when it is:
+
+- a whole text node shaped like a catalogue key, such as `nav.settings` or `checkout.summary.total` (file names, host names and version numbers are excluded);
+- an unrendered placeholder, such as `Hello {{name}}`;
+- a library's missing-translation marker: `[missing "fr.nav.home" translation]` (i18n-js) or `translation missing: fr.nav.home` (Rails).
+
+If your keys look different, pass a pattern, for example `the page should have no untranslated keys matching "^[A-Z0-9_]{3,}$"` for `SCREAMING_CASE` keys.

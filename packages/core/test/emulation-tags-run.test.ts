@@ -191,7 +191,7 @@ describe('#116 — emulation tags reach the browser context (real Chromium run)'
     expect(Object.keys(results).sort(), run.stdout + run.stderr).toEqual(
       [...titles.map((t) => `${DESKTOP}/${t}`), ...titles.map((t) => `${MOBILE}/${t}`)].sort(),
     );
-  });
+  }, 300_000);
 
   it('an untagged scenario gets the env use: block (colorScheme, locale, timezone are not inert)', () => {
     expect(status('untagged')).toBe('passed');
