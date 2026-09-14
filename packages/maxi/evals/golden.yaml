@@ -5,7 +5,6 @@
 #   include   - regexes (case-insensitive) that must all match
 #   exclude   - regexes that must not match
 #   feature   - the answer's gherkin block must pass validate_feature
-#   featureExclude - regexes that must not match inside that gherkin block
 #
 # When a visitor's 👎 or an "I'm not sure" points at a real gap, fix the docs first, then add the
 # question here so the fix stays fixed.
