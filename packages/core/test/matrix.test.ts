@@ -177,6 +177,49 @@ describe('roles.matrix.yaml validation', () => {
   });
 });
 
+describe('generated test titles are unique', () => {
+  const withTitle = (title: string) =>
+    messages(MATRIX_YAML.replace('admin-surfaces:', `admin-surfaces:\n    title: '${title}'`));
+
+  it('refuses a title that leaves out <role> or a column, since two tests could share it', () => {
+    // owner and admin both see /settings/billing → allowed: Playwright refuses duplicate titles.
+    expect(withTitle('<surface> → <expect>')).toEqual([
+      'matrices.admin-surfaces: title "<surface> → <expect>" leaves out <role>; a custom title needs <role> and every column (surface), or two generated tests can share a title and Playwright refuses to load them.',
+    ]);
+    expect(
+      messages(`matrices:
+  m:
+    roles: [a, b]
+    title: '<role> <surface>'
+    rows:
+      - { surface: /x, area: one, expect: ok }
+      - { surface: /x, area: two, expect: ok }
+`),
+    ).toEqual([
+      'matrices.m: title "<role> <surface>" leaves out <area>; a custom title needs <role> and every column (surface, area), or two generated tests can share a title and Playwright refuses to load them.',
+    ]);
+  });
+
+  it('refuses a title that still renders the same for two rows', () => {
+    expect(
+      messages(`matrices:
+  m:
+    roles: [a]
+    title: '<role><x><y>'
+    rows:
+      - { x: ab, y: c, expect: ok }
+      - { x: a, y: bc, expect: ok }
+`),
+    ).toEqual([
+      'matrices.m: title "<role><x><y>" renders "aabc" for more than one generated test; separate the placeholders so every title is unique.',
+    ]);
+  });
+
+  it('accepts a title with <role> and every column', () => {
+    expect(withTitle('<role> opens <surface> → <expect>')).toEqual([]);
+  });
+});
+
 describe('expanding a @matrix outline', () => {
   it('writes one Examples block per role, tagged @user:<role> (golden)', () => {
     const r = expandFeatureText(TEMPLATE, matrices());
