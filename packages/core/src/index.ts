@@ -8,6 +8,7 @@ export * from './heal/index.js';
 export * from './shots/index.js';
 export * from './lint/index.js';
 export * from './evidence/index.js';
+export * from './mail/index.js';
 export { BasePage } from './pages/base-page.js';
 export { PageRegistry } from './fixtures/pages.js';
 export { AuthStateCache } from './fixtures/auth.js';

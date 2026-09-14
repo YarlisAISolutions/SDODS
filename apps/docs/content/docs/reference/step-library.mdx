@@ -88,3 +88,27 @@ The `exact` variants match the whole text of an element (whitespace-normalised, 
 | `I seed via {method} {string} with body:`             | API request reported as a seed           |
 | `the UI should show the text from JSON path {string}` | asserts a captured API value in the page |
 | `I replay HAR {string} for {string}`                  | `routeFromHAR` for a URL glob            |
+
+## Email steps
+
+Read a mail catcher configured as `mail` in the [environment yaml](/docs/reference/env-yaml). Mailpit is the supported provider. Every address, subject, text and pattern argument renders `{{variables}}`, so `{{email}}` from a factory works. See the [email guide](/docs/guides/email) for setup.
+
+| Step                                                                                                   | Effect                                                                        |
+| ------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------- |
+| `I clear the inbox for {string}`                                                                       | delete every message to that exact address                                    |
+| `the inbox for {string} should receive an email with subject containing {string} within {int} seconds` | poll until a match arrives; pins it as the latest email                       |
+| `the latest email to {string} should contain the text {string}`                                        | substring of the text part or the HTML part rendered to text                  |
+| `the latest email to {string} should have been sent from {string}`                                     | sender address, display name, or `Name <address>` (case-insensitive)          |
+| `I save the link matching {string} from the latest email to {string} as {string}`                      | first href containing the pattern, or matching it as a regex                  |
+| `I save the code matching {string} from the latest email to {string} as {string}`                      | regex over the text; saves capture group 1, else the whole match              |
+| `I open the link {string} from the latest email to {string}`                                           | `page.goto` the link by visible text, then by href (`@ui` and `@hybrid` only) |
+
+### Which email is "the latest"
+
+Scenarios must not read each other's mail, so the inbox is scoped per scenario:
+
+- Only messages received after the scenario started, or after the last `I clear the inbox for` that address, count. The start time is the runner's clock and the receive time is Mailpit's, so the window opens `mail.clockSkewMs` (2000 by default) early.
+- `the inbox for … should receive an email with subject containing …` pins the message it matched. Later "latest email" steps for that address read that message, even when a newer one arrives after it: a signup that sends "Welcome" and "Verify your email" in either order still yields the verify link.
+- With nothing pinned, the latest email is the newest message to the address inside the window, waited for up to `mail.timeoutSeconds` (15 by default).
+
+Addresses match exactly and case-insensitively: `ann@x.test` never reads mail for `jo.ann@x.test`. Links come from `<a href>` in the HTML part with `&amp;` decoded, then from `http(s)` URLs in the text part; `mailto:` and `tel:` links are skipped. A wait that times out lists the subjects that did reach the address, so "nothing was sent" and "sent with a different subject" read differently.
