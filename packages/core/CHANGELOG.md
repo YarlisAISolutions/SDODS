@@ -1,5 +1,13 @@
 # @sdods/core
 
+## 0.6.0
+
+### Patch Changes
+
+- Updated dependencies [097aead]
+  - @sdods/db@0.6.0
+  - @sdods/contracts@0.6.0
+
 ## 0.5.2
 
 ### Patch Changes

@@ -1,5 +1,22 @@
 # @sdods/cli
 
+## 0.6.0
+
+### Minor Changes
+
+- 097aead: `sdods users reset --yes` removes every user with their sessions, API tokens and memberships, so the next `sdods serve` offers the one-time `/setup` link again; projects, runs and schedules are kept. `sdods users set-password <username> --password <pw> [--activate]` sets a password from the terminal, signs the user out everywhere and can re-enable a deactivated account, so a locked-out sole admin no longer has to wipe the database. Both are audited. The docs gain a "Reinstall or reset" section for installed, clone, Docker and desktop setups.
+
+### Patch Changes
+
+- Updated dependencies [097aead]
+  - @sdods/db@0.6.0
+  - @sdods/core@0.6.0
+  - @sdods/server@0.6.0
+  - @sdods/agents@0.6.0
+  - @sdods/contracts@0.6.0
+  - @sdods/integrations@0.6.0
+  - @sdods/mcp@0.6.0
+
 ## 0.5.2
 
 ### Patch Changes
