@@ -327,28 +327,42 @@ export function expandFeatureText(
         ownUser.location.line,
       );
 
-    // Placeholders the template uses must come from the matrix or a hand-written Examples block.
+    // Gherkin fills a placeholder only from the Examples block its row belongs to, so each block is
+    // checked on its own: the generated blocks supply role, expect and the matrix columns; every
+    // hand-written block must supply every placeholder itself.
     const generatedExamples = (ex: Scenario['examples'][number]) =>
       inside.some((p) => ex.location.line > p.begin && ex.location.line < p.end);
-    const handColumns = sc.examples
-      .filter((ex) => !generatedExamples(ex))
-      .flatMap((ex) => ex.tableHeader?.cells.map((c) => c.value) ?? []);
-    const available = new Set(['role', 'expect', ...matrix.columns, ...handColumns]);
-    const used = new Set<string>([
-      ...placeholders(sc.name),
-      ...sc.steps.flatMap((s) => [
-        ...placeholders(s.text),
-        ...placeholders(s.docString?.content ?? ''),
-        ...(s.dataTable?.rows.flatMap((r) => r.cells.flatMap((c) => placeholders(c.value))) ?? []),
+    const used = [
+      ...new Set<string>([
+        ...placeholders(sc.name),
+        ...sc.steps.flatMap((s) => [
+          ...placeholders(s.text),
+          ...placeholders(s.docString?.content ?? ''),
+          ...(s.dataTable?.rows.flatMap((r) => r.cells.flatMap((c) => placeholders(c.value))) ??
+            []),
+        ]),
       ]),
-    ]);
-    const unknown = [...used].filter((p) => !available.has(p));
+    ];
+    const generated = ['role', 'expect', ...matrix.columns];
+    const unknown = used.filter((p) => !generated.includes(p));
     if (unknown.length)
       problem(
         'matrix/placeholder',
-        `${unknown.map((p) => `<${p}>`).join(', ')} not provided by matrix "${name}" (columns: ${[...available].join(', ')}).`,
+        `${unknown.map((p) => `<${p}>`).join(', ')} not provided by matrix "${name}" (columns: ${generated.join(', ')}).`,
         line,
       );
+    for (const ex of sc.examples.filter((e) => !generatedExamples(e))) {
+      // A block without a table produces no rows, so nothing to fill.
+      if (!ex.tableHeader) continue;
+      const header = ex.tableHeader.cells.map((c) => c.value);
+      const missing = used.filter((p) => !header.includes(p));
+      if (missing.length)
+        problem(
+          'matrix/placeholder',
+          `Examples${ex.name ? ` "${ex.name}"` : ''} does not supply ${missing.map((p) => `<${p}>`).join(', ')}; Gherkin fills a placeholder only from the Examples block its row is in.`,
+          ex.location.line,
+        );
+    }
 
     const indent = sc.steps[0]
       ? ' '.repeat(sc.steps[0].location.column! - 1)

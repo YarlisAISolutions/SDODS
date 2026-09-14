@@ -10,6 +10,8 @@ import {
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
+import { AstBuilder, GherkinClassicTokenMatcher, Parser, compile } from '@cucumber/gherkin';
+import { IdGenerator } from '@cucumber/messages';
 import { describe, expect, it } from 'vitest';
 import { ProjectConfigSchema } from '@sdods/contracts';
 import { parseFeatureFile, scenariosOf } from '../src/lint/gherkin.js';
@@ -278,6 +280,60 @@ describe('expanding a @matrix outline', () => {
         'Feature: F\n\n  @ui @smoke @matrix:admin-surfaces\n  Scenario Outline: S\n    Given x\n    # sdods:matrix:begin admin-surfaces\n',
       ),
     ).toEqual(['matrix/markers@6: "# sdods:matrix:begin" without a matching end.']);
+  });
+});
+
+describe('placeholders are checked per Examples block, as Gherkin fills them', () => {
+  /** Compile with the real Gherkin compiler and return every pickle step still holding a `<placeholder>`. */
+  const literalPlaceholders = (text: string) => {
+    const newId = IdGenerator.incrementing();
+    const doc = new Parser(new AstBuilder(newId), new GherkinClassicTokenMatcher()).parse(text);
+    return compile(doc, 'f.feature', newId)
+      .flatMap((p) => [p.name, ...p.steps.map((s) => s.text)])
+      .filter((t) => /<[^<>\s]+>/.test(t));
+  };
+  const outline = (steps: string, hand: string) =>
+    `Feature: F\n\n  @ui @regression @matrix:admin-surfaces\n  Scenario Outline: S\n${steps}${hand}`;
+  const placeholderProblems = (text: string) =>
+    expandFeatureText(text, matrices())
+      .problems.filter((p) => p.rule === 'matrix/placeholder')
+      .map((p) => `${p.line}: ${p.message}`);
+
+  it('a column only a hand-written block has is reported for the generated blocks', () => {
+    const text = outline(
+      '    Given I sign in with "<password>"\n    Then "<surface>" is "<expect>"\n',
+      '\n    @user:owner\n    Examples: hand-written\n      | role  | surface | expect  | password |\n      | owner | /legacy | allowed | pw       |\n',
+    );
+    const r = expandFeatureText(text, matrices());
+    // Gherkin leaves <password> literal in every generated row...
+    expect(literalPlaceholders(r.text).length).toBeGreaterThan(0);
+    expect(literalPlaceholders(r.text).every((t) => t.includes('<password>'))).toBe(true);
+    // ...so the expansion must say so instead of passing.
+    expect(placeholderProblems(text)).toEqual([
+      '4: <password> not provided by matrix "admin-surfaces" (columns: role, expect, surface).',
+    ]);
+  });
+
+  it('a hand-written block that lacks a matrix column is reported on that block', () => {
+    const text = outline(
+      '    Given I open the surface "<surface>"\n    Then access should be "<expect>"\n',
+      '\n    @user:owner\n    Examples: legacy\n      | role  | expect  |\n      | owner | allowed |\n',
+    );
+    const r = expandFeatureText(text, matrices());
+    expect(literalPlaceholders(r.text)).toEqual(['I open the surface "<surface>"']);
+    expect(placeholderProblems(text)).toEqual([
+      '9: Examples "legacy" does not supply <surface>; Gherkin fills a placeholder only from the Examples block its row is in.',
+    ]);
+  });
+
+  it('reports nothing when every block supplies every placeholder, and Gherkin agrees', () => {
+    const text = outline(
+      '    Given I open the surface "<surface>"\n    Then access should be "<expect>" for <role>\n',
+      '\n    @user:owner\n    Examples: hand-written\n      | role  | surface | expect  |\n      | owner | /legacy | allowed |\n',
+    );
+    const r = expandFeatureText(text, matrices());
+    expect(r.problems).toEqual([]);
+    expect(literalPlaceholders(r.text)).toEqual([]);
   });
 });
 

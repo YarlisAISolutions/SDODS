@@ -96,7 +96,8 @@ The outline gains one block per role, between markers:
 Each row becomes one test titled from `title` (`owner opens /settings/billing → allowed`) and tagged `@user:owner`, so the pool leases an owner account and the cached storage state logs it in, exactly as for a hand-written `@user:owner` scenario. `-t "@matrix:admin-surfaces and @user:viewer"` runs one role's column.
 
 - Re-running with an unchanged matrix changes nothing.
-- Only the lines between the markers are rewritten. Hand-written `Examples:` blocks in the same outline are kept, and their columns count as available placeholders.
+- Only the lines between the markers are rewritten. Hand-written `Examples:` blocks in the same outline are kept.
+- Gherkin fills a placeholder only from the `Examples:` block its row is in, so each block is checked on its own (`matrix/placeholder`): the generated blocks supply only `<role>`, `<expect>` and the matrix columns, and a hand-written block must have a column for every placeholder the outline uses. A column that only a hand-written block has would stay a literal `<column>` in every generated row.
 - Removing the `@matrix:` tag and expanding again removes the generated block.
 - The generated rows are committed like any other Gherkin, so reviews show the grid that will run.
 
