@@ -393,6 +393,115 @@ export interface CoverageReport {
   };
 }
 
+// ── Requirement traceability (`@req:<id>` → `sdods report traceability`) ──
+
+/** Outcome of one requirement in the chosen run. `not-covered` needs a requirements file. */
+export type TraceRequirementStatus = 'passed' | 'failed' | 'not-run' | 'not-covered';
+/** Outcome of one scenario across every runner project / example row it ran as. */
+export type TraceScenarioStatus = 'passed' | 'failed' | 'skipped' | 'not-run';
+
+/** The final attempt of one scenario in one runner project (and one Examples row for outlines). */
+export interface TraceResult {
+  runnerProject: string;
+  layer?: string;
+  browser?: string;
+  /** 1-based Examples row for a Scenario Outline, null for a plain scenario. */
+  exampleIndex: number | null;
+  status: SuiteStatus;
+  attempts: number;
+  /** failed at least once, then passed on a retry */
+  flaky: boolean;
+  durationMs?: number;
+  startedAt?: string;
+  finishedAt?: string;
+  error?: string;
+}
+
+export interface TraceScenario {
+  /** feature file, relative to the project root */
+  feature: string;
+  featureName: string;
+  line: number;
+  name: string;
+  /** effective tags: Feature + Rule + Scenario + Examples */
+  tags: string[];
+  requirements: string[];
+  status: TraceScenarioStatus;
+  results: TraceResult[];
+}
+
+export interface TraceRequirement {
+  id: string;
+  title?: string;
+  url?: string;
+  /**
+   * Whether the id is listed in the requirements file: `true`/`false` when one is configured,
+   * `null` when the project has none (ids are then whatever the tags say).
+   */
+  declared: boolean | null;
+  status: TraceRequirementStatus;
+  scenarios: TraceScenario[];
+}
+
+export interface TraceRunInfo {
+  id: string;
+  env?: string;
+  trigger?: string;
+  command?: string;
+  tagsExpr?: string;
+  startedAt?: string;
+  finishedAt?: string;
+  exitCode?: number;
+  git?: { sha?: string; branch?: string; dirty?: boolean };
+  ci?: { provider?: string; runId?: string; url?: string };
+  sdodsVersion?: string;
+  playwrightVersion?: string;
+  /** where scenario results were read from */
+  resultsSource: 'cucumber-messages' | 'scenario-meta' | 'none';
+}
+
+/**
+ * Filled in by a person, never by SDODS. Sign-off authority is human and not delegable, so the
+ * export carries the empty block and every field stays null in what the framework writes.
+ */
+export interface TraceSignOff {
+  signedBy: null;
+  role: null;
+  date: null;
+  decision: null;
+  notes: null;
+}
+
+export interface TraceabilityReport {
+  kind: 'sdods-traceability';
+  version: 1;
+  project: string;
+  projectName: string;
+  generatedAt: string;
+  /** requirements file, relative to the project root */
+  requirementsFile?: string;
+  run: TraceRunInfo | null;
+  requirements: TraceRequirement[];
+  /** scenarios that carry no `@req:` tag */
+  untraced: Array<Pick<TraceScenario, 'feature' | 'line' | 'name' | 'status'>>;
+  summary: {
+    requirements: number;
+    covered: number;
+    passed: number;
+    failed: number;
+    notRun: number;
+    /** null when no requirements file is configured: uncovered ids cannot be known */
+    notCovered: number | null;
+    /** ids tagged on scenarios but missing from the requirements file */
+    undeclared: number;
+    scenarios: number;
+    tracedScenarios: number;
+    untracedScenarios: number;
+  };
+  signOff: TraceSignOff;
+  notes: string[];
+}
+
 export interface ProjectProposal {
   slug: string;
   name: string;

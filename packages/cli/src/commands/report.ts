@@ -1,12 +1,12 @@
-import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
+import { dirname, extname, join, resolve } from 'node:path';
 import type { Command } from 'commander';
 import { execa } from 'execa';
 import pc from 'picocolors';
 import { runFiles } from '@sdods/contracts';
 import { SdodsError } from '@sdods/core';
 import { createContext } from '../context.js';
-import { json, ok, out, table } from '../ui.js';
+import { json, ok, out, table, warn } from '../ui.js';
 
 function artifactsRoot(rootDir: string): string {
   return resolve(rootDir, process.env.SDODS_ARTIFACTS_DIR ?? '.sdods/runs');
@@ -254,6 +254,106 @@ export function register(program: Command) {
       if (ctx.opts.json)
         return json({ runId, merged: dirs.length, htmlReport: join(runDir, runFiles.htmlReport) });
       ok(`Merged ${dirs.length} shard report dir(s) into ${join(runDir, runFiles.htmlReport)}`);
+    });
+
+  report
+    .command('traceability')
+    .description(
+      'Export requirement → scenario → result traceability for a run (@req:<id> tags), with an empty sign-off block',
+    )
+    .requiredOption('-p, --project <slug>', 'project slug')
+    .option('-e, --env <name>', 'only consider runs against this environment')
+    .option('--run <id>', 'run id (default: the latest run of the project)')
+    .option('--last', 'use the latest run of the project; fail if there is none')
+    .option('--format <fmt>', 'json|csv|md|html (default: from -o, else md)')
+    .option('-o, --output <file>', 'write the export to a file instead of stdout')
+    .action(async (opts, cmd) => {
+      const ctx = createContext(cmd);
+      // `report` defines --run/--last itself, and Commander hands options it knows to the parent
+      // wherever they appear, so read them from both.
+      const parent = (cmd.parent?.opts() ?? {}) as { run?: string; last?: boolean };
+      const runOpt: string | undefined = opts.run ?? parent.run;
+      const last = Boolean(opts.last ?? parent.last);
+      const {
+        TRACEABILITY_FORMATS,
+        buildTraceabilityReport,
+        latestRunFor,
+        readRunManifest,
+        renderTraceability,
+      } = await import('@sdods/core/analyze');
+
+      const output: string | undefined = opts.output
+        ? resolve(process.cwd(), opts.output)
+        : undefined;
+      const fromExt = output
+        ? (
+            {
+              '.json': 'json',
+              '.csv': 'csv',
+              '.md': 'md',
+              '.html': 'html',
+              '.htm': 'html',
+            } as const
+          )[extname(output).toLowerCase() as '.json']
+        : undefined;
+      const format = (opts.format ?? (ctx.opts.json ? 'json' : fromExt) ?? 'md') as string;
+      if (!(TRACEABILITY_FORMATS as readonly string[]).includes(format))
+        throw new SdodsError('CONFIG_INVALID', `Unknown format "${format}".`, {
+          hint: `Use one of: ${TRACEABILITY_FORMATS.join(', ')}.`,
+          exitCode: 2,
+        });
+
+      const slug: string = opts.project;
+      const project = { ...ctx.registry.get(slug), root: ctx.registry.rootOf(slug) };
+      const root = artifactsRoot(ctx.rootDir);
+      let run: { runId: string; dir: string } | undefined;
+      if (runOpt) {
+        const dir = join(root, runOpt);
+        if (!existsSync(dir))
+          throw new SdodsError('RUN_FAILED', `No run "${runOpt}" under ${root}.`, { exitCode: 2 });
+        const m = readRunManifest(dir);
+        if (m && m.projectSlug !== slug)
+          throw new SdodsError(
+            'CONFIG_INVALID',
+            `Run ${runOpt} belongs to project "${m.projectSlug}", not "${slug}".`,
+            { exitCode: 2 },
+          );
+        if (m && opts.env && m.env !== opts.env)
+          throw new SdodsError(
+            'CONFIG_INVALID',
+            `Run ${runOpt} ran against "${m.env}", not "${opts.env}".`,
+            { exitCode: 2 },
+          );
+        run = { runId: runOpt, dir };
+      } else {
+        run = latestRunFor(root, slug, opts.env) ?? undefined;
+        if (!run && last)
+          throw new SdodsError(
+            'RUN_FAILED',
+            `No runs of ${slug}${opts.env ? ` on ${opts.env}` : ''} under ${root}.`,
+            {
+              hint: `Run \`sdods run -p ${slug}\` first, or omit --last for a static matrix.`,
+              exitCode: 2,
+            },
+          );
+        if (!run)
+          warn(
+            `No runs of ${slug}${opts.env ? ` on ${opts.env}` : ''} found: every scenario is reported as not run.`,
+          );
+      }
+
+      const traceReport = await buildTraceabilityReport({ project, run });
+      const text = renderTraceability(traceReport, format as 'json');
+      if (!output) return out(text);
+      mkdirSync(dirname(output), { recursive: true });
+      writeFileSync(output, text);
+      const s = traceReport.summary;
+      if (ctx.opts.json)
+        return json({ output, format, run: traceReport.run?.id ?? null, summary: s });
+      ok(`Wrote ${format} traceability export to ${output}`);
+      out(
+        `${s.requirements} requirement(s): ${pc.green(`${s.passed} passed`)}  ${pc.red(`${s.failed} failed`)}  ${pc.yellow(`${s.notRun} not run`)}  ${s.notCovered == null ? pc.dim('not covered: unknown') : pc.magenta(`${s.notCovered} not covered`)}`,
+      );
     });
 
   program
