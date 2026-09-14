@@ -1,5 +1,32 @@
 # @sdods/server
 
+## 0.8.0
+
+### Patch Changes
+
+- Updated dependencies [8611552]
+- Updated dependencies [8611552]
+- Updated dependencies [4c00473]
+- Updated dependencies [8611552]
+- Updated dependencies [842a700]
+- Updated dependencies [8611552]
+- Updated dependencies [f950986]
+- Updated dependencies [8611552]
+- Updated dependencies [00930d0]
+- Updated dependencies [8611552]
+- Updated dependencies [8611552]
+- Updated dependencies [8611552]
+- Updated dependencies [8611552]
+- Updated dependencies [b0ae3b9]
+- Updated dependencies [0cc05cb]
+- Updated dependencies [509b2c8]
+- Updated dependencies [8611552]
+- Updated dependencies [85ac708]
+  - @sdods/core@0.8.0
+  - @sdods/contracts@0.8.0
+  - @sdods/db@0.8.0
+  - @sdods/mcp@0.8.0
+
 ## 0.7.3
 
 ### Patch Changes
