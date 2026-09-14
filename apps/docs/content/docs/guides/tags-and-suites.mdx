@@ -21,6 +21,7 @@ description: The tag taxonomy SDODS enforces and how tags select layers, suites,
 | `@env:<name>`                                                             | must be in `envs.available`                         | restricts a scenario to one environment              |
 | `@jira:PROJ-123` `@github:123`                                            | pattern-checked                                     | links the scenario to an issue                       |
 | `@skip:<browser>`                                                         | browser must be supported                           | excludes the scenario from that engine               |
+| `@matrix:<name>`                                                          | matrix must exist in `roles.matrix.yaml`            | generates one tagged Examples block per role         |
 | `@retries:N` `@timeout:N` `@slow` `@mode:serial` `@skip` `@fixme` `@only` | runner control tags                                 | passed through                                       |
 
 Unknown tags produce a warning, so typos surface without blocking.

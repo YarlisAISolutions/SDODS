@@ -222,6 +222,60 @@ export const featureTools = [
     },
   }),
   defineTool({
+    name: 'matrix_expand',
+    title: 'Propose role-matrix Examples',
+    description:
+      'Expand every @matrix:<name> Scenario Outline from roles.matrix.yaml (one Examples block per role, tagged @user:<role>) and stage the changed features as a proposal. Never writes to the working tree.',
+    shape: {
+      project: z.string(),
+      summary: z.string().optional(),
+    },
+    access: 'write',
+    domain: 'features',
+    capability: 'core',
+    annotations: { destructiveHint: false },
+    handler: async (args, ctx) => {
+      const root = projectRoot(ctx.rootDir, args.project);
+      const r = await sdodsCli<{
+        files: Array<{ path: string; status: string; examples: number; content?: string }>;
+        problems: Array<{ severity: string; rule: string; message: string; file: string }>;
+      }>(['matrix', 'expand', '-p', args.project, '--dry-run'], {
+        cwd: ctx.rootDir,
+        signal: ctx.signal,
+        timeoutMs: 120_000,
+      });
+      const { files = [], problems = [] } = r.json ?? {};
+      const errors = problems.filter((p) => p.severity === 'error');
+      if (errors.length)
+        return {
+          text: `Matrix problems:\n${errors.map((p) => `${p.file}: ${p.rule} ${p.message}`).join('\n')}`,
+          data: { files: files.map(({ content: _c, ...f }) => f), problems },
+          isError: true,
+        };
+      const stale = files.filter((f) => f.status === 'stale' && f.content !== undefined);
+      if (!stale.length)
+        return {
+          text: files.length
+            ? `All ${files.length} matrix feature(s) are up to date.`
+            : 'No @matrix:<name> outlines in this project.',
+          data: { files, problems },
+        };
+      const projectRel = relative(ctx.rootDir, root).replace(/\\/g, '/');
+      const manifest = new ProposalStore(ctx.rootDir).create({
+        role: 'mcp',
+        project: args.project,
+        summary:
+          args.summary ??
+          `Expand role matrix Examples in ${stale.length} feature(s) (${stale.reduce((n, f) => n + f.examples, 0)} examples)`,
+        files: stale.map((f) => ({ path: `${projectRel}/${f.path}`, content: f.content! })),
+      });
+      return {
+        text: `Proposal ${manifest.id} updates ${stale.length} feature(s). Review with proposal_get and apply with proposal_accept.${problems.length ? `\nWarnings:\n${problems.map((p) => `${p.file}: ${p.rule} ${p.message}`).join('\n')}` : ''}`,
+        data: { proposal: manifest, problems },
+      };
+    },
+  }),
+  defineTool({
     name: 'step_list',
     title: 'List step definitions',
     description: 'Step patterns available to a project (core library + project steps).',

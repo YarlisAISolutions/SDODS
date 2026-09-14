@@ -19,6 +19,7 @@ export const KNOWN_VALUE_TAGS = [
   'skip',
   'title',
   'flag',
+  'matrix',
 ] as const;
 /**
  * Values `@skip:<browser>` accepts. Derived from the schema rather than copied, so adding a browser
