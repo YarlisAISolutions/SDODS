@@ -41,6 +41,20 @@ The jar comes from the scenario's storageState, not from the live browser page: 
 
 The evidence JSON of each recorded request carries `auth` (`none`, `bearer`, `basic` or `header:<name>`, never the value) and `isolated: true` when it went through the isolated client.
 
+### JSON paths that match nothing
+
+A path is either dotted (`data.items[0].id`) or a JSONPath (`$.data.items[*].id`, `$..id`). Both read the same way:
+
+| The path matches              | Value read                           |
+| ----------------------------- | ------------------------------------ |
+| nothing                       | nothing: the path is absent          |
+| one value                     | that value, including `null` or `[]` |
+| two or more values (JSONPath) | an array of the matches              |
+
+So on a missing key, `the response JSON path {string} should exist` fails and `the response JSON path {string} should not exist` passes, whichever syntax the path uses. `I save the response JSON path {string} as {string}`, `the response JSON path {string} should have {int} items` (and `at least`) and `the UI should show the text from JSON path {string}` fail with `RUN_FAILED` instead of storing or comparing an empty value. A key that is present with the value `null` or `[]` still saves.
+
+A wildcard over an empty array matches nothing: `$.items[*]` on `{ "items": [] }` is absent. To count or save the array itself, point at `$.items`.
+
 ## UI steps
 
 | Step                                                                            | Effect                            |
