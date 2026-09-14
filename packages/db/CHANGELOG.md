@@ -1,5 +1,22 @@
 # @sdods/db
 
+## 0.8.0
+
+### Patch Changes
+
+- 8611552: Run ingest no longer stores a skipped scenario as passed. A passing before or after hook counted as a pass, so a scenario whose Gherkin steps were all skipped (`@skip:<browser>`) was recorded as passed in the results database. Hooks now only fail a scenario; passed and skipped come from its Gherkin steps, as in the traceability reader.
+- 8611552: A scenario that called `test.skip()` part-way is recorded as skipped, not passed, by run ingest and by `sdods report traceability`. playwright-bdd reports the steps before the skip as PASSED and the rest as SKIPPED, and both readers counted any passed step as a pass; the worst step result now wins, as in Cucumber.
+- Updated dependencies [4c00473]
+- Updated dependencies [842a700]
+- Updated dependencies [8611552]
+- Updated dependencies [f950986]
+- Updated dependencies [8611552]
+- Updated dependencies [00930d0]
+- Updated dependencies [8611552]
+- Updated dependencies [509b2c8]
+- Updated dependencies [85ac708]
+  - @sdods/contracts@0.8.0
+
 ## 0.7.3
 
 ### Patch Changes
