@@ -133,7 +133,8 @@ export function emulationFromTags(tags: readonly string[]): Emulation {
 
   const out: Emulation = {};
   const locale = one('locale');
-  if (locale) out.locale = locale;
+  // Canonical form (`fr-fr` → `fr-FR`), so the context and `I use the locale` agree on spelling.
+  if (locale) out.locale = Intl.getCanonicalLocales(locale)[0];
   const timezone = one('timezone');
   if (timezone) out.timezoneId = timezone;
   const theme = one('theme');

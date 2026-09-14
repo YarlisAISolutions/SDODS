@@ -1023,7 +1023,18 @@ describe('browser steps: emulation', () => {
   it('I use the device passes only when @device: created the context with it', async () => {
     const tagged = { ...base(), $sdodsEmulation: emulationFromTags(['@device:iPhone-15']) };
     await run('I use the device {string}', tagged, 'iPhone 15');
-    const untagged = { ...base(), $sdodsEmulation: emulationFromTags([]) };
+    // A mobile run target built on the descriptor passes without the tag: same user agent.
+    const { devices } = await import('@playwright/test');
+    await run(
+      'I use the device {string}',
+      {
+        ...base(),
+        $sdodsEmulation: emulationFromTags([]),
+        userAgent: devices['iPhone 15']!.userAgent,
+      },
+      'iPhone 15',
+    );
+    const untagged = { ...base(), $sdodsEmulation: emulationFromTags([]), userAgent: undefined };
     const err = await failure('I use the device {string}', untagged, 'iPhone 15');
     expect(err?.message).toContain('@device:iPhone-15');
     expect((await failure('I use the device {string}', untagged, 'Nokia 3310'))?.message).toContain(

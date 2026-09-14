@@ -1,4 +1,4 @@
-import { expect } from '@playwright/test';
+import { devices, expect } from '@playwright/test';
 import type { Cookie, Page } from '@playwright/test';
 import { Given, Then, When } from '../fixtures/test.js';
 import { renderStrict } from '../api/template.js';
@@ -962,21 +962,25 @@ Given('I use the viewport {int} by {int}', async ({ page }, width: number, heigh
 });
 
 // Proves the scenario runs with this device's viewport, user agent, pixel ratio and touch. The
-// engine stays the run target's browser. Passes only when `@device:` already set it.
-Given('I use the device {string}', async ({ $sdodsEmulation, apiContext, env }, value: string) => {
-  const wanted = renderStrict(value, ...scopesOf(apiContext, env));
-  const name = findDevice(wanted);
-  if (!name)
-    throw new SdodsError('RUN_FAILED', `"${wanted}" is not a Playwright device.`, {
-      hint: 'Use a descriptor name such as "iPhone 15" or "Pixel 7".',
-    });
-  if ($sdodsEmulation.device?.name !== name)
-    throw contextFixed(
-      'device',
-      `@device:${name.replace(/\s+/g, '-')}`,
-      $sdodsEmulation.device?.name ?? 'no device emulation',
-    );
-});
+// engine stays the run target's browser. Passes when the context carries the device's user agent —
+// from `@device:`, or from a mobile run target built on that descriptor (mobile-safari is iPhone 15).
+Given(
+  'I use the device {string}',
+  async ({ $sdodsEmulation, userAgent, apiContext, env }, value: string) => {
+    const wanted = renderStrict(value, ...scopesOf(apiContext, env));
+    const name = findDevice(wanted);
+    if (!name)
+      throw new SdodsError('RUN_FAILED', `"${wanted}" is not a Playwright device.`, {
+        hint: 'Use a descriptor name such as "iPhone 15" or "Pixel 7".',
+      });
+    if ($sdodsEmulation.device?.name !== name && userAgent !== devices[name]?.userAgent)
+      throw contextFixed(
+        'device',
+        `@device:${name.replace(/\s+/g, '-')}`,
+        $sdodsEmulation.device?.name ?? 'no device emulation',
+      );
+  },
+);
 
 // The WCAG 1.4.10 phrasing of `the page should not scroll horizontally` — same measurement, same
 // blank-page guard. Pair it with `@viewport:320x640`.
