@@ -43,20 +43,9 @@ if (!existsSync(demo)) throw new Error(`missing ${demo} — the demo project is 
 cpSync(demo, join(out, 'projects/demo-shop'), { recursive: true, filter: relFilter(demo) });
 staged.push('projects/demo-shop/');
 
-const skills = join(repoRoot, '.claude/skills');
-// Skills that only make sense inside this repository must not ship to customer workspaces.
-// `sdods-brand` drives files under `brand/`, which no scaffolded workspace has; `code-signing` and
-// `sdods-desktop-release` are about releasing SDODS itself, not about using it.
-const REPO_ONLY_SKILLS = ['sdods-brand', 'code-signing', 'sdods-desktop-release'];
-if (existsSync(skills)) {
-  const skillFilter = relFilter(skills);
-  cpSync(skills, join(out, '.claude/skills'), {
-    recursive: true,
-    filter: (src, dest) =>
-      skillFilter(src, dest) && !REPO_ONLY_SKILLS.some((s) => src.includes(`/.claude/skills/${s}`)),
-  });
-  staged.push('.claude/skills/');
-}
+// Skills are not staged: the user-facing set lives in packages/cli/skills/, which the package ships
+// directly ("files"), and `init` copies from there rather than from this repository's
+// .claude/skills (which also holds skills for releasing SDODS itself).
 
 // init.ts has inline fallbacks for these two, but shipping the real ones keeps a published
 // workspace identical to one scaffolded from a checkout.

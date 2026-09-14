@@ -1,5 +1,12 @@
 import Link from 'next/link';
+import { AgentInstall, SupportProject } from '@sdods/site-kit';
 import { InstallTabs } from '@/components/install-tabs';
+import {
+  AI_TOOLS_GUIDE_URL,
+  SDODS_AGENT_PROJECT,
+  SUPPORT_LINKS,
+  SUPPORT_PROJECT,
+} from '@/lib/ai-tools';
 import { DOCS_URL, REPO_PUBLIC, REPO_URL } from '@/lib/links';
 
 const WHY: Array<[string, string]> = [
@@ -46,7 +53,7 @@ const FEATURES: Array<[string, string]> = [
   ['SQLite or Postgres', 'One schema, runtime toggle, verified switch in both directions.'],
   [
     'MCP server and agents',
-    '84 tools for Claude Code, Codex, Cursor and VS Code; planner, generator, healer, upgrader.',
+    '84 tools for Claude Code, Codex, Cursor, VS Code, Gemini CLI and any MCP client; a Claude Code plugin; planner, generator, healer, upgrader.',
   ],
   [
     'GitHub and Jira',
@@ -95,7 +102,7 @@ export default function HomePage() {
     <>
       <section className="mx-auto max-w-6xl px-4 pb-12 pt-16 text-center md:pt-24">
         <p className="mb-4 inline-block rounded-full border border-[var(--line)] px-3 py-1 text-xs muted">
-          Open source · Apache-2.0 · API tokens are free
+          {REPO_PUBLIC ? 'Open source' : 'Free'} · Apache-2.0 · API tokens are free
         </p>
         <h1 className="mx-auto max-w-4xl text-4xl font-extrabold tracking-tight md:text-6xl">
           <span className="brand-gradient">SDODS</span> — an automation platform with a reusable
@@ -240,21 +247,35 @@ sdods run -p demo-shop -e staging -l ui -b chromium -t @smoke`}</code>
       </section>
 
       <section className="mx-auto max-w-6xl px-4 py-12" aria-labelledby="clients">
-        <div className="card flex flex-col items-start justify-between gap-4 p-6 md:flex-row md:items-center">
+        <div className="grid items-start gap-8 md:grid-cols-2">
           <div>
-            <h2 id="clients" className="text-xl font-bold">
-              Works with Claude Code and Codex
+            <h2 id="clients" className="text-2xl font-bold">
+              Works with your AI coding tools
             </h2>
-            <p className="muted mt-1 text-sm">
-              SDODS is an MCP server: <code>sdods mcp install claude</code> or{' '}
-              <code>sdods mcp install codex</code>, then ask your assistant to run, analyze or heal
-              tests. Agents can reuse your logged-in CLI session, so no API key is required.
+            <p className="muted mt-2">
+              Claude Code, Codex, Cursor, VS Code, Gemini CLI, Windsurf and any MCP client. Install
+              the plugin or the skills, then ask your assistant to plan, write, run, heal or review
+              tests. Agents reuse your logged-in CLI session, so no API key is required.
+            </p>
+            <p className="muted mt-3 text-sm">
+              A team can also share one SDODS server and connect every assistant to its{' '}
+              <code>/mcp</code> endpoint with a scoped token. The{' '}
+              <a href={AI_TOOLS_GUIDE_URL} className="underline">
+                AI coding tools guide
+              </a>{' '}
+              covers each client.
             </p>
           </div>
-          <a href={`${DOCS_URL}/docs/guides/mcp/`} className="btn btn-secondary whitespace-nowrap">
-            MCP guide
-          </a>
+          <AgentInstall
+            project={SDODS_AGENT_PROJECT}
+            learnMoreHref={AI_TOOLS_GUIDE_URL}
+            learnMoreLabel="Every tool, the MCP endpoint and skills"
+          />
         </div>
+      </section>
+
+      <section className="mx-auto max-w-6xl px-4 pb-4" aria-label="Support SDODS">
+        <SupportProject project={SUPPORT_PROJECT} links={SUPPORT_LINKS} variant="banner" />
       </section>
 
       <section className="mx-auto max-w-6xl px-4 pb-20 pt-8" aria-labelledby="feedback">

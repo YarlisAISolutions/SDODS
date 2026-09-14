@@ -1,0 +1,40 @@
+---
+title: sdods skills
+description: List and install the Agent Skills SDODS ships for Claude Code, Codex, Cursor, Copilot and Gemini CLI.
+---
+
+## `skills`
+
+```text
+sdods skills list
+sdods skills install [--agent <list>] [-g|--global] [--skill <names>] [--force]
+```
+
+| Flag              | Meaning                                                                                                                        |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `--agent <list>`  | comma-separated targets: `claude`, `agents`, `cursor`, `copilot`, `gemini`; default `claude,agents`                            |
+| `-g`, `--global`  | install under your home directory instead of the project                                                                       |
+| `--skill <names>` | only these skills; default all of them                                                                                         |
+| `--force`         | replace a skill that is already installed; without it an existing folder, including your own edits, is left alone and reported |
+
+Where each target writes, relative to the project (or `~` with `--global`):
+
+| Target    | Folder           | Read by                                                         |
+| --------- | ---------------- | --------------------------------------------------------------- |
+| `claude`  | `.claude/skills` | Claude Code                                                     |
+| `agents`  | `.agents/skills` | Codex, Cursor, Gemini CLI, GitHub Copilot, OpenCode, Amp, Goose |
+| `cursor`  | `.cursor/skills` | Cursor                                                          |
+| `copilot` | `.github/skills` | GitHub Copilot in VS Code (`~/.copilot/skills` with `--global`) |
+| `gemini`  | `.gemini/skills` | Gemini CLI                                                      |
+
+The bundled skills are `sdods` (working rules and the command reference), `sdods-run`,
+`sdods-record` and `sdods-start-ui`. `sdods init` installs the same set into new workspaces.
+
+No global install is needed:
+
+```bash
+npx -y @sdods/cli skills install
+```
+
+See [Connect AI coding tools](/docs/guides/ai-coding-tools) for `npx skills add` and the Claude Code
+plugin.

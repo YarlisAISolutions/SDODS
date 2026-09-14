@@ -47,6 +47,7 @@
       "version": "0.1.0",
       "dependencies": {
         "@sdods/roadmap": "workspace:*",
+        "@sdods/site-kit": "workspace:*",
         "firebase": "^12.18.0",
         "fumadocs-core": "^16.15.5",
         "fumadocs-mdx": "^15.4.0",
@@ -76,6 +77,7 @@
       "dependencies": {
         "@sdods/qa-archive": "workspace:*",
         "@sdods/roadmap": "workspace:*",
+        "@sdods/site-kit": "workspace:*",
         "firebase": "^12.18.0",
         "next": "^16.3.4",
         "next-themes": "^0.4.6",
@@ -95,7 +97,7 @@
     },
     "packages/agents": {
       "name": "@sdods/agents",
-      "version": "0.3.2",
+      "version": "0.5.2",
       "dependencies": {
         "@anthropic-ai/claude-agent-sdk": "^0.3.259",
         "@anthropic-ai/sdk": "^0.123.0",
@@ -107,7 +109,7 @@
     },
     "packages/cli": {
       "name": "@sdods/cli",
-      "version": "0.3.2",
+      "version": "0.5.2",
       "bin": {
         "sdods": "./bin/sdods.js",
       },
@@ -135,14 +137,14 @@
     },
     "packages/contracts": {
       "name": "@sdods/contracts",
-      "version": "0.3.2",
+      "version": "0.5.2",
       "dependencies": {
         "zod": "^4.5.4",
       },
     },
     "packages/core": {
       "name": "@sdods/core",
-      "version": "0.3.2",
+      "version": "0.5.2",
       "dependencies": {
         "@cucumber/cucumber-expressions": "19.0.0",
         "@cucumber/gherkin": "^42.0.1",
@@ -176,7 +178,7 @@
     },
     "packages/db": {
       "name": "@sdods/db",
-      "version": "0.3.2",
+      "version": "0.5.2",
       "dependencies": {
         "@sdods/contracts": "workspace:*",
         "better-sqlite3": "^13.0.3",
@@ -191,7 +193,7 @@
     },
     "packages/integrations": {
       "name": "@sdods/integrations",
-      "version": "0.3.2",
+      "version": "0.5.2",
       "dependencies": {
         "@octokit/rest": "^22.0.1",
         "@sdods/contracts": "workspace:*",
@@ -203,7 +205,7 @@
     },
     "packages/mcp": {
       "name": "@sdods/mcp",
-      "version": "0.3.2",
+      "version": "0.5.2",
       "dependencies": {
         "@cucumber/gherkin": "^42.0.1",
         "@cucumber/messages": "^34.2.1",
@@ -227,7 +229,7 @@
     },
     "packages/server": {
       "name": "@sdods/server",
-      "version": "0.3.2",
+      "version": "0.5.2",
       "dependencies": {
         "@fastify/cookie": "^11.1.2",
         "@fastify/multipart": "^10.1.1",
@@ -253,6 +255,19 @@
       "devDependencies": {
         "@types/pixelmatch": "^5.2.6",
         "@types/pngjs": "^6.0.5",
+      },
+    },
+    "packages/site-kit": {
+      "name": "@sdods/site-kit",
+      "version": "0.1.0",
+      "devDependencies": {
+        "@types/react": "^19.2.18",
+        "@types/react-dom": "^19.2.0",
+        "react": "^19.2.0",
+        "react-dom": "^19.2.0",
+      },
+      "peerDependencies": {
+        "react": ">=19",
       },
     },
     "packages/web": {
@@ -1128,6 +1143,8 @@
     "@sdods/roadmap": ["@sdods/roadmap@workspace:packages/roadmap"],
 
     "@sdods/server": ["@sdods/server@workspace:packages/server"],
+
+    "@sdods/site-kit": ["@sdods/site-kit@workspace:packages/site-kit"],
 
     "@sdods/web": ["@sdods/web@workspace:packages/web"],
 

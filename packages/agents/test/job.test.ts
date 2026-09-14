@@ -152,7 +152,7 @@ describe('agent jobs', () => {
     const mcp = JSON.parse(readFileSync(join(root, '.mcp.json'), 'utf8')) as {
       mcpServers: Record<string, { args: string[] }>;
     };
-    expect(mcp.mcpServers.sdods!.args).toEqual(['sdods', 'mcp', '--project', 'shop']);
+    expect(mcp.mcpServers.sdods!.args).toEqual(['-y', '@sdods/cli', 'mcp', '--project', 'shop']);
     // The raw Playwright server is not registered any more: the sdods server wraps every one of
     // its tools as browser_*, bound to the project, and a second ungoverned path to the same
     // browser would defeat that.

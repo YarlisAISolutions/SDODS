@@ -42,6 +42,8 @@ export async function miscRoutes(app: FastifyInstance) {
       scopes: SCOPES,
       snippets: {
         claudeCode: `claude mcp add --transport http sdods ${base}/mcp --header "Authorization: Bearer <token>"`,
+        codex: `codex mcp add sdods --url ${base}/mcp --bearer-token-env-var SDODS_TOKEN`,
+        gemini: `gemini mcp add --transport http --header "Authorization: Bearer <token>" sdods ${base}/mcp`,
         json: {
           mcpServers: {
             sdods: {
@@ -62,7 +64,12 @@ export async function miscRoutes(app: FastifyInstance) {
         },
         stdio: {
           mcpServers: {
-            sdods: { command: 'npx', args: ['sdods', 'mcp'], cwd: app.config.rootDir },
+            // `npx sdods` 404s on the registry; the bin belongs to @sdods/cli. `--cwd` pins the
+            // workspace, which clients started outside it (Claude Desktop, user-level configs) need.
+            sdods: {
+              command: 'npx',
+              args: ['-y', '@sdods/cli', '--cwd', app.config.rootDir, 'mcp'],
+            },
           },
         },
       },

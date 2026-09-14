@@ -37,7 +37,7 @@ What gets created:
 | `.claude/skills/`            | `sdods-record` and `sdods-run` skills                                                                                            |
 
 ```bash
-npx sdods init my-tests --org acme --workspace web && cd my-tests
+npx -y @sdods/cli init my-tests --org acme --workspace web && cd my-tests
 bun run sdods doctor
 bun run sdods workspace tree
 bun run sdods run -p demo-shop -e staging -l api

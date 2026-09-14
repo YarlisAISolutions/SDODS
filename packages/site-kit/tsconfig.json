@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "rootDir": "src",
+    "outDir": "dist",
+    "tsBuildInfoFile": "dist/.tsbuildinfo",
+    "jsx": "react-jsx",
+    // Consumed as raw TypeScript by the Next sites and the Vite web UI, whose bundlers resolve
+    // extension-less specifiers.
+    "module": "esnext",
+    "moduleResolution": "bundler"
+  },
+  "include": ["src"]
+}

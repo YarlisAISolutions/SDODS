@@ -1,10 +1,25 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
-import { dirname, join } from 'node:path';
+import { dirname, isAbsolute, join } from 'node:path';
 import { parse as parseToml, stringify as stringifyToml } from 'smol-toml';
 
-export type McpClient = 'claude' | 'codex' | 'cursor' | 'vscode' | 'windsurf';
-export const MCP_CLIENTS: McpClient[] = ['claude', 'codex', 'cursor', 'vscode', 'windsurf'];
+export type McpClient = 'claude' | 'codex' | 'cursor' | 'vscode' | 'windsurf' | 'gemini';
+export const MCP_CLIENTS: McpClient[] = [
+  'claude',
+  'codex',
+  'cursor',
+  'vscode',
+  'windsurf',
+  'gemini',
+];
+
+/**
+ * How a client launches the stdio server when no command is given. `npx sdods` only resolves inside
+ * a checkout that has the bin in node_modules/.bin; everywhere else npx asks the registry, where no
+ * package named `sdods` exists, and the client reports CONNECTION_CLOSED. Name the package that owns
+ * the bin.
+ */
+export const STDIO_LAUNCH = ['-y', '@sdods/cli', 'mcp'];
 
 export interface SnippetOptions {
   project?: string;
@@ -20,18 +35,35 @@ export interface SnippetOptions {
 }
 
 function stdioArgs(o: SnippetOptions): string[] {
-  const args = [...(o.args ?? ['sdods', 'mcp'])];
+  const args = [...(o.args ?? STDIO_LAUNCH)];
   if (o.project) args.push('--project', o.project);
   if (o.env) args.push('--env', o.env);
   if (o.caps) args.push('--caps', o.caps);
   return args;
 }
 
+/**
+ * How each client reads the token from the environment inside its config file, so the secret is
+ * never written there. VS Code prompts for it once instead.
+ */
+const TOKEN_REFERENCE: Record<Exclude<McpClient, 'codex'>, string> = {
+  claude: '${SDODS_TOKEN}',
+  cursor: '${env:SDODS_TOKEN}',
+  windsurf: '${env:SDODS_TOKEN}',
+  gemini: '$SDODS_TOKEN',
+  vscode: '${input:sdods-token}',
+};
+
 export function serverEntry(o: SnippetOptions, client: McpClient): Record<string, unknown> {
   const token =
-    o.tokenPlaceholder ?? (client === 'vscode' ? '${input:sdods-token}' : '<YOUR_SDODS_TOKEN>');
+    o.tokenPlaceholder ?? (client === 'codex' ? '<YOUR_SDODS_TOKEN>' : TOKEN_REFERENCE[client]);
   if (o.httpUrl) {
-    return { type: 'http', url: o.httpUrl, headers: { Authorization: `Bearer ${token}` } };
+    const headers = { Authorization: `Bearer ${token}` };
+    // Windsurf names the remote URL `serverUrl`; Gemini CLI uses `httpUrl` for Streamable HTTP
+    // (its `url` means SSE).
+    if (client === 'windsurf') return { serverUrl: o.httpUrl, headers };
+    if (client === 'gemini') return { httpUrl: o.httpUrl, headers };
+    return { type: 'http', url: o.httpUrl, headers };
   }
   return { command: o.command ?? 'npx', args: stdioArgs(o) };
 }
@@ -49,8 +81,8 @@ export function playwrightEntry(): Record<string, unknown> {
   return { command: 'npx', args: ['playwright', 'mcp', '--headless'] };
 }
 
-/** `codex mcp add` / `claude mcp add` command lines for the same configuration. */
-export function cliCommands(o: SnippetOptions): { claude: string; codex: string } {
+/** `claude mcp add` / `codex mcp add` / `gemini mcp add` command lines for the same configuration. */
+export function cliCommands(o: SnippetOptions): { claude: string; codex: string; gemini: string } {
   const stdio = `${o.command ?? 'npx'} ${stdioArgs(o).join(' ')}`;
   const token = o.tokenPlaceholder ?? '$SDODS_TOKEN';
   return {
@@ -60,6 +92,10 @@ export function cliCommands(o: SnippetOptions): { claude: string; codex: string 
     codex: o.httpUrl
       ? `codex mcp add sdods --url ${o.httpUrl} --bearer-token-env-var SDODS_TOKEN`
       : `codex mcp add sdods -- ${stdio}`,
+    // gemini parses dashed arguments as its own flags unless they follow `--`
+    gemini: o.httpUrl
+      ? `gemini mcp add --transport http --header "Authorization: Bearer ${token}" sdods ${o.httpUrl}`
+      : `gemini mcp add sdods ${o.command ?? 'npx'} -- ${stdioArgs(o).join(' ')}`,
   };
 }
 
@@ -71,6 +107,11 @@ export function codexTomlEntries(o: SnippetOptions): Record<string, Record<strin
   const out: Record<string, Record<string, unknown>> = { sdods };
   if (o.withPlaywright === true) out.playwright = playwrightEntry();
   return out;
+}
+
+/** Windsurf reads one user-level file; a `.windsurf/mcp.json` in the project is ignored. */
+export function windsurfConfigPath(): string {
+  return join(homedir(), '.codeium', 'windsurf', 'mcp_config.json');
 }
 
 export function codexConfigPath(): string {
@@ -101,8 +142,13 @@ export function snippets(
       json: { mcpServers: { sdods: serverEntry(o, 'cursor'), ...pw } },
     },
     windsurf: {
-      file: '.windsurf/mcp.json',
+      file: windsurfConfigPath(),
       json: { mcpServers: { sdods: serverEntry(o, 'windsurf'), ...pw } },
+    },
+    gemini: {
+      file: '.gemini/settings.json',
+      json: { mcpServers: { sdods: serverEntry(o, 'gemini'), ...pw } },
+      cli: cli.gemini,
     },
     vscode: {
       file: '.vscode/mcp.json',
@@ -133,7 +179,7 @@ export function installClientConfig(
 ): { file: string; merged: Record<string, unknown>; created: boolean } {
   if (client === 'codex') return installCodexConfig(o);
   const s = snippets(o)[client];
-  const file = join(rootDir, s.file);
+  const file = isAbsolute(s.file) ? s.file : join(rootDir, s.file);
   const existing = existsSync(file) ? safeParse(readFileSync(file, 'utf8')) : {};
   const merged: Record<string, unknown> = { ...existing };
   const key = client === 'vscode' ? 'servers' : 'mcpServers';

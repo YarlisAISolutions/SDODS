@@ -26,6 +26,7 @@ import { register as registerTrace } from './commands/trace.js';
 import { register as registerAgent } from './commands/agent.js';
 import { register as registerProposals } from './commands/proposals.js';
 import { register as registerMcp } from './commands/mcp.js';
+import { register as registerSkills } from './commands/skills.js';
 import { register as registerServe } from './commands/serve.js';
 import { register as registerUsers } from './commands/users.js';
 import { register as registerTokens } from './commands/tokens.js';
@@ -83,6 +84,7 @@ export function buildProgram(): Command {
   registerAgent(program);
   registerProposals(program);
   registerMcp(program);
+  registerSkills(program);
   registerServe(program);
   registerUsers(program);
   registerTokens(program);

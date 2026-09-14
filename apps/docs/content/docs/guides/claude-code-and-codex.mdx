@@ -8,6 +8,12 @@ description: Use SDODS from Claude Code and OpenAI Codex, and run SDODS agents o
   SDODS's own agent roles through those CLIs instead of an API key, and what each client sees.
 </Learn>
 
+<Callout>
+  The fastest start in Claude Code is the SDODS plugin — skills, slash commands, the five subagents
+  and the MCP server in one install. It and every other client are in [Connect AI coding
+  tools](/docs/guides/ai-coding-tools).
+</Callout>
+
 ## Two directions
 
 ```mermaid
@@ -60,7 +66,7 @@ claude login
 bun run sdods agent install --for claude -p demo-shop -e staging
 ```
 
-This writes `.claude/agents/sdods-<role>.md` (one subagent per SDODS role), `CLAUDE.md`, `AGENT.md` and `SKILL.md`, and runs `claude mcp add -s project sdods -- npx sdods mcp --project demo-shop --env staging` (plus the bundled Playwright MCP). Use `--no-mcp` to skip the registration, or `sdods mcp install claude --file` to write `.mcp.json` instead of calling the CLI.
+This writes `.claude/agents/sdods-<role>.md` (one subagent per SDODS role), `CLAUDE.md`, `AGENT.md` and `SKILL.md`, and runs `claude mcp add -s project sdods -- npx -y @sdods/cli mcp --project demo-shop --env staging` (plus the bundled Playwright MCP). Use `--no-mcp` to skip the registration, or `sdods mcp install claude --file` to write `.mcp.json` instead of calling the CLI.
 
 ### Use it
 
@@ -91,7 +97,7 @@ codex login          # ChatGPT account; or set OPENAI_API_KEY
 bun run sdods agent install --for codex -p demo-shop -e staging
 ```
 
-This writes `AGENTS.md` (Codex reads it as project instructions; the five roles become sections), `AGENT.md` and `SKILL.md`, and runs `codex mcp add sdods -- npx sdods mcp --project demo-shop --env staging` (plus Playwright). Without the CLI on PATH the same entries are merged into `~/.codex/config.toml` under `[mcp_servers.sdods]`; other servers in that file are kept.
+This writes `AGENTS.md` (Codex reads it as project instructions; the five roles become sections), `AGENT.md` and `SKILL.md`, and runs `codex mcp add sdods -- npx -y @sdods/cli mcp --project demo-shop --env staging` (plus Playwright). Without the CLI on PATH the same entries are merged into `~/.codex/config.toml` under `[mcp_servers.sdods]`; other servers in that file are kept.
 
 ### Use it
 
