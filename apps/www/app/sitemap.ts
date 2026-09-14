@@ -2,6 +2,7 @@ import type { MetadataRoute } from 'next';
 import { HANDLES, TAG_NAMES, THREADS, USE_CASES } from '@sdods/qa-archive';
 import { SITE_URL } from '@/lib/links';
 import { DESKTOP_PUBLIC } from '@/lib/desktop-release';
+import { SPONSOR_PUBLIC } from '@/lib/sponsor';
 
 export const dynamic = 'force-static';
 
@@ -23,6 +24,9 @@ const PAGES: Array<[path: string, priority: number]> = [
   ['/questions/users/', 0.4],
   ['/questions/use-cases/', 0.6],
   ['/feedback/', 0.6],
+  // /sponsor/ always renders, but until the Stripe links exist it is only an email address.
+  // /sponsor/thanks/ is where Checkout lands and is never listed.
+  ...(SPONSOR_PUBLIC ? ([['/sponsor/', 0.5]] as Array<[string, number]>) : []),
   // A repository address that happens to have a page. Worth indexing so someone searching for the
   // apt setup finds it, but it is not a destination anyone browses to.
   ['/apt/', 0.4],

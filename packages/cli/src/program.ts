@@ -53,7 +53,9 @@ export function buildProgram(): Command {
     .option('--no-color', 'disable colours')
     .showHelpAfterError('(add --help for usage)')
     .showSuggestionAfterError()
-    .configureHelp({ sortSubcommands: true });
+    .configureHelp({ sortSubcommands: true })
+    // Root help only: 'after' is not inherited by subcommands.
+    .addHelpText('after', '\nDocs: https://docs.sdods.com  ·  Sponsor: https://sdods.com/sponsor/');
 
   registerProjectCommands(program);
   registerEnvCommands(program);

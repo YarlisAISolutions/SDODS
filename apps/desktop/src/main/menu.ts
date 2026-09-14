@@ -57,6 +57,11 @@ export function buildMenu(ctx: MenuContext): void {
         click: () => void shell.openPath(logsDir()),
       },
       { type: 'separator' },
+      {
+        label: 'Sponsor SDODS…',
+        click: () => void shell.openExternal('https://sdods.com/sponsor/'),
+      },
+      { type: 'separator' },
       { role: 'quit' },
     ],
   };

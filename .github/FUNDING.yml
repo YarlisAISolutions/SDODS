@@ -1,0 +1,3 @@
+# GitHub shows a Sponsor button on the repository from this file. Payments run through Stripe on
+# sdods.com, so the only entry is the sponsor page; see apps/www/lib/sponsor.ts.
+custom: ['https://sdods.com/sponsor/']
