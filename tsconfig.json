@@ -33,6 +33,9 @@
     },
     {
       "path": "packages/site-kit"
+    },
+    {
+      "path": "packages/maxi"
     }
   ]
 }

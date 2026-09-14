@@ -1,0 +1,6 @@
+# Cloud Build for Maxi. Submitted from the repository root by .github/workflows/maxi.yml:
+#   gcloud builds submit --config packages/maxi/cloudbuild.yaml --substitutions _IMAGE=<image:tag> .
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args: ['build', '-f', 'packages/maxi/Dockerfile', '-t', '${_IMAGE}', '.']
+images: ['${_IMAGE}']

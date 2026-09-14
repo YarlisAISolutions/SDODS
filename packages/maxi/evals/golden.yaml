@@ -1,0 +1,138 @@
+# Maxi's golden questions. Run with:  bun run --filter @sdods/maxi eval
+#
+# Each case checks what a good answer must contain, not its exact wording:
+#   cite      - a docs URL fragment the answer should link
+#   include   - regexes (case-insensitive) that must all match
+#   exclude   - regexes that must not match
+#   feature   - the answer's gherkin block must pass validate_feature
+#
+# When a visitor's 👎 or an "I'm not sure" points at a real gap, fix the docs first, then add the
+# question here so the fix stays fixed.
+
+- id: install
+  question: How do I install SDODS on my Mac?
+  cite: /docs/getting-started/installation
+  include: ['curl -fsSL https://sdods\.com/install\.sh \| sh']
+
+- id: install-with-workspace
+  question: Can the installer also set up a workspace and connect Claude Code?
+  include: ['--workspace', '--mcp claude']
+
+- id: doctor
+  question: Something is off with my setup. Is there a command that checks it?
+  include: ['sdods doctor']
+
+- id: start-ui
+  question: How do I open the SDODS web dashboard locally?
+  include: ['sdods serve', '4444']
+
+- id: docker-port
+  question: I started the Docker image but nothing answers on port 4444. Why?
+  include: ['8080']
+
+- id: init-workspace
+  question: How do I create a new workspace for my tests?
+  include: ['sdods init']
+
+- id: run-api-smoke
+  question: How do I run only the API smoke tests for demo-shop on staging?
+  include: ['-l api', '@smoke']
+
+- id: tags-rule
+  question: What tags does every scenario need?
+  include: ['@ui', '@api', '@hybrid', '@smoke', '@regression', '@sanity', 'exactly one|one layer']
+
+- id: locator-priority
+  question: Which locators should my page objects prefer?
+  cite: /docs/best-practices/locator-strategy
+  include: ['role']
+  exclude: ['use xpath']
+
+- id: self-healing
+  question: What does self-healing actually do when a locator breaks?
+  cite: /docs/guides/self-healing
+
+- id: secrets
+  question: Can I put the test user's password directly in the feature file?
+  include: ['\$\{[A-Z_]+\}|environment variable']
+
+- id: mcp-claude
+  question: How do I connect SDODS to Claude Code?
+  include: ['sdods mcp install claude']
+
+- id: proposals
+  question: An agent wrote a proposal. How do I apply it?
+  include: ['sdods proposals accept']
+
+- id: data-driven
+  question: How do I run the same scenario with several sets of data?
+  include: ['Scenario Outline|@data:']
+
+- id: browsers
+  question: Can I run the same suite in Firefox and WebKit?
+  include: ['-b (firefox|webkit)|--project-matrix']
+
+- id: record
+  question: Is there a way to record a flow in the browser instead of writing it by hand?
+  include: ['sdods record']
+
+- id: onboard-existing
+  question: I already have a web app repo. Can SDODS look at it and suggest tests?
+  include: ['sdods analyze']
+
+- id: reset-users
+  question: I forgot the admin password for the local web UI. How do I start over with users?
+  include: ['sdods users reset']
+
+- id: license
+  question: Is SDODS free? What license is it under?
+  include: ['Apache']
+
+- id: vs-playwright
+  question: How is SDODS different from just using Playwright directly?
+
+- id: invented-flag
+  question: What does sdods deploy --kubernetes do?
+  include: ["not sure|doesn't|does not|no such|isn't|is not|can't find|couldn't find"]
+  exclude: ['kubectl apply']
+
+- id: off-topic
+  question: Can you give me a good lasagna recipe?
+  include: ["outside|can't help|cannot help|here for|focus"]
+  exclude: ['ricotta|béchamel|bechamel']
+
+- id: no-repo-links
+  question: Where is the SDODS source code on GitHub?
+  exclude: ['github\.com/[\w-]+/sdods']
+
+- id: write-ui-login
+  question: Write a UI smoke scenario for demo-shop where a standard user logs in and lands on the inventory page.
+  feature: true
+  include: ['@ui', '@smoke']
+  exclude: ['xpath', 'secret_sauce']
+
+- id: write-cart
+  question: Write a regression feature for demo-shop that adds "Sauce Labs Backpack" to the cart and checks the badge shows 1 item.
+  feature: true
+  include: ['@regression']
+
+- id: write-api
+  question: Write an API smoke scenario that checks GET /posts/1 returns status 200.
+  feature: true
+  include: ['@api']
+
+- id: fix-feature
+  question: |
+    Why does lint reject this?
+
+    @smoke @regression
+    Feature: Checkout
+      Scenario: pay
+        Given I am on the login page
+  feature: true
+  include: ['layer tag|@ui']
+
+- id: explain-page
+  question: Can you summarise this page in three bullets?
+  page: https://docs.sdods.com/docs/guides/tags-and-suites/
+  include: ['tag']

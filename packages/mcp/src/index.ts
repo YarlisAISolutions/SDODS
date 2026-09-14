@@ -5,7 +5,7 @@ export * from './fs.js';
 export * from './proposals.js';
 export * from './prompts/index.js';
 export * from './tools/index.js';
-export { parseGherkin, basicTagCheck, similarity } from './tools/feature.js';
+export { parseGherkin, basicTagCheck, similarity } from './gherkin.js';
 export {
   analyzeApp,
   analyzeCoverage,
