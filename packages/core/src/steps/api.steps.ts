@@ -2,7 +2,7 @@ import { expect } from '@playwright/test';
 import './params.js';
 import { Given, Then, When } from '../fixtures/test.js';
 import type { HttpMethod } from '../api/client.js';
-import { coerce, getPath } from '../api/json-path.js';
+import { coerce, getPath, matchedPath } from '../api/json-path.js';
 import { renderJson, renderStrict } from '../api/template.js';
 import { pollUntil } from '../api/poll.js';
 import {
@@ -171,7 +171,7 @@ Then(
   'the response JSON path {string} should have {int} items',
   async ({ apiContext, env }, jsonPath: string, count: number) => {
     const path = renderStrict(jsonPath, apiContext.vars.toObject(), env.vars);
-    const actual = getPath(apiContext.last().response.body, path);
+    const actual = matchedPath(apiContext.last().response.body, path);
     expect(Array.isArray(actual) ? actual.length : -1, `JSON path ${path} length`).toBe(count);
   },
 );
@@ -180,7 +180,7 @@ Then(
   'the response JSON path {string} should have at least {int} items',
   async ({ apiContext, env }, jsonPath: string, count: number) => {
     const path = renderStrict(jsonPath, apiContext.vars.toObject(), env.vars);
-    const actual = getPath(apiContext.last().response.body, path);
+    const actual = matchedPath(apiContext.last().response.body, path);
     expect(
       Array.isArray(actual) ? actual.length : -1,
       `JSON path ${path} length`,
@@ -254,13 +254,8 @@ When(
   async ({ apiContext, env }, jsonPath: string, name: string) => {
     // `name` is the variable being written, an identifier rather than a template.
     const path = renderStrict(jsonPath, apiContext.vars.toObject(), env.vars);
-    const value = getPath(apiContext.last().response.body, path);
-    if (value === undefined)
-      throw new SdodsError(
-        'RUN_FAILED',
-        `JSON path ${path} is undefined in the last response; cannot save as {{${name}}}.`,
-      );
-    apiContext.vars.set(name, value);
+    // A present `null` or `[]` is saved as is; only a path that matched nothing fails.
+    apiContext.vars.set(name, matchedPath(apiContext.last().response.body, path, `{{${name}}}`));
   },
 );
 
