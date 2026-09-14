@@ -1,6 +1,6 @@
 {
   "name": "@sdods/mcp",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "SDODS MCP server: project analysis, runs, results and proposals as tools for AI clients.",
   "license": "Apache-2.0",
   "author": "SDODS <admin@sdods.com>",
