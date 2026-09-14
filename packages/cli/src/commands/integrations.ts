@@ -2,7 +2,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Command } from 'commander';
 import pc from 'picocolors';
-import { DEFAULT_ARTIFACTS_DIR } from '@sdods/core';
+import { DEFAULT_ARTIFACTS_DIR, SdodsError } from '@sdods/core';
 import { createContext } from '../context.js';
 import { LINKS_FILE, notifyRun } from '../notify.js';
 import { json, ok, out, table, warn } from '../ui.js';
@@ -57,6 +57,7 @@ export function register(program: Command) {
           detail: res.detail,
           secrets: fmtSecrets(p.secrets),
           ...(ctx.opts.json && res.labels ? { labels: res.labels } : {}),
+          ...(ctx.opts.json && res.evidence ? { evidence: res.evidence } : {}),
         });
       }
       if (ctx.opts.json) return json(rows);
@@ -201,6 +202,65 @@ export function register(program: Command) {
       if (ctx.opts.json) return json(rows);
       if (!rows.length) return ok('Nothing to sync (no enabled providers or no links).');
       table(rows);
+    });
+
+  const evidence = cmd
+    .command('evidence')
+    .description('The GitHub evidence branch (integrations.github.evidence.host: branch)');
+
+  evidence
+    .command('prune')
+    .description(
+      'Rewrite the evidence branch without runs uploaded before the cutoff (a new orphan commit, force-pushed)',
+    )
+    .requiredOption('-p, --project <slug>', 'project slug')
+    .option('--older-than <age>', 'e.g. 14d, 36h, 2w (default: evidence.retainDays)')
+    .option('--dry-run', 'list the runs that would be removed without rewriting the branch')
+    .action(async (opts, c) => {
+      const ctx = createContext(c);
+      const entry = ctx.registry.entry(opts.project);
+      const { getProviders, GitHubProvider, parseAge } = await import('@sdods/integrations');
+      if (opts.olderThan) {
+        try {
+          parseAge(opts.olderThan);
+        } catch (e) {
+          throw new SdodsError('CONFIG_INVALID', (e as Error).message);
+        }
+      }
+      const [gh] = await getProviders(entry.config, { only: ['github'], projectRoot: entry.root });
+      const docsPath = '/docs/guides/github-and-jira#evidence-that-renders-in-private-repositories';
+      if (!gh?.enabled || !(gh.provider instanceof GitHubProvider))
+        throw new SdodsError(
+          'CONFIG_INVALID',
+          `integrations.github is not enabled for project ${entry.slug}.`,
+          { docsPath },
+        );
+      if (gh.initError)
+        throw new SdodsError('CONFIG_INVALID', `github: ${gh.initError}`, { docsPath });
+      if (entry.config.integrations.github?.evidence?.host !== 'branch')
+        throw new SdodsError(
+          'CONFIG_INVALID',
+          `integrations.github.evidence.host is not "branch" for project ${entry.slug}.`,
+          { docsPath },
+        );
+      const res = await gh.provider.pruneEvidence({
+        olderThan: opts.olderThan,
+        dryRun: Boolean(opts.dryRun),
+      });
+      if (ctx.opts.json) return json(res);
+      const verb = res.dryRun ? 'would remove' : 'removed';
+      if (!res.removed.length)
+        ok(`${res.branch}: nothing to prune (${res.kept.length} run(s) kept)`);
+      else {
+        table(res.removed.map((r) => ({ run: r.runId, uploaded: r.uploadedAt })));
+        ok(
+          `${res.branch}: ${verb} ${res.removed.length} run(s), kept ${res.kept.length}${res.commitSha ? ` (new root ${res.commitSha.slice(0, 10)})` : ''}`,
+        );
+      }
+      if (res.unknown.length)
+        warn(
+          `kept ${res.unknown.length} run(s) missing from runs/index.json (age unknown): ${res.unknown.join(', ')}`,
+        );
     });
 
   cmd
