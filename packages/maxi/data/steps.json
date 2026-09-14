@@ -200,6 +200,26 @@
     "source": "project"
   },
   {
+    "keyword": "When",
+    "pattern": "I connect the {string} handle of node {string} to the {string} handle of node {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "When",
+    "pattern": "I drag the element with test id {string} by {int} and {int}",
+    "source": "project"
+  },
+  {
+    "keyword": "When",
+    "pattern": "I drag the element with test id {string} onto the element with test id {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "When",
+    "pattern": "I drag the node {string} by {int} and {int}",
+    "source": "project"
+  },
+  {
     "keyword": "Given",
     "pattern": "I emulate the {string} colour scheme",
     "source": "project"
@@ -471,6 +491,11 @@
   },
   {
     "keyword": "When",
+    "pattern": "I select the node {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "When",
     "pattern": "I send a {method} request to {string}",
     "source": "project"
   },
@@ -502,6 +527,11 @@
   {
     "keyword": "When",
     "pattern": "I send a {method} request to {string} without following redirects with form:",
+    "source": "project"
+  },
+  {
+    "keyword": "When",
+    "pattern": "I set the {string} field of node {string} to {string}",
     "source": "project"
   },
   {
@@ -821,6 +851,21 @@
   },
   {
     "keyword": "Then",
+    "pattern": "the canvas should contain {int} node(s)",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the canvas should contain an edge from {string} to {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the canvas should not contain an edge from {string} to {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
     "pattern": "the cart badge should be hidden",
     "source": "project"
   },
@@ -1072,6 +1117,16 @@
   {
     "keyword": "Then",
     "pattern": "the latest email to {string} should have been sent from {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the node {string} should be visible",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the node {string} should show the {string} badge",
     "source": "project"
   },
   {
