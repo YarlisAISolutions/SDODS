@@ -8,7 +8,14 @@ import { ingestRun, moduleFromUri, selectorFromError, splitUri } from '../src/in
 import { getRun, getRunScenarios, getScenarioDetail } from '../src/repos/runs.js';
 import { listFlakyStats, listHealEvents, listLocatorStats } from '../src/repos/improvement.js';
 import { ensureProject } from '../src/repos/projects.js';
-import { buildMessages, buildPwJson, TINY_PNG_BASE64, testDb, writeRun } from './helpers.js';
+import {
+  buildMessages,
+  buildPwJson,
+  TINY_PNG_BASE64,
+  testDb,
+  writeRun,
+  type StepSpec,
+} from './helpers.js';
 
 const PW = 'demo-shop--ui--chromium';
 
@@ -104,6 +111,50 @@ describe('cucumber NDJSON ingest', () => {
     const outlineRows = scenarios.filter((s) => s.scenarioName.startsWith('Failed login'));
     expect(outlineRows.map((s) => s.exampleIndex).sort()).toEqual([1, 2]);
     expect(new Set(outlineRows.map((s) => s.fingerprint)).size).toBe(2);
+  });
+
+  it('a passing hook does not turn skipped steps into a pass; a failing hook fails', async () => {
+    const steps: StepSpec[] = [
+      { keyword: 'Given', text: 'I am on the login page' },
+      { keyword: 'Then', text: 'I should see the inventory' },
+    ];
+    const ndjson = buildMessages(
+      [
+        {
+          uri: 'features/ui/hooks.feature',
+          name: 'Hooks',
+          tags: ['@ui'],
+          scenarios: [
+            // @skip:<browser>: every Gherkin step skipped, the before and after hooks still pass.
+            {
+              name: 'Skipped with hooks',
+              tags: ['@smoke'],
+              steps,
+              attempts: [['SKIPPED', 'SKIPPED']],
+              afterHook: 'PASSED',
+            },
+            {
+              name: 'Passed then after-hook failed',
+              tags: ['@smoke'],
+              steps,
+              afterHook: 'FAILED',
+            },
+            { name: 'Passed with hooks', tags: ['@smoke'], steps, afterHook: 'PASSED' },
+          ],
+        },
+      ],
+      { runnerProject: PW },
+    );
+    const { root } = writeRun('run-hooks', { 'messages.ndjson': ndjson });
+    const res = await ingestRun(adb, { runId: 'run-hooks', artifactsRoot: root });
+    const scenarios = await getRunScenarios(adb.db, 'run-hooks');
+    const status = Object.fromEntries(scenarios.map((s) => [s.scenarioName, s.status]));
+    expect(status).toEqual({
+      'Skipped with hooks': 'skipped',
+      'Passed then after-hook failed': 'failed',
+      'Passed with hooks': 'passed',
+    });
+    expect(res.totals).toMatchObject({ total: 3, passed: 1, failed: 1, skipped: 1 });
   });
 
   it('retry-flaky: attempt history, flaky flag, locator stats, idempotent re-ingest', async () => {
