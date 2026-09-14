@@ -123,6 +123,17 @@ service cloud.firestore {
       allow update, delete: if isModerator();
     }
 
+    // Maxi, the docs assistant: anonymous conversation logs and the daily spend counter. Only the
+    // Maxi service writes them, with its service account, which security rules do not apply to.
+    // Browsers get nothing; the moderator can read the logs to find gaps in the docs.
+    match /maxiChats/{chatId} {
+      allow read: if isModerator();
+      allow write: if false;
+    }
+    match /maxiUsage/{day} {
+      allow read, write: if false;
+    }
+
     // Nothing else in the database is reachable from a browser.
     match /{document=**} {
       allow read, write: if false;

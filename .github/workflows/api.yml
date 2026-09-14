@@ -9,10 +9,13 @@ on:
     branches: [main]
     paths:
       - 'packages/**'
+      # Maxi ships as its own service (maxi.yml); its changes don't touch the API image's behaviour.
+      - '!packages/maxi/**'
       - 'projects/**'
       - 'Dockerfile'
       - '.dockerignore'
       - 'deploy/**'
+      - '!deploy/deploy-maxi.sh'
       - 'package.json'
       - 'bun.lock'
       - '.github/workflows/api.yml'

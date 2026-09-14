@@ -53,4 +53,38 @@ describe('deploy scripts', () => {
     expect(deploy).toContain('SDODS_SESSION_COOKIE=__session');
     expect(deploy).toMatch(/--quiet$/);
   });
+
+  it('deploys Maxi with its key from Secret Manager and a spend budget', () => {
+    const bin = mkdtempSync(join(tmpdir(), 'sdods-deploy-maxi-'));
+    const calls = join(bin, 'calls.log');
+    const stub = (name: string, body: string) => {
+      writeFileSync(join(bin, name), `#!/usr/bin/env bash\n${body}\n`);
+      chmodSync(join(bin, name), 0o755);
+    };
+    stub(
+      'gcloud',
+      `printf '%s\\n' "$*" >> "${calls}"; [ "$2" = services ] && echo https://example.run.app; exit 0`,
+    );
+    stub('curl', 'echo \'{"ok":true}\'');
+
+    execFileSync('bash', [join(deployDir, 'deploy-maxi.sh'), 'abc123'], {
+      env: { ...process.env, PATH: `${bin}:${process.env.PATH}` },
+      stdio: 'pipe',
+    });
+
+    const deploy = readFileSync(calls, 'utf8')
+      .split('\n')
+      .find((l) => l.startsWith('run deploy'));
+    expect(deploy).toBeDefined();
+    expect(deploy).toContain('run deploy sdods-maxi');
+    expect(deploy).toContain('--image us-central1-docker.pkg.dev/automax-docs/sdods/maxi:abc123');
+    expect(deploy).toContain('--service-account maxi-runtime@automax-docs.iam.gserviceaccount.com');
+    // The key is only ever a secret reference, never a literal in the command line.
+    expect(deploy).toContain('--set-secrets ANTHROPIC_API_KEY=maxi-anthropic-key:latest');
+    expect(deploy).not.toMatch(/sk-ant-/);
+    expect(deploy).toContain('MAXI_MODEL=claude-sonnet-5');
+    expect(deploy).toContain('MAXI_DAILY_BUDGET_USD=20');
+    expect(deploy).toContain('MAXI_FIRESTORE_PROJECT=automax-docs');
+    expect(deploy).toMatch(/--quiet$/);
+  });
 });

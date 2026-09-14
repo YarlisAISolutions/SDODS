@@ -1,0 +1,1372 @@
+[
+  {
+    "keyword": "Then",
+    "pattern": "{int} requests should have been counted for {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Given",
+    "pattern": "a callback receiver is listening",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "a console error matching {string} should have been recorded",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "a dialog should be open",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "a request matching {string} should have been made",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "at least {int} requests should have been counted for {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "at most {int} requests should have been counted for {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "every focusable element within {string} should show a visible focus indicator",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "every icon-only control within {string} should expose an accessible name",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "every image on the page should carry an alt attribute",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "every image within {string} should carry an alt attribute",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "every latency sample should have returned status {int}",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "every recorded focus should have stayed inside the dialog",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "focus should be on the {string} {role}",
+    "source": "project"
+  },
+  {
+    "keyword": "When",
+    "pattern": "I abort requests to {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "When",
+    "pattern": "I add {string} to the cart",
+    "source": "project"
+  },
+  {
+    "keyword": "Given",
+    "pattern": "I allow {int} seconds for the event stream",
+    "source": "project"
+  },
+  {
+    "keyword": "Given",
+    "pattern": "I am on the login page",
+    "source": "project"
+  },
+  {
+    "keyword": "Given",
+    "pattern": "I authenticate the API with the leased user's token",
+    "source": "project"
+  },
+  {
+    "keyword": "Given",
+    "pattern": "I authenticate with basic credentials {string} and {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Given",
+    "pattern": "I authenticate with bearer token from {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "When",
+    "pattern": "I check the {string} checkbox",
+    "source": "project"
+  },
+  {
+    "keyword": "Given",
+    "pattern": "I clear all browser cookies",
+    "source": "project"
+  },
+  {
+    "keyword": "Given",
+    "pattern": "I clear all browser storage",
+    "source": "project"
+  },
+  {
+    "keyword": "Given",
+    "pattern": "I clear the browser cookie {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Given",
+    "pattern": "I clear the local storage key {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Given",
+    "pattern": "I clear the request headers and query parameters",
+    "source": "project"
+  },
+  {
+    "keyword": "When",
+    "pattern": "I click the {string} {role}",
+    "source": "project"
+  },
+  {
+    "keyword": "When",
+    "pattern": "I click the {string} {role} and capture the download",
+    "source": "project"
+  },
+  {
+    "keyword": "When",
+    "pattern": "I click the {string} {role} at position {int}",
+    "source": "project"
+  },
+  {
+    "keyword": "When",
+    "pattern": "I click the element with test id {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "When",
+    "pattern": "I click the element with test id {string} and capture the download",
+    "source": "project"
+  },
+  {
+    "keyword": "When",
+    "pattern": "I click the element with test id {string} at position {int}",
+    "source": "project"
+  },
+  {
+    "keyword": "When",
+    "pattern": "I click the first {string} {role}",
+    "source": "project"
+  },
+  {
+    "keyword": "When",
+    "pattern": "I click the first element with test id {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "When",
+    "pattern": "I click the frame {role} {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "When",
+    "pattern": "I click the frame element {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "When",
+    "pattern": "I click the text {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "When",
+    "pattern": "I close the current tab",
+    "source": "project"
+  },
+  {
+    "keyword": "Given",
+    "pattern": "I emulate the {string} colour scheme",
+    "source": "project"
+  },
+  {
+    "keyword": "Given",
+    "pattern": "I enter the frame {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "When",
+    "pattern": "I fill the {string} field of the open dialog with {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "When",
+    "pattern": "I fill the {string} field with {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "When",
+    "pattern": "I fill the element with test id {string} at position {int} with {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "When",
+    "pattern": "I fill the element with test id {string} with {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "When",
+    "pattern": "I fill the first element with test id {string} with {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "When",
+    "pattern": "I fill the form:",
+    "source": "project"
+  },
+  {
+    "keyword": "When",
+    "pattern": "I fill the frame field {string} with {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "When",
+    "pattern": "I fill the open alert dialog field with {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "When",
+    "pattern": "I fill the open dialog field with {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "When",
+    "pattern": "I fill the open popover field with {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Given",
+    "pattern": "I generate a {string} from the factory as {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Given",
+    "pattern": "I install a fake clock",
+    "source": "project"
+  },
+  {
+    "keyword": "Given",
+    "pattern": "I install a fake clock set to {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Given",
+    "pattern": "I leave the frame",
+    "source": "project"
+  },
+  {
+    "keyword": "Given",
+    "pattern": "I load dataset {string} row {int}",
+    "source": "project"
+  },
+  {
+    "keyword": "Given",
+    "pattern": "I load dataset {string} where {string} is {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "When",
+    "pattern": "I login with {string} and {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "When",
+    "pattern": "I mock {string} with HTML:",
+    "source": "project"
+  },
+  {
+    "keyword": "When",
+    "pattern": "I mock {string} with JSON:",
+    "source": "project"
+  },
+  {
+    "keyword": "When",
+    "pattern": "I mock {string} with status {int}",
+    "source": "project"
+  },
+  {
+    "keyword": "Given",
+    "pattern": "I navigate to the {string} page",
+    "source": "project"
+  },
+  {
+    "keyword": "When",
+    "pattern": "I open a new tab by clicking the {role} {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "When",
+    "pattern": "I open a new tab by clicking the element {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "When",
+    "pattern": "I open the cart",
+    "source": "project"
+  },
+  {
+    "keyword": "When",
+    "pattern": "I poll {method} {string} until JSON path {string} equals {string} within {int} seconds",
+    "source": "project"
+  },
+  {
+    "keyword": "When",
+    "pattern": "I poll {method} {string} until the status is {int} within {int} seconds",
+    "source": "project"
+  },
+  {
+    "keyword": "When",
+    "pattern": "I press {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "When",
+    "pattern": "I press {string} {int} times",
+    "source": "project"
+  },
+  {
+    "keyword": "When",
+    "pattern": "I press {string} {int} times recording every focused element",
+    "source": "project"
+  },
+  {
+    "keyword": "When",
+    "pattern": "I read the event stream from a {method} request to {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "When",
+    "pattern": "I read the event stream from a {method} request to {string} with body:",
+    "source": "project"
+  },
+  {
+    "keyword": "Given",
+    "pattern": "I record outgoing browser requests",
+    "source": "project"
+  },
+  {
+    "keyword": "Given",
+    "pattern": "I record the background painted on the first frame",
+    "source": "project"
+  },
+  {
+    "keyword": "When",
+    "pattern": "I record the page vitals",
+    "source": "project"
+  },
+  {
+    "keyword": "When",
+    "pattern": "I register cleanup {method} {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Given",
+    "pattern": "I reload the page",
+    "source": "project"
+  },
+  {
+    "keyword": "When",
+    "pattern": "I remove {string} from the cart",
+    "source": "project"
+  },
+  {
+    "keyword": "When",
+    "pattern": "I replace the focused field with {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "When",
+    "pattern": "I replay HAR {string} for {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Given",
+    "pattern": "I request the locale {string} with the Accept-Language header",
+    "source": "project"
+  },
+  {
+    "keyword": "When",
+    "pattern": "I resize the viewport to {int} by {int}",
+    "source": "project"
+  },
+  {
+    "keyword": "When",
+    "pattern": "I sample the latency of {method} {string} over {int} requests",
+    "source": "project"
+  },
+  {
+    "keyword": "When",
+    "pattern": "I sample the latency of {method} {string} over {int} requests with body:",
+    "source": "project"
+  },
+  {
+    "keyword": "When",
+    "pattern": "I save the raw response body as {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "When",
+    "pattern": "I save the response JSON path {string} as {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Given",
+    "pattern": "I seed local storage {string} with {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Given",
+    "pattern": "I seed session storage {string} with {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "When",
+    "pattern": "I seed via {method} {string} with body:",
+    "source": "project"
+  },
+  {
+    "keyword": "When",
+    "pattern": "I select {string} in the {string} dropdown",
+    "source": "project"
+  },
+  {
+    "keyword": "When",
+    "pattern": "I send a {method} request to {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "When",
+    "pattern": "I send a {method} request to {string} with body:",
+    "source": "project"
+  },
+  {
+    "keyword": "When",
+    "pattern": "I send a {method} request to {string} with form:",
+    "source": "project"
+  },
+  {
+    "keyword": "When",
+    "pattern": "I send a {method} request to {string} with the raw body:",
+    "source": "project"
+  },
+  {
+    "keyword": "When",
+    "pattern": "I send a {method} request to {string} without following redirects",
+    "source": "project"
+  },
+  {
+    "keyword": "When",
+    "pattern": "I send a {method} request to {string} without following redirects with body:",
+    "source": "project"
+  },
+  {
+    "keyword": "When",
+    "pattern": "I send a {method} request to {string} without following redirects with form:",
+    "source": "project"
+  },
+  {
+    "keyword": "Given",
+    "pattern": "I set the browser cookie {string} to {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Given",
+    "pattern": "I set the query parameter {string} to {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Given",
+    "pattern": "I set the request header {string} to {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Given",
+    "pattern": "I set the variable {string} to {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "I should be on the inventory page",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "I should not see the exact text {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "I should not see the text {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "I should see the exact text {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "I should see the login error {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "I should see the text {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "When",
+    "pattern": "I sort products by {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "When",
+    "pattern": "I start counting requests to {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Given",
+    "pattern": "I start recording console messages",
+    "source": "project"
+  },
+  {
+    "keyword": "When",
+    "pattern": "I stop the callback receiver",
+    "source": "project"
+  },
+  {
+    "keyword": "Given",
+    "pattern": "I switch back to the original tab",
+    "source": "project"
+  },
+  {
+    "keyword": "Given",
+    "pattern": "I switch the interface locale to {string} using the {string} cookie",
+    "source": "project"
+  },
+  {
+    "keyword": "Given",
+    "pattern": "I switch to the tab with URL containing {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "When",
+    "pattern": "I tab to the first focusable element inside the {string} {role}",
+    "source": "project"
+  },
+  {
+    "keyword": "When",
+    "pattern": "I tab to the first focusable element inside the element with test id {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "When",
+    "pattern": "I upload {string} to the {string} field",
+    "source": "project"
+  },
+  {
+    "keyword": "Given",
+    "pattern": "I use a leased user with role {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Given",
+    "pattern": "I use a leased user with role {string} for API calls",
+    "source": "project"
+  },
+  {
+    "keyword": "Given",
+    "pattern": "I use an isolated API client",
+    "source": "project"
+  },
+  {
+    "keyword": "Given",
+    "pattern": "I use no authentication",
+    "source": "project"
+  },
+  {
+    "keyword": "Given",
+    "pattern": "I use the user {string} from the pool",
+    "source": "project"
+  },
+  {
+    "keyword": "When",
+    "pattern": "I wait for {int} seconds",
+    "source": "project"
+  },
+  {
+    "keyword": "When",
+    "pattern": "I wait for the {string} table to have a row where {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "local storage {string} should be absent",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "local storage {string} should equal {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "no {string} {role} should exist",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "no console error should have been recorded",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "no console error should match {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "no console warning should match {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "no dialog should be open",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "no request matching {string} should have been made",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "no requests should have been counted for {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "no uncaught page error should have been recorded",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "no visible text should look like a raw message key",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "nothing in the raw response body should look like a credential",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "nothing in the response body should look like a credential",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "session storage {string} should be absent",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "session storage {string} should equal {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the {string} {role} at position {int} should be visible",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the {string} {role} should be absent or disabled",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the {string} {role} should be disabled",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the {string} {role} should be enabled",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the {string} {role} should be visible",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the {string} {role} should not be visible",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the {string} {role} should stay absent for {int} seconds",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the {string} {role} should stay disabled for {int} seconds",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the {string} checkbox should be checked",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the {string} checkbox should not be checked",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the {string} column of the row where {string} in {string} should be {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the {string} table should have {int} row(s) where {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the {string} table should have a row where {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the {string} table should have no row where {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the browser cookie {string} should carry {string} equal to {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the browser cookie {string} should equal {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the browser cookie {string} should exist",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the browser cookie {string} should not exist",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the callback receiver should receive {int} delivery/deliveries",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the callback receiver should receive a delivery",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the callback receiver should receive a delivery containing {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the cart badge should be hidden",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the cart badge should show {int} item(s)",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the cart should contain {int} item(s)",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the cart should list {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Given",
+    "pattern": "the clock advances by {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Given",
+    "pattern": "the clock jumps to {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Given",
+    "pattern": "the clock resumes",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the current tab should contain the text {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the current tab URL should contain {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the downloaded file name should contain {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the downloaded file name should end with {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the downloaded JSON path {string} should equal {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the downloaded JSON path {string} should have {int} items",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the downloaded text first line should be {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the downloaded text should contain {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the downloaded text should have at least {int} data rows",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the downloaded text should have at most {int} data rows",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the element matching {string} should not overflow horizontally",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the element matching {string} should paint a dark background",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the element with test id {string} at position {int} should be visible",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the element with test id {string} at position {int} should contain {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the element with test id {string} should be absent or disabled",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the element with test id {string} should be disabled",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the element with test id {string} should be enabled",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the element with test id {string} should be visible",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the element with test id {string} should contain {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the element with test id {string} should have at least {int} matches",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the element with test id {string} should have exactly {int} matches",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the element with test id {string} should not be visible",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the element with test id {string} should not exist",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the first {string} {role} should be visible",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the first element with test id {string} should be visible",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the first painted frame should have been dark",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the first painted frame should have been light",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the first stream event type should be {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the focused element should be inside the open dialog",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the focused element should be named {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the focused element should be visible",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the frame element {string} should be visible",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the frame should contain the text {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the heading levels should not skip a level",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the html dir attribute should be absent or ltr",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the html element should carry the {string} class",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the html element should not carry the {string} class",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the html lang attribute should be {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the inventory title should be {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the last callback delivery should have the header {string} set to {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the last stream event type should be {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the page clock should read {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the page should have {int} frame(s)",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the page should have exactly one level-1 heading",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the page should have no accessibility violations",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the page should have no accessibility violations of impact {string} or worse",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the page should have no accessibility violations of impact {string} or worse within {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the page should have no accessibility violations of rule {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the page should have no accessibility violations within {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the page should have no colour-contrast violations",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the page should have no colour-contrast violations within {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the page should match the visual baseline {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the page should not contain the text {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the page should not scroll horizontally",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the page title should contain {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the page URL should contain {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the painted page background should be dark",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the painted page background should be light",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the perf budgets {string} should be configured",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the product names should be sorted descending",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the product prices should be sorted ascending",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the raw response body should be identical to {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the raw response body should contain {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the raw response cookie {string} should be cleared",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the raw response cookie {string} should carry {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the raw response header {string} should contain {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the raw response Location should be {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the raw response Location should contain {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the raw response should have no {string} header",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the raw response should not set the {string} cookie",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the raw response should set the {string} cookie",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the raw response status should be {int}",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the raw response status should be one of {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the recorded {string} should be no worse than the previous recording plus {int} ms",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the recorded {string} should be under {int} ms",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the recorded {string} should be within its configured budget",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the response body should be an array",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the response header {string} should contain {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the response JSON path {string} should equal {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the response JSON path {string} should exist",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the response JSON path {string} should have {int} items",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the response JSON path {string} should have at least {int} items",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the response JSON path {string} should match {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the response JSON path {string} should not exist",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the response should contain {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the response should have no {string} header",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the response should match the JSON schema {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the response should match the OpenAPI schema for {method} {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the response should match the zod schema {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the response should not contain any of {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the response status should be {int}",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the response status should be one of {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the response time should be under {int} ms",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the sampled p95 should be no worse than the previous sample plus {int} ms",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the sampled p95 should be under {int} ms",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the sampled p95 should be within the configured apiP95Ms budget",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the stream content type should be {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the stream should have at least {int} events",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the stream should have terminated cleanly",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the stream status should be {int}",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the text {string} should appear anywhere on the page",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the text {string} should not appear anywhere on the page",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the UI should show the text from JSON path {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "there should be {int} open tab(s)",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "there should be {int} products listed",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "there should be at least {int} {string} {role} elements",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "there should be exactly {int} {string} {role} elements",
+    "source": "project"
+  }
+]

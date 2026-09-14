@@ -205,6 +205,17 @@
         "msw": "^2.15.0",
       },
     },
+    "packages/maxi": {
+      "name": "@sdods/maxi",
+      "version": "0.1.0",
+      "dependencies": {
+        "@anthropic-ai/sdk": "^0.123.0",
+        "@fastify/rate-limit": "^11.2.0",
+        "@sdods/mcp": "workspace:*",
+        "fastify": "^5.12.1",
+        "yaml": "^2.9.0",
+      },
+    },
     "packages/mcp": {
       "name": "@sdods/mcp",
       "version": "0.7.0",
@@ -1137,6 +1148,8 @@
     "@sdods/docs": ["@sdods/docs@workspace:apps/docs"],
 
     "@sdods/integrations": ["@sdods/integrations@workspace:packages/integrations"],
+
+    "@sdods/maxi": ["@sdods/maxi@workspace:packages/maxi"],
 
     "@sdods/mcp": ["@sdods/mcp@workspace:packages/mcp"],
 

@@ -92,6 +92,7 @@
   --sk-card: var(--color-fd-card);
   --sk-line: var(--color-fd-border);
   --sk-accent: var(--color-fd-primary);
+  --sk-accent-fg: var(--color-fd-primary-foreground);
   --sk-code-bg: var(--color-fd-muted);
   --sk-hover-bg: var(--color-fd-accent);
 }

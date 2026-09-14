@@ -1,0 +1,28 @@
+{
+  "name": "@sdods/maxi",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Maxi, the SDODS docs assistant: a streaming chat service grounded in the published docs.",
+  "license": "Apache-2.0",
+  "author": "SDODS <admin@sdods.com>",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "dev": "node --import tsx src/main.ts",
+    "steps": "node --import tsx scripts/build-steps.ts",
+    "bundle": "bun build src/main.ts --target=node --outfile=dist/maxi.js",
+    "eval": "node --import tsx scripts/eval.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.123.0",
+    "@fastify/rate-limit": "^11.2.0",
+    "@sdods/mcp": "workspace:*",
+    "fastify": "^5.12.1",
+    "yaml": "^2.9.0"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
