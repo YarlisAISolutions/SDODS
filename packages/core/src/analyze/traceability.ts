@@ -260,7 +260,8 @@ async function readMessagesFile(file: string): Promise<RunAttempt[]> {
   const scenarioLines = new Map<string, { line: number; name: string }>();
   const exampleRows = new Map<string, number>();
   const pickles = new Map<string, { uri: string; name: string; astNodeIds: string[] }>();
-  const testCases = new Map<string, string>();
+  /** test case id → pickle id, and the ids of its steps that are Gherkin steps (not hooks) */
+  const testCases = new Map<string, { pickleId: string; gherkinSteps: Set<string> }>();
   const started = new Map<
     string,
     {
@@ -301,7 +302,13 @@ async function readMessagesFile(file: string): Promise<RunAttempt[]> {
       const p = env.pickle;
       pickles.set(p.id, { uri: p.uri ?? '', name: p.name ?? '', astNodeIds: p.astNodeIds ?? [] });
     } else if (env.testCase) {
-      testCases.set(env.testCase.id, env.testCase.pickleId);
+      const tc = env.testCase;
+      testCases.set(tc.id, {
+        pickleId: tc.pickleId,
+        gherkinSteps: new Set(
+          (tc.testSteps ?? []).filter((x: any) => x.pickleStepId).map((x: any) => x.id),
+        ),
+      });
     } else if (env.testCaseStarted) {
       const t = env.testCaseStarted;
       started.set(t.id, {
@@ -315,7 +322,10 @@ async function readMessagesFile(file: string): Promise<RunAttempt[]> {
       const s = started.get(t.testCaseStartedId);
       if (!s) continue;
       const status = stepStatus(t.testStepResult?.status);
-      s.statuses.push(status);
+      // A failing hook fails the scenario, but a passing one proves nothing: after-hooks run and
+      // pass on a scenario whose steps were all skipped (`@skip:<browser>`), which must stay skipped.
+      const gherkinStep = testCases.get(s.testCaseId)?.gherkinSteps.has(t.testStepId) ?? true;
+      if (status === 'failed' || gherkinStep) s.statuses.push(status);
       if (status === 'failed' && !s.error) {
         const msg: string | undefined =
           t.testStepResult?.exception?.message ?? t.testStepResult?.message;
@@ -324,7 +334,7 @@ async function readMessagesFile(file: string): Promise<RunAttempt[]> {
     } else if (env.testCaseFinished) {
       const t = env.testCaseFinished;
       const s = started.get(t.testCaseStartedId);
-      const pickle = s ? pickles.get(testCases.get(s.testCaseId) ?? '') : undefined;
+      const pickle = s ? pickles.get(testCases.get(s.testCaseId)?.pickleId ?? '') : undefined;
       if (!s || !pickle) continue;
       const m = /^\[([^\]]+)\]:(.*)$/.exec(pickle.uri);
       const scenario = pickle.astNodeIds.map((id) => scenarioLines.get(id)).find(Boolean);

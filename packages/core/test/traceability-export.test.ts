@@ -181,6 +181,72 @@ describe('traceability export', () => {
     ]);
   });
 
+  it('a passing after-hook does not turn skipped steps into a pass; a failing one fails', async () => {
+    const f = fixture();
+    const base = {
+      feature: 'features/auth/login.feature',
+      start: '2026-09-01T10:00:00.000Z',
+      durationMs: 100,
+    };
+    const dir = writeRun(f.runs, {
+      runId: 'run-hooks',
+      startedAt: '2026-09-01T09:59:00.000Z',
+      attempts: [
+        // @skip:webkit-style: every Gherkin step skipped, the finalize hook still passes.
+        {
+          ...base,
+          runnerProject: 'shop--ui--webkit',
+          scenario: 'Valid login',
+          status: 'SKIPPED',
+          afterHook: 'PASSED',
+        },
+        {
+          ...base,
+          runnerProject: 'shop--ui--chromium',
+          scenario: 'Locked user',
+          status: 'PASSED',
+          afterHook: 'FAILED',
+        },
+      ],
+    });
+    const report = await buildTraceabilityReport({
+      project: f.project,
+      run: { runId: 'run-hooks', dir },
+      now: NOW,
+    });
+    const auth1 = report.requirements.find((r) => r.id === 'AUTH-1')!;
+    expect(auth1.scenarios.map((s) => [s.name, s.status])).toEqual([
+      ['Valid login', 'skipped'],
+      ['Locked user', 'failed'],
+    ]);
+    expect(report.requirements.find((r) => r.id === 'AUTH-2')!.status).toBe('failed');
+  });
+
+  it('a requirement whose only scenario was skipped is not run, not passed', async () => {
+    const f = fixture();
+    const dir = writeRun(f.runs, {
+      runId: 'run-skip',
+      startedAt: '2026-09-01T09:59:00.000Z',
+      attempts: [
+        {
+          runnerProject: 'shop--api',
+          feature: 'features/api/orders.feature',
+          scenario: 'Cancel order',
+          status: 'SKIPPED',
+          afterHook: 'PASSED',
+          start: '2026-09-01T10:00:00.000Z',
+          durationMs: 0,
+        },
+      ],
+    });
+    const report = await buildTraceabilityReport({
+      project: f.project,
+      run: { runId: 'run-skip', dir },
+      now: NOW,
+    });
+    expect(report.requirements.find((r) => r.id === 'ORD-2')!.status).toBe('not-run');
+  });
+
   it('falls back to per-scenario meta.json when a run has no messages, latest attempt wins', async () => {
     const f = fixture();
     const dir = writeRun(f.runs, { runId: 'run-meta', startedAt: '2026-09-01T09:00:00.000Z' });

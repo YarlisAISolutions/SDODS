@@ -265,7 +265,10 @@ export function register(program: Command) {
     .option('-e, --env <name>', 'only consider runs against this environment')
     .option('--run <id>', 'run id (default: the latest run of the project)')
     .option('--last', 'use the latest run of the project; fail if there is none')
-    .option('--format <fmt>', 'json|csv|md|html (default: from -o, else md)')
+    .option(
+      '--format <fmt>',
+      'json|csv|md|html (default: from the -o extension, else json with --json, else md)',
+    )
     .option('-o, --output <file>', 'write the export to a file instead of stdout')
     .action(async (opts, cmd) => {
       const ctx = createContext(cmd);
@@ -296,7 +299,8 @@ export function register(program: Command) {
             } as const
           )[extname(output).toLowerCase() as '.json']
         : undefined;
-      const format = (opts.format ?? (ctx.opts.json ? 'json' : fromExt) ?? 'md') as string;
+      // -o's extension decides the file format; --json then only shapes the confirmation line.
+      const format = (opts.format ?? fromExt ?? (ctx.opts.json ? 'json' : 'md')) as string;
       if (!(TRACEABILITY_FORMATS as readonly string[]).includes(format))
         throw new SdodsError('CONFIG_INVALID', `Unknown format "${format}".`, {
           hint: `Use one of: ${TRACEABILITY_FORMATS.join(', ')}.`,

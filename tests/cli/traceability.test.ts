@@ -82,6 +82,24 @@ describe('sdods report traceability', () => {
     expect(html).toContain('<h2>Sign-off</h2>');
   });
 
+  it('--json with -o still writes the format the extension names', async () => {
+    const out = join(repo, 'exports', 'trace.csv');
+    const r = await cli(
+      '--json',
+      'report',
+      'traceability',
+      '-p',
+      'shop',
+      '--run',
+      'run-old',
+      '-o',
+      out,
+    );
+    expect(r.exitCode, r.stderr).toBe(0);
+    expect(JSON.parse(r.stdout)).toMatchObject({ output: out, format: 'csv', run: 'run-old' });
+    expect(readFileSync(out, 'utf8').split('\n')[0]).toMatch(/^requirement_id,/);
+  });
+
   it('prints Markdown by default and CSV on request', async () => {
     const md = await cli('report', 'traceability', '-p', 'shop', '--run', 'run-old');
     expect(md.exitCode, md.stderr).toBe(0);

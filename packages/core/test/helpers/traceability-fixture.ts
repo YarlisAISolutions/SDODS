@@ -112,6 +112,8 @@ export interface FixtureAttempt {
   start: string;
   durationMs: number;
   error?: string;
+  /** add an AFTER_TEST_CASE hook step with this result (after-hooks run even for skipped steps) */
+  afterHook?: 'PASSED' | 'FAILED';
 }
 
 /**
@@ -159,8 +161,20 @@ export function messagesFor(attempts: FixtureAttempt[], projectsPrefix = 'projec
     const pickle = pickleFor.get(`${a.runnerProject}|${a.feature}|${a.scenario}|${a.example ?? 1}`);
     if (!pickle) throw new Error(`fixture: no pickle for ${a.feature} / ${a.scenario}`);
     const testCaseId = newId();
-    const steps = pickle.steps.map((s) => ({ id: newId(), pickleStepId: s.id }));
-    lines.push({ testCase: { id: testCaseId, pickleId: pickle.id, testSteps: steps } });
+    const steps: Array<{ id: string; pickleStepId?: string; hookId?: string; status: string }> =
+      pickle.steps.map((s, i) => ({
+        id: newId(),
+        pickleStepId: s.id,
+        status: a.status === 'FAILED' ? (i === 0 ? 'FAILED' : 'SKIPPED') : a.status,
+      }));
+    if (a.afterHook) steps.push({ id: newId(), hookId: 'hook-finalize', status: a.afterHook });
+    lines.push({
+      testCase: {
+        id: testCaseId,
+        pickleId: pickle.id,
+        testSteps: steps.map(({ status: _s, ...step }) => step),
+      },
+    });
     const startedId = newId();
     lines.push({
       testCaseStarted: {
@@ -171,8 +185,7 @@ export function messagesFor(attempts: FixtureAttempt[], projectsPrefix = 'projec
       },
     });
     const each = Math.floor(a.durationMs / Math.max(steps.length, 1));
-    steps.forEach((step, i) => {
-      const status = a.status === 'FAILED' ? (i === 0 ? 'FAILED' : 'SKIPPED') : a.status;
+    steps.forEach(({ status, ...step }) => {
       lines.push({ testStepStarted: { testCaseStartedId: startedId, testStepId: step.id } });
       lines.push({
         testStepFinished: {

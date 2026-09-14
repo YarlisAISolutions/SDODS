@@ -22,14 +22,14 @@ sdods report traceability -p <slug> [-e <env>] [--run <id> | --last] [--format j
 
 Exports, for one run, every requirement named by an `@req:<id>` tag (or listed in `traceability.requirements`), the scenarios that cover it (feature file, line, name, effective tags) and each scenario's final attempt in every runner project it ran in (status, browser, attempts, flaky, duration, timestamps). The header carries the run id, environment, commit and branch, SDODS version and CI link from `run.json`. It reads the run directory only; no database or server is needed.
 
-| Flag                   | Default                            | Meaning                                                                                    |
-| ---------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------ |
-| `-p, --project <slug>` | required                           | project whose features and runs are read                                                   |
-| `-e, --env <name>`     |                                    | only runs against this environment                                                         |
-| `--run <id>`           | latest run of the project          | run directory under `.sdods/runs` (exit 2 if it belongs to another project or environment) |
-| `--last`               |                                    | the latest run, and exit 2 when there is none                                              |
-| `--format <fmt>`       | from the `-o` extension, else `md` | `json`, `csv` (one row per requirement × scenario × result), `md`, `html`                  |
-| `-o, --output <file>`  | stdout                             | write the export to a file                                                                 |
+| Flag                   | Default                                                       | Meaning                                                                                    |
+| ---------------------- | ------------------------------------------------------------- | ------------------------------------------------------------------------------------------ |
+| `-p, --project <slug>` | required                                                      | project whose features and runs are read                                                   |
+| `-e, --env <name>`     |                                                               | only runs against this environment                                                         |
+| `--run <id>`           | latest run of the project                                     | run directory under `.sdods/runs` (exit 2 if it belongs to another project or environment) |
+| `--last`               |                                                               | the latest run, and exit 2 when there is none                                              |
+| `--format <fmt>`       | from the `-o` extension, else `json` with `--json`, else `md` | `json`, `csv` (one row per requirement × scenario × result), `md`, `html`                  |
+| `-o, --output <file>`  | stdout                                                        | write the export to a file                                                                 |
 
 With no run at all the export is still written, as a static requirement → scenario matrix with every scenario `not-run`.
 
