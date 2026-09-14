@@ -12,6 +12,7 @@ export { BasePage } from './pages/base-page.js';
 export { PageRegistry } from './fixtures/pages.js';
 export { AuthStateCache } from './fixtures/auth.js';
 export { ScenarioMeta } from './fixtures/scenario.js';
+export { HeaderMap } from './fixtures/api-context.js';
 export type { TestFixtures, WorkerFixtures, SdodsOption } from './fixtures/types.js';
 export { coreStepsGlob, coreStepsPatterns, coreStepNames, coreStepsDir } from './steps/glob.js';
 export { VERSION } from './version.js';
