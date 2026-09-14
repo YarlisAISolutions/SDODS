@@ -62,7 +62,6 @@ export function installCodingAgents(
       const mcp = installClientConfig(rootDir, 'claude', {
         project: opts.project,
         env: opts.env,
-        args: ['sdods', 'mcp'],
       });
       written.push(mcp.file);
     }

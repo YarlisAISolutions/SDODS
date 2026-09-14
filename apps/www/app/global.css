@@ -29,6 +29,17 @@
   color-scheme: dark;
 }
 
+/* @sdods/site-kit reads these; they follow the palette above, so .dark switches them too. */
+:root {
+  --sk-fg: var(--fg);
+  --sk-muted: var(--muted);
+  --sk-card: var(--card);
+  --sk-line: var(--line);
+  --sk-accent: var(--brand);
+  --sk-code-bg: var(--bg);
+  --sk-hover-bg: var(--line);
+}
+
 html,
 body {
   background: var(--bg);

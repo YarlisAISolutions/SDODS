@@ -1,0 +1,27 @@
+{
+  "name": "@sdods/site-kit",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Reusable site components: the AI coding agent install widget and the project support prompt. Every string comes from props, so any project can use them.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "sideEffects": [
+    "*.css"
+  ],
+  "exports": {
+    ".": "./src/index.ts",
+    "./styles.css": "./src/styles.css"
+  },
+  "peerDependencies": {
+    "react": ">=19"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.18",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "@types/react-dom": "^19.2.0"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

@@ -4,6 +4,7 @@ import { ThemeProvider } from 'next-themes';
 import { SiteHeader } from '@/components/site-header';
 import { SiteFooter } from '@/components/site-footer';
 import { SITE_URL } from '@/lib/links';
+import '@sdods/site-kit/styles.css';
 import './global.css';
 
 export const metadata: Metadata = {

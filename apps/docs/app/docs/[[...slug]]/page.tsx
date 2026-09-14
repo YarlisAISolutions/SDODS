@@ -4,6 +4,7 @@ import type { Metadata } from 'next';
 import { source } from '@/lib/source';
 import { getMDXComponents } from '@/mdx-components';
 import { PageFeedback } from '@/components/page-feedback';
+import { DocsPageFooter } from '@/components/ai-tools';
 
 export default async function Page(props: { params: Promise<{ slug?: string[] }> }) {
   const params = await props.params;
@@ -18,6 +19,7 @@ export default async function Page(props: { params: Promise<{ slug?: string[] }>
         <MDX components={getMDXComponents()} />
       </DocsBody>
       <PageFeedback path={page.url} title={page.data.title} />
+      <DocsPageFooter url={page.url} />
     </DocsPage>
   );
 }

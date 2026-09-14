@@ -6,7 +6,7 @@ const config = {
   images: { unoptimized: true },
   reactStrictMode: true,
   // The roadmap data is a workspace package of raw TypeScript.
-  transpilePackages: ['@sdods/roadmap', '@sdods/qa-archive'],
+  transpilePackages: ['@sdods/roadmap', '@sdods/qa-archive', '@sdods/site-kit'],
   env: {
     NEXT_PUBLIC_SITE_URL: process.env.WWW_SITE_URL ?? 'https://sdods.com',
   },

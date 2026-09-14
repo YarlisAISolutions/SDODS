@@ -1,12 +1,12 @@
 import type { Command } from 'commander';
 import pc from 'picocolors';
 import { SdodsError } from '@sdods/core';
-import { ALL_CAPABILITIES, DEFAULT_CAPABILITIES } from '@sdods/mcp';
+import { ALL_CAPABILITIES, DEFAULT_CAPABILITIES, MCP_CLIENTS, type McpClient } from '@sdods/mcp';
 import { createContext } from '../context.js';
 import { json, ok, out } from '../ui.js';
 
-const CLIENTS = ['claude', 'codex', 'cursor', 'vscode', 'windsurf'] as const;
-type Client = (typeof CLIENTS)[number];
+const CLIENTS = MCP_CLIENTS;
+type Client = McpClient;
 
 /**
  * The default capability list, derived rather than restated. It used to be spelled out in three
@@ -97,7 +97,7 @@ export function register(program: Command) {
   mcp
     .command('install <client>')
     .description(
-      'Register the SDODS MCP server with a client: claude | codex | cursor | vscode | windsurf (merges, never clobbers)',
+      'Register the SDODS MCP server with a client: claude | codex | cursor | vscode | windsurf | gemini (merges, never clobbers)',
     )
     .option('-p, --project <slug>')
     .option('-e, --env <name>')
@@ -196,13 +196,28 @@ async function registerViaClientCli(
       });
     }
   };
+  // A remote server without credentials answers 401 to every call, so the token is part of the
+  // registration. Neither form writes the secret: Claude Code expands ${SDODS_TOKEN} from the
+  // environment when it reads .mcp.json, and Codex reads the variable named by
+  // --bearer-token-env-var at connect time.
   const addArgs =
     client === 'claude'
       ? o.httpUrl
-        ? ['mcp', 'add', '-s', 'project', '--transport', 'http', 'sdods', o.httpUrl]
+        ? [
+            'mcp',
+            'add',
+            '-s',
+            'project',
+            '--transport',
+            'http',
+            'sdods',
+            o.httpUrl,
+            '--header',
+            'Authorization: Bearer ${SDODS_TOKEN}',
+          ]
         : ['mcp', 'add', '-s', 'project', 'sdods', '--', ...stdio]
       : o.httpUrl
-        ? ['mcp', 'add', 'sdods', '--url', o.httpUrl]
+        ? ['mcp', 'add', 'sdods', '--url', o.httpUrl, '--bearer-token-env-var', 'SDODS_TOKEN']
         : ['mcp', 'add', 'sdods', '--', ...stdio];
   const ok1 = await run(addArgs);
   if (!ok1) return false;

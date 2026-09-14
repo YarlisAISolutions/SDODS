@@ -1,5 +1,12 @@
 import type { Metadata } from 'next';
+import { AgentInstall, SupportProject } from '@sdods/site-kit';
 import { InstallTabs } from '@/components/install-tabs';
+import {
+  AI_TOOLS_GUIDE_URL,
+  SDODS_AGENT_PROJECT,
+  SUPPORT_LINKS,
+  SUPPORT_PROJECT,
+} from '@/lib/ai-tools';
 import { DOCS_URL, REPO_PUBLIC, REPO_URL } from '@/lib/links';
 
 export const metadata: Metadata = {
@@ -38,7 +45,10 @@ const AFTER: Array<[string, string]> = [
   ['See the results', 'sdods report --last --open'],
   ['Open the web UI', 'sdods serve'],
   ['Start from your app', 'sdods analyze /path/to/your-app --apply'],
-  ['Use it from your AI CLI', 'sdods mcp install claude   # or: codex'],
+  [
+    'Use it from your AI CLI',
+    'sdods mcp install claude   # or: codex, cursor, vscode, windsurf, gemini',
+  ],
 ];
 
 export default function InstallPage() {
@@ -122,6 +132,27 @@ export default function InstallPage() {
             </div>
           ))}
         </dl>
+      </section>
+
+      <section className="mt-14" aria-labelledby="ai-tools">
+        <h2 id="ai-tools" className="text-2xl font-bold">
+          Add it to your AI coding agent
+        </h2>
+        <p className="muted mt-2">
+          The installer is not needed for this: the plugin, the skills and the MCP server all run
+          through <code>npx</code>.
+        </p>
+        <div className="mt-6">
+          <AgentInstall
+            project={SDODS_AGENT_PROJECT}
+            title="Using an AI coding agent? Install SDODS:"
+            learnMoreHref={AI_TOOLS_GUIDE_URL}
+            learnMoreLabel="Every tool, the MCP endpoint and skills"
+          />
+        </div>
+        <div className="mt-6">
+          <SupportProject project={SUPPORT_PROJECT} links={SUPPORT_LINKS} variant="inline" />
+        </div>
       </section>
 
       <section className="mt-14" aria-labelledby="options">

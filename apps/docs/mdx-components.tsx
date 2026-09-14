@@ -14,6 +14,7 @@ import { Art, ArtRow } from '@/components/art';
 import { Playground } from '@/components/playground';
 import { Roadmap, RoadmapChecklist, RoadmapVerification } from '@/components/roadmap';
 import { RepoOnly } from '@/components/repo-only';
+import { SdodsAgentInstall, SupportSdods } from '@/components/ai-tools';
 
 /**
  * A markdown table that is wider than the column scrolls sideways, and the wrapper Fumadocs
@@ -56,6 +57,8 @@ export function getMDXComponents(components?: MDXComponents): MDXComponents {
     RoadmapChecklist,
     RoadmapVerification,
     RepoOnly,
+    AgentInstall: SdodsAgentInstall,
+    SupportSdods,
     ...components,
   };
 }

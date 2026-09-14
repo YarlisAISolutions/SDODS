@@ -17,6 +17,7 @@
     "trace",
     "agent-proposals",
     "mcp-serve",
+    "skills",
     "users-tokens-schedule-integrations",
     "completion",
     "upgrade"

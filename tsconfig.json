@@ -30,6 +30,9 @@
     },
     {
       "path": "packages/roadmap"
+    },
+    {
+      "path": "packages/site-kit"
     }
   ]
 }

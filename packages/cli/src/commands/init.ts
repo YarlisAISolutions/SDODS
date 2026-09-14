@@ -15,6 +15,7 @@ import pc from 'picocolors';
 import { OrganizationSchema, SlugSchema, WorkspaceSchema } from '@sdods/contracts';
 import { SdodsError, VERSION, WORKSPACE_FILE } from '@sdods/core';
 import { globalOptions } from '../context.js';
+import { installSkills } from '../skills-catalog.js';
 import { json, ok, out, warn } from '../ui.js';
 
 /** Root of the SDODS monorepo this CLI runs from (used by --link, which needs a real checkout). */
@@ -369,11 +370,11 @@ Docs: https://docs.sdods.com
     write('projects/.gitkeep', '');
   }
 
-  const skillsSrc = join(src, '.claude', 'skills');
-  if (existsSync(skillsSrc)) {
-    cpSync(skillsSrc, join(target, '.claude', 'skills'), { recursive: true });
-    files.push('.claude/skills/');
-  }
+  // The user-facing skills, for Claude Code (.claude/skills) and every agent that reads the shared
+  // .agents/skills. Copied from the bundled set, never from this repository's own .claude/skills,
+  // which also holds skills for releasing SDODS itself.
+  const skills = installSkills({ rootDir: target });
+  if (skills.some((s) => s.status !== 'skipped')) files.push('.claude/skills/', '.agents/skills/');
 
   if (flags.from) {
     try {

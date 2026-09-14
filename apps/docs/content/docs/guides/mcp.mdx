@@ -34,17 +34,17 @@ Playwright MCP tools bound to a project and environment. One server to install.
 <Tabs items={['Claude Code', 'Cursor', 'VS Code', 'HTTP']}>
 <Tab value="Claude Code">
 ```bash
-claude mcp add sdods -- npx sdods mcp --project demo-shop --env staging
+claude mcp add sdods -- npx -y @sdods/cli mcp --project demo-shop --env staging
 ```
 </Tab>
 <Tab value="Cursor">
 ```json title=".cursor/mcp.json"
-{ "mcpServers": { "sdods": { "command": "npx", "args": ["sdods", "mcp", "--project", "demo-shop"] } } }
+{ "mcpServers": { "sdods": { "command": "npx", "args": ["-y", "@sdods/cli", "mcp", "--project", "demo-shop"] } } }
 ```
 </Tab>
 <Tab value="VS Code">
 ```json title=".vscode/mcp.json"
-{ "servers": { "sdods": { "type": "stdio", "command": "npx", "args": ["sdods", "mcp", "--project", "demo-shop"] } } }
+{ "servers": { "sdods": { "type": "stdio", "command": "npx", "args": ["-y", "@sdods/cli", "mcp", "--project", "demo-shop"] } } }
 ```
 </Tab>
 <Tab value="HTTP">
@@ -54,7 +54,7 @@ claude mcp add --transport http sdods https://sdods.example.com/mcp --header "Au
 </Tab>
 </Tabs>
 
-`sdods mcp install claude|cursor|vscode` writes these files for you.
+`sdods mcp install claude|codex|cursor|vscode|windsurf|gemini` writes these for you. Every other client — Gemini CLI, Windsurf, Zed, JetBrains, Claude Desktop and more — and the Claude Code plugin are in [Connect AI coding tools](/docs/guides/ai-coding-tools).
 
 <Screenshot
   src="/screenshots/ui/settings-mcp.png"

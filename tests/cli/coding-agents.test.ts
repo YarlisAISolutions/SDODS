@@ -59,7 +59,7 @@ describe('coding-agent CLIs: doctor tokens, agent install, mcp install codex', (
     const r = sdods(['mcp', 'install', 'codex', '-p', 'demo-shop', '--print']);
     expect(r.code).toBe(0);
     expect(r.stdout).toContain('[mcp_servers.sdods]');
-    expect(r.stdout).toContain('codex mcp add sdods -- npx sdods mcp --project demo-shop');
+    expect(r.stdout).toContain('codex mcp add sdods -- npx -y @sdods/cli mcp --project demo-shop');
     const j = JSON.parse(
       sdods(['--json', 'mcp', 'install', 'codex', '-p', 'demo-shop', '--print']).stdout.replace(
         /^[^{]*/,
