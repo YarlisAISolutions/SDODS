@@ -28,6 +28,7 @@ interface Case {
   include?: string[];
   exclude?: string[];
   feature?: boolean;
+  featureExclude?: string[];
 }
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -100,6 +101,8 @@ for (const c of cases) {
     const block = /```gherkin\n([\s\S]*?)```/.exec(answer)?.[1];
     if (!block) problems.push('no gherkin block');
     else {
+      for (const re of c.featureExclude ?? [])
+        if (new RegExp(re, 'i').test(block)) problems.push(`feature contains /${re}/`);
       const report = validateFeature(block, catalog);
       if (!report.valid)
         problems.push(
