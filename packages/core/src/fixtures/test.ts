@@ -4,6 +4,7 @@ import type { EnvConfig } from '@sdods/contracts';
 import { ProjectRegistry } from '../config/registry.js';
 import type { HarMode } from '../config/resolve.js';
 import { parseTagValue, scenarioSkipReason } from '../config/tags.js';
+import { applyEmulation, emulationFromTags } from '../config/emulation.js';
 import { noopAuth } from '../auth/index.js';
 import { ApiClient, isolatedRequestFactory } from '../api/client.js';
 import { CompositeDataProvider } from '../data/provider.js';
@@ -232,6 +233,42 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
   storageState: async ({ user, authCache, auth, sdods, browser, config }, use) => {
     if (!user || sdods.layer === 'api' || !config.project.auth.storageState) return use(undefined);
     await use(await authCache.ensure(user, auth, browser));
+  },
+
+  // ── per-scenario emulation: @locale: @timezone: @theme: @viewport: @device: ────
+  //
+  // Mirrors `storageState` above: Playwright builds the browser context from these option
+  // fixtures, so overriding them is the one place a tag can reach the context BEFORE it opens —
+  // which locale and timezone require, because neither can change on a live context. Each
+  // override takes its own previous value (the env's `use:` via the runner project, or
+  // Playwright's default) and replaces it only when the scenario is tagged, so tags win over the
+  // env and an untagged scenario is untouched.
+  $sdodsEmulation: async ({ $tags }, use) => {
+    await use(emulationFromTags($tags));
+  },
+  locale: async ({ locale, $sdodsEmulation }, use) => {
+    await use(applyEmulation({ locale }, $sdodsEmulation).locale);
+  },
+  timezoneId: async ({ timezoneId, $sdodsEmulation }, use) => {
+    await use(applyEmulation({ timezoneId }, $sdodsEmulation).timezoneId);
+  },
+  colorScheme: async ({ colorScheme, $sdodsEmulation }, use) => {
+    await use(applyEmulation({ colorScheme }, $sdodsEmulation).colorScheme);
+  },
+  viewport: async ({ viewport, $sdodsEmulation }, use) => {
+    await use(applyEmulation({ viewport }, $sdodsEmulation).viewport);
+  },
+  userAgent: async ({ userAgent, $sdodsEmulation }, use) => {
+    await use(applyEmulation({ userAgent }, $sdodsEmulation).userAgent);
+  },
+  deviceScaleFactor: async ({ deviceScaleFactor, $sdodsEmulation }, use) => {
+    await use(applyEmulation({ deviceScaleFactor }, $sdodsEmulation).deviceScaleFactor);
+  },
+  hasTouch: async ({ hasTouch, $sdodsEmulation }, use) => {
+    await use(applyEmulation({ hasTouch }, $sdodsEmulation).hasTouch);
+  },
+  isMobile: async ({ isMobile, browserName, $sdodsEmulation }, use) => {
+    await use(applyEmulation({ isMobile, browserName }, $sdodsEmulation).isMobile);
   },
 
   heal: async ({ config, healHistory, scenario, $bddContext }, use, testInfo) => {

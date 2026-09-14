@@ -1,7 +1,13 @@
-import { expect } from '@playwright/test';
+import { devices, expect } from '@playwright/test';
 import type { Cookie, Page } from '@playwright/test';
 import { Given, Then, When } from '../fixtures/test.js';
 import { renderStrict } from '../api/template.js';
+import {
+  COLOR_SCHEMES,
+  emulationTagProblem,
+  findDevice,
+  parseViewport,
+} from '../config/emulation.js';
 import { SdodsError } from '../errors.js';
 
 /**
@@ -399,7 +405,11 @@ function probeHorizontalOverflow(): OverflowReport {
 // TRAP: a blank document also does not scroll sideways. The body-children guard is what stops this
 // step going green on a page that failed to render, which is the one case it must not bless.
 Then('the page should not scroll horizontally', async ({ page }) => {
-  requireNavigated(page, 'the page should not scroll horizontally');
+  await expectNoHorizontalScroll(page, 'the page should not scroll horizontally');
+});
+
+async function expectNoHorizontalScroll(page: Page, step: string): Promise<void> {
+  requireNavigated(page, step);
   const report = (await page.evaluate(probeHorizontalOverflow)) as OverflowReport;
   expect(
     report.bodyChildren,
@@ -409,7 +419,7 @@ Then('the page should not scroll horizontally', async ({ page }) => {
     report.scrollWidth,
     `the document is ${report.scrollWidth}px wide inside a ${report.clientWidth}px viewport. Offenders: ${report.offenders.join(', ') || '(none measurable)'}`,
   ).toBeLessThanOrEqual(report.clientWidth + 1);
-});
+}
 
 // Proves ONE container contains its own width — a table, a code block or a chart that is allowed
 // to scroll internally must not push the page. Fails when the selector matches nothing, because a
@@ -884,3 +894,178 @@ Then('no uncaught page error should have been recorded', async ({ apiContext }) 
   const recording = recordingFor(apiContext, 'no uncaught page error should have been recorded');
   expect(recording.pageErrors, 'uncaught page errors').toEqual([]);
 });
+
+/* ── per-scenario emulation: the `I use …` family (#116) ─────────────── */
+
+// Locale, timezone and device are browser-CONTEXT options: Playwright fixes them when the context
+// is created and offers no way to change them afterwards. By the time the first step runs, the
+// context is open, so these steps cannot apply a value. The tags `@locale:` `@timezone:` and
+// `@device:` are resolved before the context opens; each step below passes when the context
+// already has the value (it then states the scenario's intent in its text) and otherwise fails,
+// naming the tag to use. Recreating the context was rejected: the page objects, the healer and the
+// screenshot narrator already hold the original page, and would silently act on a closed one.
+// Colour scheme and viewport CAN change on a live page, so those steps apply their value.
+
+function contextFixed(what: string, tag: string, actual: string | undefined): SdodsError {
+  return new SdodsError(
+    'RUN_FAILED',
+    // The tag is in the MESSAGE, not only the hint: a Playwright report shows the message alone.
+    `The browser context was created with ${what} ${actual === undefined ? '(the system default)' : `"${actual}"`}, and Playwright cannot change it on an open context — tag the scenario ${tag}.`,
+    {
+      hint: `Tag the scenario ${tag} (or its Feature, or an Examples block) — the tag is applied before the context is created, and this step then passes.`,
+    },
+  );
+}
+
+// Proves the scenario runs under this locale: navigator.language, Intl formatting and the
+// Accept-Language header all come from it. Passes only when `@locale:` (or the env's `use.locale`)
+// already set it.
+Given('I use the locale {string}', async ({ locale, apiContext, env }, value: string) => {
+  const wanted = renderStrict(value, ...scopesOf(apiContext, env));
+  const problem = emulationTagProblem('locale', wanted);
+  if (problem) throw new SdodsError('RUN_FAILED', problem);
+  const canon = (l: string) => Intl.getCanonicalLocales(l)[0];
+  if (!locale || canon(locale) !== canon(wanted))
+    throw contextFixed('locale', `@locale:${wanted}`, locale);
+});
+
+// Proves the scenario runs in this IANA time zone — the one that decides what "today" and every
+// rendered timestamp mean. Passes only when `@timezone:` (or `use.timezoneId`) already set it.
+Given('I use the timezone {string}', async ({ timezoneId, apiContext, env }, value: string) => {
+  const wanted = renderStrict(value, ...scopesOf(apiContext, env));
+  const problem = emulationTagProblem('timezone', wanted);
+  if (problem) throw new SdodsError('RUN_FAILED', problem);
+  if (timezoneId !== wanted) throw contextFixed('time zone', `@timezone:${wanted}`, timezoneId);
+});
+
+// Proves the OS-level colour preference for the rest of the scenario. Applied on the live page, so
+// it works mid-scenario; `@theme:` does the same before the first paint, which is what a
+// flash-of-wrong-theme check needs.
+Given('I use the {string} color scheme', async ({ page, apiContext, env }, scheme: string) => {
+  const wanted = renderStrict(scheme, ...scopesOf(apiContext, env));
+  if (!(COLOR_SCHEMES as readonly string[]).includes(wanted))
+    throw new SdodsError('RUN_FAILED', `"${wanted}" is not a color scheme.`, {
+      hint: `Use one of: ${COLOR_SCHEMES.join(', ')}.`,
+    });
+  await page.emulateMedia({ colorScheme: wanted as 'light' | 'dark' | 'no-preference' });
+});
+
+// Resizes the live page. `@viewport:<W>x<H>` sets the size before the first navigation instead,
+// which matters for apps that choose a layout once, on load.
+Given('I use the viewport {int} by {int}', async ({ page }, width: number, height: number) => {
+  const size = parseViewport(`${width}x${height}`);
+  if (!size)
+    throw new SdodsError('RUN_FAILED', `Viewport ${width}x${height} is not a usable size.`, {
+      hint: 'Both dimensions must be positive integers, e.g. `Given I use the viewport 320 by 640`.',
+    });
+  await page.setViewportSize(size);
+});
+
+// Proves the scenario runs with this device's viewport, user agent, pixel ratio and touch. The
+// engine stays the run target's browser. Passes when the context carries the device's user agent —
+// from `@device:`, or from a mobile run target built on that descriptor (mobile-safari is iPhone 15).
+Given(
+  'I use the device {string}',
+  async ({ $sdodsEmulation, userAgent, apiContext, env }, value: string) => {
+    const wanted = renderStrict(value, ...scopesOf(apiContext, env));
+    const name = findDevice(wanted);
+    if (!name)
+      throw new SdodsError('RUN_FAILED', `"${wanted}" is not a Playwright device.`, {
+        hint: 'Use a descriptor name such as "iPhone 15" or "Pixel 7".',
+      });
+    if ($sdodsEmulation.device?.name !== name && userAgent !== devices[name]?.userAgent)
+      throw contextFixed(
+        'device',
+        `@device:${name.replace(/\s+/g, '-')}`,
+        $sdodsEmulation.device?.name ?? 'no device emulation',
+      );
+  },
+);
+
+// The WCAG 1.4.10 phrasing of `the page should not scroll horizontally` — same measurement, same
+// blank-page guard. Pair it with `@viewport:320x640`.
+Then('the page should reflow without horizontal scrolling', async ({ page }) => {
+  await expectNoHorizontalScroll(page, 'the page should reflow without horizontal scrolling');
+});
+
+/**
+ * What counts as an untranslated key in visible text, by default:
+ *   * a whole text node shaped like a catalogue key — `nav.settings`, `checkout.summary.total`
+ *     (the same rule as {@link looksLikeMessageKey}: file names, hostnames and versions excluded);
+ *   * an unrendered interpolation placeholder — `Hello {{name}}`;
+ *   * a library's own missing marker — `[missing "fr.nav.home" translation]` (i18n-js) or
+ *     `translation missing: fr.nav.home` (Rails).
+ * A project whose keys look different passes its own pattern to the `matching {string}` step,
+ * which then replaces these defaults.
+ */
+export const UNTRANSLATED_MARKERS: readonly RegExp[] = [
+  /\{\{\s*[^{}\s][^{}]*\}\}/,
+  /\[missing\b[^\]]*\]/i,
+  /\btranslation missing:/i,
+];
+
+export function findUntranslated(texts: readonly string[], pattern?: RegExp): string[] {
+  const found = new Set<string>();
+  for (const raw of texts) {
+    const text = raw.trim();
+    if (!text) continue;
+    const hit = pattern
+      ? pattern.test(text)
+      : (text.length < 80 && !/\s/.test(text) && looksLikeMessageKey(text)) ||
+        UNTRANSLATED_MARKERS.some((re) => re.test(text));
+    if (hit) found.add(text.length > 120 ? `${text.slice(0, 117)}...` : text);
+  }
+  return [...found];
+}
+
+/** Every visible text node, whole, plus how many were examined. */
+function collectVisibleTexts(): { sampled: number; texts: string[] } {
+  const skip = ['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEMPLATE', 'TITLE'];
+  const texts: string[] = [];
+  if (!document.body) return { sampled: 0, texts };
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  let node = walker.nextNode();
+  while (node) {
+    const parent = node.parentElement;
+    const text = (node.textContent ?? '').trim();
+    if (text && parent && skip.indexOf(parent.tagName) === -1) {
+      const el = parent as HTMLElement & { checkVisibility?: () => boolean };
+      const visible =
+        typeof el.checkVisibility === 'function' ? el.checkVisibility() : el.offsetParent !== null;
+      if (visible) texts.push(text);
+    }
+    node = walker.nextNode();
+  }
+  return { sampled: texts.length, texts };
+}
+
+async function expectNoUntranslated(page: Page, step: string, pattern?: RegExp): Promise<void> {
+  requireNavigated(page, step);
+  const seen = (await page.evaluate(collectVisibleTexts)) as { sampled: number; texts: string[] };
+  // TRAP: a page that rendered no text has no untranslated keys either — fail instead of passing.
+  expect(
+    seen.sampled,
+    'the page rendered no visible text at all, so this step examined nothing',
+  ).toBeGreaterThan(0);
+  expect(
+    findUntranslated(seen.texts, pattern),
+    `untranslated keys rendered as visible text${pattern ? ` (matching /${pattern.source}/)` : ''}`,
+  ).toEqual([]);
+}
+
+// Proves the catalogue resolved for this locale: no raw key, no unrendered `{{placeholder}}` and
+// no library "missing translation" marker is visible. Run it under each `@locale:`.
+Then('the page should have no untranslated keys', async ({ page }) => {
+  await expectNoUntranslated(page, 'the page should have no untranslated keys');
+});
+
+// The same check with the project's own definition of an untranslated key (a JavaScript regular
+// expression tested against each visible text node), e.g. "^[A-Z0-9_]{3,}$" for SCREAMING_CASE keys.
+Then(
+  'the page should have no untranslated keys matching {string}',
+  async ({ page, apiContext, env }, pattern: string) => {
+    const step = 'the page should have no untranslated keys matching …';
+    const rendered = renderStrict(pattern, ...scopesOf(apiContext, env));
+    await expectNoUntranslated(page, step, compilePattern(rendered, step));
+  },
+);

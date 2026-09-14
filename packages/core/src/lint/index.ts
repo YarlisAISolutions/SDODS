@@ -12,6 +12,7 @@ import {
   taxonomyFromProject,
 } from '../config/tags.js';
 import { moduleForFeature } from '../config/workspace.js';
+import { emulationTagProblem } from '../config/emulation.js';
 import { parseFeatureFile, scenariosOf, type ParsedFeature } from './gherkin.js';
 import { projectRequirements } from '../analyze/traceability.js';
 import { checkStepAmbiguity } from './steps.js';
@@ -230,6 +231,28 @@ export async function lintProject(opts: LintOptions): Promise<LintResult> {
                   ...loc,
                 });
               break;
+            case 'locale':
+            case 'timezone':
+            case 'theme':
+            case 'viewport':
+            case 'device': {
+              const problem = emulationTagProblem(key, value);
+              if (problem)
+                errors.push({ severity: 'error', rule: `tags/${key}`, message: problem, ...loc });
+              // One browser context per scenario, so one value per key (Feature tags included).
+              // Outlines are exempt: their tag list folds in every Examples block, and one block
+              // per locale (`@locale:fr` / `@locale:de`) is exactly the pattern these tags enable.
+              // The runner still refuses a real conflict on a single example.
+              const distinct = [...new Set(sc.tags.filter((t) => t.startsWith(`@${key}:`)))];
+              if (!sc.isOutline && distinct.length > 1 && distinct[0] === tag)
+                errors.push({
+                  severity: 'error',
+                  rule: `tags/${key}`,
+                  message: `Conflicting ${distinct.join(' and ')}: a scenario takes one @${key}: value.`,
+                  ...loc,
+                });
+              break;
+            }
             default:
               if (!(KNOWN_VALUE_TAGS as readonly string[]).includes(key))
                 warnings.push({

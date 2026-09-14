@@ -1,4 +1,5 @@
 import type { BrowserName, Layer } from '@sdods/contracts';
+import type { Emulation } from '../config/emulation.js';
 import type { ProjectRegistry } from '../config/registry.js';
 import type { HarMode, ResolvedConfig } from '../config/resolve.js';
 import type { EnvConfig } from '@sdods/contracts';
@@ -50,4 +51,6 @@ export interface TestFixtures {
   $sdodsAnnotations: void;
   /** auto fixture: applies @env:, @skip:<browser>, @quarantine and @flag: */
   $sdodsTagGate: void;
+  /** What the scenario's @locale: @timezone: @theme: @viewport: @device: tags ask for. */
+  $sdodsEmulation: Emulation;
 }

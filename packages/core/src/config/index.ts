@@ -7,3 +7,4 @@ export * from './resolve.js';
 export * from './registry.js';
 export * from './workspace.js';
 export * from './runner.js';
+export * from './emulation.js';
