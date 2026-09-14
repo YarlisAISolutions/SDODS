@@ -496,13 +496,17 @@ export class IngestSession {
     const a = this.attempts.get(tcf.testCaseStartedId);
     if (!a) return;
     const { db, driver } = this.ctx.adb;
+    // The worst step result wins, as in Cucumber: a scenario that called test.skip() part-way has
+    // PASSED steps before the SKIPPED ones, and it was skipped, not passed.
     const status: SuiteStatus = a.statuses.includes('failed')
       ? 'failed'
-      : a.statuses.some((s) => s === 'passed')
-        ? 'passed'
-        : a.statuses.length
-          ? 'skipped'
-          : 'unknown';
+      : a.statuses.includes('skipped')
+        ? 'skipped'
+        : a.statuses.includes('passed')
+          ? 'passed'
+          : a.statuses.length
+            ? 'skipped'
+            : 'unknown';
     const finishedAt = tsToIso(tcf.timestamp) ?? a.lastStepEndIso;
     const durationMs =
       a.startedAtIso && finishedAt

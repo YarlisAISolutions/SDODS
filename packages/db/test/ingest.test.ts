@@ -157,6 +157,38 @@ describe('cucumber NDJSON ingest', () => {
     expect(res.totals).toMatchObject({ total: 3, passed: 1, failed: 1, skipped: 1 });
   });
 
+  it('a scenario skipped part-way (test.skip() in a step) is skipped, not passed', async () => {
+    const ndjson = buildMessages(
+      [
+        {
+          uri: 'features/ui/skip-midway.feature',
+          name: 'Skip midway',
+          tags: ['@ui'],
+          scenarios: [
+            // playwright-bdd: earlier steps PASSED, the step that called test.skip() and the rest SKIPPED
+            {
+              name: 'Skipped part-way',
+              tags: ['@smoke'],
+              steps: [
+                { keyword: 'Given', text: 'I am on the login page' },
+                { keyword: 'When', text: 'the feature flag is off' },
+                { keyword: 'Then', text: 'I should see the inventory' },
+              ],
+              attempts: [['PASSED', 'SKIPPED', 'SKIPPED']],
+              afterHook: 'PASSED',
+            },
+          ],
+        },
+      ],
+      { runnerProject: PW },
+    );
+    const { root } = writeRun('run-skip-midway', { 'messages.ndjson': ndjson });
+    const res = await ingestRun(adb, { runId: 'run-skip-midway', artifactsRoot: root });
+    const [sc] = await getRunScenarios(adb.db, 'run-skip-midway');
+    expect(sc!.status).toBe('skipped');
+    expect(res.totals).toMatchObject({ total: 1, passed: 0, skipped: 1 });
+  });
+
   it('retry-flaky: attempt history, flaky flag, locator stats, idempotent re-ingest', async () => {
     const ndjson = buildMessages(
       [

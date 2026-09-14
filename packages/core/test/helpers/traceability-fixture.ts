@@ -114,6 +114,8 @@ export interface FixtureAttempt {
   error?: string;
   /** add an AFTER_TEST_CASE hook step with this result (after-hooks run even for skipped steps) */
   afterHook?: 'PASSED' | 'FAILED';
+  /** per Gherkin step results, overriding `status` for the steps (missing entries are SKIPPED) */
+  stepStatuses?: Array<'PASSED' | 'FAILED' | 'SKIPPED'>;
 }
 
 /**
@@ -165,7 +167,13 @@ export function messagesFor(attempts: FixtureAttempt[], projectsPrefix = 'projec
       pickle.steps.map((s, i) => ({
         id: newId(),
         pickleStepId: s.id,
-        status: a.status === 'FAILED' ? (i === 0 ? 'FAILED' : 'SKIPPED') : a.status,
+        status: a.stepStatuses
+          ? (a.stepStatuses[i] ?? 'SKIPPED')
+          : a.status === 'FAILED'
+            ? i === 0
+              ? 'FAILED'
+              : 'SKIPPED'
+            : a.status,
       }));
     if (a.afterHook) steps.push({ id: newId(), hookId: 'hook-finalize', status: a.afterHook });
     lines.push({

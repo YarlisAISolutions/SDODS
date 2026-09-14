@@ -222,6 +222,35 @@ describe('traceability export', () => {
     expect(report.requirements.find((r) => r.id === 'AUTH-2')!.status).toBe('failed');
   });
 
+  it('a scenario skipped part-way (test.skip() in a step) is skipped, not passed', async () => {
+    const f = fixture();
+    const dir = writeRun(f.runs, {
+      runId: 'run-skip-midway',
+      startedAt: '2026-09-01T09:59:00.000Z',
+      attempts: [
+        {
+          // playwright-bdd: earlier steps PASSED, the step that called test.skip() and the rest SKIPPED
+          runnerProject: 'shop--api',
+          feature: 'features/api/orders.feature',
+          scenario: 'Cancel order',
+          status: 'SKIPPED',
+          stepStatuses: ['PASSED', 'SKIPPED'],
+          afterHook: 'PASSED',
+          start: '2026-09-01T10:00:00.000Z',
+          durationMs: 5,
+        },
+      ],
+    });
+    const report = await buildTraceabilityReport({
+      project: f.project,
+      run: { runId: 'run-skip-midway', dir },
+      now: NOW,
+    });
+    const ord2 = report.requirements.find((r) => r.id === 'ORD-2')!;
+    expect(ord2.scenarios.map((s) => s.status)).toEqual(['skipped']);
+    expect(ord2.status).toBe('not-run');
+  });
+
   it('a requirement whose only scenario was skipped is not run, not passed', async () => {
     const f = fixture();
     const dir = writeRun(f.runs, {
