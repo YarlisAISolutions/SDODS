@@ -22,6 +22,7 @@ description: The tag taxonomy SDODS enforces and how tags select layers, suites,
 | `@jira:PROJ-123` `@github:123`                                            | pattern-checked                                     | links the scenario to an issue                       |
 | `@skip:<browser>`                                                         | browser must be supported                           | excludes the scenario from that engine               |
 | `@matrix:<name>`                                                          | matrix must exist in `roles.matrix.yaml`            | generates one tagged Examples block per role         |
+| `@req:<id>` (repeatable, also on Feature or Rule)                         | must be in `traceability.requirements` when set     | traces the scenario to a requirement                 |
 | `@retries:N` `@timeout:N` `@slow` `@mode:serial` `@skip` `@fixme` `@only` | runner control tags                                 | passed through                                       |
 
 Unknown tags produce a warning, so typos surface without blocking.
@@ -34,6 +35,23 @@ flowchart LR
   L -->|role ok| U["lease pool user 'standard'"]
   L -->|issue pattern ok| J["link DEMO-12 in run viewer"]
 ```
+
+## Requirement traceability
+
+`@req:<id>` links a scenario to a requirement. The id is opaque: SDODS does not decide whether it names a Jira story, a clause of a specification or a row in a spreadsheet. A scenario may carry several, and a tag on the `Feature` or a `Rule` applies to every scenario under it.
+
+```gherkin
+@ui @req:AUTH-1
+Feature: Login
+
+  @smoke
+  Scenario: Valid login
+
+  @regression @req:AUTH-2
+  Scenario: Locked user
+```
+
+With `traceability.requirements` set in the project YAML, lint rejects ids that are not in that file; with `traceability.require: true` it also rejects scenarios that carry no `@req:` at all. [`sdods report traceability`](/docs/reference/cli-commands/report-heal-insights#report-traceability) exports requirement → scenario → result for a run.
 
 ## Filter a run
 
