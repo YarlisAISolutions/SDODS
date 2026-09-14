@@ -1,5 +1,6 @@
-import { readFileSync } from 'node:fs';
-import { basename, extname } from 'node:path';
+import { mkdtempSync, readFileSync, rmSync, statSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { basename, extname, join } from 'node:path';
 import { Octokit } from '@octokit/rest';
 import type { RunRecord } from '@sdods/contracts';
 import {
@@ -10,8 +11,18 @@ import {
   truncate,
 } from './context.js';
 import { IssueDedupe, fingerprintMarker, issueTitle } from './dedupe.js';
+import {
+  GitHubBranchEvidence,
+  evidenceKey,
+  formatBytes,
+  parseAge,
+  scenarioSlug,
+  type PruneResult,
+} from './evidence.js';
+import { GifPreviewer, type CommandRunner } from './gif.js';
 import type {
   CreateIssueInput,
+  EvidenceFile,
   GitHubConfig,
   IntegrationContext,
   IntegrationProvider,
@@ -22,6 +33,7 @@ import type {
   NotifyResult,
   ProviderTestOptions,
   ProviderTestResult,
+  PublishedEvidence,
   RunSummaryInput,
   ScenarioSummary,
 } from './types.js';
@@ -30,10 +42,20 @@ export const PR_COMMENT_MARKER = '<!-- sdods:run-summary -->';
 const ANNOTATION_BATCH = 50;
 /** colour for labels created by `sdods integrations test --create-labels` */
 const LABEL_COLOR = 'd93f0b';
+/** evidence key of a scenario's GIF preview */
+const PREVIEW_REL = '#preview.gif';
 
 export interface GitHubProviderOptions {
   baseUrl?: string;
   octokit?: Octokit;
+  /** Octokit for the evidence repository (default: one built from `evidence.tokenEnv`, else `octokit`) */
+  evidenceOctokit?: Octokit;
+  /** web origin for evidence links (default `GITHUB_SERVER_URL`, then https://github.com) */
+  serverUrl?: string;
+  /** runs ffmpeg for GIF previews; injected by tests */
+  runCommand?: CommandRunner;
+  /** backoff between evidence ref-update attempts; injected by tests */
+  sleep?: (ms: number) => Promise<void>;
 }
 
 export class GitHubProvider implements IntegrationProvider<GitHubConfig> {
@@ -42,6 +64,9 @@ export class GitHubProvider implements IntegrationProvider<GitHubConfig> {
   private octokit!: Octokit;
   private owner = '';
   private repo = '';
+  private evidence?: GitHubBranchEvidence;
+  private evidenceError?: string;
+  private gif?: GifPreviewer;
 
   constructor(private readonly options: GitHubProviderOptions = {}) {}
 
@@ -62,17 +87,75 @@ export class GitHubProvider implements IntegrationProvider<GitHubConfig> {
         baseUrl: this.options.baseUrl ?? process.env.GITHUB_API_URL,
         userAgent: 'sdods',
       });
+    this.initEvidence(config, secrets);
+  }
+
+  /** `integrations.github.evidence.host: branch` — off unless configured. */
+  private initEvidence(config: GitHubConfig, secrets: IntegrationSecrets): void {
+    const ev = config.evidence;
+    if (ev?.host !== 'branch') return;
+    const [owner, repo] = ev.repo ? ev.repo.split('/') : [this.owner, this.repo];
+    let octokit = this.options.evidenceOctokit;
+    if (!octokit && ev.tokenEnv && !this.options.octokit) {
+      if (!secrets.evidenceToken) {
+        // issues are still created, with the links used without an evidence host
+        this.evidenceError = `evidence host needs a token in $${ev.tokenEnv}`;
+        return;
+      }
+      octokit = new Octokit({
+        auth: secrets.evidenceToken,
+        baseUrl: this.options.baseUrl ?? process.env.GITHUB_API_URL,
+        userAgent: 'sdods',
+      });
+    }
+    this.evidence = new GitHubBranchEvidence({
+      octokit: octokit ?? this.octokit,
+      owner: owner!,
+      repo: repo!,
+      branch: ev.branch,
+      serverUrl: this.options.serverUrl ?? process.env.GITHUB_SERVER_URL,
+      retainDays: ev.retainDays,
+      sleep: this.options.sleep,
+    });
+    if (ev.gifPreview) this.gif = new GifPreviewer(this.options.runCommand);
   }
 
   async test(opts: ProviderTestOptions = {}): Promise<ProviderTestResult> {
     let detail: string;
+    let isPrivate: boolean;
     try {
       const { data } = await this.octokit.rest.repos.get({ owner: this.owner, repo: this.repo });
       detail = `repo ${data.full_name} reachable (${data.private ? 'private' : 'public'})`;
+      isPrivate = data.private;
     } catch (e) {
       return { ok: false, detail: (e as Error).message };
     }
-    return this.checkLabels(detail, opts);
+    const result = await this.checkLabels(detail, opts);
+    if (this.config.evidence?.host !== 'branch') return result;
+    const evidence = this.evidence
+      ? await this.evidence.check(isPrivate)
+      : { ok: false, detail: this.evidenceError ?? 'evidence host not initialised' };
+    return {
+      ...result,
+      ok: result.ok && evidence.ok,
+      detail: `${result.detail}; ${evidence.detail}`,
+      evidence,
+    };
+  }
+
+  /**
+   * Rewrite the evidence branch without the runs uploaded more than `olderThan` ago
+   * (default `evidence.retainDays`). Used by `sdods integrations evidence prune`.
+   */
+  async pruneEvidence(opts: { olderThan?: string; dryRun?: boolean } = {}): Promise<PruneResult> {
+    if (this.config.evidence?.host !== 'branch')
+      throw new Error('integrations.github.evidence.host is not "branch" for this project.');
+    if (!this.evidence)
+      throw new Error(`GitHub ${this.evidenceError ?? 'evidence host not initialised'}.`);
+    const olderThanMs = opts.olderThan
+      ? parseAge(opts.olderThan)
+      : this.config.evidence.retainDays * 86_400_000;
+    return this.evidence.prune({ olderThanMs, dryRun: opts.dryRun });
   }
 
   /**
@@ -146,8 +229,8 @@ export class GitHubProvider implements IntegrationProvider<GitHubConfig> {
       actions.push(await this.upsertPrComment(summary, ctx));
     }
 
-    const candidates = this.failuresToReport(summary);
-    for (const scenario of candidates) {
+    const decided = [];
+    for (const scenario of this.failuresToReport(summary)) {
       // The local link file does not survive a fresh CI runner, so an open issue carrying the
       // fingerprint marker is looked up in the repository before creating another one.
       const dedupe = new IssueDedupe(ctx.store, {
@@ -155,7 +238,17 @@ export class GitHubProvider implements IntegrationProvider<GitHubConfig> {
           ? undefined
           : () => this.findOpenIssueByFingerprint(scenario, run, ctx),
       });
-      const decision = await dedupe.decide(run.projectSlug, this.name, scenario.fingerprint);
+      decided.push({
+        scenario,
+        decision: await dedupe.decide(run.projectSlug, this.name, scenario.fingerprint),
+      });
+    }
+    // every new issue's evidence goes up in one commit, before the issues are created
+    const toCreate = decided.filter((d) => d.decision.action === 'create').map((d) => d.scenario);
+    const evidence =
+      ctx.dryRun || !toCreate.length ? undefined : await this.publishEvidence(toCreate, run, ctx);
+
+    for (const { scenario, decision } of decided) {
       if (decision.action === 'create') {
         if (ctx.dryRun) {
           actions.push({
@@ -173,6 +266,7 @@ export class GitHubProvider implements IntegrationProvider<GitHubConfig> {
             scenario,
             screenshots: selectIssueScreenshots(scenario),
             reportUrl: summary.reportUrl,
+            evidence,
           },
           ctx,
         );
@@ -239,6 +333,85 @@ export class GitHubProvider implements IntegrationProvider<GitHubConfig> {
       if (action) actions.push(action);
     }
     return { provider: this.name, actions };
+  }
+
+  /**
+   * Commit the screenshots, video and GIF preview of the scenarios about to get an issue to the
+   * evidence branch. Any failure is a warning: the issues then use the links they had before.
+   */
+  private async publishEvidence(
+    scenarios: ScenarioSummary[],
+    run: RunRecord,
+    ctx: IntegrationContext,
+  ): Promise<PublishedEvidence | undefined> {
+    if (this.evidenceError) {
+      ctx.logger.warn(`github: ${this.evidenceError}; issues link evidence without it`);
+      return undefined;
+    }
+    const host = this.evidence;
+    const ev = this.config.evidence;
+    if (!host || !ev) return undefined;
+    host.logger = ctx.logger;
+    const files: EvidenceFile[] = [];
+    let tmp: string | undefined;
+    const add = (
+      scenario: ScenarioSummary,
+      key: string,
+      localPath: string,
+      kind: EvidenceFile['kind'],
+      taken: Set<string>,
+      wanted = basename(localPath),
+    ) => {
+      let name = wanted;
+      for (let i = 2; taken.has(name); i++) name = `${i}-${wanted}`;
+      taken.add(name);
+      files.push({
+        key: evidenceKey(scenario.fingerprint, key),
+        fingerprint: scenario.fingerprint,
+        scenarioDir: scenarioSlug(scenario.scenarioName, scenario.fingerprint),
+        name,
+        localPath,
+        kind,
+        bytes: statSync(localPath).size,
+      });
+    };
+    try {
+      for (const scenario of scenarios) {
+        const taken = new Set<string>();
+        for (const shot of selectIssueScreenshots(scenario)) {
+          const local = ctx.artifactPath(shot, run);
+          if (local) add(scenario, shot.relPath, local, 'screenshot', taken);
+        }
+        // the trace is never offered: it carries credentials (#101)
+        const video = scenario.videoPath
+          ? ctx.artifactPath({ relPath: scenario.videoPath }, run)
+          : null;
+        if (!video) continue;
+        if (this.gif) {
+          tmp ??= mkdtempSync(join(tmpdir(), 'sdods-gif-'));
+          const gif = await this.gif.make(video, join(tmp, `${files.length}.gif`), ctx.logger);
+          if (gif) add(scenario, PREVIEW_REL, gif, 'preview', taken, 'preview.gif');
+        }
+        add(scenario, scenario.videoPath!, video, 'video', taken);
+      }
+      if (!files.length) return undefined;
+      const published = await host.publishRun(
+        { id: run.id, projectSlug: run.projectSlug },
+        files,
+        ev,
+      );
+      ctx.logger.info(
+        `github evidence: ${published.urls.size} file(s) on ${host.fullName}@${host.branch}${published.skipped.length ? `, ${published.skipped.length} skipped by the size caps` : ''}`,
+      );
+      return published;
+    } catch (e) {
+      ctx.logger.warn(
+        `github: evidence upload to ${host.fullName}@${host.branch} failed, issues link evidence without it: ${(e as Error).message}`,
+      );
+      return undefined;
+    } finally {
+      if (tmp) rmSync(tmp, { recursive: true, force: true });
+    }
   }
 
   /**
@@ -475,15 +648,18 @@ export class GitHubProvider implements IntegrationProvider<GitHubConfig> {
     const { scenario, run } = input;
     const title = issueTitle(scenario.featureName, scenario.scenarioName, scenario.browser);
     const shotLines: string[] = [];
+    const hosted = (relPath: string) =>
+      input.evidence?.urls.get(evidenceKey(scenario.fingerprint, relPath));
     for (const shot of input.screenshots) {
-      let url = ctx.artifactUrl(shot, run);
-      if (this.config.uploadToRelease) {
+      // precedence: evidence branch, then release asset, then SDODS_PUBLIC_URL, then CI artifacts
+      let url = hosted(shot.relPath) ?? ctx.artifactUrl(shot, run);
+      if (this.config.uploadToRelease && !hosted(shot.relPath)) {
         const uploaded = await this.uploadReleaseAsset(shot, run, ctx).catch(() => null);
         if (uploaded) url = uploaded;
       }
       if (url)
         shotLines.push(
-          `- ${shot.phase ?? 'screenshot'}${shot.stepIndex != null ? ` (step ${shot.stepIndex})` : ''}: ${url.endsWith('.png') ? `![${shot.phase}](${url})` : url}`,
+          `- ${shot.phase ?? 'screenshot'}${shot.stepIndex != null ? ` (step ${shot.stepIndex})` : ''}: ${/\.png(\?raw=true)?$/.test(url) ? `![${shot.phase}](${url})` : url}`,
         );
     }
     const body = [
@@ -503,7 +679,8 @@ export class GitHubProvider implements IntegrationProvider<GitHubConfig> {
       '```',
       '',
       ...(shotLines.length ? ['### Screenshots', ...shotLines, ''] : []),
-      ...(await this.mediaLines(scenario, run, ctx)),
+      ...(await this.mediaLines(scenario, run, ctx, input.evidence)),
+      ...skippedEvidenceLines(scenario, input.evidence),
       ...(input.reportUrl || ctx.ci.runUrl
         ? [
             '### Links',
@@ -563,13 +740,18 @@ export class GitHubProvider implements IntegrationProvider<GitHubConfig> {
     scenario: ScenarioSummary,
     run: RunRecord,
     ctx: IntegrationContext,
+    evidence?: PublishedEvidence,
   ): Promise<string[]> {
     const lines: string[] = [];
+    const preview = evidence?.urls.get(evidenceKey(scenario.fingerprint, PREVIEW_REL));
+    if (preview)
+      lines.push(`- Preview (last ${this.gif?.seconds ?? 5} s): ![video preview](${preview})`);
     if (scenario.videoPath) {
       const relPath = scenario.videoPath;
       const local = artifactDisplayPath(relPath, run);
-      let url = ctx.artifactUrl({ relPath }, run);
-      if (this.config.uploadToRelease) {
+      const hostedVideo = evidence?.urls.get(evidenceKey(scenario.fingerprint, relPath));
+      let url = hostedVideo ?? ctx.artifactUrl({ relPath }, run);
+      if (this.config.uploadToRelease && !hostedVideo) {
         const uploaded = await this.uploadReleaseAsset({ relPath }, run, ctx).catch(() => null);
         if (uploaded) url = uploaded;
       }
@@ -701,6 +883,17 @@ export class GitHubProvider implements IntegrationProvider<GitHubConfig> {
       detail: 'passing again',
     };
   }
+}
+
+/** Files the evidence host did not take, so a reader knows why they are only linked. */
+function skippedEvidenceLines(scenario: ScenarioSummary, evidence?: PublishedEvidence): string[] {
+  const mine = evidence?.skipped.filter((s) => s.fingerprint === scenario.fingerprint) ?? [];
+  if (!mine.length) return [];
+  return [
+    '### Evidence not uploaded',
+    ...mine.map((s) => `- \`${s.name}\` (${formatBytes(s.bytes)}): ${s.reason}`),
+    '',
+  ];
 }
 
 export function issueNumber(key: string): number {

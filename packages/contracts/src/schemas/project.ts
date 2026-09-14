@@ -210,6 +210,36 @@ export const GitHubIntegrationSchema = z.object({
   labels: z.array(z.string()).default(['sdods']),
   tokenEnv: z.string().default('GITHUB_TOKEN'),
   uploadToRelease: z.string().optional(),
+  /**
+   * Where issue evidence (screenshots, video, GIF preview) is hosted so it renders inline in a
+   * private repository. Absent or `host: none` keeps the links described above.
+   */
+  evidence: z
+    .object({
+      host: z.enum(['none', 'branch']).default('none'),
+      /** `owner/name`; default: the issue repository */
+      repo: z
+        .string()
+        .regex(/^[\w.-]+\/[\w.-]+$/, 'must be owner/name')
+        .optional(),
+      branch: z.string().min(1).default('sdods-evidence'),
+      /** env var NAME of a token for the evidence repo; default: `tokenEnv` */
+      tokenEnv: z.string().optional(),
+      maxFileBytes: z
+        .number()
+        .int()
+        .positive()
+        .default(5 * 1024 * 1024),
+      maxRunBytes: z
+        .number()
+        .int()
+        .positive()
+        .default(25 * 1024 * 1024),
+      retainDays: z.number().int().positive().default(14),
+      /** an inline GIF of the video's last seconds when ffmpeg is on PATH */
+      gifPreview: z.boolean().default(true),
+    })
+    .optional(),
 });
 
 export const JiraIntegrationSchema = z.object({
