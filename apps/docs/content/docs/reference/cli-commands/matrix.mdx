@@ -27,7 +27,7 @@ Output lists each matrix feature as `updated`, `out of date` (`--check`, `--dry-
 | `matrix/markers`       | error    | a begin marker without an end marker, or the reverse; the file is left alone                    |
 | `matrix/unseeded-role` | warning  | a matrix role has no account in the user pool dataset for an environment, or there is no pool   |
 
-Exit codes: `0` success, `2` when `roles.matrix.yaml` is invalid (nothing is written), `3` on template errors, or with `--check` when any feature is out of date. `--dry-run` alone always exits `0` so its JSON can be read.
+Exit codes: `0` success, `2` when `roles.matrix.yaml` is invalid (nothing is written), `3` on template errors (a feature with a template error is reported and left unwritten), or with `--check` when any feature is out of date. `--dry-run` alone always exits `0` so its JSON can be read.
 
 `sdods lint` reports the same findings, plus `matrix/stale` (warning) for a feature whose generated rows no longer match the matrix, and `tags/matrix` (error) for an unknown `@matrix:<name>`.
 

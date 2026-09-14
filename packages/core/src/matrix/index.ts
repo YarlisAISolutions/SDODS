@@ -100,7 +100,8 @@ export function parseRolesMatrices(text: string, file = ROLES_MATRIX_FILE): Load
   }
   const lines = text.split(/\r?\n/);
   const lineOf = (name: string) => {
-    const i = lines.findIndex((l) => new RegExp(`^\\s+['"]?${name}['"]?\\s*:`).test(l));
+    const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const i = lines.findIndex((l) => new RegExp(`^\\s+['"]?${escaped}['"]?\\s*:`).test(l));
     return i >= 0 ? i + 1 : undefined;
   };
 

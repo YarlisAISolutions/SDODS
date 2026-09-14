@@ -45,11 +45,13 @@ export function register(program: Command) {
         for (const p of [...plan.problems, ...plan.files.flatMap((f) => f.problems)])
           problems.push({ project: e.slug, ...p });
         for (const f of plan.files) {
-          if (write && f.changed) writeFileSync(f.file, f.after);
+          // A template with errors is reported, not rewritten: fix the outline, then expand.
+          const blocked = f.problems.some((p) => p.severity === 'error');
+          if (write && f.changed && !blocked) writeFileSync(f.file, f.after);
           files.push({
             project: e.slug,
             path: f.path,
-            status: !f.changed ? 'unchanged' : write ? 'updated' : 'stale',
+            status: !f.changed ? 'unchanged' : write && !blocked ? 'updated' : 'stale',
             examples: f.examples,
             ...(opts.dryRun && ctx.opts.json ? { content: f.after } : {}),
           });

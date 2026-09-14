@@ -124,6 +124,10 @@ describe('roles.matrix.yaml validation', () => {
 
   it('reports yaml syntax and schema errors without throwing', () => {
     expect(messages('matrices: [oops')[0]).toMatch(/Cannot parse YAML/);
+    // A name that is not a valid regex source must still come back as a finding.
+    expect(messages('matrices:\n  a(:\n    roles: [a]\n    rows: [{ x: 1, expect: y }]\n')).toEqual(
+      [expect.stringContaining('lowercase letters, digits and dashes')],
+    );
     expect(
       messages('matrices:\n  Bad Name:\n    roles: [a]\n    rows: [{ x: 1, expect: y }]\n'),
     ).toEqual([expect.stringContaining('lowercase letters, digits and dashes')]);
