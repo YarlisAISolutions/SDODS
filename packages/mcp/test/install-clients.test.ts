@@ -36,7 +36,7 @@ describe('MCP install snippets per client', () => {
     expect(serverEntry(o, 'cursor')).toMatchObject({ type: 'http', url: o.httpUrl });
     expect(serverEntry(o, 'windsurf')).toEqual({
       serverUrl: o.httpUrl,
-      headers: { Authorization: 'Bearer <YOUR_SDODS_TOKEN>' },
+      headers: { Authorization: 'Bearer ${env:SDODS_TOKEN}' },
     });
     expect(serverEntry(o, 'gemini')).toMatchObject({ httpUrl: o.httpUrl });
     expect(serverEntry(o, 'vscode')).toMatchObject({

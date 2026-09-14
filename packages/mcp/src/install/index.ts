@@ -42,9 +42,21 @@ function stdioArgs(o: SnippetOptions): string[] {
   return args;
 }
 
+/**
+ * How each client reads the token from the environment inside its config file, so the secret is
+ * never written there. VS Code prompts for it once instead.
+ */
+const TOKEN_REFERENCE: Record<Exclude<McpClient, 'codex'>, string> = {
+  claude: '${SDODS_TOKEN}',
+  cursor: '${env:SDODS_TOKEN}',
+  windsurf: '${env:SDODS_TOKEN}',
+  gemini: '$SDODS_TOKEN',
+  vscode: '${input:sdods-token}',
+};
+
 export function serverEntry(o: SnippetOptions, client: McpClient): Record<string, unknown> {
   const token =
-    o.tokenPlaceholder ?? (client === 'vscode' ? '${input:sdods-token}' : '<YOUR_SDODS_TOKEN>');
+    o.tokenPlaceholder ?? (client === 'codex' ? '<YOUR_SDODS_TOKEN>' : TOKEN_REFERENCE[client]);
   if (o.httpUrl) {
     const headers = { Authorization: `Bearer ${token}` };
     // Windsurf names the remote URL `serverUrl`; Gemini CLI uses `httpUrl` for Streamable HTTP
