@@ -34,7 +34,7 @@ gcloud run deploy "$SERVICE" \
   --concurrency 80 --timeout 300 \
   --cpu-boost \
   --set-secrets "ANTHROPIC_API_KEY=maxi-anthropic-key:latest" \
-  --set-env-vars "MAXI_MODEL=${MAXI_MODEL:-claude-sonnet-5},MAXI_DAILY_BUDGET_USD=${MAXI_DAILY_BUDGET_USD:-20},MAXI_FIRESTORE_PROJECT=${PROJECT},MAXI_CORPUS_URL=https://docs.sdods.com/llms-full.txt,MAXI_TRUST_PROXY=1,ANTHROPIC_WORKSPACE_ID=${ANTHROPIC_WORKSPACE_ID:-}" \
+  --set-env-vars "MAXI_MODEL=${MAXI_MODEL:-claude-sonnet-5},MAXI_DAILY_BUDGET_USD=${MAXI_DAILY_BUDGET_USD:-3},MAXI_FIRESTORE_PROJECT=${PROJECT},MAXI_CORPUS_URL=https://docs.sdods.com/llms-full.txt,MAXI_TRUST_PROXY=1,ANTHROPIC_WORKSPACE_ID=${ANTHROPIC_WORKSPACE_ID:-}" \
   --quiet
 
 URL=$(gcloud run services describe "$SERVICE" --project "$PROJECT" --region "$REGION" --format 'value(status.url)')
