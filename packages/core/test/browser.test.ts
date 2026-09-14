@@ -4,9 +4,11 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import {
   DARK_MAX_CHANNEL,
   LIGHT_MIN_CHANNEL,
+  findUntranslated,
   firstPaintedColour,
   looksLikeMessageKey,
 } from '../src/steps/browser.steps.js';
+import { emulationFromTags } from '../src/config/emulation.js';
 import { SdodsError } from '../src/errors.js';
 
 /**
@@ -173,6 +175,14 @@ const EXPECTED: Array<[string, string]> = [
   ['Then', 'no console warning should match {string}'],
   ['Then', 'a console error matching {string} should have been recorded'],
   ['Then', 'no uncaught page error should have been recorded'],
+  ['Given', 'I use the locale {string}'],
+  ['Given', 'I use the timezone {string}'],
+  ['Given', 'I use the {string} color scheme'],
+  ['Given', 'I use the viewport {int} by {int}'],
+  ['Given', 'I use the device {string}'],
+  ['Then', 'the page should reflow without horizontal scrolling'],
+  ['Then', 'the page should have no untranslated keys'],
+  ['Then', 'the page should have no untranslated keys matching {string}'],
 ];
 
 describe('browser steps: registration', () => {
@@ -954,5 +964,151 @@ describe('browser steps: console and page errors', () => {
     // A different scenario must not inherit the recording, and must say so rather than pass.
     const err = await failure('no console error should have been recorded', { apiContext: second });
     expect(err).toBeInstanceOf(SdodsError);
+  });
+});
+
+/* ── per-scenario emulation: the `I use …` family (#116) ─────────────── */
+
+describe('browser steps: emulation', () => {
+  const base = () => ({ apiContext: fakeContext({ lang: 'fr-FR' }), env: fakeEnv() });
+
+  it('I use the locale passes when the context already has it, canonicalising case', async () => {
+    await run('I use the locale {string}', { ...base(), locale: 'fr-FR' }, '{{lang}}');
+    await run('I use the locale {string}', { ...base(), locale: 'fr-FR' }, 'fr-fr');
+  });
+
+  it('I use the locale fails on an open context with another locale, naming the tag', async () => {
+    const err = await failure('I use the locale {string}', { ...base(), locale: 'en-US' }, 'de-DE');
+    expect(err).toBeInstanceOf(SdodsError);
+    expect(err?.message).toContain('"en-US"');
+    expect(err?.message).toContain('@locale:de-DE');
+  });
+
+  it('I use the locale refuses a value that is not a locale', async () => {
+    const err = await failure('I use the locale {string}', { ...base(), locale: 'en-US' }, 'fr_FR');
+    expect(err?.message).toContain('hyphen');
+  });
+
+  it('I use the timezone passes on a match and names @timezone: otherwise', async () => {
+    await run('I use the timezone {string}', { ...base(), timezoneId: 'Asia/Tokyo' }, 'Asia/Tokyo');
+    const err = await failure(
+      'I use the timezone {string}',
+      { ...base(), timezoneId: undefined },
+      'Asia/Tokyo',
+    );
+    expect(err?.message).toContain('(the system default)');
+    expect(err?.message).toContain('@timezone:Asia/Tokyo');
+    expect(
+      (await failure('I use the timezone {string}', { ...base() }, 'Mars/Olympus'))?.message,
+    ).toContain('IANA');
+  });
+
+  it('I use the color scheme applies on the live page and refuses a typo', async () => {
+    const { page, calls } = fakePage();
+    await run('I use the {string} color scheme', { ...base(), page }, 'dark');
+    expect(calls.media).toEqual([{ colorScheme: 'dark' }]);
+    const err = await failure('I use the {string} color scheme', { ...base(), page }, 'dim');
+    expect((err as SdodsError).hint).toContain('no-preference');
+  });
+
+  it('I use the viewport resizes the live page and refuses a zero dimension', async () => {
+    const { page, calls } = fakePage();
+    await run('I use the viewport {int} by {int}', { page }, 320, 640);
+    expect(calls.viewport).toEqual([{ width: 320, height: 640 }]);
+    expect(await failure('I use the viewport {int} by {int}', { page }, 0, 640)).toBeInstanceOf(
+      SdodsError,
+    );
+  });
+
+  it('I use the device passes only when @device: created the context with it', async () => {
+    const tagged = { ...base(), $sdodsEmulation: emulationFromTags(['@device:iPhone-15']) };
+    await run('I use the device {string}', tagged, 'iPhone 15');
+    const untagged = { ...base(), $sdodsEmulation: emulationFromTags([]) };
+    const err = await failure('I use the device {string}', untagged, 'iPhone 15');
+    expect(err?.message).toContain('@device:iPhone-15');
+    expect((await failure('I use the device {string}', untagged, 'Nokia 3310'))?.message).toContain(
+      'not a Playwright device',
+    );
+  });
+
+  it('the reflow phrasing runs the same measurement, blank-page guard included', async () => {
+    const blank = fakePage({
+      url: 'https://app.test/x',
+      evaluates: [{ bodyChildren: 0, scrollWidth: 320, clientWidth: 320, offenders: [] }],
+    });
+    expect(
+      (await failure('the page should reflow without horizontal scrolling', { page: blank.page }))
+        ?.message,
+    ).toContain('the document body is empty');
+    const wide = fakePage({
+      url: 'https://app.test/x',
+      evaluates: [{ bodyChildren: 2, scrollWidth: 412, clientWidth: 320, offenders: ['nav.x'] }],
+    });
+    expect(
+      (await failure('the page should reflow without horizontal scrolling', { page: wide.page }))
+        ?.message,
+    ).toContain('nav.x');
+  });
+});
+
+describe('untranslated keys', () => {
+  it('flags raw keys, unrendered placeholders and library missing markers', () => {
+    expect(
+      findUntranslated([
+        'Settings',
+        'nav.settings',
+        'Hello {{ name }}',
+        '[missing "fr.nav.home" translation]',
+        'translation missing: fr.nav.home',
+      ]),
+    ).toEqual([
+      'nav.settings',
+      'Hello {{ name }}',
+      '[missing "fr.nav.home" translation]',
+      'translation missing: fr.nav.home',
+    ]);
+  });
+
+  it('does not flag file names, hostnames, versions, prose or empty braces', () => {
+    expect(
+      findUntranslated(['docs.sdods.com', 'report.pdf', 'v2.1.0', 'e.g. this', 'Use {} here']),
+    ).toEqual([]);
+  });
+
+  it('a custom pattern replaces the defaults', () => {
+    expect(findUntranslated(['SETTINGS_TITLE', 'nav.settings'], /^[A-Z0-9_]{3,}$/)).toEqual([
+      'SETTINGS_TITLE',
+    ]);
+  });
+
+  it('fails on a page with no visible text, and reports what it found', async () => {
+    const empty = fakePage({ url: 'https://app.test/x', evaluates: [{ sampled: 0, texts: [] }] });
+    expect(
+      (await failure('the page should have no untranslated keys', { page: empty.page }))?.message,
+    ).toContain('rendered no visible text at all');
+    const bad = fakePage({
+      url: 'https://app.test/x',
+      evaluates: [{ sampled: 2, texts: ['Bonjour', 'Hi {{user}}'] }],
+    });
+    expect(
+      (await failure('the page should have no untranslated keys', { page: bad.page }))?.message,
+    ).toContain('Hi {{user}}');
+    const custom = fakePage({
+      url: 'https://app.test/x',
+      evaluates: [{ sampled: 2, texts: ['Bonjour', 'NAV_HOME'] }],
+    });
+    const err = await failure(
+      'the page should have no untranslated keys matching {string}',
+      { page: custom.page, apiContext: fakeContext(), env: fakeEnv() },
+      '^[A-Z_]+$',
+    );
+    expect(err?.message).toContain('NAV_HOME');
+  });
+
+  it('refuses to run before the page navigated', async () => {
+    const { page } = fakePage();
+    expect(await failure('the page should have no untranslated keys', { page })).toBeInstanceOf(
+      SdodsError,
+    );
   });
 });
