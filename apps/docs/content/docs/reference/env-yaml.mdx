@@ -29,6 +29,11 @@ description: Field reference for environment files.
       type: "{ driver: 'sqlite'|'postgres', url }",
       description: 'Test-data database for db datasets.',
     },
+    mail: {
+      type: "{ provider?: 'mailpit', url, auth?: basic{username,password}, pollIntervalMs?, clockSkewMs?, timeoutSeconds? }",
+      description:
+        'Mail catcher for the email steps. url is the Mailpit web/API address (port 8025 by default), not SMTP. auth.password must be a ${VAR} reference. Defaults: provider mailpit, pollIntervalMs 1000, clockSkewMs 2000, timeoutSeconds 15.',
+    },
     'users.poolSize': { type: 'number', description: 'Maximum accounts a run may lease.' },
     vars: {
       type: 'Record<string, string|number|boolean>',
@@ -63,6 +68,7 @@ api:
   headers: { Accept: application/json }
   auth: { type: none }
 users: { poolSize: 4 }
+mail: { provider: mailpit, url: http://localhost:8025 }
 vars:
   defaultProduct: Sauce Labs Backpack
   standardPassword: '${DEMO_SHOP_PASSWORD:-secret_sauce}'

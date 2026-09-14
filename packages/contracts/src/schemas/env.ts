@@ -33,6 +33,22 @@ export const EnvUseSchema = z.object({
   httpCredentials: z.object({ username: z.string(), password: z.string() }).optional(),
 });
 
+/**
+ * The mail catcher the email steps read. Only Mailpit today: MailHog's API hands back raw MIME
+ * (quoted-printable, nested multiparts) and is unmaintained, so an enum value for it would be a
+ * half-working promise. `auth.password` trips the secret-literal check, so it must be `${VAR}`.
+ */
+export const MailConfigSchema = z.object({
+  provider: z.enum(['mailpit']).default('mailpit'),
+  url: z.string().url(),
+  auth: z
+    .object({ type: z.literal('basic'), username: z.string(), password: z.string() })
+    .optional(),
+  pollIntervalMs: z.number().int().positive().default(1000),
+  clockSkewMs: z.number().int().nonnegative().default(2000),
+  timeoutSeconds: z.number().int().positive().default(15),
+});
+
 export const EnvConfigSchema = z.object({
   name: z.string().min(1),
   description: z.string().optional(),
@@ -45,6 +61,7 @@ export const EnvConfigSchema = z.object({
   }),
   aliases: z.array(z.string().url()).default([]),
   db: z.object({ driver: z.enum(['sqlite', 'postgres']), url: z.string() }).optional(),
+  mail: MailConfigSchema.optional(),
   users: z.object({ poolSize: z.number().int().positive().optional() }).default({}),
   vars: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])).default({}),
   use: EnvUseSchema.default({}),
@@ -58,4 +75,5 @@ export const EnvConfigSchema = z.object({
 
 export type EnvConfig = z.infer<typeof EnvConfigSchema>;
 export type EnvConfigInput = z.input<typeof EnvConfigSchema>;
+export type MailConfig = z.infer<typeof MailConfigSchema>;
 export type ApiAuthConfig = z.infer<typeof ApiAuthSchema>;
