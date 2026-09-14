@@ -1,19 +1,25 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { notFound } from 'next/navigation';
 import { FEEDBACK_EMAIL } from '@/lib/links';
 import {
   CUSTOM_AMOUNT_URL,
   MANAGE_SUBSCRIPTION_URL,
+  SPONSOR_ENABLED,
   SPONSOR_PUBLIC,
   tiersFor,
   type SponsorTier,
 } from '@/lib/sponsor';
 
-export const metadata: Metadata = {
-  title: 'Sponsor SDODS',
-  description:
-    'SDODS is free and open source. Buy the maintainers a coffee, back the project monthly or sponsor it as a company.',
-};
+// While sponsorship is off the page is a 404, and its title and description would still leak into
+// the tab and the HTML head, so it borrows the not-found page's plain metadata instead.
+export const metadata: Metadata = SPONSOR_ENABLED
+  ? {
+      title: 'Sponsor SDODS',
+      description:
+        'SDODS is free and open source. Buy the maintainers a coffee, back the project monthly or sponsor it as a company.',
+    }
+  : { robots: { index: false, follow: true } };
 
 const LARGE_SPONSOR_MAILTO = `mailto:${FEEDBACK_EMAIL}?subject=${encodeURIComponent(
   'Sponsoring SDODS',
@@ -38,6 +44,7 @@ function TierCard({ tier }: { tier: SponsorTier }) {
 }
 
 export default function SponsorPage() {
+  if (!SPONSOR_ENABLED) notFound();
   return (
     <div className="mx-auto max-w-5xl px-4 py-14">
       <h1 className="text-3xl font-extrabold tracking-tight md:text-4xl">

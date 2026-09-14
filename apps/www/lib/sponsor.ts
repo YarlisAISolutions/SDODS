@@ -10,11 +10,14 @@
  * exists: while any is empty the page shows only the "large sponsorship" email card and the nav
  * and footer hide the ask. Fill all of them in at once (tests/sponsor.test.ts rejects a half-filled
  * set).
+ *
+ * Nothing here shows at all while SPONSOR_ENABLED (in @sdods/contracts/sponsor) is false: the
+ * sponsor pages are not found and every link to them is hidden. Flip it with the links.
  */
-import { SITE_URL } from './links';
+import { SPONSOR_ENABLED, SPONSOR_URL } from '@sdods/contracts/sponsor';
 
+export { SPONSOR_ENABLED, SPONSOR_URL };
 export const SPONSOR_PAGE = '/sponsor/';
-export const SPONSOR_URL = `${SITE_URL}${SPONSOR_PAGE}`;
 
 export type SponsorCadence = 'once' | 'monthly';
 
@@ -93,8 +96,8 @@ export const SPONSOR_LINKS: string[] = [
   MANAGE_SUBSCRIPTION_URL,
 ];
 
-/** True once every Stripe link exists; the site shows the ask only then. */
-export const SPONSOR_PUBLIC = SPONSOR_LINKS.every((u) => u !== '');
+/** True when sponsorship is on and every Stripe link exists; the site shows the ask only then. */
+export const SPONSOR_PUBLIC = SPONSOR_ENABLED && SPONSOR_LINKS.every((u) => u !== '');
 
 export function tiersFor(cadence: SponsorCadence): SponsorTier[] {
   return SPONSOR_TIERS.filter((t) => t.cadence === cadence);

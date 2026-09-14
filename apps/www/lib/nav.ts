@@ -22,6 +22,6 @@ export const NAV_LINKS: NavLink[] = [
   { label: 'Questions', href: '/questions/' },
   { label: 'Feedback', href: '/feedback/' },
   ...(REPO_PUBLIC ? [{ label: 'GitHub', href: REPO_URL, external: true } as NavLink] : []),
-  // Shown once every Stripe link exists -- see SPONSOR_PUBLIC in ./sponsor.
+  // Shown once sponsorship is on and every Stripe link exists -- see SPONSOR_PUBLIC in ./sponsor.
   ...(SPONSOR_PUBLIC ? [{ label: 'Sponsor', href: SPONSOR_PAGE } as NavLink] : []),
 ];
