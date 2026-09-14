@@ -216,7 +216,8 @@ async function main(): Promise<void> {
   const deadline = Date.now() + POLL_BUDGET_MS;
   while (pending.length && Date.now() < deadline) {
     for (let i = pending.length - 1; i >= 0; i--) {
-      const { result, id } = pending[i];
+      // `noUncheckedIndexedAccess`: the index is in range, but the type does not know that.
+      const { result, id } = pending[i]!;
       try {
         const stats = await analysis(id, key);
         if (stats) {
