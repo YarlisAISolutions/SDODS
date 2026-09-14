@@ -1,6 +1,6 @@
 {
   "name": "@sdods/integrations",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "description": "SDODS integrations: GitHub checks and issues, Jira issues and links.",
   "license": "Apache-2.0",
   "author": "SDODS <admin@sdods.com>",
