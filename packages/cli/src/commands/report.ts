@@ -213,7 +213,9 @@ export function register(program: Command) {
     .action(async (dirs: string[], opts, cmd) => {
       const ctx = createContext(cmd);
       const root = artifactsRoot(ctx.rootDir);
-      const runId: string | null = opts.run ?? latestRunId(root);
+      // `report` defines --run too, and Commander hands it to the parent wherever it appears.
+      const parent = (cmd.parent?.opts() ?? {}) as { run?: string };
+      const runId: string | null = opts.run ?? parent.run ?? latestRunId(root);
       if (!runId) {
         throw new SdodsError('CONFIG_NOT_FOUND', 'No run to merge into.', {
           hint: 'Pass --run <id>, or run a suite first.',
