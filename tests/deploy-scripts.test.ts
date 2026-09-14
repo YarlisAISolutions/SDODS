@@ -83,7 +83,7 @@ describe('deploy scripts', () => {
     expect(deploy).toContain('--set-secrets ANTHROPIC_API_KEY=maxi-anthropic-key:latest');
     expect(deploy).not.toMatch(/sk-ant-/);
     expect(deploy).toContain('MAXI_MODEL=claude-sonnet-5');
-    expect(deploy).toContain('MAXI_DAILY_BUDGET_USD=20');
+    expect(deploy).toContain('MAXI_DAILY_BUDGET_USD=3');
     expect(deploy).toContain('MAXI_FIRESTORE_PROJECT=automax-docs');
     expect(deploy).toMatch(/--quiet$/);
   });
