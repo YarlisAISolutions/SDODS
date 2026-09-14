@@ -1,5 +1,5 @@
 import { writeFileSync } from 'node:fs';
-import { resolve as resolvePath } from 'node:path';
+import { resolve as resolvePath, sep } from 'node:path';
 import type { Command } from 'commander';
 import pc from 'picocolors';
 import { ROLES_MATRIX_FILE, listFeatureFiles, planMatrixExpansion } from '@sdods/core';
@@ -38,7 +38,7 @@ export function register(program: Command) {
         // The matrix needs the project file, not an environment: no env is resolved (or required).
         const project = { ...e.config, root: e.root };
         const featureFiles = only.length
-          ? only.filter((f) => f.startsWith(project.root))
+          ? only.filter((f) => f.startsWith(resolvePath(project.root) + sep))
           : listFeatureFiles(project.root);
         const plan = planMatrixExpansion(project, featureFiles);
         if (plan.loaded?.problems.length) configInvalid = true;

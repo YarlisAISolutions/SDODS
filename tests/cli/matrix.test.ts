@@ -109,6 +109,30 @@ describe('sdods matrix expand (#118)', () => {
     expect(readFileSync(feature, 'utf8')).toBe(TEMPLATE);
   }, 60_000);
 
+  it('--file without -p belongs to the project whose folder holds it, not one with a prefix of its name', async () => {
+    const { ws } = workspace();
+    // A second project whose slug starts with the first one's: projects/shop-admin vs projects/shop.
+    for (const [rel, body] of Object.entries({
+      'projects/shop-admin/sdods.project.yaml':
+        'slug: shop-admin\nname: Shop admin\nlayers: [ui]\nbrowsers: [chromium]\nenvs: { default: local, available: [local] }\ntags: { roles: [owner, viewer] }\n',
+      'projects/shop-admin/envs/local.yaml':
+        'ui: { baseUrl: http://localhost:3000 }\napi: { baseUrl: http://localhost:3000/api }\n',
+      'projects/shop-admin/roles.matrix.yaml': MATRIX,
+      'projects/shop-admin/features/admin/surfaces.feature': TEMPLATE,
+    })) {
+      mkdirSync(dirname(join(ws, rel)), { recursive: true });
+      writeFileSync(join(ws, rel), body);
+    }
+    const file = join(ws, 'projects/shop-admin/features/admin/surfaces.feature');
+    const r = await cli(ws, '--json', 'matrix', 'expand', '--dry-run', '--file', file);
+    expect(r.exitCode, r.stderr).toBe(0);
+    expect(
+      (JSON.parse(r.stdout).files as Array<{ project: string; path: string }>).map(
+        (f) => `${f.project}:${f.path}`,
+      ),
+    ).toEqual(['shop-admin:features/admin/surfaces.feature']);
+  }, 60_000);
+
   it('exits 2 on an invalid matrix file and does not rewrite features', async () => {
     const { ws, feature } = workspace();
     writeFileSync(
