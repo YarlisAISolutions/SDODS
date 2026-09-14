@@ -115,6 +115,7 @@ for a in "$@"; do
 done
 printf '%s\\n' "$@" > "\${summary%/*}/fake-k6-args.txt"
 printf 'API_TOKEN=%s\\nTENANT_ID=%s\\nPAGE_SIZE=%s\\n' "$API_TOKEN" "$TENANT_ID" "$PAGE_SIZE" > "\${summary%/*}/fake-k6-env.txt"
+printf 'K6_VUS=%s\\nK6_STAGES=%s\\nK6_OUT=%s\\n' "$K6_VUS" "$K6_STAGES" "$K6_OUT" > "\${summary%/*}/fake-k6-k6vars.txt"
 printf '{"metrics":{"http_reqs":{"count":42,"rate":4.2},"http_req_duration":{"avg":80,"p(95)":123.4},"http_req_failed":{"passes":0,"fails":42,"value":0},"checks":{"passes":41,"fails":1,"value":0.976}}}' > "$summary"
 exit "\${FAKE_K6_EXIT:-0}"
 `,
@@ -170,7 +171,11 @@ describe('load profile schema', () => {
 
   it('env load block is optional and defaults to the safe side', () => {
     expect(env().load).toBeUndefined();
-    expect(env({ load: { allowed: true } }).load).toEqual({ allowed: true, allowWrites: false });
+    expect(env({ load: { allowed: true } }).load).toEqual({
+      allowed: true,
+      allowWrites: false,
+      allowBaseUrlOverride: false,
+    });
   });
 });
 
@@ -269,6 +274,52 @@ describe('opt-in guard', () => {
     expect(existsSync(join(root, 'out'))).toBe(false);
   });
 
+  it.skipIf(process.platform === 'win32')(
+    'refuses SDODS_API_BASE_URL pointing away from the environment that opted in',
+    async () => {
+      const PROD = 'https://api.production.example.com';
+      const { root, proj } = scaffold({ envLoad: OPTED_IN });
+      const load = (processEnv: NodeJS.ProcessEnv, dryRun = false) =>
+        runLoad({
+          rootDir: root,
+          projectRoot: proj,
+          profile: 'browse',
+          outDir: join(root, dryRun ? 'dry' : 'out'),
+          dryRun,
+          processEnv: { ...VARS, PATH: fakeK6(), ...processEnv },
+          stdio: 'pipe',
+        });
+
+      const err = await load({ SDODS_API_BASE_URL: PROD }).catch(
+        (e: unknown) => e as { code: string; message: string; hint: string },
+      );
+      expect(err).toMatchObject({ code: 'CONFIG_INVALID' });
+      expect(err.message).toContain(
+        `SDODS_API_BASE_URL (${PROD}) is not the api.baseUrl of "perf" (https://api.perf.example.com)`,
+      );
+      expect(err.hint).toContain('load.allowBaseUrlOverride: true');
+      expect(existsSync(join(root, 'out'))).toBe(false);
+
+      const dry = await load({ SDODS_API_BASE_URL: PROD }, true);
+      expect(dry.guardProblems).toEqual([expect.stringContaining('SDODS_API_BASE_URL')]);
+
+      // The same host as the env file, trailing slash aside, is not an override.
+      const same = await load({ SDODS_API_BASE_URL: 'https://api.perf.example.com/' }, true);
+      expect(same.guardProblems).toEqual([]);
+
+      // An environment may opt in to being pointed elsewhere.
+      writeFileSync(
+        join(proj, 'envs', 'perf.yaml'),
+        readFileSync(join(proj, 'envs', 'perf.yaml'), 'utf8').replace(
+          'allowWrites: true',
+          'allowWrites: true, allowBaseUrlOverride: true',
+        ),
+      );
+      const allowed = await load({ SDODS_API_BASE_URL: PROD });
+      expect(allowed).toMatchObject({ exitCode: 0, target: PROD, guardProblems: [] });
+    },
+  );
+
   it('--dry-run writes the script, reports the guard, and never inlines secrets', async () => {
     const { root, proj } = scaffold({ dotenv: `API_TOKEN=${SECRET}\n` });
     const lines: string[] = [];
@@ -323,6 +374,35 @@ describe('running k6', () => {
     expect(err).toMatchObject({ code: 'CONFIG_UNRESOLVED_VAR' });
     expect(err.message).toContain('${OWNER_ID}');
   });
+
+  it.skipIf(process.platform === 'win32')(
+    'strips K6_* variables from k6’s environment, so they cannot override the profile or maxVus',
+    async () => {
+      const { root, proj } = scaffold({ envLoad: OPTED_IN });
+      const lines: string[] = [];
+      const res = await runLoad({
+        rootDir: root,
+        projectRoot: proj,
+        profile: 'browse',
+        processEnv: {
+          ...VARS,
+          PATH: fakeK6(),
+          K6_VUS: '5000',
+          K6_STAGES: '10s:5000',
+          K6_OUT: 'json=out.json',
+        },
+        stdio: 'pipe',
+        log: (l) => lines.push(l),
+      });
+      expect(res.exitCode).toBe(0);
+      expect(readFileSync(join(res.outDir, 'fake-k6-k6vars.txt'), 'utf8')).toBe(
+        'K6_VUS=\nK6_STAGES=\nK6_OUT=\n',
+      );
+      expect(lines).toContain(
+        'warning: not passing K6_OUT, K6_STAGES, K6_VUS to k6: k6 reads K6_* variables as options that override the profile and load.maxVus',
+      );
+    },
+  );
 
   it('maps k6 exit codes: 0 passes, 99 (thresholds) and anything else fail with 1', () => {
     expect(mapK6ExitCode(0)).toEqual({ exitCode: 0, thresholdsFailed: false });

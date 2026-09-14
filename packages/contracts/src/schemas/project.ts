@@ -277,6 +277,16 @@ export const PerfBudgetsSchema = z.object({
   apiP95Ms: z.number().positive().optional(),
 });
 
+/** Branch names `integrations.github.evidence.branch` refuses: prune force-rewrites the branch. */
+export const EVIDENCE_PROTECTED_BRANCHES = [
+  'main',
+  'master',
+  'develop',
+  'development',
+  'trunk',
+  'gh-pages',
+];
+
 export const GitHubIntegrationSchema = z.object({
   enabled: z.boolean().default(false),
   owner: z.string().optional(),
@@ -300,7 +310,17 @@ export const GitHubIntegrationSchema = z.object({
         .string()
         .regex(/^[\w.-]+\/[\w.-]+$/, 'must be owner/name')
         .optional(),
-      branch: z.string().min(1).default('sdods-evidence'),
+      /**
+       * An orphan branch SDODS creates and `evidence prune` rewrites. The names people work on are
+       * refused here; the repository's default branch is refused at upload and prune time.
+       */
+      branch: z
+        .string()
+        .min(1)
+        .refine((b) => !EVIDENCE_PROTECTED_BRANCHES.includes(b.toLowerCase()), {
+          message: `must not be ${EVIDENCE_PROTECTED_BRANCHES.join(', ')}: the evidence branch is rewritten by evidence prune, which would erase that branch's history`,
+        })
+        .default('sdods-evidence'),
       /** env var NAME of a token for the evidence repo; default: `tokenEnv` */
       tokenEnv: z.string().optional(),
       maxFileBytes: z

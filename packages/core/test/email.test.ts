@@ -118,7 +118,10 @@ beforeAll(async () => {
       const one = /^\/api\/v1\/message\/([^/]+)$/.exec(u.pathname);
       if (req.method === 'GET' && one) {
         const m = messages.find((x) => x.ID === decodeURIComponent(one[1]!));
-        return m ? send(200, m) : send(404, {});
+        if (!m) return send(404, {});
+        // Mailpit's full Message has `Date` and no `Created`; only MessageSummary (search) has `Created`.
+        const { Created, ...rest } = m;
+        return send(200, { ...rest, Date: Created });
       }
       if (req.method === 'DELETE' && u.pathname === '/api/v1/messages') {
         const ids: string[] = JSON.parse(body || '{}').IDs ?? [];
@@ -233,6 +236,7 @@ describe('MailpitInbox', () => {
   it('gets a whole message with text and html', async () => {
     const m = deliver({ to: 'a@x.test', subject: 'Hi', Text: 'plain', HTML: '<p>rich</p>' });
     const got = await new MailpitInbox({ url }).get(m.ID);
+    expect(got.receivedAt.toISOString()).toBe(m.Created);
     expect(got).toMatchObject({
       id: m.ID,
       subject: 'Hi',

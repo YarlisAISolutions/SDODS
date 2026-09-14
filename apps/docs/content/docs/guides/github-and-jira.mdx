@@ -129,7 +129,7 @@ integrations:
 
 How it works:
 
-- **Branch.** The branch is an orphan (its first commit holds only a README) and is created on the first upload through the GitHub API; nothing is cloned. Do not base work on it.
+- **Branch.** The branch is an orphan (its first commit holds only a README) and is created on the first upload through the GitHub API; nothing is cloned. Do not base work on it. `evidence.branch` must be a branch of its own: `main`, `master`, `develop`, `development`, `trunk` and `gh-pages` are rejected in the project file, and uploads, prune and `sdods integrations test` refuse the repository's default branch, whatever its name.
 - **Layout.** Files go under `runs/<runId>/<scenario>-<fingerprint>/`, and `runs/index.json` records when each run was uploaded.
 - **One commit per run.** The files of every issue a run creates go up in a single commit on top of the current head, and the ref moves only as a fast-forward. When another job moves the branch first, GitHub rejects the update (HTTP 422). SDODS rebuilds the commit on the new head and retries up to 5 times with backoff. If it still cannot, it logs a warning and the issue uses the links from the list above.
 - **Size caps.** Screenshots are taken first, then GIF previews, then videos. A file over `maxFileBytes`, or one that would take the run past `maxRunBytes`, is not uploaded. The issue lists it under **Evidence not uploaded** with the reason and links it the old way.
@@ -151,7 +151,7 @@ sdods integrations evidence prune -p demo-shop --older-than 14d --dry-run
 sdods integrations evidence prune -p demo-shop
 ```
 
-Run it on a schedule, for example weekly. Kept runs keep their paths, so their links keep working. Images in issues about pruned runs stop rendering. GitHub garbage-collects the dropped objects on its own schedule, so the repository does not shrink right away. Run directories missing from `runs/index.json` are kept, because their age is unknown. Just before the force update, prune checks whether the branch moved and, if so, starts over on the new head. A force update cannot be made conditional, though, so a run pushed in the moment between that check and the update is lost. Run prune when no CI job is uploading. Uploads log a reminder when the branch holds runs older than `retainDays`.
+Run it on a schedule, for example weekly. Kept runs keep their paths, so their links keep working. Images in issues about pruned runs stop rendering. GitHub garbage-collects the dropped objects on its own schedule, so the repository does not shrink right away. Prune refuses a branch that SDODS did not create, recognised by the `# SDODS evidence` README its first commit writes, so pointing `evidence.branch` at an existing branch can never erase that branch's history. Run directories missing from `runs/index.json` are kept, because their age is unknown. Just before the force update, prune checks whether the branch moved and, if so, starts over on the new head. A force update cannot be made conditional, though, so a run pushed in the moment between that check and the update is lost. Run prune when no CI job is uploading. Uploads log a reminder when the branch holds runs older than `retainDays`.
 
 ## Link scenarios to issues
 

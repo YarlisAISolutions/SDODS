@@ -38,11 +38,13 @@ matrices:
 | `roles`           | the actors, in the order their Examples blocks are written; each must be declared under `tags.roles`              |
 | `default`         | outcome for a role that a row's `expect` map does not name                                                        |
 | `outcomes`        | when set, every resolved outcome must be one of these                                                             |
-| `title`           | the `# title-format:` of each generated block; placeholders are `<role>`, `<expect>` and the row columns          |
+| `title`           | the `# title-format:` of each generated block; must use `<role>` and every row column, may use `<expect>`         |
 | `description`     | free text                                                                                                         |
 | `rows[].expect`   | one outcome for every role, or a `role: outcome` map                                                              |
 | `rows[].default`  | outcome for the roles this row's map leaves out                                                                   |
 | `rows[].<column>` | any other key is an Examples column (`surface` → `<surface>`); every row has the same columns; `role` is reserved |
+
+Playwright refuses to load two tests with the same title, so a custom `title` must name `<role>` and every row column: rows are unique by their columns, so that makes every generated title unique. `'<surface> → <expect>'` is refused, because two roles that share an outcome would get the same title. Separate adjacent placeholders too; a title that still renders the same text twice is an error.
 
 An outcome resolves as `rows[].expect[role]` → `rows[].default` → `default`; a role left without one is an error. Duplicate rows, unknown roles in an `expect` map and rows with different columns are errors too.
 
@@ -96,7 +98,8 @@ The outline gains one block per role, between markers:
 Each row becomes one test titled from `title` (`owner opens /settings/billing → allowed`) and tagged `@user:owner`, so the pool leases an owner account and the cached storage state logs it in, exactly as for a hand-written `@user:owner` scenario. `-t "@matrix:admin-surfaces and @user:viewer"` runs one role's column.
 
 - Re-running with an unchanged matrix changes nothing.
-- Only the lines between the markers are rewritten. Hand-written `Examples:` blocks in the same outline are kept, and their columns count as available placeholders.
+- Only the lines between the markers are rewritten. Hand-written `Examples:` blocks in the same outline are kept.
+- Gherkin fills a placeholder only from the `Examples:` block its row is in, so each block is checked on its own (`matrix/placeholder`): the generated blocks supply only `<role>`, `<expect>` and the matrix columns, and a hand-written block must have a column for every placeholder the outline uses. A column that only a hand-written block has would stay a literal `<column>` in every generated row.
 - Removing the `@matrix:` tag and expanding again removes the generated block.
 - The generated rows are committed like any other Gherkin, so reviews show the grid that will run.
 

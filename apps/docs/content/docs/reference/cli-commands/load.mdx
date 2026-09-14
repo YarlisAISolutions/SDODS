@@ -26,6 +26,9 @@ Before anything runs it checks the environment:
 - `load.allowed: true` must be set in `envs/<env>.yaml`, otherwise the run is refused.
 - `load.maxVus`, when set, caps the profile's peak virtual users.
 - Profiles that send `POST`, `PUT`, `PATCH` or `DELETE` need `load.allowWrites: true`.
+- `SDODS_API_BASE_URL`, when set to a URL other than `api.baseUrl`, is refused unless the environment sets `load.allowBaseUrlOverride: true`.
+
+No `K6_*` environment variable is passed to k6: k6 reads them (`K6_VUS`, `K6_STAGES`, `K6_DURATION` and so on) as options that would override the profile and `load.maxVus`. The run prints a warning naming any it left out.
 
 Authentication comes from the environment's `api.auth` and `api.headers`. `${VAR}` references become `__ENV.VAR` lookups in the script, so secret values are never written to `script.js`; k6 receives them through its process environment (with `--runner docker`, as `-e NAME` without a value). A variable with no default that is unset stops the run before k6 starts.
 
