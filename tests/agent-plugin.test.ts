@@ -58,7 +58,12 @@ describe('agent plugin repository', () => {
       expect(nameOf(text)).toBe(n);
       expect(text).toMatch(/^description: .{20,}$/m);
       expect(text).not.toMatch(/npx (-y )?sdods\b/);
+      // `npx skills add` also reads marketplace.json; hidden, the plugin's copies do not appear
+      // next to the portable skills in skills/.
+      expect(text).toMatch(/^---\r?\n[\s\S]*?^metadata:\r?\n {2}internal: true\r?\n---/m);
     }
+    for (const s of readdirSync(join(out, 'skills')))
+      expect(read(out, `skills/${s}/SKILL.md`)).not.toContain('internal: true');
   });
 
   it('turns every SDODS role into a subagent limited to read tools and the plugin MCP server', () => {

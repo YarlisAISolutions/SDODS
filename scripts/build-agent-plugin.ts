@@ -59,6 +59,15 @@ function withName(text: string, name: string): string {
   return text.replace(/^---\r?\n/, `---\nname: ${name}\n`);
 }
 
+/**
+ * `npx skills add` also reads skills declared by `.claude-plugin/marketplace.json`, which would list
+ * the plugin's copies (and its Claude-only commands) next to the portable ones in skills/. Marked
+ * internal, they stay out of its normal discovery; Claude Code ignores the metadata.
+ */
+function markInternal(text: string): string {
+  return text.replace(/^(---\r?\n[\s\S]*?)(\r?\n---)/, `$1\nmetadata:\n  internal: true$2`);
+}
+
 function write(file: string, content: string) {
   mkdirSync(dirname(file), { recursive: true });
   writeFileSync(file, content);
@@ -148,7 +157,7 @@ export function buildAgentPlugin(o: BuildOptions): string[] {
   for (const name of bundled) {
     const short = PLUGIN_SKILL_NAMES[name] ?? name;
     const text = readFileSync(join(skillsSrc, name, 'SKILL.md'), 'utf8');
-    put(`${p}/skills/${short}/SKILL.md`, renameSkill(text, short));
+    put(`${p}/skills/${short}/SKILL.md`, markInternal(renameSkill(text, short)));
   }
   const commandsDir = join(repoRoot, 'plugin/commands');
   for (const file of readdirSync(commandsDir)
@@ -159,7 +168,7 @@ export function buildAgentPlugin(o: BuildOptions): string[] {
       throw new Error(`plugin/commands/${file} collides with a bundled skill named ${name}`);
     put(
       `${p}/skills/${name}/SKILL.md`,
-      withName(readFileSync(join(commandsDir, file), 'utf8'), name),
+      markInternal(withName(readFileSync(join(commandsDir, file), 'utf8'), name)),
     );
   }
 
