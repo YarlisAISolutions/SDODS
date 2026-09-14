@@ -1,14 +1,18 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { notFound } from 'next/navigation';
 import { DOCS_URL, FEEDBACK_EMAIL } from '@/lib/links';
+import { SPONSOR_ENABLED } from '@/lib/sponsor';
 
 // Stripe Checkout redirects here after a payment. It says nothing a search engine should index.
+// While sponsorship is off the page is a 404 and keeps its title out of the tab.
 export const metadata: Metadata = {
-  title: 'Thank you for sponsoring SDODS',
+  ...(SPONSOR_ENABLED && { title: 'Thank you for sponsoring SDODS' }),
   robots: { index: false, follow: true },
 };
 
 export default function SponsorThanksPage() {
+  if (!SPONSOR_ENABLED) notFound();
   return (
     <div className="mx-auto max-w-2xl px-4 py-20 text-center">
       <p className="text-5xl" aria-hidden="true">

@@ -12,6 +12,7 @@
     "screenshots": "node --import tsx scripts/screenshots.ts"
   },
   "dependencies": {
+    "@sdods/contracts": "workspace:*",
     "@sdods/qa-archive": "workspace:*",
     "@sdods/roadmap": "workspace:*",
     "@sdods/site-kit": "workspace:*",

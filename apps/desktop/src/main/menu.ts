@@ -7,6 +7,10 @@ import { app, Menu, clipboard, dialog, shell, type MenuItemConstructorOptions } 
 import { logsDir } from './paths.js';
 import type { Credentials } from './auth.js';
 
+// A copy of SPONSOR_ENABLED in @sdods/contracts/sponsor, which the desktop app does not bundle;
+// tests/sponsor.test.ts keeps the two in step.
+const SPONSOR_ENABLED = false;
+
 export interface MenuContext {
   workspace: string;
   serverUrl: string;
@@ -56,11 +60,15 @@ export function buildMenu(ctx: MenuContext): void {
         label: 'Open Logs Folder',
         click: () => void shell.openPath(logsDir()),
       },
-      { type: 'separator' },
-      {
-        label: 'Sponsor SDODS…',
-        click: () => void shell.openExternal('https://sdods.com/sponsor/'),
-      },
+      ...(SPONSOR_ENABLED
+        ? ([
+            { type: 'separator' },
+            {
+              label: 'Sponsor SDODS…',
+              click: () => void shell.openExternal('https://sdods.com/sponsor/'),
+            },
+          ] satisfies MenuItemConstructorOptions[])
+        : []),
       { type: 'separator' },
       { role: 'quit' },
     ],

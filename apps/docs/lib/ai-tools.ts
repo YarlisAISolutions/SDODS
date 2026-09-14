@@ -1,3 +1,4 @@
+import { SPONSOR_ENABLED, SPONSOR_URL } from '@sdods/contracts/sponsor';
 import type { AgentProject, SupportLinks } from '@sdods/site-kit';
 import { withBase } from './base-path';
 import { REPO_PUBLIC } from './links';
@@ -15,9 +16,12 @@ export const SDODS_AGENT_PROJECT: AgentProject = {
 export const AI_TOOLS_GUIDE_PATH = '/docs/guides/ai-coding-tools/';
 export const AI_TOOLS_GUIDE_HREF = withBase(AI_TOOLS_GUIDE_PATH);
 
-/** Unset links render nothing; NEXT_PUBLIC_SPONSOR_URL is set at build time once the page is live. */
+/**
+ * Unset links render nothing, so the support prompt stays hidden while SPONSOR_ENABLED is off.
+ * The sponsor page itself lives on sdods.com, which also waits for its Stripe links.
+ */
 export const SUPPORT_LINKS: SupportLinks = {
-  'sponsor-page': process.env.NEXT_PUBLIC_SPONSOR_URL,
+  'sponsor-page': SPONSOR_ENABLED ? SPONSOR_URL : undefined,
 };
 
 export const SUPPORT_PROJECT = {

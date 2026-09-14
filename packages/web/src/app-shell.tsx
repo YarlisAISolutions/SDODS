@@ -1,4 +1,5 @@
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router';
+import { SPONSOR_ENABLED, SPONSOR_URL } from '@sdods/contracts/sponsor';
 import { SdodsLockup } from './components/sdods-mark';
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from './auth/AuthContext';
@@ -187,15 +188,17 @@ function Shell() {
             >
               Send feedback ↗
             </a>
-            <a
-              href="https://sdods.com/sponsor/"
-              target="_blank"
-              rel="noreferrer"
-              data-testid="sponsor-link"
-              className="block rounded px-2 py-1 text-sm muted hover:underline"
-            >
-              Sponsor SDODS ♥ ↗
-            </a>
+            {SPONSOR_ENABLED && (
+              <a
+                href={SPONSOR_URL}
+                target="_blank"
+                rel="noreferrer"
+                data-testid="sponsor-link"
+                className="block rounded px-2 py-1 text-sm muted hover:underline"
+              >
+                Sponsor SDODS ♥ ↗
+              </a>
+            )}
           </div>
         </nav>
         <div className="flex items-center justify-between border-t border-line px-3 py-2 text-xs">
