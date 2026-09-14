@@ -12,8 +12,9 @@
  *   plugins/sdods/hooks/                   plugin/hooks
  *
  * Usage: bun run plugin:build [--out <dir>] [--sponsor-url <https url>]
- * The default output is dist/sdods-skills. Copy it over a checkout of the public repository and
- * commit; see apps/docs/content/docs/guides/ai-coding-tools.mdx for what users run.
+ * The default output is dist/sdods-skills. After each release, publish it with
+ * scripts/push-agent-plugin.mjs; see apps/docs/content/docs/guides/ai-coding-tools.mdx for what
+ * users run.
  */
 import {
   cpSync,
@@ -57,6 +58,15 @@ function renameSkill(text: string, name: string): string {
 function withName(text: string, name: string): string {
   if (/^---\r?\n[\s\S]*?^name:/m.test(text)) return renameSkill(text, name);
   return text.replace(/^---\r?\n/, `---\nname: ${name}\n`);
+}
+
+/**
+ * `npx skills add` also reads skills declared by `.claude-plugin/marketplace.json`, which would list
+ * the plugin's copies (and its Claude-only commands) next to the portable ones in skills/. Marked
+ * internal, they stay out of its normal discovery; Claude Code ignores the metadata.
+ */
+function markInternal(text: string): string {
+  return text.replace(/^(---\r?\n[\s\S]*?)(\r?\n---)/, `$1\nmetadata:\n  internal: true$2`);
 }
 
 function write(file: string, content: string) {
@@ -148,7 +158,7 @@ export function buildAgentPlugin(o: BuildOptions): string[] {
   for (const name of bundled) {
     const short = PLUGIN_SKILL_NAMES[name] ?? name;
     const text = readFileSync(join(skillsSrc, name, 'SKILL.md'), 'utf8');
-    put(`${p}/skills/${short}/SKILL.md`, renameSkill(text, short));
+    put(`${p}/skills/${short}/SKILL.md`, markInternal(renameSkill(text, short)));
   }
   const commandsDir = join(repoRoot, 'plugin/commands');
   for (const file of readdirSync(commandsDir)
@@ -159,7 +169,7 @@ export function buildAgentPlugin(o: BuildOptions): string[] {
       throw new Error(`plugin/commands/${file} collides with a bundled skill named ${name}`);
     put(
       `${p}/skills/${name}/SKILL.md`,
-      withName(readFileSync(join(commandsDir, file), 'utf8'), name),
+      markInternal(withName(readFileSync(join(commandsDir, file), 'utf8'), name)),
     );
   }
 
