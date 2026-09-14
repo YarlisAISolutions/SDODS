@@ -26,9 +26,12 @@ load:
   allowed: true # without this, sdods load refuses to run
   maxVus: 50 # refuse profiles that go higher
   allowWrites: false # refuse POST, PUT, PATCH and DELETE
+  allowBaseUrlOverride: false # refuse SDODS_API_BASE_URL pointing at another host
 ```
 
 Add the environment to `envs.available` in `sdods.project.yaml` like any other.
+
+The opt-in belongs to this file, so the load goes to its `api.baseUrl`. When `SDODS_API_BASE_URL` is set to a different URL (a leftover from a functional run, say), `sdods load` refuses to run and `--dry-run` reports it. Set `allowBaseUrlOverride: true` only for an environment whose URL is meant to change per run, such as a preview deployment.
 
 ## 2. Write a profile
 

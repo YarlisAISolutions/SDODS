@@ -170,7 +170,11 @@ describe('load profile schema', () => {
 
   it('env load block is optional and defaults to the safe side', () => {
     expect(env().load).toBeUndefined();
-    expect(env({ load: { allowed: true } }).load).toEqual({ allowed: true, allowWrites: false });
+    expect(env({ load: { allowed: true } }).load).toEqual({
+      allowed: true,
+      allowWrites: false,
+      allowBaseUrlOverride: false,
+    });
   });
 });
 
@@ -268,6 +272,52 @@ describe('opt-in guard', () => {
     expect(err.hint).toContain('load: { allowed: true');
     expect(existsSync(join(root, 'out'))).toBe(false);
   });
+
+  it.skipIf(process.platform === 'win32')(
+    'refuses SDODS_API_BASE_URL pointing away from the environment that opted in',
+    async () => {
+      const PROD = 'https://api.production.example.com';
+      const { root, proj } = scaffold({ envLoad: OPTED_IN });
+      const load = (processEnv: NodeJS.ProcessEnv, dryRun = false) =>
+        runLoad({
+          rootDir: root,
+          projectRoot: proj,
+          profile: 'browse',
+          outDir: join(root, dryRun ? 'dry' : 'out'),
+          dryRun,
+          processEnv: { ...VARS, PATH: fakeK6(), ...processEnv },
+          stdio: 'pipe',
+        });
+
+      const err = await load({ SDODS_API_BASE_URL: PROD }).catch(
+        (e: unknown) => e as { code: string; message: string; hint: string },
+      );
+      expect(err).toMatchObject({ code: 'CONFIG_INVALID' });
+      expect(err.message).toContain(
+        `SDODS_API_BASE_URL (${PROD}) is not the api.baseUrl of "perf" (https://api.perf.example.com)`,
+      );
+      expect(err.hint).toContain('load.allowBaseUrlOverride: true');
+      expect(existsSync(join(root, 'out'))).toBe(false);
+
+      const dry = await load({ SDODS_API_BASE_URL: PROD }, true);
+      expect(dry.guardProblems).toEqual([expect.stringContaining('SDODS_API_BASE_URL')]);
+
+      // The same host as the env file, trailing slash aside, is not an override.
+      const same = await load({ SDODS_API_BASE_URL: 'https://api.perf.example.com/' }, true);
+      expect(same.guardProblems).toEqual([]);
+
+      // An environment may opt in to being pointed elsewhere.
+      writeFileSync(
+        join(proj, 'envs', 'perf.yaml'),
+        readFileSync(join(proj, 'envs', 'perf.yaml'), 'utf8').replace(
+          'allowWrites: true',
+          'allowWrites: true, allowBaseUrlOverride: true',
+        ),
+      );
+      const allowed = await load({ SDODS_API_BASE_URL: PROD });
+      expect(allowed).toMatchObject({ exitCode: 0, target: PROD, guardProblems: [] });
+    },
+  );
 
   it('--dry-run writes the script, reports the guard, and never inlines secrets', async () => {
     const { root, proj } = scaffold({ dotenv: `API_TOKEN=${SECRET}\n` });

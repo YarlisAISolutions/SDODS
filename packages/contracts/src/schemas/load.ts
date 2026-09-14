@@ -12,6 +12,11 @@ export const EnvLoadSchema = z.object({
   maxVus: z.number().int().positive().optional(),
   /** Allow POST, PUT, PATCH and DELETE requests; read-only profiles need nothing. */
   allowWrites: z.boolean().default(false),
+  /**
+   * Let `SDODS_API_BASE_URL` send the load somewhere other than this file's `api.baseUrl`. Off by
+   * default: the opt-in is for this environment, and a stray override would load another host.
+   */
+  allowBaseUrlOverride: z.boolean().default(false),
 });
 
 /** k6 duration: `30s`, `1m30s`, `500ms`, `2h`. */

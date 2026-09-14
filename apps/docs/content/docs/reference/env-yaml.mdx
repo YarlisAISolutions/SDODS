@@ -72,6 +72,12 @@ description: Field reference for environment files.
       default: 'false',
       description: 'Allow load profiles that send POST, PUT, PATCH or DELETE requests.',
     },
+    'load.allowBaseUrlOverride': {
+      type: 'boolean',
+      default: 'false',
+      description:
+        'Let `SDODS_API_BASE_URL` point `sdods load` at a URL other than `api.baseUrl`. Without it a differing override is refused.',
+    },
   }}
 />
 
