@@ -48,6 +48,8 @@ $RepoSlug = 'siri1410/SDODS'
 $RepoUrl = if ($env:SDODS_REPO_URL) { $env:SDODS_REPO_URL } else { "https://github.com/$RepoSlug.git" }
 $ApiUrl = "https://api.github.com/repos/$RepoSlug"
 $DocsUrl = 'https://docs.sdods.com'
+# Mirrors SPONSOR_ENABLED in packages/contracts/src/sponsor.ts (tests/sponsor.test.ts checks it).
+$SponsorEnabled = $false
 $NodeMinMajor = 22
 $BunVersionPin = '1.4.0'
 $InstallerVersion = '1.0.0'
@@ -533,7 +535,7 @@ function Show-NextSteps {
   Say "  Check the setup     sdods doctor"
   Say "  Docs                $DocsUrl"
   Say "  Request a feature   sdods feedback --feature"
-  Say "  Sponsor SDODS       https://sdods.com/sponsor/"
+  if ($SponsorEnabled) { Say "  Sponsor SDODS       https://sdods.com/sponsor/" }
   Say ''
 }
 

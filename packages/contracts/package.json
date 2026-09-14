@@ -9,6 +9,7 @@
     "./ids": "./src/ids.ts",
     "./names": "./src/names.ts",
     "./scopes": "./src/scopes.ts",
+    "./sponsor": "./src/sponsor.ts",
     "./schemas": "./src/schemas/index.ts",
     "./types": "./src/types.ts"
   },
@@ -18,6 +19,7 @@
       "./ids": "./dist/ids.js",
       "./names": "./dist/names.js",
       "./scopes": "./dist/scopes.js",
+      "./sponsor": "./dist/sponsor.js",
       "./schemas": "./dist/schemas/index.js",
       "./types": "./dist/types.js"
     },

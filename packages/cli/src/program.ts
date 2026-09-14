@@ -1,5 +1,6 @@
 import { Command } from 'commander';
 import { VERSION } from '@sdods/core';
+import { SPONSOR_ENABLED, SPONSOR_URL } from '@sdods/contracts/sponsor';
 import { registerProjectCommands } from './commands/project.js';
 import { registerEnvCommands } from './commands/env.js';
 import { registerConfigCommands } from './commands/config.js';
@@ -56,7 +57,10 @@ export function buildProgram(): Command {
     .showSuggestionAfterError()
     .configureHelp({ sortSubcommands: true })
     // Root help only: 'after' is not inherited by subcommands.
-    .addHelpText('after', '\nDocs: https://docs.sdods.com  ·  Sponsor: https://sdods.com/sponsor/');
+    .addHelpText(
+      'after',
+      `\nDocs: https://docs.sdods.com${SPONSOR_ENABLED ? `  ·  Sponsor: ${SPONSOR_URL}` : ''}`,
+    );
 
   registerProjectCommands(program);
   registerEnvCommands(program);

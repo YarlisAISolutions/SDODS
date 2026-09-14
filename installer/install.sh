@@ -23,6 +23,8 @@ SDODS_REPO_URL="${SDODS_REPO_URL:-https://github.com/${SDODS_REPO_SLUG}.git}"
 SDODS_API_URL="${SDODS_API_URL:-https://api.github.com/repos/${SDODS_REPO_SLUG}}"
 SITE_URL='https://sdods.com'
 DOCS_URL='https://docs.sdods.com'
+# Mirrors SPONSOR_ENABLED in packages/contracts/src/sponsor.ts (tests/sponsor.test.ts checks it).
+SPONSOR_ENABLED=0
 NODE_MIN_MAJOR=22
 BUN_VERSION_PIN='1.4.0'
 INSTALLER_VERSION='1.0.0'
@@ -823,7 +825,9 @@ next_steps() {
   say "  ${C_BOLD}Check the setup${C_RESET}     sdods doctor"
   say "  ${C_BOLD}Docs${C_RESET}                ${DOCS_URL}"
   say "  ${C_BOLD}Request a feature${C_RESET}   sdods feedback --feature"
-  say "  ${C_BOLD}Sponsor SDODS${C_RESET}       ${SITE_URL}/sponsor/"
+  if [ "$SPONSOR_ENABLED" = 1 ]; then
+    say "  ${C_BOLD}Sponsor SDODS${C_RESET}       ${SITE_URL}/sponsor/"
+  fi
   say ''
 }
 

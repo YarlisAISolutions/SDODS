@@ -14,6 +14,7 @@
     "postinstall": "fumadocs-mdx"
   },
   "dependencies": {
+    "@sdods/contracts": "workspace:*",
     "@sdods/roadmap": "workspace:*",
     "@sdods/site-kit": "workspace:*",
     "firebase": "^12.18.0",
