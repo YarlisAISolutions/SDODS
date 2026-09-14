@@ -84,3 +84,14 @@
     break-inside: avoid;
   }
 }
+
+/* @sdods/site-kit reads these; the fumadocs palette already switches with .dark. */
+:root {
+  --sk-fg: var(--color-fd-foreground);
+  --sk-muted: var(--color-fd-muted-foreground);
+  --sk-card: var(--color-fd-card);
+  --sk-line: var(--color-fd-border);
+  --sk-accent: var(--color-fd-primary);
+  --sk-code-bg: var(--color-fd-muted);
+  --sk-hover-bg: var(--color-fd-accent);
+}

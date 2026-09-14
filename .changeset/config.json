@@ -14,6 +14,7 @@
     "@sdods/www",
     "@sdods/roadmap",
     "@sdods/desktop",
-    "@sdods/qa-archive"
+    "@sdods/qa-archive",
+    "@sdods/site-kit"
   ]
 }

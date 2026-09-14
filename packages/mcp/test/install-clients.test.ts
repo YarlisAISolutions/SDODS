@@ -57,6 +57,6 @@ describe('MCP install snippets per client', () => {
     const r = installClientConfig(root, 'gemini', { httpUrl: 'https://h/mcp' });
     expect(r.file).toBe(join(root, '.gemini', 'settings.json'));
     expect(JSON.parse(readFileSync(r.file, 'utf8')).mcpServers.sdods.httpUrl).toBe('https://h/mcp');
-    expect(snippets({}).gemini.cli).toBe('gemini mcp add sdods npx -y @sdods/cli mcp');
+    expect(snippets({}).gemini.cli).toBe('gemini mcp add sdods npx -- -y @sdods/cli mcp');
   });
 });

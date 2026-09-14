@@ -80,9 +80,10 @@ export function cliCommands(o: SnippetOptions): { claude: string; codex: string;
     codex: o.httpUrl
       ? `codex mcp add sdods --url ${o.httpUrl} --bearer-token-env-var SDODS_TOKEN`
       : `codex mcp add sdods -- ${stdio}`,
+    // gemini parses dashed arguments as its own flags unless they follow `--`
     gemini: o.httpUrl
-      ? `gemini mcp add --transport http sdods ${o.httpUrl} --header "Authorization: Bearer ${token}"`
-      : `gemini mcp add sdods ${stdio}`,
+      ? `gemini mcp add --transport http --header "Authorization: Bearer ${token}" sdods ${o.httpUrl}`
+      : `gemini mcp add sdods ${o.command ?? 'npx'} -- ${stdioArgs(o).join(' ')}`,
   };
 }
 

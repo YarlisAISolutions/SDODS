@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+/* global process */
 // SessionStart hook for the SDODS Claude Code plugin.
 //
 // Prints a short orientation when the session opens inside an SDODS workspace, so Claude knows the

@@ -2,6 +2,7 @@ import { RootProvider } from 'fumadocs-ui/provider/next';
 import type { Metadata } from 'next';
 import type { ReactNode } from 'react';
 import { basePath, siteUrl, withBase } from '@/lib/base-path';
+import '@sdods/site-kit/styles.css';
 import './global.css';
 
 export const metadata: Metadata = {

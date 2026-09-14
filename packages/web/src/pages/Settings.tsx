@@ -300,7 +300,7 @@ function McpTab() {
     },
     {
       label: 'Gemini CLI (remote)',
-      code: `gemini mcp add --transport http sdods ${url} --header "Authorization: Bearer ${token}"`,
+      code: `gemini mcp add --transport http --header "Authorization: Bearer ${token}" sdods ${url}`,
     },
     {
       label: 'Claude Code (local stdio)',

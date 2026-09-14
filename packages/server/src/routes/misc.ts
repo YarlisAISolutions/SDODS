@@ -43,7 +43,7 @@ export async function miscRoutes(app: FastifyInstance) {
       snippets: {
         claudeCode: `claude mcp add --transport http sdods ${base}/mcp --header "Authorization: Bearer <token>"`,
         codex: `codex mcp add sdods --url ${base}/mcp --bearer-token-env-var SDODS_TOKEN`,
-        gemini: `gemini mcp add --transport http sdods ${base}/mcp --header "Authorization: Bearer <token>"`,
+        gemini: `gemini mcp add --transport http --header "Authorization: Bearer <token>" sdods ${base}/mcp`,
         json: {
           mcpServers: {
             sdods: {

@@ -1,0 +1,426 @@
+---
+title: Connect AI coding tools
+description: Add SDODS to Claude Code, Codex, Cursor, VS Code, Gemini CLI, Windsurf and any MCP client — as a plugin, as skills, as a local MCP server or through your team's endpoint.
+---
+
+<Learn>
+  The four ways to give an AI coding agent SDODS — plugin, skills, local MCP server, shared endpoint
+  — the exact configuration for each popular client, and how to check it works.
+</Learn>
+
+<AgentInstall learnMore={false} />
+
+## Choose how
+
+| Option             | What the agent gets                                                                                        | Needs                             |
+| ------------------ | ---------------------------------------------------------------------------------------------------------- | --------------------------------- |
+| Claude Code plugin | skills, slash commands, the five SDODS subagents, the MCP server and a session hook, in one install        | Claude Code                       |
+| Skills             | how to work in an SDODS workspace: tags, step reuse, locators, the commands to run and how to read results | any agent that reads Agent Skills |
+| Local MCP server   | the SDODS tools — projects, features, steps, runs, results, healing, browser — against your workspace      | Node 22 and `npx`                 |
+| Dedicated endpoint | the same tools from one shared SDODS server, filtered by a scoped token; nothing installed on the laptop   | an SDODS server and an API token  |
+
+Skills teach, MCP acts. Most people want both, which is what the plugin is. SDODS is free for all
+of them: Apache-2.0 on npm, unlimited API tokens, no paid tier.
+
+## Claude Code plugin
+
+```text
+/plugin marketplace add siri1410/sdods-skills
+```
+
+```text
+/plugin install sdods@sdods
+```
+
+| Part           | What you get                                                                                                                                         |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Slash commands | `/sdods:setup`, `/sdods:test`, `/sdods:plan`, `/sdods:generate`, `/sdods:heal`, `/sdods:review`, `/sdods:upgrade`                                    |
+| Skills         | `workspace` (the working rules), `run`, `record` and `start-ui`, which Claude uses on its own when a request matches                                 |
+| Subagents      | `sdods-planner`, `sdods-generator`, `sdods-healer`, `sdods-upgrader`, `sdods-reviewer` — read-only on your files, writing through SDODS proposals    |
+| MCP server     | `sdods`, started with `npx -y @sdods/cli mcp` in the project you opened                                                                              |
+| Hook           | on session start inside an SDODS workspace, a short summary of its projects and environments; it reads local files only and prints nothing elsewhere |
+
+To offer the plugin to everyone who opens a repository, commit this to `.claude/settings.json`.
+Claude Code asks each person to trust the marketplace the first time.
+
+```json title=".claude/settings.json"
+{
+  "extraKnownMarketplaces": {
+    "sdods": { "source": { "source": "github", "repo": "siri1410/sdods-skills" } }
+  },
+  "enabledPlugins": { "sdods@sdods": true }
+}
+```
+
+Update with `/plugin marketplace update sdods`.
+
+## Skills
+
+The skills follow the open [Agent Skills](https://agentskills.io) format, so one copy works across
+agents. Install them with the `skills` CLI, which asks which agents you use:
+
+```bash
+npx skills add siri1410/sdods-skills
+```
+
+Add `-a claude-code`, `-a codex`, `-a cursor` or `-a github-copilot` to pick agents up front, and
+`-g` to install for your user instead of the project.
+
+Or from npm, without GitHub:
+
+```bash
+npx -y @sdods/cli skills install
+```
+
+That writes `.claude/skills` and `.agents/skills`; `--agent cursor,copilot,gemini` adds other
+folders and `--global` installs under your home directory. See
+[sdods skills](/docs/reference/cli-commands/skills).
+
+| Agent          | Project folder                       | User folder                            |
+| -------------- | ------------------------------------ | -------------------------------------- |
+| Claude Code    | `.claude/skills`                     | `~/.claude/skills`                     |
+| Codex          | `.agents/skills`                     | `~/.agents/skills`                     |
+| Cursor         | `.agents/skills`, `.cursor/skills`   | `~/.agents/skills`, `~/.cursor/skills` |
+| GitHub Copilot | `.github/skills`, `.agents/skills`   | `~/.copilot/skills`                    |
+| Gemini CLI     | `.gemini/skills`, `.agents/skills`   | `~/.gemini/skills`                     |
+| OpenCode       | `.opencode/skills`, `.agents/skills` | `~/.config/opencode/skills`            |
+
+## Local MCP server
+
+Every stdio client runs the same command. There is no npm package called `sdods`; the command
+belongs to `@sdods/cli`, and `-y` lets `npx` fetch it without a prompt:
+
+```bash
+npx -y @sdods/cli mcp --project <slug> --env <env>
+```
+
+`--project` and `--env` are defaults for tools and prompts, and both are optional. The server finds
+the workspace from the directory the client starts it in. A client that starts servers somewhere
+else — Claude Desktop, or any user-level config — needs the workspace named:
+
+```bash
+npx -y @sdods/cli --cwd /path/to/workspace mcp
+```
+
+For the clients SDODS knows, one command writes the configuration and keeps any servers already
+there:
+
+```bash
+sdods mcp install claude
+```
+
+The other targets are `codex`, `cursor`, `vscode`, `windsurf` and `gemini`.
+
+## Dedicated MCP endpoint
+
+Every SDODS server serves MCP over Streamable HTTP at `/mcp`: `sdods serve` on a machine your team
+can reach, the [Docker image](/docs/getting-started/web-ui) or a
+[Cloud Run deployment](/docs/guides/hosting). Nothing runs on each laptop, runs and results are
+shared, and each person's token decides which tools they see.
+
+<Steps>
+<Step>
+
+### Create a token
+
+In the web UI under Settings → API tokens, or:
+
+```bash
+sdods tokens create --user <username> --name claude-code --scopes runs:read,runs:write,features:read
+```
+
+Scopes default to everything the user's role allows and can only be narrower. The token is shown
+once.
+
+</Step>
+<Step>
+
+### Keep it in the environment
+
+```bash
+export SDODS_TOKEN=amx_...
+```
+
+The configurations below read `SDODS_TOKEN` instead of storing the secret in a file you might
+commit.
+
+</Step>
+<Step>
+
+### Check the endpoint
+
+```bash
+curl https://<your-sdods-host>/api/mcp/info
+```
+
+It answers without a token with the URL, transport, tool list and ready-made snippets. Settings →
+MCP clients in the web UI shows the same snippets with your server's URL filled in, and a
+**Test connection** button.
+
+</Step>
+</Steps>
+
+If your administrator gave you an account on `https://api.sdods.com`, the endpoint is
+`https://api.sdods.com/mcp`. The snippets below use `https://<your-sdods-host>/mcp`.
+
+<Callout type="warn">
+  ChatGPT developer mode and Claude.ai custom connectors connect only to servers that sign users in
+  with OAuth, which SDODS does not offer yet. Use one of the clients below with a token, or bridge a
+  stdio-only app with `mcp-remote` as shown for Claude Desktop.
+</Callout>
+
+## Every client
+
+Each section has the local (stdio) form first and the endpoint form second.
+
+### Claude Code
+
+```bash
+claude mcp add sdods -- npx -y @sdods/cli mcp
+```
+
+```bash
+claude mcp add --transport http sdods https://<your-sdods-host>/mcp --header 'Authorization: Bearer ${SDODS_TOKEN}'
+```
+
+Add `-s project` to write `.mcp.json` for the whole team. The single quotes keep `${SDODS_TOKEN}`
+in the file, and Claude Code expands it from each person's environment. Check with `/mcp`.
+
+### Codex
+
+```bash
+codex mcp add sdods -- npx -y @sdods/cli mcp
+```
+
+```bash
+codex mcp add sdods --url https://<your-sdods-host>/mcp --bearer-token-env-var SDODS_TOKEN
+```
+
+Both write `~/.codex/config.toml`, which the Codex CLI, IDE extension and desktop app share:
+
+```toml title="~/.codex/config.toml"
+[mcp_servers.sdods]
+url = "https://<your-sdods-host>/mcp"
+bearer_token_env_var = "SDODS_TOKEN"
+```
+
+### Gemini CLI
+
+```bash
+gemini mcp add sdods npx -- -y @sdods/cli mcp
+```
+
+```bash
+gemini mcp add --transport http --header "Authorization: Bearer $SDODS_TOKEN" sdods https://<your-sdods-host>/mcp
+```
+
+The `--` matters: without it Gemini reads `-y` as its own flag. In `settings.json`, `httpUrl` is
+Streamable HTTP; `url` would mean the older SSE transport.
+
+```json title=".gemini/settings.json"
+{
+  "mcpServers": {
+    "sdods": {
+      "httpUrl": "https://<your-sdods-host>/mcp",
+      "headers": { "Authorization": "Bearer $SDODS_TOKEN" }
+    }
+  }
+}
+```
+
+### Cursor
+
+Use **Add to Cursor** in the box at the top of this page, or write the file:
+
+```json title=".cursor/mcp.json"
+{
+  "mcpServers": {
+    "sdods": { "command": "npx", "args": ["-y", "@sdods/cli", "mcp"] }
+  }
+}
+```
+
+```json title=".cursor/mcp.json (endpoint)"
+{
+  "mcpServers": {
+    "sdods": {
+      "url": "https://<your-sdods-host>/mcp",
+      "headers": { "Authorization": "Bearer ${env:SDODS_TOKEN}" }
+    }
+  }
+}
+```
+
+`~/.cursor/mcp.json` makes it available in every project.
+
+### VS Code and GitHub Copilot
+
+Use **Add to VS Code** at the top of this page, run
+`code --add-mcp '{"name":"sdods","command":"npx","args":["-y","@sdods/cli","mcp"]}'`, or write the
+file. VS Code calls the top-level key `servers`, and prompts for the token once with an input:
+
+```json title=".vscode/mcp.json"
+{
+  "inputs": [
+    {
+      "id": "sdods-token",
+      "type": "promptString",
+      "description": "SDODS API token",
+      "password": true
+    }
+  ],
+  "servers": {
+    "sdods": {
+      "type": "http",
+      "url": "https://<your-sdods-host>/mcp",
+      "headers": { "Authorization": "Bearer ${input:sdods-token}" }
+    }
+  }
+}
+```
+
+For stdio, the server entry is `{ "type": "stdio", "command": "npx", "args": ["-y", "@sdods/cli", "mcp"] }`.
+
+### Windsurf
+
+Windsurf reads one user-level file and names the remote URL `serverUrl`:
+
+```json title="~/.codeium/windsurf/mcp_config.json"
+{
+  "mcpServers": {
+    "sdods": {
+      "serverUrl": "https://<your-sdods-host>/mcp",
+      "headers": { "Authorization": "Bearer ${env:SDODS_TOKEN}" }
+    }
+  }
+}
+```
+
+For stdio use `{ "command": "npx", "args": ["-y", "@sdods/cli", "--cwd", "/path/to/workspace", "mcp"] }`.
+Windsurf caps the number of enabled tools; `--caps core,run,analyze` keeps SDODS under it.
+
+### Zed
+
+```json title="settings.json"
+{
+  "context_servers": {
+    "sdods": { "command": "npx", "args": ["-y", "@sdods/cli", "mcp"] }
+  }
+}
+```
+
+For the endpoint: `{ "url": "https://<your-sdods-host>/mcp", "headers": { "Authorization": "Bearer <token>" } }`.
+
+### JetBrains AI Assistant and Junie
+
+In AI Assistant, open Settings → Tools → AI Assistant → Model Context Protocol, add a server and
+paste the `mcpServers` JSON from the Cursor section. Junie reads the same shape from
+`.junie/mcp/mcp.json` in the project or `~/.junie/mcp/mcp.json`.
+
+### OpenCode
+
+```json title="opencode.json"
+{
+  "mcp": {
+    "sdods": { "type": "local", "command": ["npx", "-y", "@sdods/cli", "mcp"], "enabled": true }
+  }
+}
+```
+
+For the endpoint: `{ "type": "remote", "url": "https://<your-sdods-host>/mcp", "headers": { "Authorization": "Bearer <token>" }, "oauth": false }`.
+
+### Amp
+
+```bash
+amp mcp add sdods -- npx -y @sdods/cli mcp
+```
+
+### Kiro
+
+```json title=".kiro/settings/mcp.json"
+{
+  "mcpServers": {
+    "sdods": { "command": "npx", "args": ["-y", "@sdods/cli", "mcp"] }
+  }
+}
+```
+
+### Cline, Roo Code, Continue, Goose, Warp and Factory Droid
+
+| Client        | Where                                               | Endpoint entry                                           |
+| ------------- | --------------------------------------------------- | -------------------------------------------------------- |
+| Cline         | MCP Servers panel → Configure                       | `"type": "streamableHttp", "url": …`                     |
+| Roo Code      | `.roo/mcp.json`                                     | `"type": "streamable-http", "url": …, "headers": …`      |
+| Continue      | a YAML file in `.continue/mcpServers/`              | `type: streamable-http`, `url`, `requestOptions.headers` |
+| Goose         | `goose configure`, or `~/.config/goose/config.yaml` | `type: streamable_http`, `uri`                           |
+| Warp          | `.warp/.mcp.json` or `~/.warp/.mcp.json`            | `"url": …, "headers": …`                                 |
+| Factory Droid | `.factory/mcp.json` or `~/.factory/mcp.json`        | `"type": "http", "url": …, "headers": …`                 |
+
+Every one of them takes `npx -y @sdods/cli mcp` for stdio.
+
+### Claude Desktop
+
+Claude Desktop's config file starts stdio servers only, outside any project, so name the workspace:
+
+```json title="claude_desktop_config.json"
+{
+  "mcpServers": {
+    "sdods": {
+      "command": "npx",
+      "args": ["-y", "@sdods/cli", "--cwd", "/path/to/workspace", "mcp"]
+    }
+  }
+}
+```
+
+The file is `~/Library/Application Support/Claude/claude_desktop_config.json` on macOS and
+`%APPDATA%\Claude\claude_desktop_config.json` on Windows. To reach an endpoint instead, bridge it
+with `mcp-remote`:
+
+```json title="claude_desktop_config.json (endpoint)"
+{
+  "mcpServers": {
+    "sdods": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-remote",
+        "https://<your-sdods-host>/mcp",
+        "--header",
+        "Authorization:${AUTH_HEADER}"
+      ],
+      "env": { "AUTH_HEADER": "Bearer <token>" }
+    }
+  }
+}
+```
+
+LM Studio uses the same `mcpServers` shape in `~/.lmstudio/mcp.json`.
+
+## Check it works
+
+List the tools without any client involved — this is also the fastest way to see a real error:
+
+```bash
+npx -y @sdods/cli mcp --list-tools
+```
+
+Then ask the agent something only SDODS can answer, such as "list the SDODS projects and their
+environments".
+
+| Symptom                                         | Cause                                                      | Fix                                                                |
+| ----------------------------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------ |
+| `CONNECTION_CLOSED` or the server exits at once | the config says `npx sdods`, a package that does not exist | use `npx -y @sdods/cli mcp`, or rerun `sdods mcp install <client>` |
+| `401` from the endpoint                         | no token, a revoked or expired one, or `SDODS_TOKEN` unset | create a token and export it in the shell that starts the client   |
+| A tool is missing or refused with `403`         | the token's scopes do not include it                       | create a token with the scope; it can never exceed your role       |
+| Tools find no projects                          | the client started the server outside the workspace        | add `--cwd /path/to/workspace` before `mcp`                        |
+| `npx: command not found` in a desktop app       | the app does not see the Node on your shell's `PATH`       | use the full path to `npx`, or install Node system-wide            |
+| Too many tools for the client                   | every capability is enabled                                | `--caps core,run,analyze`                                          |
+
+<SupportSdods />
+
+## Next steps
+
+- [MCP](/docs/guides/mcp) — topology, tool families and scopes
+- [Claude Code and Codex](/docs/guides/claude-code-and-codex) — running SDODS agents through them
+- [MCP tools](/docs/reference/mcp-tools) — the full catalogue
