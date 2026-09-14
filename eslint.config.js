@@ -8,6 +8,8 @@ export default tseslint.config(
   {
     ignores: [
       '**/test/fixtures/apps/**',
+      // Golden k6 scripts (k6 globals such as __ENV, byte-for-byte generator output).
+      '**/test/fixtures/load/**',
       // Python virtualenvs (e.g. media/film/tts/.venv) ship vendored JS that is not ours to lint.
       '**/.venv/**',
       '**/dist/**',
