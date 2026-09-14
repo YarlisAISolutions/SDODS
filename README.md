@@ -14,6 +14,7 @@
   <a href="LICENSE"><img alt="License: Apache-2.0" src="https://img.shields.io/badge/license-Apache--2.0-blue.svg"></a>
   <img alt="Node 22+" src="https://img.shields.io/badge/node-%E2%89%A522-339933?logo=node.js&logoColor=white">
   <img alt="Bun" src="https://img.shields.io/badge/bun-1.4-000000?logo=bun&logoColor=white">
+  <a href="https://sdods.com/sponsor/"><img alt="Sponsor SDODS" src="https://img.shields.io/badge/sponsor-%E2%99%A5-ea4aaa?logo=githubsponsors&logoColor=white"></a>
 </p>
 
 ---
@@ -41,6 +42,7 @@ SDODS is an automation and orchestration platform. You describe behaviour in Ghe
 17. [CLI reference](#cli-reference)
 18. [Development process](#development-process)
 19. [Roadmap and status](#roadmap-and-status)
+20. [Support SDODS](#support-sdods)
 
 ## Why SDODS
 
@@ -590,6 +592,10 @@ The full road — the chapters, the twelve months and the horizon to 2030 — is
 <https://docs.sdods.com/docs/roadmap/>.
 
 <!-- roadmap:end -->
+
+## Support SDODS
+
+SDODS is free and stays free. If it saves you time, [buy the maintainers a coffee or sponsor the project](https://sdods.com/sponsor/): one-time or monthly, any amount. Companies that want an invoice, a bank transfer or their logo here can email admin@sdods.com.
 
 ## License
 

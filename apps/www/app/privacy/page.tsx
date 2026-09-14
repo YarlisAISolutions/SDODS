@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { FEEDBACK_EMAIL, REPO_PUBLIC, REPO_URL } from '@/lib/links';
+import { SPONSOR_PUBLIC } from '@/lib/sponsor';
 
 export const metadata: Metadata = {
   title: 'Privacy',
@@ -35,6 +36,21 @@ export default function PrivacyPage() {
             The feedback form composes an email in your own mail client and opens it. Nothing is
             sent to us until you press send, and nothing is stored by this site.
           </p>
+        )}
+        {SPONSOR_PUBLIC && (
+          <>
+            <h2 className="mt-6 text-lg font-bold">Sponsorship payments</h2>
+            <p>
+              The buttons on the sponsor page are links to Stripe Checkout, hosted by Stripe; this
+              site loads no payment script. Stripe processes the payment for SDODS Developers under{' '}
+              <a href="https://stripe.com/privacy" className="underline" rel="noreferrer">
+                its own privacy policy
+              </a>
+              . We receive your name, email address, billing country, the amount and anything you
+              type in the optional thank-you field. We never see card or bank details. We use this
+              only to send receipts, handle refunds and, if you asked for it, thank you publicly.
+            </p>
+          </>
         )}
         <h2 className="mt-6 text-lg font-bold">The SDODS software</h2>
         <p>
