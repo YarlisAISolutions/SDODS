@@ -5,6 +5,9 @@
 ### Patch Changes
 
 - ffbf50f: `ApiContext.headers` is now case-insensitive, as HTTP header names are. It is a `HeaderMap` (exported from `@sdods/core`), a `Map` whose `set`, `get`, `has` and `delete` lower-case the name, so `delete('x-api-key')` removes a header set as `X-API-Key` and `get('cookie')` finds one set as `Cookie`. Names are stored lower-cased, and when a scenario sets the same header under two casings the last `set` wins. What goes on the wire is unchanged: the client already lower-cased names when building a request. Project workarounds that installed their own case-insensitive map over the `apiContext` fixture can be removed.
+- 732d1e2: A JSONPath (`$…`) that matches nothing now reads as absent (`undefined`), the same as a dotted path, instead of `[]`. `the response JSON path {string} should exist` fails on a missing key and `should not exist` passes, whatever the path syntax. `I save the response JSON path {string} as {string}`, `should have {int} items` / `at least {int} items` and `the UI should show the text from JSON path {string}` fail with `RUN_FAILED` and a hint when the path matches nothing; a key that is present with the value `null` or `[]` still saves. `getPath` returns `undefined` for no match, the value for one match and an array for two or more, and the new `matchedPath` throws on no match.
+  
+  Behaviour change: a wildcard over an empty array (`$.items[*]` on `{ "items": [] }`) is now absent rather than `[]`, so `the response JSON path "$.items[*]" should have 0 items` fails. Point the path at the array itself (`$.items`).
 - @sdods/contracts@0.7.3
   - @sdods/db@0.7.3
 
