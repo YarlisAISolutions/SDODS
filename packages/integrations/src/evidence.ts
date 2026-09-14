@@ -159,6 +159,8 @@ export class GitHubBranchEvidence {
     const urls = new Map<string, string>();
     if (!upload.length) return { urls, skipped };
 
+    // first, so an empty repository fails with a clear message before any upload
+    await this.ensureBranch();
     const runDir = `runs/${safeSegment(run.id)}`;
     const entries: TreeEntry[] = [];
     let bytes = 0;
@@ -259,11 +261,17 @@ export class GitHubBranchEvidence {
   async ensureBranch(): Promise<string> {
     const existing = await this.headSha();
     if (existing) return existing;
-    const { data: tree } = await this.octokit.rest.git.createTree({
-      owner: this.owner,
-      repo: this.repo,
-      tree: [{ path: 'README.md', mode: '100644', type: 'blob', content: README }],
-    });
+    const { data: tree } = await this.octokit.rest.git
+      .createTree({
+        owner: this.owner,
+        repo: this.repo,
+        tree: [{ path: 'README.md', mode: '100644', type: 'blob', content: README }],
+      })
+      .catch((e: unknown) => {
+        // the git data API cannot write to a repository without any commit
+        if (statusOf(e) === 409) throw new Error(this.emptyRepoMessage());
+        throw e;
+      });
     const { data: commit } = await this.octokit.rest.git.createCommit({
       owner: this.owner,
       repo: this.repo,
@@ -287,6 +295,24 @@ export class GitHubBranchEvidence {
       if (!head) throw e;
       return head;
     }
+  }
+
+  private async isEmptyRepo(): Promise<boolean> {
+    try {
+      await this.octokit.rest.repos.listCommits({
+        owner: this.owner,
+        repo: this.repo,
+        per_page: 1,
+      });
+      return false;
+    } catch (e) {
+      if (statusOf(e) === 409) return true;
+      throw e;
+    }
+  }
+
+  private emptyRepoMessage(): string {
+    return `evidence repo ${this.fullName} is empty: create it with a README (any first commit) before using it`;
   }
 
   private async headSha(): Promise<string | null> {
@@ -356,10 +382,12 @@ export class GitHubBranchEvidence {
 
   /**
    * Rewrite the branch as a new orphan commit without the runs uploaded before the cutoff.
-   * Kept run directories are reused by tree sha, so nothing is uploaded again. The ref is
-   * force-updated only if the head is still the one the new tree was built from; otherwise the
-   * rewrite is rebuilt on the new head. GitHub garbage-collects the dropped objects later, and
-   * issues that linked them stop rendering those images.
+   * Kept run directories are reused by tree sha, so nothing is uploaded again. Just before the
+   * force update the head is compared with the one the new tree was built from, and the rewrite is
+   * rebuilt when it moved. That narrows the race with a concurrent upload but cannot close it: a
+   * force update has no compare-and-swap, so a run pushed between that check and the update is
+   * lost. Prune when CI is quiet. GitHub garbage-collects the dropped objects later, and issues
+   * that linked them stop rendering those images.
    */
   async prune(opts: PruneOptions): Promise<PruneResult> {
     for (let attempt = 1; ; attempt++) {
@@ -381,7 +409,11 @@ export class GitHubBranchEvidence {
       const cutoff = this.now().getTime() - opts.olderThanMs;
       const keptDirs: TreeEntry[] = [];
       for (const entry of runs) {
-        if (entry.type !== 'tree') continue;
+        if (entry.type !== 'tree') {
+          // stray files next to the run directories stay; the index is rewritten below
+          if (entry.path !== 'index.json') keptDirs.push(entry);
+          continue;
+        }
         const meta = index.runs[entry.path];
         if (!meta) {
           result.unknown.push(entry.path);
@@ -478,6 +510,8 @@ export class GitHubBranchEvidence {
     let branch: string;
     try {
       const head = await this.headSha();
+      if (!head && (await this.isEmptyRepo()))
+        return { ok: false, detail: this.emptyRepoMessage() };
       branch = head
         ? `branch ${this.branch} exists`
         : `branch ${this.branch} will be created on the first upload`;

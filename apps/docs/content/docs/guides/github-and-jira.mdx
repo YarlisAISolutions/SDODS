@@ -120,10 +120,11 @@ integrations:
 <Callout type="warn">
   Pushing evidence needs `contents: write`, and a token with `contents: write` on the code
   repository can also push code to it. To avoid that, point `evidence.repo` at a separate private
-  repository and give `evidence.tokenEnv` a fine-grained token that can write only there. Everyone
-  who can read the evidence repository can open every screenshot and video in it, and screenshots
-  show whatever test data was on screen. `sdods integrations test` warns when the evidence
-  repository is public and the issue repository is private.
+  repository and give `evidence.tokenEnv` a fine-grained token that can write only there. Create
+  that repository with a README: the GitHub API cannot write to an empty repository. Everyone who
+  can read the evidence repository can open every screenshot and video in it, and screenshots show
+  whatever test data was on screen. `sdods integrations test` warns when the evidence repository is
+  public and the issue repository is private.
 </Callout>
 
 How it works:
@@ -150,7 +151,7 @@ sdods integrations evidence prune -p demo-shop --older-than 14d --dry-run
 sdods integrations evidence prune -p demo-shop
 ```
 
-Run it on a schedule, for example weekly. Kept runs keep their paths, so their links keep working. Images in issues about pruned runs stop rendering. GitHub garbage-collects the dropped objects on its own schedule, so the repository does not shrink right away. Run directories missing from `runs/index.json` are kept, because their age is unknown. If a run is committed while the prune is working, the prune starts over on the new head, so that run is not dropped. Uploads log a reminder when the branch holds runs older than `retainDays`.
+Run it on a schedule, for example weekly. Kept runs keep their paths, so their links keep working. Images in issues about pruned runs stop rendering. GitHub garbage-collects the dropped objects on its own schedule, so the repository does not shrink right away. Run directories missing from `runs/index.json` are kept, because their age is unknown. Just before the force update, prune checks whether the branch moved and, if so, starts over on the new head. A force update cannot be made conditional, though, so a run pushed in the moment between that check and the update is lost. Run prune when no CI job is uploading. Uploads log a reminder when the branch holds runs older than `retainDays`.
 
 ## Link scenarios to issues
 

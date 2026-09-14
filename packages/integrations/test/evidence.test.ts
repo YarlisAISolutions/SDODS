@@ -50,6 +50,8 @@ class FakeGit {
     permissions: { push: true },
   };
   blobWritesAllowed = true;
+  /** a repository created without a README */
+  empty = false;
   /** runs before a ref update is applied: simulates another CI job pushing first */
   beforeUpdate?: (attempt: number) => void;
 
@@ -180,8 +182,15 @@ class FakeGit {
   handlers(base = `${API}/repos/acme/shop`) {
     const call = (name: string) => this.calls.push(name);
     let updateAttempt = 0;
+    const emptyRepo = () =>
+      HttpResponse.json({ message: 'Git Repository is empty.' }, { status: 409 });
     return [
       http.get(base, () => HttpResponse.json(this.repo)),
+      http.get(`${base}/commits`, () => (this.empty ? emptyRepo() : HttpResponse.json([{}]))),
+      // the git data API refuses writes to a repository without a first commit
+      ...['blobs', 'trees', 'commits'].map((kind) =>
+        http.post(`${base}/git/${kind}`, () => (this.empty ? emptyRepo() : undefined)),
+      ),
       http.get(`${base}/git/ref/*`, ({ request }) => {
         call('getRef');
         const ref = decodeURIComponent(new URL(request.url).pathname.split('/git/ref/')[1]!);
@@ -749,6 +758,27 @@ describe('sdods integrations test with evidence.host: branch', () => {
     expect(denied.detail).toContain('cannot write git objects (needs contents: write)');
   });
 
+  it('reports an empty evidence repository, and issues fall back to the old links', async () => {
+    git.empty = true;
+    useFake();
+    const p = await provider({ host: 'branch' });
+    const res = await p.test();
+    expect(res.evidence).toEqual({
+      ok: false,
+      detail:
+        'evidence repo acme/shop is empty: create it with a README (any first commit) before using it',
+    });
+    const { logger, lines } = recordingLogger();
+    await p.onRunFinished(
+      summary(artifacts(), [scenario('fp-login', 'Successful login')]),
+      createIntegrationContext({ store: createMemoryStore(), env: {} as never, logger }),
+    );
+    expect(issues).toHaveLength(1);
+    expect(issues[0]!.body).not.toContain('blob/');
+    expect(lines.warn.join('\n')).toContain('is empty: create it with a README');
+    expect(git.calls).not.toContain('createBlob');
+  });
+
   it('reports a missing evidence token without breaking issue creation', async () => {
     useFake();
     const p = new GitHubProvider({ baseUrl: API });
@@ -791,6 +821,7 @@ describe('sdods integrations evidence prune', () => {
       'runs/old-run/login/scenario-failure.png': 'old',
       'runs/new-run/login/scenario-failure.png': 'new',
       'runs/stray-run/login/scenario-failure.png': 'unknown age',
+      'runs/NOTES.md': 'a file someone added by hand',
       'runs/index.json': JSON.stringify({
         runs: {
           'old-run': { uploadedAt: daysAgo(20), files: 1, bytes: 3 },
@@ -828,6 +859,7 @@ describe('sdods integrations evidence prune', () => {
     const files = git.headFiles('sdods-evidence');
     expect([...files.keys()].sort()).toEqual([
       'README.md',
+      'runs/NOTES.md',
       'runs/index.json',
       'runs/new-run/login/scenario-failure.png',
       'runs/stray-run/login/scenario-failure.png',
