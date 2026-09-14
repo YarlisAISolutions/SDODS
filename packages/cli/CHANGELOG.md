@@ -1,5 +1,18 @@
 # @sdods/cli
 
+## 0.7.2
+
+### Patch Changes
+
+- Updated dependencies [0865fee]
+  - @sdods/mcp@0.7.2
+  - @sdods/agents@0.7.2
+  - @sdods/server@0.7.2
+  - @sdods/contracts@0.7.2
+  - @sdods/core@0.7.2
+  - @sdods/db@0.7.2
+  - @sdods/integrations@0.7.2
+
 ## 0.7.1
 
 ### Patch Changes
