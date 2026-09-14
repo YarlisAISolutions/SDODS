@@ -125,6 +125,11 @@
     "source": "project"
   },
   {
+    "keyword": "When",
+    "pattern": "I clear the inbox for {string}",
+    "source": "project"
+  },
+  {
     "keyword": "Given",
     "pattern": "I clear the local storage key {string}",
     "source": "project"
@@ -326,6 +331,11 @@
   },
   {
     "keyword": "When",
+    "pattern": "I open the link {string} from the latest email to {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "When",
     "pattern": "I poll {method} {string} until JSON path {string} equals {string} within {int} seconds",
     "source": "project"
   },
@@ -417,6 +427,16 @@
   {
     "keyword": "When",
     "pattern": "I sample the latency of {method} {string} over {int} requests with body:",
+    "source": "project"
+  },
+  {
+    "keyword": "When",
+    "pattern": "I save the code matching {string} from the latest email to {string} as {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "When",
+    "pattern": "I save the link matching {string} from the latest email to {string} as {string}",
     "source": "project"
   },
   {
@@ -1026,6 +1046,11 @@
   },
   {
     "keyword": "Then",
+    "pattern": "the inbox for {string} should receive an email with subject containing {string} within {int} seconds",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
     "pattern": "the inventory title should be {string}",
     "source": "project"
   },
@@ -1037,6 +1062,16 @@
   {
     "keyword": "Then",
     "pattern": "the last stream event type should be {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the latest email to {string} should contain the text {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
+    "pattern": "the latest email to {string} should have been sent from {string}",
     "source": "project"
   },
   {
