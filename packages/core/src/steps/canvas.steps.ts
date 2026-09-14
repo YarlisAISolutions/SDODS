@@ -119,7 +119,14 @@ export function expandCanvasSelector(
 }
 
 function rootOf(page: Page, c: Canvas): Locator {
-  return page.locator(c.config.root);
+  return page.locator(expandCanvasSelector('root', c.config.root, {}, c.testIdAttribute));
+}
+
+/** Every node on the canvas (`canvas.nodes`), scoped inside the root. */
+function allNodes(page: Page, c: Canvas): Locator {
+  return rootOf(page, c).locator(
+    expandCanvasSelector('nodes', c.config.nodes, {}, c.testIdAttribute),
+  );
 }
 
 function nodeLocator(page: Page, c: Canvas, id: string): Locator {
@@ -383,7 +390,7 @@ Then('the canvas should contain {int} node(s)', async ({ page, config }, count: 
     });
   }
   const c = canvasOf(config);
-  await expect(rootOf(page, c).locator(c.config.nodes)).toHaveCount(count);
+  await expect(allNodes(page, c)).toHaveCount(count);
 });
 
 // Proves the editor holds an edge from one node to the other, in that direction.
@@ -414,7 +421,7 @@ Then(
     const t = arg({ apiContext, env }, target);
     const root = rootOf(page, c);
     try {
-      await expect(root.locator(c.config.nodes).first()).toBeAttached();
+      await expect(allNodes(page, c).first()).toBeAttached();
     } catch {
       throw new SdodsError('RUN_FAILED', 'The canvas has rendered no nodes at all.', {
         hint: `Asserting there is no edge from "${s}" to "${t}" on an empty or unrendered canvas proves nothing. Check canvas.root and canvas.nodes, or assert a node first.`,

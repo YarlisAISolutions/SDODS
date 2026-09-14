@@ -619,6 +619,26 @@ describe('node assertions', () => {
     ]);
   }, 60_000);
 
+  it('expands {testIdAttribute} in canvas.root and canvas.nodes, which the schema accepts', async () => {
+    const parsed = ProjectConfigSchema.parse({
+      slug: 'p',
+      name: 'P',
+      layers: ['ui'],
+      envs: { default: 'd', available: ['d'] },
+      canvas: { root: '[{testIdAttribute}="canvas"]', nodes: '[{testIdAttribute}^="rf__node-"]' },
+    });
+    canvas = parsed.canvas;
+    await openEditor([
+      { id: 'a', x: 100, y: 100 },
+      { id: 'b', x: 500, y: 100 },
+    ]);
+    await run('the canvas should contain {int} node(s)', 2);
+    await run('the node {string} should be visible', 'a');
+    await run('the canvas should not contain an edge from {string} to {string}', 'a', 'b');
+    await page.evaluate(() => (window as any).seedEdge('a', 'out', 'b', 'in'));
+    await run('the canvas should contain an edge from {string} to {string}', 'a', 'b');
+  }, 60_000);
+
   it('escapes quotes in ids, so an id cannot break out of the selector', async () => {
     await openEditor([{ id: 'say "hi"', x: 100, y: 100 }]);
     await run('the node {string} should be visible', 'say "hi"');
