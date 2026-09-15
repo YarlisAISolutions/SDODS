@@ -6,8 +6,8 @@
 class Sdods < Formula
   desc "BDD test automation for UI, API and hybrid flows"
   homepage "https://sdods.com"
-  url "https://registry.npmjs.org/@sdods/cli/-/cli-0.9.0.tgz"
-  sha256 "9e9bf432718f2045c20eb0ff1cbd74f0414d7a341f9462c36f2854121bbb4f9d"
+  url "https://registry.npmjs.org/@sdods/cli/-/cli-0.10.0.tgz"
+  sha256 "3fbde4469501c90b4848a9341247d47d5f8d5bcab2dab814a864fb1692441423"
   license "Apache-2.0"
 
   # Not a vendored Node: SDODS spawns Node for the test runner and the server, and a formula that
