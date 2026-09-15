@@ -1,6 +1,6 @@
 {
   "name": "@sdods/db",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "SDODS platform database: one schema on SQLite or Postgres, migrations, result ingest and insights.",
   "license": "Apache-2.0",
   "author": "SDODS <admin@sdods.com>",
