@@ -56,6 +56,10 @@ description: Field reference for environment files.
     heal: { type: 'partial HealConfig' },
     timeouts: { type: 'partial Timeouts' },
     'perf.budgets': { type: 'partial PerfBudgets' },
+    a11y: {
+      type: '{ failOn?, include?, exclude? }',
+      description: 'Overrides single keys of the project `a11y` section for this environment.',
+    },
     ci: { type: 'boolean', description: 'Treat this environment as CI (retries.ci applies).' },
     'load.allowed': {
       type: 'boolean',

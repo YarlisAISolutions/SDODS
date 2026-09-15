@@ -497,7 +497,7 @@ The phrasing is identical to the table in the step library reference, down to th
         votes: 44,
         body: `Nothing. The step does not exist. Neither does \`the page should meet the performance budget\`.
 
-I would rather say that plainly than let you spend an afternoon on the configuration. The accessibility guide and that row in the step library reference describe a design, not a build. What is real today is that \`@a11y\` and \`@perf\` are reserved in the tag taxonomy and that the project schema accepts accessibility and performance gates on a process. There is no axe hook in the runner and no budget check.
+I would rather say that plainly than let you spend an afternoon on the configuration. The accessibility guide and that row in the step library reference describe a design, not a build. What is real as I write this is that \`@a11y\` and \`@perf\` are reserved in the tag taxonomy and that the project schema accepts accessibility and performance gates on a process. There is no axe hook in the runner yet, and no budget check.
 
 The page that is honest about it is the workshop chapter: [Screenshots, a11y and performance](https://docs.sdods.com/docs/workshop/visual-a11y-performance/).
 
@@ -505,7 +505,7 @@ If you want the check anyway, the interim shape is yours to own:
 
 1. Add the accessibility library to your own project's dependencies — nothing in SDODS pulls it in.
 2. Write the step under \`projects/<slug>/steps/\` with the phrasing you actually want, and assert on the result there.
-3. Attach the JSON under \`sdods/a11y/<step>\`. That attachment name is already reserved in the contracts, so the run viewer and the ingest will file it in the right place even though nothing produces it today.
+3. Attach the JSON under \`sdods/a11y/<step>\`. That attachment name is already reserved in the contracts, so the run viewer and the ingest will file it in the right place even though nothing produces it yet.
 
 \`\`\`bash
 sdods steps list -p demo-shop
@@ -565,7 +565,7 @@ shows \`perf.budgets.pageLoadMs\` resolving from \`envs/staging.yaml\`, so the p
         votes: 38,
         body: `You are missing nothing, and the reason it looks like plumbing is that it is plumbing with nothing on the end of it.
 
-The schema accepts \`perf.budgets\`. The schema accepts \`perfBudgets\` and \`a11y\` on a process gate. The resolver merges them and \`config show --explain\` will happily tell you which layer won. Then nothing at run time reads either value. There is no timing check and no accessibility hook — the gate booleans are recorded and never asked.
+The schema accepts \`perf.budgets\`. The schema accepts \`perfBudgets\` and \`a11y\` on a process gate. The resolver merges them and \`config show --explain\` will happily tell you which layer won. Then, as of this answer, nothing at run time reads either value. There is no timing check and no accessibility hook yet — the gate booleans are recorded and never asked.
 
 So a green run is not evidence about the speed of that page. It is evidence that the scenario's assertions passed.
 
@@ -609,7 +609,7 @@ Both passed, in about the same time as before. I cannot tell from the output whe
 
 An accessibility pass would attach JSON per step under \`sdods/a11y/<step>\`. Open the run, go to Artifacts, and there is nothing under that name. Empty artefacts is the difference between "checked and clean" and "not checked", and it is the only reliable tell.
 
-\`@a11y\` is a plain selection tag. In this area the only tag the runner treats specially is \`@visual\`, which chooses the screenshot policy; everything else a scenario carries is used to decide whether it runs, not what happens while it does. Your two scenarios ran as ordinary scenarios and passed for the ordinary reason.`,
+For now \`@a11y\` is a plain selection tag. In this area the only tag the runner treats specially is \`@visual\`, which chooses the screenshot policy; everything else a scenario carries is used to decide whether it runs, not what happens while it does. Your two scenarios ran as ordinary scenarios and passed for the ordinary reason.`,
       },
       {
         id: 'a2',
@@ -658,7 +658,7 @@ Both pages are in the same documentation set, published together. One of them is
         by: 'reeta-nandal',
         on: '2025-08-28',
         votes: 47,
-        body: `The workshop chapter is right. \`@a11y\` and \`@perf\` are schema-only: reserved in the tag taxonomy, accepted by the project schema, read by nothing at run time.
+        body: `The workshop chapter is right. As of today, \`@a11y\` and \`@perf\` are schema-only: reserved in the tag taxonomy, accepted by the project schema, read by nothing at run time.
 
 The accessibility and performance guide describes a design that was written before the code and never retracted when the code went a different way. The step library reference is wrong in the same direction — it lists two steps that are not in the catalogue, which you can confirm yourself with \`sdods steps list\`. Known limitations records the visual-baseline gap and not this one, which is a third instance of the same bug.
 

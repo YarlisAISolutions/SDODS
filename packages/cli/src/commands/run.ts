@@ -9,6 +9,7 @@ import {
   runFiles,
   type BrowserName,
   type Layer,
+  type GateResult,
   type RunManifest,
   type RunSummary,
 } from '@sdods/contracts';
@@ -17,8 +18,11 @@ import {
   CLI_OVERRIDES_ENV,
   VERSION,
   checkPoolCapacity,
+  collectGateEvidence,
   effectiveWorkers,
+  evaluateGates,
   formatFindings,
+  hasGates,
   lintProject,
   listGeneratedProjects,
   moduleByName,
@@ -39,7 +43,7 @@ import { createContext } from '../context.js';
 import { browserStatuses } from './browsers.js';
 import { maybeNotify, notifyRun, type AutoNotifyOutcome } from '../notify.js';
 import { installedPlaywrightVersion, stepResultsWarning } from '../runner-compat.js';
-import { collect, json, out, parseIntFlag, table, warn } from '../ui.js';
+import { collect, json, out, parseIntFlag, renderError, table, warn } from '../ui.js';
 
 export interface RunFlags {
   project?: string;
@@ -590,6 +594,30 @@ export async function runCommand(flags: RunFlags, cmd: Command): Promise<number>
   }
 
   const summary = readSummary(runDir, runId, exitCode, Date.now() - started);
+
+  // Process gates are judged here, from the run that just finished, before anything publishes it.
+  // One shard of several holds only part of the run, so its pass rate and its a11y/perf evidence
+  // are not the run's; a sharded process is gated where the shards are merged, not per shard.
+  const shardTotal = cfg.runtime.shard?.total ?? 1;
+  let gates: GateResult | undefined;
+  if (proc && hasGates(proc.gates) && exitCode !== 130) {
+    if (shardTotal > 1) {
+      warn(
+        `process "${proc.name}" gates are not evaluated on shard ${cfg.runtime.shard?.current}/${shardTotal}: one shard is not the whole run.`,
+      );
+    } else {
+      gates = evaluateGates({
+        process: proc.name,
+        gates: proc.gates,
+        totals: summary?.totals,
+        evidence: collectGateEvidence(runDir),
+      });
+      writeFileSync(join(runDir, runFiles.gates), JSON.stringify(gates, null, 2));
+      if (summary) summary.gates = gates;
+      manifest.gatesPassed = gates.passed;
+      writeManifest();
+    }
+  }
   if (summary) writeFileSync(join(runDir, runFiles.summary), JSON.stringify(summary, null, 2));
 
   const dbConfigured =
@@ -638,6 +666,14 @@ export async function runCommand(flags: RunFlags, cmd: Command): Promise<number>
     }
   }
 
+  // A breached gate fails a run whose scenarios passed. Exit 1, as the exit-code reference says:
+  // a gate not met is a failure, not a configuration error.
+  if (gates && !gates.passed && finalExit === 0) {
+    finalExit = 1;
+    manifest.exitCode = finalExit;
+    writeManifest();
+  }
+
   // Enabled integrations (check runs, PR comment, issues) act on the run here, the same way
   // `sdods integrations notify --run-id` does. Failures are reported and never change the exit code.
   const notify: AutoNotifyOutcome = await maybeNotify({
@@ -674,8 +710,21 @@ export async function runCommand(flags: RunFlags, cmd: Command): Promise<number>
   }
 
   if (ctx.opts.json) {
-    json({ runId, runDir, exitCode: finalExit, summary, manifest, notify });
+    json({ runId, runDir, exitCode: finalExit, summary, manifest, notify, gates });
   } else {
+    if (gates) {
+      out('');
+      out(pc.bold(`gates · process ${gates.process}`));
+      table(
+        gates.rows.map((r) => ({
+          gate: r.gate,
+          threshold: r.threshold,
+          actual: r.actual,
+          result: r.passed ? 'pass' : 'FAIL',
+          detail: r.detail ?? '',
+        })),
+      );
+    }
     const t = summary?.totals;
     out('');
     out(
@@ -684,6 +733,20 @@ export async function runCommand(flags: RunFlags, cmd: Command): Promise<number>
     out(pc.dim(`artifacts:   ${runDir}`));
     out(pc.dim(`html report: ${join(runDir, runFiles.htmlReport, 'index.html')}`));
     out(pc.dim(`dashboard:   ${join(runDir, runFiles.dashboard, 'index.html')}`));
+  }
+  if (gates && !gates.passed) {
+    const failed = gates.rows.filter((r) => !r.passed);
+    renderError(
+      new SdodsError(
+        'GATE_FAILED',
+        `Process "${gates.process}" did not meet ${failed.length} gate(s): ${failed.map((r) => `${r.gate} (${r.actual}, needs ${r.threshold})`).join('; ')}.`,
+        {
+          hint: `The verdict is in ${join(runDir, runFiles.gates)}. Gates are set under processes[].gates in sdods.project.yaml.`,
+          docsPath: '/docs/guides/processes-and-testing-types',
+        },
+      ),
+      Boolean(ctx.opts.json),
+    );
   }
   return finalExit;
 }

@@ -20,5 +20,6 @@ import './perf.steps.js';
 import './email.steps.js';
 import './canvas.steps.js';
 import '../shots/hooks.js';
+import '../quality/hooks.js';
 
 export { coreStepsGlob, coreStepsPatterns, coreStepNames, coreStepsDir } from './glob.js';

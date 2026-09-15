@@ -13,6 +13,7 @@ export type SdodsErrorCode =
   | 'HEAL_FAILED'
   | 'LINT_FAILED'
   | 'RUN_FAILED'
+  | 'GATE_FAILED'
   | 'HAR_MISS'
   | 'DB_REQUIRED'
   | 'MAIL_REQUIRED'

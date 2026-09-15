@@ -2,8 +2,14 @@ import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { ChildProcess } from 'node:child_process';
 import type { SdodsDb } from '@sdods/db';
-import { getProjectBySlug, upsertRun } from '@sdods/db';
-import { newRunId, runFiles, type RunRecord, type RunTrigger } from '@sdods/contracts';
+import { getProjectBySlug, readJson, upsertRun } from '@sdods/db';
+import {
+  newRunId,
+  runFiles,
+  type GateResult,
+  type RunRecord,
+  type RunTrigger,
+} from '@sdods/contracts';
 import type { ServerConfig } from '../config.js';
 import { spawnCli } from './cli.js';
 import { LogBuffer } from './log-buffer.js';
@@ -225,10 +231,12 @@ export class RunManager {
     job.finishedAt = Date.now();
     job.log.push('sys', `finished: ${status} (exit ${exitCode})`);
     job.log.close();
-    void this.setStatus(job, status, exitCode).finally(() => {
-      void this.hooks.onFinished?.(job);
-      this.pump();
-    });
+    void this.setStatus(job, status, exitCode)
+      .then(() => this.recordGates(job))
+      .finally(() => {
+        void this.hooks.onFinished?.(job);
+        this.pump();
+      });
   }
 
   private async setStatus(job: RunJob, status: RunJob['status'], exitCode?: number) {
@@ -263,6 +271,44 @@ export class RunManager {
       });
     } catch {
       /* db unavailable */
+    }
+  }
+
+  /**
+   * Records the process gate verdict the CLI wrote (`gates.json`) on the run row: under
+   * `totals_json.gates`, and — when a gate failed — as the run's status and error. The CLI ingests
+   * its results before it judges the gates, so ingest alone would leave a gated-out run marked
+   * `passed`, which is exactly the claim the gate exists to stop.
+   */
+  async recordGates(job: RunJob): Promise<void> {
+    const file = join(this.config.artifactsDir, job.runId, runFiles.gates);
+    if (!existsSync(file)) return;
+    try {
+      const gates = JSON.parse(readFileSync(file, 'utf8')) as GateResult;
+      const row = await this.adb.db
+        .selectFrom('runs')
+        .select(['id', 'project_id', 'env_name', 'totals_json'])
+        .where('id', '=', job.runId)
+        .executeTakeFirst();
+      if (!row) return;
+      const failed = gates.rows.filter((r) => !r.passed);
+      await upsertRun(this.adb.db, this.adb.driver, {
+        id: job.runId,
+        projectId: row.project_id,
+        envName: row.env_name,
+        totals: { ...(readJson<Record<string, unknown>>(row.totals_json) ?? {}), gates },
+        ...(gates.passed || job.status === 'cancelled'
+          ? {}
+          : {
+              status: 'failed',
+              exitCode: job.exitCode || 1,
+              errorText: `GATE_FAILED: process "${gates.process}" did not meet ${failed
+                .map((r) => `${r.gate} (${r.actual}, needs ${r.threshold})`)
+                .join('; ')}`,
+            }),
+      });
+    } catch {
+      /* db unavailable or unreadable verdict: the CLI's exit code still carries it */
     }
   }
 
