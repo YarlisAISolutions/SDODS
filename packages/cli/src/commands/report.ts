@@ -92,7 +92,18 @@ function resolveMergeProcess(
         exitCode: 2,
       },
     );
-  const proc = ctx.registry.processOf(slug, name);
+  let proc: ProcessConfig;
+  try {
+    proc = ctx.registry.processOf(slug, name);
+  } catch (e) {
+    // Named explicitly, an unknown process is an error. Inferred from a run.json this checkout
+    // cannot resolve, it only means there is nothing here to judge it by; the merge still runs.
+    if (input.process) throw e;
+    warn(
+      `run.json names process "${name}" of ${slug}, which this checkout does not define: gates not judged.`,
+    );
+    return undefined;
+  }
   if (!hasGates(proc.gates)) {
     // Named explicitly, a process without gates is a mistake worth saying; inferred, it is not.
     if (input.process)
@@ -102,14 +113,36 @@ function resolveMergeProcess(
   return { slug, process: proc };
 }
 
-/** Copies the blob reports of several shard report directories into one temporary directory. */
-function stageShardReports(dirs: string[]): string {
-  const staged = mkdtempSync(join(tmpdir(), 'sdods-merge-'));
-  dirs.forEach((dir, i) => {
-    for (const name of readdirSync(dir))
-      if (name.endsWith('.zip')) copyFileSync(join(dir, name), join(staged, `${i + 1}-${name}`));
+/**
+ * A merge workspace for `playwright merge-reports`: the blob reports of every directory copied into
+ * one (it reads exactly one directory; prefixed, because two runs' shard 1 carry the same file
+ * name), and a merge config that pins the root the report paths are relative to. Blobs recorded
+ * under different checkouts, such as CI's Playwright container (`/__w/…`) and its bare runner
+ * (`/home/runner/work/…`), otherwise refuse to merge ("recorded with different test directories").
+ */
+function mergeWorkspace(
+  dirs: string[],
+  rootDir: string,
+): { reports: string; config: string; dir: string } {
+  const dir = mkdtempSync(join(tmpdir(), 'sdods-merge-'));
+  const reports = join(dir, 'reports');
+  mkdirSync(reports);
+  dirs.forEach((from, i) => {
+    for (const name of readdirSync(from))
+      if (name.endsWith('.zip')) copyFileSync(join(from, name), join(reports, `${i + 1}-${name}`));
   });
-  return staged;
+  const config = join(dir, 'merge.config.mjs');
+  writeFileSync(config, `export default ${JSON.stringify({ testDir: rootDir })};\n`);
+  return { reports, config, dir };
+}
+
+/** The error Playwright printed, rather than the last lines of its stack. */
+function mergeFailureHint(stderr: string | undefined): string | undefined {
+  const lines = (stderr ?? '').split('\n');
+  const at = lines.findIndex((l) => /^\s*Error\b/.test(l));
+  const picked =
+    at >= 0 ? lines.slice(at, at + 12).filter((l) => !/^\s+at /.test(l)) : lines.slice(-3);
+  return picked.join(' ').replace(/\s+/g, ' ').trim() || undefined;
 }
 
 /** Writes the merged verdict where `sdods run --process` writes one, so ingest records it the same way. */
@@ -369,16 +402,16 @@ export function register(program: Command) {
       if (gated) mkdirSync(runDir, { recursive: true });
 
       // Shard reports are produced by `sdods run --reporter blob --shard i/n`; merging them
-      // rebuilds one HTML report and JUnit file for the whole matrix. `merge-reports` reads ONE
-      // directory, so the reports of several are staged into one first (each shard wrote its own
-      // directory; prefixed, because two runs' shard 1 carry the same file name).
-      const staged = shardDirs.length > 1 ? stageShardReports(shardDirs) : undefined;
+      // rebuilds one HTML report and JUnit file for the whole matrix.
+      const workspace = mergeWorkspace(shardDirs, ctx.rootDir);
       const args = [
         'playwright',
         'merge-reports',
+        '--config',
+        workspace.config,
         '--reporter',
         reporters.join(','),
-        staged ?? shardDirs[0]!,
+        workspace.reports,
       ];
       const res = await execa('npx', args, {
         cwd: ctx.rootDir,
@@ -396,7 +429,7 @@ export function register(program: Command) {
           throw new SdodsError(
             'RUN_FAILED',
             `Merging shard reports failed (exit ${res.exitCode}).`,
-            { hint: res.stderr?.split('\n').slice(-3).join(' ') || undefined },
+            { hint: mergeFailureHint(res.stderr) },
           );
         }
         if (gated) {
@@ -417,7 +450,7 @@ export function register(program: Command) {
           recordMergedGates(runDir, gates);
         }
       } finally {
-        if (staged) rmSync(staged, { recursive: true, force: true });
+        rmSync(workspace.dir, { recursive: true, force: true });
       }
 
       if (ctx.opts.json)
