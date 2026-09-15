@@ -37,8 +37,16 @@ describe('roadmap checkpoints', () => {
   it('orders the chapters and leaves them undated', () => {
     const chapters = CHECKPOINTS.filter(isChapter);
     expect(chapters.map((c) => c.order)).toEqual([1, 2, 3, 4, 5]);
-    // A delivered chapter carries no date on purpose; there is no release history to date it against.
+    // A delivered chapter carries no date on purpose: it landed before the first release.
     expect(chapters.every((c) => !('when' in c))).toBe(true);
+  });
+
+  it('delivers the months behind today and promises the ones after it', () => {
+    const months = CHECKPOINTS.filter(isMonth);
+    const today = months.findIndex((m) => m.id === TODAY_ID);
+    expect(today).toBeGreaterThanOrEqual(0);
+    expect(months.slice(0, today).every((m) => m.state === 'delivered')).toBe(true);
+    expect(months.slice(today + 1).every((m) => m.state === 'planned')).toBe(true);
   });
 
   it('climbs a rung of the ladder at every stop', () => {

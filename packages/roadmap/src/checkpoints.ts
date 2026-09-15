@@ -25,10 +25,12 @@ const phases = (...numbers: number[]): RoadmapPhase[] =>
  * The road, stop by stop.
  *
  * Behind the reader: five chapters, deliberately undated. The work is real and the code is
- * here, but this repository's history is days old and nothing has been released, so a month
- * against each chapter would be a number nobody could check.
+ * here, but it landed before the first release, in a repository whose history begins on
+ * 3 September 2026, so a month against each chapter would be a number nobody could check.
  *
- * Ahead: twelve months that are close enough to promise, then three years of direction.
+ * Then twelve months. A month is `delivered` only when its proof can be repeated today, and its
+ * `ships` and `proof` are rewritten to what actually landed rather than what was promised. After
+ * that, three years of direction.
  */
 export const CHECKPOINTS: Checkpoint[] = [
   {
@@ -134,17 +136,19 @@ export const CHECKPOINTS: Checkpoint[] = [
     when: '2026-10',
     label: 'Oct 2026',
     title: 'Every claim on this site is true',
-    state: 'now',
+    state: 'delivered',
     arc: 2,
     goal: 'No page describes a feature that does not run. Trust is the product.',
     ships: [
-      'Accessibility checks actually execute axe-core per @a11y scenario, or the guide retracts them',
-      'Performance budgets enforced at run time, or the checkbox goes away',
-      'Known limitations re-checked line by line against the code',
+      '@a11y audits the page each tagged scenario ends on with axe-core, failing at a configurable impact',
+      '@perf compares page vitals and live API p95 with the configured budgets when the scenario ends',
+      'sdods run --process evaluates minPassRate, maxFlaky, a11y and perfBudgets, and exits GATE_FAILED on a breach',
+      'Known limitations re-checked line by line against the code, with the stale rows removed',
       'One source of truth for this roadmap, shared by the docs, the site and the README',
     ],
-    proof: 'Every capability the documentation claims has a test that exercises it.',
-    maxi: 'You are here. The most valuable thing this month is subtraction — two features the docs describe do not actually run, and saying so is worth more than shipping a third.',
+    proof:
+      'sdods run -p demo-shop -e staging -l ui -b chromium -t "@a11y or @perf" --process release-gate passes every gate, and a deliberate breach fails it.',
+    maxi: 'Delivered ahead of its month. The guide described two tags that only worked as explicit steps; now the tags do what the page says, and a process gate can fail the run instead of decorating a form.',
   },
   {
     id: 'm-2026-11',
@@ -152,17 +156,18 @@ export const CHECKPOINTS: Checkpoint[] = [
     when: '2026-11',
     label: 'Nov 2026',
     title: 'A first real release',
-    state: 'planned',
+    state: 'delivered',
     arc: 2,
     goal: 'Install SDODS the way you install anything else.',
     ships: [
-      'A version bump through changesets and a git tag that exists',
-      'The @sdods packages published to npm for real',
-      'A GitHub release with notes generated from the changesets',
-      'A server image on GHCR, built from the tag',
+      'Versions bumped through changesets, with a git tag per published package',
+      'The @sdods packages published to npm',
+      'A GitHub release per version, with notes generated from the changesets',
+      'A server image on GHCR, built and pushed by the release workflow',
     ],
-    proof: 'npm view @sdods/cli version answers, and the installer stops falling back to git.',
-    maxi: 'Nothing on this road matters if people cannot install it. Right now the installer quietly falls back to a git checkout, and this is the month that stops being necessary.',
+    proof:
+      'npm view @sdods/cli version answers, and the installer installs from npm without a git checkout.',
+    maxi: 'Delivered ahead of its month. The installer used to fall back to a git checkout quietly; now it installs the published packages, and says so plainly when it cannot.',
   },
   {
     id: 'm-2026-12',
@@ -170,16 +175,17 @@ export const CHECKPOINTS: Checkpoint[] = [
     when: '2026-12',
     label: 'Dec 2026',
     title: 'CI and your laptop agree about a screenshot',
-    state: 'planned',
+    state: 'delivered',
     arc: 2,
     goal: 'Visual tests stop being the suite everyone disables.',
     ships: [
-      'Cross-platform visual baselines, with Linux baselines produced in CI',
-      'A baseline update flow that reviews the diff instead of trusting the runner',
-      'Masking of the regions that will never be stable',
+      'Baselines kept per platform, with the linux/ set rendered by the visual-baselines workflow in the pinned Playwright image',
+      'sdods baselines diff and accept, and Accept as baseline in the web UI, so a person reviews the diff before it becomes the baseline',
+      'Masks and a diff threshold per baseline, and a step that masks inline',
     ],
-    proof: 'The @visual suite passes on Linux CI and macOS from the same committed baselines.',
-    maxi: "Visual testing is the first suite teams switch off, and it is almost always because the baseline was made on someone's laptop.",
+    proof:
+      'The @visual suite passes on ubuntu inside the Playwright image from committed linux/ baselines, and on macOS from darwin/ ones.',
+    maxi: "Delivered ahead of its month. Visual testing is the first suite teams switch off, almost always because the baseline was made on someone's laptop; now CI makes its own, and a person reviews every change to one.",
   },
   {
     id: 'm-2027-01',
@@ -187,7 +193,7 @@ export const CHECKPOINTS: Checkpoint[] = [
     when: '2027-01',
     label: 'Jan 2027',
     title: 'A suite that runs with the network unplugged',
-    state: 'planned',
+    state: 'now',
     arc: 2,
     goal: 'Third-party sandboxes stop deciding whether your build is green.',
     ships: [
@@ -398,4 +404,4 @@ export const CHECKPOINTS: Checkpoint[] = [
 ];
 
 /** The checkpoint the traveller is standing on. */
-export const TODAY_ID = 'm-2026-10';
+export const TODAY_ID = 'm-2027-01';
