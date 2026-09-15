@@ -617,16 +617,32 @@ export function checkMatrixRoles(
 export function poolRolesByEnv(
   project: ProjectConfig & { root: string },
 ): Map<string, Set<string>> | undefined {
+  const counts = poolAccountsByEnv(project);
+  if (!counts) return undefined;
+  return new Map([...counts].map(([env, roles]) => [env, new Set(roles.keys())]));
+}
+
+/**
+ * Accounts per role in the user-pool dataset, per available environment. Undefined if not
+ * file-backed (a db or openapi dataset is not knowable without connecting).
+ *
+ * `poolSize` is the env's `users.poolSize`, applied as the lease applies it: the dataset is sliced
+ * BEFORE rows are split by role, so a small value can leave a role with no account at all.
+ */
+export function poolAccountsByEnv(
+  project: ProjectConfig & { root: string },
+  opts: { envs?: readonly string[]; poolSize?: (env: string) => number | undefined } = {},
+): Map<string, Map<string, number>> | undefined {
   const pool = project.data.userPool;
   const spec = pool ? project.data.sources[pool.dataset] : undefined;
   if (!pool || !spec || !('path' in spec)) return undefined;
-  const out = new Map<string, Set<string>>();
-  for (const env of project.envs.available) {
+  const out = new Map<string, Map<string, number>>();
+  for (const env of opts.envs ?? project.envs.available) {
     let file: string;
     try {
       file = resolveDataPath(project.root, spec, env);
     } catch {
-      out.set(env, new Set());
+      out.set(env, new Map());
       continue;
     }
     let rows: Array<Record<string, unknown>> = [];
@@ -641,8 +657,15 @@ export function poolRolesByEnv(
     } catch {
       rows = [];
     }
+    const size = opts.poolSize?.(env);
+    if (size) rows = rows.slice(0, size);
+    const roles = new Map<string, number>();
     // Same fallback as the lease: a row without a role column is a "standard" account.
-    out.set(env, new Set(rows.map((r) => String(r[pool.roleColumn] ?? 'standard'))));
+    for (const r of rows) {
+      const role = String(r[pool.roleColumn] ?? 'standard');
+      roles.set(role, (roles.get(role) ?? 0) + 1);
+    }
+    out.set(env, roles);
   }
   return out;
 }

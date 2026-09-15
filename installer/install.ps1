@@ -3,9 +3,10 @@
   SDODS installer for Windows (PowerShell 5.1 and 7+).
 
 .DESCRIPTION
-  Checks Node 22+, installs Bun into the SDODS home if needed, fetches SDODS (npm when
-  published, otherwise a shallow git clone), installs dependencies and browser engines, and
-  writes an `sdods.cmd` shim. Re-running upgrades in place.
+  Checks Node 22+, installs Bun into the SDODS home if needed, fetches SDODS from npm (a failed
+  npm install is an error, never a silent clone; -Source git builds from a source checkout
+  instead), installs dependencies and browser engines, and writes an `sdods.cmd` shim.
+  Re-running upgrades in place.
 
   Nothing is written outside -Dir (default $env:USERPROFILE\.sdods) and -BinDir (default
   $env:LOCALAPPDATA\SDODS\bin). The user PATH is only changed with -ModifyPath.

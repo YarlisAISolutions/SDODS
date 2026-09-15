@@ -8,7 +8,7 @@ import { applyEmulation, emulationFromTags } from '../config/emulation.js';
 import { noopAuth } from '../auth/index.js';
 import { ApiClient, isolatedRequestFactory } from '../api/client.js';
 import { CompositeDataProvider } from '../data/provider.js';
-import { FileUserPool } from '../data/user-pool.js';
+import { FileUserPool, scenarioLeaseClock } from '../data/user-pool.js';
 import { apiHarForScenario } from '../har/hooks.js';
 import { Healer } from '../heal/healer.js';
 import { HealHistory } from '../heal/history.js';
@@ -224,11 +224,31 @@ export const test = base.extend<TestFixtures, WorkerFixtures>({
   // `$sdodsTagGate` first, and it is not unused: it is here to force the ordering.
   // Leasing an account for a scenario that the tag gate is about to skip burns a
   // pool slot, and on a role with no rows it throws before the skip can happen.
-  user: async ({ $sdodsTagGate, userPool, $tags }, use, testInfo) => {
+  user: async ({ $sdodsTagGate, userPool, config, $tags }, use, testInfo) => {
     void $sdodsTagGate;
     const role = parseTagValue($tags, 'user');
-    await use(role ? await userPool.lease(role, testInfo.parallelIndex) : undefined);
+    if (!role) return use(undefined);
+    const clock = scenarioLeaseClock(config.project.data.userPool, testInfo);
+    const leased = await userPool.lease(role, testInfo.parallelIndex);
+    clock.settle();
+    await use(leased);
   },
+
+  /**
+   * `data.userPool.leaseScope: scenario` (#153): hand back every account this worker leased once
+   * the scenario is over — the `@user:` lease above and the `I use a leased user …` steps alike.
+   * A worker runs one scenario at a time, so what it holds at teardown is exactly this scenario's.
+   *
+   * Automatic and dependent only on worker fixtures, so it is set up before and torn down after
+   * everything that could still be signed in as the account (page, context, storageState).
+   */
+  $sdodsScenarioLeases: [
+    async ({ config, userPool }, use) => {
+      await use();
+      if (config.project.data.userPool?.leaseScope === 'scenario') await userPool.releaseAll();
+    },
+    { auto: true },
+  ],
 
   storageState: async ({ user, authCache, auth, sdods, browser, config }, use) => {
     if (!user || sdods.layer === 'api' || !config.project.auth.storageState) return use(undefined);

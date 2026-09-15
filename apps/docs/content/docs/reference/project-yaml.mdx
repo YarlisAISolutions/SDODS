@@ -138,8 +138,9 @@ description: Field-by-field reference for the project file and the workspace fil
     },
     'data.factories': { type: 'string', description: 'Path to a defineFactories module.' },
     'data.userPool': {
-      type: '{ dataset, roleColumn, leaseStore, leaseTtlMs }',
-      description: "roleColumn default 'role', leaseStore 'file'|'db', leaseTtlMs 600000.",
+      type: '{ dataset, roleColumn, leaseStore, leaseTtlMs, mode, waitMs, leaseScope }',
+      description:
+        "roleColumn default 'role'; leaseStore 'file' (the only store; 'db' is rejected); leaseTtlMs 600000; mode 'exclusive'|'shared'; waitMs 30000 with worker scope, leaseTtlMs with scenario scope; leaseScope 'worker' (default) holds an account until the worker exits, 'scenario' releases it when each scenario ends.",
     },
     'auth.strategy': {
       type: "'none'|'form'|'token'|'oauth-client-credentials'|'sso'|'custom'",

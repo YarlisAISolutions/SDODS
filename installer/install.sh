@@ -4,9 +4,10 @@
 #   curl -fsSL https://sdods.com/install.sh | sh
 #   curl -fsSL https://sdods.com/install.sh | sh -s -- --workspace ~/tests --mcp claude
 #
-# What it does: checks Node 22+, installs Bun into the SDODS home if needed, fetches SDODS
-# (npm when published, otherwise a shallow git clone), installs dependencies and browser
-# browsers, and writes an `sdods` shim on your PATH. Re-running upgrades in place.
+# What it does: checks Node 22+, installs Bun into the SDODS home if needed, fetches SDODS from
+# npm (a failed npm install is an error, never a silent clone; --source git builds from a source
+# checkout instead), installs dependencies and browsers, and writes an `sdods` shim on your PATH.
+# Re-running upgrades in place.
 #
 # Nothing is written outside $SDODS_HOME (default ~/.sdods) and $BIN_DIR (default
 # ~/.local/bin), and the shell rc file is only touched with --modify-path.

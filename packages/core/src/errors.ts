@@ -9,6 +9,7 @@ export type SdodsErrorCode =
   | 'DATASET_NOT_FOUND'
   | 'DATASET_ROW_NOT_FOUND'
   | 'USER_POOL_EXHAUSTED'
+  | 'USER_POOL_TOO_SMALL'
   | 'HEAL_FAILED'
   | 'LINT_FAILED'
   | 'RUN_FAILED'

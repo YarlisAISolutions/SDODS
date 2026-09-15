@@ -15,45 +15,46 @@ sdods run [-p <slug>] [-e <env>] [-t <expr>] [-l <layer>]... [-b <browser>]... [
             [--max-failures <n>] [--timeout <ms>] [--reporter <name[=file]>]... [--reporter-mode <mode>] [--trigger <kind>]
 ```
 
-| Flag                       | Meaning                                                                                                                                      |
-| -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `-p, --project <slug>`     | project slug (default: the only project, otherwise required)                                                                                 |
-| `-e, --env <name>`         | environment (default: `envs.default`)                                                                                                        |
-| `-t, --tags <expr>`        | Cucumber tag expression, e.g. `"@smoke and not @mock"`; a comma list means OR                                                                |
-| `-l, --layer <layer>`      | `ui`, `api`, `hybrid`, `recorded`; repeatable                                                                                                |
-| `-b, --browser <name>`     | `chromium`, `edge`, `firefox`, `webkit`, `mobile-chrome`, `mobile-safari`; repeatable                                                        |
-| `-m, --module <name>`      | restrict to a module; repeatable                                                                                                             |
-| `--process <name>`         | apply a named process from the project or workspace YAML; explicit flags override its fields                                                 |
-| `--project-matrix`         | every browser declared in the project YAML                                                                                                   |
-| `--device <name>`          | device name for mobile emulation, e.g. `"iPhone 15"`                                                                                         |
-| `--headed`                 | visible browsers                                                                                                                             |
-| `-w, --workers <n>`        | parallel workers                                                                                                                             |
-| `--shard <i/n>`            | shard, e.g. `1/3`                                                                                                                            |
-| `--retries <n>`            | retries per test (default: `retries.ci` in CI, `retries.local` elsewhere)                                                                    |
-| `--trace <mode>`           | Playwright trace mode, e.g. `on`, `off` (default: `evidence.trace`); traces are redacted after the run unless `evidence.redactTraces: false` |
-| `--video <mode>`           | Playwright video mode (default: `evidence.video`)                                                                                            |
-| `--grep <pattern>`         | filter tests by title (regular expression)                                                                                                   |
-| `--feature <path>`         | only this feature file (relative to `features/`)                                                                                             |
-| `--scenario <name>`        | only scenarios whose title contains this text                                                                                                |
-| `--run-id <id>`            | run id (default: UUID v7)                                                                                                                    |
-| `--artifacts-dir <dir>`    | artifacts root (default: `.sdods/runs`)                                                                                                      |
-| `--no-lint`                | skip feature lint before running                                                                                                             |
-| `--ingest` / `--no-ingest` | force or skip database ingest (default: ingest when a database is configured)                                                                |
-| `--no-notify`              | do not publish the run to enabled integrations (default: notify when any is enabled)                                                         |
-| `--allure`                 | also produce `allure-results`                                                                                                                |
-| `--har-update`             | record or refresh HAR files for `@har` scenarios                                                                                             |
-| `--har-replay`             | replay HAR files for `@har` scenarios                                                                                                        |
-| `--strict`                 | with `--har-replay`: abort any request that is not in the HAR (offline run)                                                                  |
-| `--update-snapshots`       | overwrite `@visual` baselines without review and print a warning; prefer [`sdods baselines`](/docs/reference/cli-commands/baselines)         |
-| `--ui`, `--debug`          | interactive UI mode, step debugger                                                                                                           |
-| `--list`                   | print the run targets and tests that would run, then stop                                                                                    |
-| `--repeat-each <n>`        | repeat each test n times                                                                                                                     |
-| `--fail-on-flaky`          | exit `1` when any test is flaky                                                                                                              |
-| `--max-failures <n>`       | stop after n failures                                                                                                                        |
-| `--timeout <ms>`           | per-test timeout override                                                                                                                    |
-| `--reporter <name[=file]>` | reporter override; repeatable                                                                                                                |
-| `--reporter-mode <mode>`   | `default`, `server` (line output for the web UI), `quiet`                                                                                    |
-| `--trigger <kind>`         | recorded in `run.json`: `cli`, `ui`, `ci`, `agent`, `mcp`, `schedule` (default `cli`)                                                        |
+| Flag                       | Meaning                                                                                                                                        |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `-p, --project <slug>`     | project slug (default: the only project, otherwise required)                                                                                   |
+| `-e, --env <name>`         | environment (default: `envs.default`)                                                                                                          |
+| `-t, --tags <expr>`        | Cucumber tag expression, e.g. `"@smoke and not @mock"`; a comma list means OR                                                                  |
+| `-l, --layer <layer>`      | `ui`, `api`, `hybrid`, `recorded`; repeatable                                                                                                  |
+| `-b, --browser <name>`     | `chromium`, `edge`, `firefox`, `webkit`, `mobile-chrome`, `mobile-safari`; repeatable                                                          |
+| `-m, --module <name>`      | restrict to a module; repeatable                                                                                                               |
+| `--process <name>`         | apply a named process from the project or workspace YAML; explicit flags override its fields                                                   |
+| `--project-matrix`         | every browser declared in the project YAML                                                                                                     |
+| `--device <name>`          | device name for mobile emulation, e.g. `"iPhone 15"`                                                                                           |
+| `--headed`                 | visible browsers                                                                                                                               |
+| `-w, --workers <n>`        | parallel workers                                                                                                                               |
+| `--allow-pool-contention`  | run even when a `@user:` role has fewer pool accounts than the scenarios that could lease it at once (otherwise exit 2, `USER_POOL_TOO_SMALL`) |
+| `--shard <i/n>`            | shard, e.g. `1/3`                                                                                                                              |
+| `--retries <n>`            | retries per test (default: `retries.ci` in CI, `retries.local` elsewhere)                                                                      |
+| `--trace <mode>`           | Playwright trace mode, e.g. `on`, `off` (default: `evidence.trace`); traces are redacted after the run unless `evidence.redactTraces: false`   |
+| `--video <mode>`           | Playwright video mode (default: `evidence.video`)                                                                                              |
+| `--grep <pattern>`         | filter tests by title (regular expression)                                                                                                     |
+| `--feature <path>`         | only this feature file (relative to `features/`)                                                                                               |
+| `--scenario <name>`        | only scenarios whose title contains this text                                                                                                  |
+| `--run-id <id>`            | run id (default: UUID v7)                                                                                                                      |
+| `--artifacts-dir <dir>`    | artifacts root (default: `.sdods/runs`)                                                                                                        |
+| `--no-lint`                | skip feature lint before running                                                                                                               |
+| `--ingest` / `--no-ingest` | force or skip database ingest (default: ingest when a database is configured)                                                                  |
+| `--no-notify`              | do not publish the run to enabled integrations (default: notify when any is enabled)                                                           |
+| `--allure`                 | also produce `allure-results`                                                                                                                  |
+| `--har-update`             | record or refresh HAR files for `@har` scenarios                                                                                               |
+| `--har-replay`             | replay HAR files for `@har` scenarios                                                                                                          |
+| `--strict`                 | with `--har-replay`: abort any request that is not in the HAR (offline run)                                                                    |
+| `--update-snapshots`       | refresh `@visual` baselines                                                                                                                    |
+| `--ui`, `--debug`          | interactive UI mode, step debugger                                                                                                             |
+| `--list`                   | print the run targets and tests that would run, then stop                                                                                      |
+| `--repeat-each <n>`        | repeat each test n times                                                                                                                       |
+| `--fail-on-flaky`          | exit `1` when any test is flaky                                                                                                                |
+| `--max-failures <n>`       | stop after n failures                                                                                                                          |
+| `--timeout <ms>`           | per-test timeout override                                                                                                                      |
+| `--reporter <name[=file]>` | reporter override; repeatable                                                                                                                  |
+| `--reporter-mode <mode>`   | `default`, `server` (line output for the web UI), `quiet`                                                                                      |
+| `--trigger <kind>`         | recorded in `run.json`: `cli`, `ui`, `ci`, `agent`, `mcp`, `schedule` (default `cli`)                                                          |
 
 Lifecycle:
 
