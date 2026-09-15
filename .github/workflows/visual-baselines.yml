@@ -12,6 +12,11 @@ name: visual-baselines
 # Run it by hand after a deliberate UI change, a Playwright upgrade (the monthly dependencies
 # workflow bumps the image tag together with the client), or when a new @visual scenario lands.
 #
+# `env` applies to every project in one dispatch, so render projects that live in different envs
+# in separate dispatches: `projects: demo-shop` with `env: staging`, and `projects: rwa-bank` with
+# `env: ci`. When `projects` names rwa-bank, cypress-realworld-app is started inside the container
+# first (.github/actions/start-rwa), exactly as the nightly `rwa-bank` job in ci.yml starts it.
+#
 # The PR is opened with GITHUB_TOKEN, and GitHub does not start workflows for events that token
 # creates: push an empty commit to the branch (or close and reopen the PR) to run CI on it.
 
@@ -19,7 +24,9 @@ on:
   workflow_dispatch:
     inputs:
       projects:
-        description: Projects to render, space- or comma-separated (each needs an env CI can reach)
+        description: >-
+          Projects to render, space- or comma-separated (each needs an env CI can reach; rwa-bank
+          starts its app in the job and uses env ci)
         type: string
         default: demo-shop
       env:
@@ -69,6 +76,10 @@ jobs:
         # Playwright image ships Python but not make or a C++ compiler.
         run: apt-get update -qq && apt-get install -y --no-install-recommends build-essential
       - run: bun install --frozen-lockfile
+      - name: Start cypress-realworld-app for rwa-bank
+        id: rwa
+        if: contains(inputs.projects, 'rwa-bank')
+        uses: ./.github/actions/start-rwa
       - name: Render @visual with --update-snapshots
         shell: bash
         env:
@@ -106,6 +117,13 @@ jobs:
           name: visual-baselines-runs
           path: .sdods/runs
           if-no-files-found: ignore
+          retention-days: 7
+      - name: Upload the cypress-realworld-app log
+        if: failure() && steps.rwa.outputs.log != ''
+        uses: actions/upload-artifact@v7
+        with:
+          name: rwa-app-log
+          path: ${{ steps.rwa.outputs.log }}
           retention-days: 7
 
   pull-request:
