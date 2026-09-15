@@ -35,6 +35,10 @@ bun run channels:sync
 bun run channels:sync -- --check   # non-zero if the committed state has drifted
 ```
 
+Nobody has to remember to run it: `.github/workflows/channels.yml` runs the sync after every
+`release` run on `main`, daily, and on demand, and opens or refreshes the `chore/channels-sync` PR
+when anything drifted. Merge that PR; do not edit its diff.
+
 Every SHA-256 in `packaging/` is computed from bytes the script downloaded. Do not transcribe one
 from a release page — it is the single field where being wrong means the package manager refuses
 to install at all, after every check here has passed.
