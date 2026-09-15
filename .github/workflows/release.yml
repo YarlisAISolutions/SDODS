@@ -10,6 +10,12 @@ on:
         description: 'Rebuild and push the server image without publishing packages'
         type: boolean
         default: false
+      push:
+        description: >-
+          Push the image to GHCR. Untick it (with image_only) to build and smoke-test both
+          architectures without publishing anything
+        type: boolean
+        default: true
 
 permissions:
   contents: write
@@ -115,7 +121,7 @@ jobs:
           echo "publishing image for ${version:-<no @sdods/cli in this release>}"
 
   docker:
-    name: server image (GHCR)
+    name: server image · ${{ matrix.arch }}
     # It used to gate on `refs/tags/v*` alone -- and nothing creates such a tag. Releases go out
     # through changesets on `main`, which commits a version bump and publishes, without tagging.
     # So this job had never run once and ghcr.io/<owner>/sdods-server does not exist.
@@ -128,10 +134,152 @@ jobs:
       (startsWith(github.ref, 'refs/tags/v') ||
        needs.changesets.outputs.published == 'true' ||
        inputs.image_only)
-    runs-on: ubuntu-latest
+    # One native runner per architecture, merged into one manifest list by `docker-manifest` below.
+    #
+    # Docker does NOT fall back to emulation for a missing architecture -- it refuses the pull with
+    # "no matching manifest for linux/arm64/v8" -- so an amd64-only image does not run on Apple
+    # silicon or Graviton at all without `--platform linux/amd64`.
+    #
+    # Not QEMU: an arm64 build emulated on an amd64 runner did not finish inside 90 minutes, because
+    # `bun install`, the native module builds and the web bundle all ran emulated. GitHub's arm64
+    # runner (`ubuntu-24.04-arm`) is available to this private repository, and on it the unchanged
+    # Dockerfile builds natively: the Playwright base and the bun installer are both multi-arch.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-latest
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
     timeout-minutes: 60
+    env:
+      # A push event has no inputs, so `inputs.push` is empty there; only a dispatch can opt out.
+      PUSH: ${{ github.event_name != 'workflow_dispatch' || inputs.push }}
+      IMAGE: ghcr.io/${{ github.repository_owner }}/sdods-server
+      LOCAL: sdods-server:smoke
     steps:
       - uses: actions/checkout@v7
+      - uses: docker/setup-buildx-action@v4
+      - name: Build (linux/${{ matrix.arch }})
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          platforms: linux/${{ matrix.arch }}
+          load: true
+          tags: ${{ env.LOCAL }}
+          # One cache per architecture: a shared scope would have each leg evict the other's layers.
+          cache-from: type=gha,scope=sdods-server-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=sdods-server-${{ matrix.arch }}
+
+      # The image is published only after it has run on its own architecture. Every check below
+      # runs the image natively on this runner, so an arm64 image that cannot load its native
+      # modules or start its server fails here instead of on a user's machine.
+      - name: 'Smoke · image metadata (arch, user, healthcheck, entrypoint)'
+        shell: bash
+        run: |
+          set -euo pipefail
+          arch=$(docker image inspect "$LOCAL" --format '{{.Architecture}}')
+          user=$(docker image inspect "$LOCAL" --format '{{.Config.User}}')
+          entrypoint=$(docker image inspect "$LOCAL" --format '{{json .Config.Entrypoint}}')
+          health=$(docker image inspect "$LOCAL" --format '{{json .Config.Healthcheck.Test}}')
+          echo "arch=$arch user=$user entrypoint=$entrypoint"
+          echo "healthcheck=$health"
+          test "$arch" = '${{ matrix.arch }}' || { echo "::error::image is $arch, expected ${{ matrix.arch }}"; exit 1; }
+          test "$user" = pwuser || { echo "::error::image runs as '$user', expected pwuser"; exit 1; }
+          test "$entrypoint" = '["/app/deploy/entrypoint.sh"]' || { echo "::error::entrypoint changed"; exit 1; }
+          grep -q '/api/health' <<<"$health" || { echo "::error::healthcheck no longer probes /api/health"; exit 1; }
+      - name: Smoke · sdods --version
+        run: docker run --rm "$LOCAL" --version
+      - name: Smoke · native modules load (better-sqlite3, argon2)
+        shell: bash
+        # The workspace uses bun's isolated linker, so each module resolves from the package that
+        # depends on it, not from /app.
+        run: |
+          set -euo pipefail
+          docker run --rm --entrypoint node -w /app/packages/db "$LOCAL" -e "
+            const Database = require('better-sqlite3');
+            const row = new Database(':memory:').prepare('select sqlite_version() as v').get();
+            console.log('better-sqlite3 ok on', process.arch, '- sqlite', row.v);"
+          docker run --rm --entrypoint node -w /app/packages/server "$LOCAL" -e "
+            const argon2 = require('argon2');
+            argon2.hash('smoke').then((h) => argon2.verify(h, 'smoke')).then((ok) => {
+              if (!ok) throw new Error('argon2 verify failed');
+              console.log('argon2 ok on', process.arch);
+            });"
+      - name: Smoke · serve answers /api/health and the container turns healthy
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run -d --name sdods-smoke -p 8080:8080 "$LOCAL"
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:8080/api/health; then echo; break; fi
+            if [ "$i" = 60 ]; then echo "::error::/api/health did not answer in 120s"; docker logs sdods-smoke; exit 1; fi
+            sleep 2
+          done
+          # The HEALTHCHECK's first probe lands 30s in; wait for Docker's own verdict.
+          for i in $(seq 1 45); do
+            status=$(docker inspect --format '{{.State.Health.Status}}' sdods-smoke)
+            [ "$status" = healthy ] && { echo "container is healthy"; break; }
+            if [ "$i" = 45 ]; then echo "::error::container health is '$status' after 90s"; docker logs sdods-smoke; exit 1; fi
+            sleep 2
+          done
+          docker exec sdods-smoke id -un
+      - name: Smoke · a UI run inside the container (demo-shop @smoke, HAR replay)
+        # Browsers ship in the Playwright base; this is the path a run started from the web UI takes.
+        run: >
+          docker run --rm --ipc=host -e CI=true "$LOCAL"
+          run -p demo-shop -e staging -l ui -b chromium -t @smoke --har-replay --strict --no-ingest
+      - name: Server logs
+        if: always()
+        run: docker logs sdods-smoke 2>&1 | tail -50 || true
+
+      - uses: docker/login-action@v4
+        if: env.PUSH == 'true'
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Push by digest
+        id: push
+        if: env.PUSH == 'true'
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          platforms: linux/${{ matrix.arch }}
+          # Untagged: the tags go on the manifest list that joins both digests.
+          outputs: type=image,name=${{ env.IMAGE }},push-by-digest=true,name-canonical=true,push=true
+          cache-from: type=gha,scope=sdods-server-${{ matrix.arch }}
+      - name: Record the digest
+        if: env.PUSH == 'true'
+        env:
+          DIGEST: ${{ steps.push.outputs.digest }}
+        run: mkdir -p "$RUNNER_TEMP/digests" && touch "$RUNNER_TEMP/digests/${DIGEST#sha256:}"
+      - uses: actions/upload-artifact@v7
+        if: env.PUSH == 'true'
+        with:
+          name: digests-${{ matrix.arch }}
+          path: ${{ runner.temp }}/digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  docker-manifest:
+    name: server image (GHCR)
+    needs: [changesets, docker]
+    if: >-
+      always() && needs.docker.result == 'success' &&
+      (github.event_name != 'workflow_dispatch' || inputs.push)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      IMAGE: ghcr.io/${{ github.repository_owner }}/sdods-server
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: digests-*
+          path: ${{ runner.temp }}/digests
+          merge-multiple: true
       - uses: docker/setup-buildx-action@v4
       - uses: docker/login-action@v4
         with:
@@ -141,30 +289,25 @@ jobs:
       - id: meta
         uses: docker/metadata-action@v6
         with:
-          images: ghcr.io/${{ github.repository_owner }}/sdods-server
+          images: ${{ env.IMAGE }}
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=raw,value=${{ needs.changesets.outputs.version }},enable=${{ needs.changesets.outputs.version != '' }}
             type=raw,value=latest
-      - uses: docker/build-push-action@v7
-        with:
-          context: .
-          # amd64 only, and that is a limitation rather than a preference.
-          #
-          # Docker does NOT fall back to emulation for a missing architecture -- it refuses the
-          # pull with "no matching manifest for linux/arm64/v8" -- so Apple silicon needs
-          # `--platform linux/amd64`, which the install page and the docs both say.
-          #
-          # Building arm64 here was tried and abandoned: with QEMU on an amd64 runner the arm64
-          # stage did not finish inside 90 minutes, because every one of `bun install`, the native
-          # module builds and the web bundle runs emulated. Two things would fix it properly, and
-          # both are more than a flag: a native arm64 runner (a paid runner tier for a private
-          # repository), or splitting the Dockerfile so the arch-independent web bundle is built
-          # on $BUILDPLATFORM and only the runtime layer is emulated.
-          platforms: linux/amd64
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+      - name: Join both architectures under the release tags
+        working-directory: ${{ runner.temp }}/digests
+        shell: bash
+        run: |
+          set -euo pipefail
+          sources=()
+          for digest in *; do sources+=("$IMAGE@sha256:$digest"); done
+          test "${#sources[@]}" = 2 || { echo "::error::expected 2 digests (amd64, arm64), got ${#sources[@]}"; exit 1; }
+          mapfile -t tags < <(jq -r '.tags[] | "--tag=" + .' <<<"$DOCKER_METADATA_OUTPUT_JSON")
+          docker buildx imagetools create "${tags[@]}" "${sources[@]}"
+      - name: The published index carries linux/amd64 and linux/arm64
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker buildx imagetools inspect "$IMAGE:latest" | tee inspect.txt
+          grep -q 'linux/amd64' inspect.txt && grep -q 'linux/arm64' inspect.txt
