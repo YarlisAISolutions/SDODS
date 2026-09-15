@@ -1,6 +1,13 @@
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
-import type { GateResult, GateRow, ProcessGates } from '@sdods/contracts';
+import { attachmentNames } from '@sdods/contracts';
+import type {
+  GateResult,
+  GateRow,
+  ProcessConfig,
+  ProcessGates,
+  RunManifest,
+} from '@sdods/contracts';
 import type { A11yScenarioReport } from './a11y-scenario.js';
 import type { PerfScenarioReport } from './perf-scenario.js';
 
@@ -97,22 +104,25 @@ export function evaluateGates(input: {
   }
 
   if (gates.a11y) {
-    const audited = evidence.a11y.filter((r) => r.status !== 'skipped');
-    const blocking = audited.reduce((n, r) => n + r.blocking, 0);
-    const failing = audited.filter((r) => r.blocking > 0);
+    const reports = evidence.a11y.filter((r) => r.status !== 'skipped');
+    // Under `a11y.scope: every-page` one scenario report holds an audit per URL; each is counted.
+    const audits = reports.reduce((n, r) => n + auditsIn(r), 0);
+    const blocking = reports.reduce((n, r) => n + r.blocking, 0);
+    const failing = reports.flatMap((r) =>
+      (r.pages ?? [r])
+        .filter((p) => p.blocking > 0)
+        .map((p) => `${p.url} [${r.runnerProject}]: ${p.blockingRules.join(', ')}`),
+    );
     rows.push({
       gate: 'a11y',
       threshold: 'no blocking violation',
-      actual: `${blocking} blocking in ${audited.length} audit(s)`,
-      passed: audited.length > 0 && blocking === 0,
+      actual: `${blocking} blocking in ${audits} audit(s)`,
+      passed: audits > 0 && blocking === 0,
       detail:
-        audited.length === 0
+        audits === 0
           ? 'no @a11y audit ran in this run, so the gate has nothing to prove'
           : failing.length
-            ? failing
-                .slice(0, 5)
-                .map((r) => `${r.url} [${r.runnerProject}]: ${r.blockingRules.join(', ')}`)
-                .join('; ')
+            ? failing.slice(0, 5).join('; ')
             : undefined,
     });
   }
@@ -145,17 +155,28 @@ export function evaluateGates(input: {
   return { process: input.process, passed: rows.every((r) => r.passed), rows };
 }
 
+/** Audits one scenario report stands for: one per URL under `every-page`, otherwise one. */
+function auditsIn(report: A11yScenarioReport): number {
+  if (!report.pages) return 1;
+  return report.pages.filter((p) => p.status !== 'not-audited').length;
+}
+
 function formatPct(n: number): string {
   return Number.isInteger(n) ? String(n) : n.toFixed(1);
 }
 
 /**
- * Reads the `@a11y` and `@perf` scenario reports out of a run directory
+ * Reads the `@a11y` and `@perf` scenario reports out of one or more run directories
  * (`<runDir>/<slug>/<fingerprint>/r<retry>/{a11y,perf}/scenario--<runner project>.json`), keeping
  * only the highest retry of each scenario on each runner project: an attempt that was retried is not
- * the scenario's verdict.
+ * the scenario's verdict. Several directories are how the shards of one run are read together: each
+ * shard wrote its own scenarios, and the same scenario never ran on two shards.
  */
-export function collectGateEvidence(runDir: string): GateEvidence {
+export function collectGateEvidence(
+  runDirs: string | readonly string[],
+  /** Reports read from elsewhere (the attachments of a merged report), judged the same way. */
+  extra: readonly (A11yScenarioReport | PerfScenarioReport)[] = [],
+): GateEvidence {
   const latest = new Map<
     string,
     { retry: number; a11y?: A11yScenarioReport; perf?: PerfScenarioReport }
@@ -171,7 +192,8 @@ export function collectGateEvidence(runDir: string): GateEvidence {
         : { retry: report.retry, perf: report },
     );
   };
-  for (const file of scenarioReportFiles(runDir)) {
+  const dirs = [...new Set(typeof runDirs === 'string' ? [runDirs] : runDirs)];
+  for (const file of dirs.flatMap(scenarioReportFiles)) {
     try {
       const parsed = JSON.parse(readFileSync(file, 'utf8')) as { kind?: string };
       if (parsed.kind === 'a11y-scenario' || parsed.kind === 'perf-scenario')
@@ -180,11 +202,64 @@ export function collectGateEvidence(runDir: string): GateEvidence {
       /* a half-written report is not evidence */
     }
   }
+  for (const report of extra) keep(report);
   const values = [...latest.values()];
   return {
     a11y: values.flatMap((v) => (v.a11y ? [v.a11y] : [])),
     perf: values.flatMap((v) => (v.perf ? [v.perf] : [])),
   };
+}
+
+/**
+ * The `sdods/a11y-scenario` and `sdods/perf-scenario` reports attached to the tests of a runner JSON
+ * report. After `playwright merge-reports` their paths point into the directory the blob reports
+ * were unpacked into, which lives only as long as the merge, so read them before it is removed. A
+ * missing or unreadable file is skipped; the run directories are the other source of the same
+ * evidence.
+ */
+export function gateReportsFromRunnerJson(
+  report: unknown,
+): (A11yScenarioReport | PerfScenarioReport)[] {
+  const names = new Set<string>([attachmentNames.a11yScenario, attachmentNames.perfScenario]);
+  const out: (A11yScenarioReport | PerfScenarioReport)[] = [];
+  type Suite = {
+    suites?: Suite[];
+    specs?: { tests?: { results?: { attachments?: { name: string; path?: string }[] }[] }[] }[];
+  };
+  const walk = (suite: Suite) => {
+    for (const spec of suite.specs ?? [])
+      for (const test of spec.tests ?? [])
+        for (const result of test.results ?? [])
+          for (const a of result.attachments ?? []) {
+            if (!names.has(a.name) || !a.path || !existsSync(a.path)) continue;
+            try {
+              const parsed = JSON.parse(readFileSync(a.path, 'utf8')) as { kind?: string };
+              if (parsed.kind === 'a11y-scenario' || parsed.kind === 'perf-scenario')
+                out.push(parsed as A11yScenarioReport | PerfScenarioReport);
+            } catch {
+              /* not evidence */
+            }
+          }
+    for (const child of suite.suites ?? []) walk(child);
+  };
+  for (const suite of (report as { suites?: Suite[] } | null)?.suites ?? []) walk(suite);
+  return out;
+}
+
+/**
+ * Gate totals from a runner JSON report's `stats` (what `playwright merge-reports --reporter json`
+ * writes for the merged shards). The same counting as the run dashboard: one row per test, retries
+ * folded into `flaky`.
+ */
+export function gateTotalsFromRunnerStats(
+  stats: { expected?: number; unexpected?: number; flaky?: number; skipped?: number } | undefined,
+): GateTotals | undefined {
+  if (!stats) return undefined;
+  const passed = stats.expected ?? 0;
+  const failed = stats.unexpected ?? 0;
+  const flaky = stats.flaky ?? 0;
+  const skipped = stats.skipped ?? 0;
+  return { total: passed + failed + flaky + skipped, passed, failed, skipped, flaky };
 }
 
 function scenarioReportFiles(runDir: string): string[] {
@@ -206,4 +281,34 @@ function scenarioReportFiles(runDir: string): string[] {
     }
   }
   return out;
+}
+
+/**
+ * The gate judge ingest runs when a run directory carries no `gates.json`: the process the run's
+ * manifest names, over the totals ingest just computed and the evidence in the run directory.
+ * `undefined` when there is nothing it may judge: no process, a process without gates, a cancelled
+ * run, or one shard of several (a shard is not the run; `sdods report merge --process` judges it).
+ */
+export function ingestGateJudge(input: {
+  manifest: Partial<RunManifest> | null | undefined;
+  runDir: string;
+  processOf: (slug: string, name: string) => ProcessConfig;
+}): ((totals: GateTotals) => GateResult | undefined) | undefined {
+  const { manifest, runDir } = input;
+  if (!manifest?.process || !manifest.projectSlug) return undefined;
+  if ((manifest.shardTotal ?? 1) > 1 || manifest.exitCode === 130) return undefined;
+  let proc: ProcessConfig;
+  try {
+    proc = input.processOf(manifest.projectSlug, manifest.process);
+  } catch {
+    return undefined; // a process this checkout no longer defines has no gates to judge
+  }
+  if (!hasGates(proc.gates)) return undefined;
+  return (totals) =>
+    evaluateGates({
+      process: proc.name,
+      gates: proc.gates,
+      totals,
+      evidence: collectGateEvidence(runDir),
+    });
 }

@@ -406,6 +406,11 @@ jobs:
           path: .sdods/runs
           merge-multiple: true
       - name: Merge shard reports (sharded UI runs)
+        # No process runs in this workflow, so no gates are judged here. A job that runs its shards
+        # with `--process <name>` gates the whole run at this step instead: merge each run's own
+        # shard-reports with `--run <that run id> --process <name>`, so the verdict (gates.json) lands
+        # in the run directory the ingest step below uploads, and let a GATE_FAILED exit fail the job
+        # rather than `|| echo`.
         shell: bash
         run: |
           shopt -s nullglob

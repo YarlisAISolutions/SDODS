@@ -7,7 +7,13 @@ import { readJson } from '../col.js';
 import { ensureProject, getProjectBySlug } from '../repos/projects.js';
 import { deleteRunChildren, upsertRun } from '../repos/runs.js';
 import { IngestSession } from './cucumber-ingest.js';
-import { finalizeRun, type LocatorCounter } from './finalize.js';
+import {
+  finalizeRun,
+  gateResultOf,
+  readGateVerdict,
+  recordGateVerdict,
+  type LocatorCounter,
+} from './finalize.js';
 import { fileSha256, parseNdjson, type ParseStats } from './parse-ndjson.js';
 import { ingestRunnerJson } from './runner-json-ingest.js';
 import type { IngestContext, IngestResult, IngestRunOptions } from './types.js';
@@ -178,7 +184,7 @@ export async function ingestRun(adb: SdodsDb, opts: IngestRunOptions): Promise<I
     filesIngested.push(key);
   }
 
-  const { totals, status } = await finalizeRun({
+  const finalized = await finalizeRun({
     adb,
     runId: opts.runId,
     projectId: project.id,
@@ -188,11 +194,32 @@ export async function ingestRun(adb: SdodsDb, opts: IngestRunOptions): Promise<I
     ingestedFiles: filesIngested,
     exitCode: manifest?.exitCode ?? null,
   });
+  const { totals } = finalized;
+  let { status } = finalized;
+  // The same verdict a server-started run gets: CLI runs and merged shards look alike in the DB.
+  // A re-ingest with nothing to judge keeps the verdict already recorded, rather than resetting the
+  // run to the status its scenarios alone would give it.
+  const gates =
+    opts.gates === null
+      ? undefined
+      : typeof opts.gates === 'object'
+        ? opts.gates
+        : (readGateVerdict(runDir) ??
+          (typeof opts.gates === 'function' ? opts.gates(totals) : undefined) ??
+          gateResultOf(prevTotals.gates));
+  if (gates)
+    status =
+      (await recordGateVerdict(adb, {
+        runId: opts.runId,
+        gates,
+        exitCode: manifest?.exitCode ?? null,
+      })) ?? status;
   return {
     runId: opts.runId,
     projectSlug,
     totals,
     status,
+    gates,
     scenarios: counts.scenarios,
     attempts: counts.attempts,
     steps: counts.steps,

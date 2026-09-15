@@ -1,5 +1,5 @@
-import { AfterScenario, BeforeScenario } from '../fixtures/test.js';
-import { auditScenarioEnd } from './a11y-scenario.js';
+import { AfterScenario, AfterStep, BeforeScenario } from '../fixtures/test.js';
+import { auditAfterStep, auditScenarioEnd, watchA11yPages } from './a11y-scenario.js';
 import { judgeScenarioPerf, watchNavigations } from './perf-scenario.js';
 
 /**
@@ -41,6 +41,29 @@ AfterScenario(
   async ({ config, scenario, apiContext, $testInfo }) => {
     await noting(scenario, () =>
       judgeScenarioPerf({ config, scenario, apiContext, testInfo: $testInfo }),
+    );
+  },
+);
+
+// `a11y.scope: every-page` only; both are no-ops under the default `final`.
+BeforeScenario(
+  { name: 'sdods:a11y:watch', tags: `@a11y and ${PAGE}` },
+  async ({ page, config, scenario }) => {
+    watchA11yPages({ page, config, scenario });
+  },
+);
+
+AfterStep(
+  { name: 'sdods:a11y:page', tags: `@a11y and ${PAGE}` },
+  async ({ page, config, scenario, $bddContext }) => {
+    await noting(scenario, () =>
+      auditAfterStep({
+        page,
+        config,
+        scenario,
+        step: $bddContext.step.title,
+        failed: $bddContext.step.error !== undefined,
+      }),
     );
   },
 );

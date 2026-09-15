@@ -3,7 +3,13 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { scenarioFiles } from '@sdods/contracts';
-import { collectGateEvidence, evaluateGates, hasGates } from '../src/quality/gates.js';
+import {
+  collectGateEvidence,
+  evaluateGates,
+  gateTotalsFromRunnerStats,
+  hasGates,
+  ingestGateJudge,
+} from '../src/quality/gates.js';
 import type { A11yScenarioReport } from '../src/quality/a11y-scenario.js';
 import type { PerfScenarioReport } from '../src/quality/perf-scenario.js';
 
@@ -212,5 +218,123 @@ describe('collectGateEvidence', () => {
       a11y: [],
       perf: [],
     });
+  });
+});
+
+describe('gates over a11y.scope every-page reports (#177)', () => {
+  const page = (url: string, blocking: number, status: 'audited' | 'not-audited' = 'audited') => ({
+    url,
+    status,
+    violations: blocking,
+    blocking,
+    blockingRules: blocking ? ['image-alt'] : [],
+  });
+
+  it('counts one audit per URL and names the violating URL, not the final one', () => {
+    const result = evaluateGates({
+      process: 'p',
+      gates: { a11y: true },
+      totals: totals(),
+      evidence: {
+        a11y: [
+          a11y({
+            url: 'https://shop/cart',
+            scope: 'every-page',
+            blocking: 1,
+            blockingRules: ['image-alt'],
+            pages: [
+              page('https://shop/login', 1),
+              page('https://shop/hop', 0, 'not-audited'),
+              page('https://shop/cart', 0),
+            ],
+          }),
+          a11y({ fingerprint: '1111111111111111', url: 'https://shop/about' }),
+        ],
+        perf: [],
+      },
+    });
+    expect(result.passed).toBe(false);
+    expect(result.rows[0]!.actual).toBe('1 blocking in 3 audit(s)');
+    expect(result.rows[0]!.detail).toBe('https://shop/login [shop--ui--chromium]: image-alt');
+  });
+});
+
+describe('gates on merged shards (#176)', () => {
+  it('reads totals from the merged runner JSON stats, counting like the dashboard', () => {
+    expect(gateTotalsFromRunnerStats({ expected: 7, unexpected: 1, flaky: 1, skipped: 1 })).toEqual(
+      { total: 10, passed: 7, failed: 1, flaky: 1, skipped: 1 },
+    );
+    expect(gateTotalsFromRunnerStats(undefined)).toBeUndefined();
+  });
+
+  it('collects evidence across the run directories of several shards', () => {
+    const shard = (fingerprint: string, blocking: number) => {
+      const dir = mkdtempSync(join(tmpdir(), 'sdods-shard-'));
+      const file = join(
+        dir,
+        'shop',
+        fingerprint,
+        'r0',
+        scenarioFiles.a11yScenarioJson('shop--ui--chromium'),
+      );
+      mkdirSync(join(file, '..'), { recursive: true });
+      writeFileSync(file, JSON.stringify(a11y({ fingerprint, blocking })));
+      return dir;
+    };
+    const one = shard('aaaaaaaaaaaaaaaa', 0);
+    const two = shard('bbbbbbbbbbbbbbbb', 2);
+    const evidence = collectGateEvidence([one, two, one]);
+    expect(evidence.a11y.map((r) => `${r.fingerprint}:${r.blocking}`).sort()).toEqual([
+      'aaaaaaaaaaaaaaaa:0',
+      'bbbbbbbbbbbbbbbb:2',
+    ]);
+  });
+});
+
+describe('ingestGateJudge', () => {
+  const gated = {
+    name: 'release-gate',
+    gates: { minPassRate: 100, perfBudgets: false, a11y: false },
+  } as never;
+  const processOf = () => gated;
+  const manifest = { projectSlug: 'shop', process: 'release-gate', exitCode: 0 };
+  const runDir = join(tmpdir(), 'sdods-no-such-run');
+
+  it('judges an unsharded run of a gated process over the totals ingest computed', () => {
+    const judge = ingestGateJudge({ manifest, runDir, processOf });
+    expect(judge?.(totals({ total: 4, passed: 3, failed: 1 }))).toMatchObject({
+      process: 'release-gate',
+      passed: false,
+      rows: [{ gate: 'minPassRate', actual: '75% (3/4)' }],
+    });
+  });
+
+  it('judges nothing it may not: no process, no gates, one shard of several, a cancelled run', () => {
+    expect(ingestGateJudge({ manifest: null, runDir, processOf })).toBeUndefined();
+    expect(
+      ingestGateJudge({ manifest: { ...manifest, process: undefined }, runDir, processOf }),
+    ).toBeUndefined();
+    expect(
+      ingestGateJudge({
+        manifest,
+        runDir,
+        processOf: () => ({ name: 'x', gates: { perfBudgets: false, a11y: false } }) as never,
+      }),
+    ).toBeUndefined();
+    expect(
+      ingestGateJudge({ manifest: { ...manifest, shardTotal: 2 }, runDir, processOf }),
+    ).toBeUndefined();
+    expect(
+      ingestGateJudge({ manifest: { ...manifest, exitCode: 130 }, runDir, processOf }),
+    ).toBeUndefined();
+    expect(
+      ingestGateJudge({
+        manifest,
+        runDir,
+        processOf: () => {
+          throw new Error('Process "release-gate" is not defined');
+        },
+      }),
+    ).toBeUndefined();
   });
 });

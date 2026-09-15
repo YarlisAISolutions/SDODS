@@ -3,6 +3,7 @@ import type { RunRecord, RunTotals } from '@sdods/contracts/types';
 import { enc, nowIso, readBool, readJson, readTs } from '../col.js';
 import type { Driver } from '../driver.js';
 import { newId } from '../ids.js';
+import { gateResultOf } from '../ingest/finalize.js';
 import type { Database } from '../schema.js';
 
 export interface RunUpsert {
@@ -169,6 +170,7 @@ export function mapRun(
     finishedAt: readTs(row.finished_at) ?? undefined,
     durationMs: row.duration_ms ?? undefined,
     totals,
+    gates: gateResultOf(totalsRaw.gates),
     totalsRaw,
     artifactsDir: row.artifacts_dir ?? undefined,
     exitCode: row.exit_code ?? undefined,

@@ -61,6 +61,8 @@ export interface RunRecord {
   finishedAt?: string;
   durationMs?: number;
   totals?: RunTotals;
+  /** The process gate verdict recorded on the run, when it ran a process that declares gates. */
+  gates?: GateResult;
   artifactsDir?: string;
   exitCode?: number;
   errorText?: string;

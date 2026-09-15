@@ -25,7 +25,12 @@ import {
   computeInsights,
 } from '@sdods/db';
 import { legacyRunFiles, runFiles } from '@sdods/contracts';
-import { acceptVisualFailures, listVisualFailures, selectVisualFailures } from '@sdods/core';
+import {
+  acceptVisualFailures,
+  ingestGateJudge,
+  listVisualFailures,
+  selectVisualFailures,
+} from '@sdods/core';
 
 import { AcceptBaselinesBody, CompareQuery, RunListQuery, StartRunBody } from '../schemas/index.js';
 import { badRequest, forbidden, notFound, parse } from '../errors.js';
@@ -279,8 +284,8 @@ export async function runRoutes(app: FastifyInstance) {
   );
 
   /**
-   * CI ingest without DB credentials: multipart files (run.json, summary.json, messages*.ndjson,
-   * runner-results*.json) plus an optional `artifacts.tgz` holding the run directory (screenshots,
+   * CI ingest without DB credentials: multipart files (run.json, summary.json, gates.json,
+   * messages*.ndjson, runner-results*.json) plus an optional `artifacts.tgz` holding the run directory (screenshots,
    * api snapshots, meta.json …). The archive is extracted under the run dir; entries that would
    * escape it (absolute paths, `..`, symlinks/links) are dropped; total size is capped by
    * SDODS_INGEST_MAX_MB (multipart limit) and the extracted bytes by 4× that.
@@ -317,7 +322,7 @@ export async function runRoutes(app: FastifyInstance) {
           continue;
         }
         if (
-          !/^(run\.json|summary\.json|messages(\.shard-\d+)?\.ndjson|(runner|pw)-results(\.shard-\d+)?\.json)$/.test(
+          !/^(run\.json|summary\.json|gates\.json|messages(\.shard-\d+)?\.ndjson|(runner|pw)-results(\.shard-\d+)?\.json)$/.test(
             name,
           )
         ) {
@@ -330,7 +335,7 @@ export async function runRoutes(app: FastifyInstance) {
       }
       if (!saved.length)
         throw badRequest(
-          'No accepted files. Send run.json, messages*.ndjson, runner-results*.json or artifacts.tgz.',
+          'No accepted files. Send run.json, gates.json, messages*.ndjson, runner-results*.json or artifacts.tgz.',
         );
       const manifestFile = join(dir, runFiles.manifest);
       const manifest = existsSync(manifestFile)
@@ -356,7 +361,13 @@ export async function runRoutes(app: FastifyInstance) {
         ndjsonPaths,
         runnerJsonPaths,
         artifactsRoot: app.config.artifactsDir,
-      } as never);
+        // Without an uploaded gates.json, the run's process gates are judged here, as the CLI would.
+        gates: ingestGateJudge({
+          manifest,
+          runDir: dir,
+          processOf: (slug, name) => app.registry.processOf(slug, name),
+        }),
+      });
       await audit(app.adb.db, {
         actorUserId: req.principal!.userId,
         actorType: 'token',

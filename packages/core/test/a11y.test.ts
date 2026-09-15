@@ -26,7 +26,12 @@ import {
 } from '../src/steps/a11y.steps.js';
 import { SdodsError } from '../src/errors.js';
 import { markPageAudited } from '../src/a11y/audit.js';
-import { auditScenarioEnd, type A11yScenarioReport } from '../src/quality/a11y-scenario.js';
+import {
+  auditAfterStep,
+  auditScenarioEnd,
+  watchA11yPages,
+  type A11yScenarioReport,
+} from '../src/quality/a11y-scenario.js';
 
 /**
  * The library's contract is "no step may pass vacuously". Every judge is therefore tested three
@@ -532,5 +537,191 @@ describe('@a11y scenario audit in a real browser', () => {
   it('fails a scenario that never navigated: there is no page to audit', async () => {
     const d = deps();
     await expect(auditScenarioEnd(d.input as never)).rejects.toThrow(/never navigated/);
+  });
+});
+
+/**
+ * `a11y.scope: every-page` (#177). A scenario that goes through a page with a violation and ends on
+ * a clean one passes under `final` and must fail under `every-page`, naming the violating URL. The
+ * step boundary is simulated by calling `auditAfterStep` where playwright-bdd's AfterStep hook would.
+ */
+describe('@a11y every-page scope in a real browser', () => {
+  let browser: Browser;
+  let context: BrowserContext;
+  let page: Page;
+
+  const SITE = 'http://pages.a11y.sdods.test';
+  const BROKEN = `<!doctype html><html lang="en"><head><title>Login</title></head><body><main>
+    <h1>Login</h1><img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=">
+    <a href="/clean">Continue</a></main></body></html>`;
+  const CLEAN = `<!doctype html><html lang="en"><head><title>Cart</title></head><body><main>
+    <h1>Cart</h1><p>Readable text</p><a href="/other">Other</a></main></body></html>`;
+  const OTHER = `<!doctype html><html lang="en"><head><title>Other</title></head><body><main>
+    <h1>Other</h1><p>Also fine</p></main></body></html>`;
+  const REDIRECTS = `<!doctype html><html lang="en"><head><title>Hop</title></head><body><main>
+    <h1>Hop</h1><img src="data:image/gif;base64,R0lGODlhAQABAAAAACw=">
+    </main><script>location.replace('/clean')</script></body></html>`;
+
+  beforeAll(async () => {
+    browser = await chromium.launch();
+  }, 120_000);
+  afterAll(async () => {
+    await browser?.close();
+  });
+  beforeEach(async () => {
+    await context?.close();
+    context = await browser.newContext();
+    page = await context.newPage();
+    const bodies: Record<string, string> = {
+      '/broken': BROKEN,
+      '/clean': CLEAN,
+      '/other': OTHER,
+      '/hop': REDIRECTS,
+    };
+    await page.route(`${SITE}/**`, (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'text/html',
+        body: bodies[new URL(route.request().url()).pathname] ?? CLEAN,
+      }),
+    );
+  });
+
+  function deps(a11y: Record<string, unknown>) {
+    const dir = mkdtempSync(join(tmpdir(), 'sdods-a11y-pages-'));
+    const attached: string[] = [];
+    const scenario = {
+      data: { runnerProject: 'shop--ui--chromium', fingerprint: '0123456789abcdef', retry: 0 },
+      file: (rel: string) => {
+        mkdirSync(join(dir, rel, '..'), { recursive: true });
+        return join(dir, rel);
+      },
+    };
+    const input = {
+      page,
+      config: { project: { a11y } },
+      scenario,
+      testInfo: {
+        status: 'passed',
+        attach: async (name: string) => {
+          attached.push(name);
+        },
+      },
+    };
+    watchA11yPages(input as never);
+    /** One scenario step: the action, then what the AfterStep hook does. */
+    const step = async (title: string, action: () => Promise<unknown>) => {
+      await action();
+      return auditAfterStep({ ...input, step: title } as never);
+    };
+    const written = () =>
+      JSON.parse(
+        readFileSync(join(dir, 'a11y', 'scenario--shop--ui--chromium.json'), 'utf8'),
+      ) as A11yScenarioReport;
+    return { input, scenario, attached, step, written };
+  }
+
+  const flow = async (d: ReturnType<typeof deps>) => {
+    await d.step('Given I navigate to the "login" page', () => page.goto(`${SITE}/broken`));
+    await d.step('When I click the "Continue" link', () =>
+      Promise.all([page.waitForURL(`${SITE}/clean`), page.getByRole('link').click()]),
+    );
+  };
+
+  it('final (the default) audits only the page the scenario ends on, so it passes', async () => {
+    const d = deps({});
+    await flow(d);
+    const report = await auditScenarioEnd(d.input as never);
+    expect(report.status).toBe('audited');
+    expect(report.url).toBe(`${SITE}/clean`);
+    expect(report.blocking).toBe(0);
+    expect(report.pages).toBeUndefined();
+    expect(report.scope).toBeUndefined();
+  });
+
+  it('every-page fails on a violation mid-flow, naming the URL, and reports each URL on its own', async () => {
+    const d = deps({ scope: 'every-page' });
+    await flow(d);
+    const error = await auditScenarioEnd(d.input as never).then(
+      () => undefined,
+      (e: Error) => e,
+    );
+    expect(error?.message).toContain('a11y.scope is "every-page"');
+    expect(error?.message).toContain(`${SITE}/broken`);
+    expect(error?.message).toContain('image-alt');
+    expect(error?.message).not.toContain(`${SITE}/clean —`);
+
+    const report = d.written();
+    expect(report.scope).toBe('every-page');
+    expect(report.url).toBe(`${SITE}/clean`);
+    expect(report.pages?.map((p) => [p.url, p.status, p.blockingRules])).toEqual([
+      [`${SITE}/broken`, 'audited', ['image-alt']],
+      [`${SITE}/clean`, 'audited', []],
+    ]);
+    expect(report.pages?.[0]?.auditedAfter).toBe('Given I navigate to the "login" page');
+    expect(report.pages?.every((p) => (p.results?.passes.length ?? 0) > 0)).toBe(true);
+    expect(report.blocking).toBe(report.pages?.[0]?.blocking);
+    expect(report.blockingRules).toEqual(['image-alt']);
+    expect(d.attached).toEqual(['sdods/a11y-scenario']);
+  });
+
+  it('passes every-page when every URL is clean, auditing each distinct URL once', async () => {
+    const d = deps({ scope: 'every-page' });
+    await d.step('Given I open clean', () => page.goto(`${SITE}/clean`));
+    // a step that stays on the page is not a new URL, and a revisit is not audited again
+    expect(
+      await d.step('Then I see the cart', () => page.getByRole('heading').waitFor()),
+    ).toBeUndefined();
+    await d.step('When I open other', () => page.goto(`${SITE}/other`));
+    expect(await d.step('When I go back', () => page.goto(`${SITE}/clean`))).toBeUndefined();
+    const report = await auditScenarioEnd(d.input as never);
+    expect(report.pages?.map((p) => p.url)).toEqual([`${SITE}/clean`, `${SITE}/other`]);
+    expect(report.pages?.every((p) => p.status === 'audited')).toBe(true);
+    expect(report.blocking).toBe(0);
+  });
+
+  it('does not count a URL an explicit whole-page step covered, before or after the tag audited it', async () => {
+    const before = deps({ scope: 'every-page' });
+    markPageAudited(before.scenario, `${SITE}/broken`);
+    await flow(before);
+    const r1 = await auditScenarioEnd(before.input as never);
+    expect(r1.pages?.[0]).toMatchObject({ url: `${SITE}/broken`, status: 'covered-by-step' });
+    expect(r1.pages?.[0]?.results).toBeUndefined();
+    expect(r1.blocking).toBe(0);
+
+    const after = deps({ scope: 'every-page' });
+    await flow(after);
+    markPageAudited(after.scenario, `${SITE}/broken`); // the explicit step ran later
+    const r2 = await auditScenarioEnd(after.input as never);
+    expect(r2.pages?.[0]).toMatchObject({ url: `${SITE}/broken`, status: 'covered-by-step' });
+    expect(r2.blocking).toBe(0);
+  });
+
+  it('lists a URL left within the step that reached it as not audited, and never audits a failed step', async () => {
+    const d = deps({ scope: 'every-page' });
+    await d.step('Given I open a page that redirects at once', () =>
+      page.goto(`${SITE}/hop`).then(() => page.waitForURL(`${SITE}/clean`)),
+    );
+    expect(
+      await auditAfterStep({ ...d.input, step: 'When it fails', failed: true } as never),
+    ).toBeUndefined();
+    const report = await auditScenarioEnd(d.input as never);
+    expect(report.pages?.map((p) => [p.url, p.status])).toEqual([
+      [`${SITE}/hop`, 'not-audited'],
+      [`${SITE}/clean`, 'audited'],
+    ]);
+    expect(report.pages?.[0]?.reason).toContain('within the step');
+    expect(report.blocking).toBe(0);
+  });
+
+  it('skips a scenario that failed, whatever it audited along the way', async () => {
+    const d = deps({ scope: 'every-page' });
+    await flow(d);
+    const report = await auditScenarioEnd({
+      ...d.input,
+      testInfo: { status: 'failed', attach: async () => undefined },
+    } as never);
+    expect(report.status).toBe('skipped');
+    expect(report.blocking).toBe(0);
   });
 });

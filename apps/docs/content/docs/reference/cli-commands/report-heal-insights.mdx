@@ -8,11 +8,35 @@ description: Open reports, ingest results, export requirement traceability and i
 ```text
 sdods report [--last | --run <id>] [--open] [--html] [--dashboard]
 sdods report ingest [files...] --run-id <id> [-p <slug>] [-e <env>] [--manifest <file>] [--format auto|cucumber|runner-json] [--artifacts-dir <dir>] [--replace]
+sdods report merge <dirs...> [--run <id>] [--reporter <list>] [--process <name>] [-p <slug>]
 sdods report traceability -p <slug> [-e <env>] [--run <id> | --last] [--format json|csv|md|html] [-o <file>]
 sdods show-report [--run <id>]
 ```
 
-`report` prints the summary of a run (totals, failed and flaky scenarios, report paths); `--open` opens the HTML report and the SDODS dashboard, `--html` / `--dashboard` open one of them. `report ingest` loads cucumber messages NDJSON and runner JSON results into the database (`sdods run` does this automatically when a database is configured); `--replace` deletes previously ingested rows of the run first. `show-report` opens the HTML report of the latest or a given run.
+`report` prints the summary of a run (totals, failed and flaky scenarios, report paths); `--open` opens the HTML report and the SDODS dashboard, `--html` / `--dashboard` open one of them. `report ingest` loads cucumber messages NDJSON and runner JSON results into the database (`sdods run` does this automatically when a database is configured); `--replace` deletes previously ingested rows of the run first. When the run directory holds a process gate verdict (`gates.json`), ingest records it on the run under `totals_json.gates` and marks a run that did not meet its gates failed, as the server does for the runs it starts. A run whose `run.json` names a process with gates but that has no `gates.json` (and is not one shard of several) is judged during ingest. `show-report` opens the HTML report of the latest or a given run.
+
+## `report merge`
+
+```text
+sdods report merge <dirs...> [--run <id>] [--reporter <list>] [--process <name>] [-p <slug>]
+```
+
+Merges the blob reports that `sdods run --reporter blob --shard i/n` wrote (each `<run>/shard-reports` directory) into one HTML report, plus the other `--reporter` outputs, under the run given by `--run`.
+
+With `--process <name>`, it also judges that process's gates on the whole run. The pass rate and flaky count come from the merged results. The `@a11y` and `@perf` evidence comes from the shards' run directories and from the reports attached in the blobs. It prints the same gate table as `sdods run --process`, writes `gates.json` into the `--run` directory (and adds the verdict to its `run.json` and `summary.json` when they exist), and exits `1` with `GATE_FAILED` when a gate is not met. Without `--process`, it judges the process a shard's `run.json` names, when that process declares gates.
+
+| Flag                   | Default                         | Meaning                                                        |
+| ---------------------- | ------------------------------- | -------------------------------------------------------------- |
+| `--run <id>`           | latest run                      | run directory the merged report and the verdict are written to |
+| `--reporter <list>`    | `html,junit`                    | reporters for the merged output                                |
+| `--process <name>`     | the gated process in `run.json` | process whose gates are judged over the merged shards          |
+| `-p, --project <slug>` | the project in `run.json`       | project that defines `--process`                               |
+
+```bash
+sdods report merge --run gh-123 --process release-gate .sdods/runs/gh-123/shard-reports
+```
+
+One invocation judges one project's process. Merge each project's shards separately when a matrix runs several projects.
 
 ## `report traceability`
 
