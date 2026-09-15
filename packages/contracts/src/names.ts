@@ -170,8 +170,13 @@ export const runFiles = {
   junit: 'junit.xml',
   log: 'run.log',
   summary: 'summary.json',
-  /** Process gate verdict, written by `sdods run --process` after the run. */
+  /** Process gate verdict, written by `sdods run --process` and `sdods report merge --process`. */
   gates: 'gates.json',
+  /**
+   * Runner JSON of merged shard reports, written by `sdods report merge --process`. Deliberately not
+   * `runner-results*.json`: ingest reads those, and this one repeats every shard's scenarios.
+   */
+  mergedResults: 'merged-results.json',
   shardReports: 'shard-reports',
 } as const;
 

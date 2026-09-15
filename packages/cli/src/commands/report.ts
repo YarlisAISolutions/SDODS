@@ -1,11 +1,38 @@
-import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
-import { dirname, extname, join, resolve } from 'node:path';
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  statSync,
+  writeFileSync,
+} from 'node:fs';
+import { tmpdir } from 'node:os';
+import { basename, dirname, extname, join, resolve } from 'node:path';
 import type { Command } from 'commander';
 import { execa } from 'execa';
 import pc from 'picocolors';
-import { runFiles } from '@sdods/contracts';
-import { SdodsError } from '@sdods/core';
+import {
+  legacyRunFiles,
+  runFiles,
+  type GateResult,
+  type ProcessConfig,
+  type RunManifest,
+  type RunSummary,
+} from '@sdods/contracts';
+import {
+  SdodsError,
+  collectGateEvidence,
+  evaluateGates,
+  gateReportsFromRunnerJson,
+  gateTotalsFromRunnerStats,
+  hasGates,
+  ingestGateJudge,
+} from '@sdods/core';
 import { createContext } from '../context.js';
+import { gateFailedError, printGates } from '../gates.js';
 import { json, ok, out, table, warn } from '../ui.js';
 
 function artifactsRoot(rootDir: string): string {
@@ -40,6 +67,64 @@ async function openPath(p: string) {
   const cmd =
     process.platform === 'darwin' ? 'open' : process.platform === 'win32' ? 'start' : 'xdg-open';
   await execa(cmd, [p], { shell: process.platform === 'win32' }).catch(() => undefined);
+}
+
+/**
+ * The process `report merge` judges: `--process` (with `-p`, or the project in a run.json), or the
+ * process a run.json names when it declares gates. `undefined` when there is nothing to judge.
+ */
+function resolveMergeProcess(
+  ctx: ReturnType<typeof createContext>,
+  input: { process?: string; project?: string; manifestDirs: string[] },
+): { slug: string; process: ProcessConfig } | undefined {
+  const manifest = input.manifestDirs
+    .map((d) => readJsonFile<Partial<RunManifest>>(join(d, runFiles.manifest)))
+    .find(Boolean);
+  const name = input.process ?? manifest?.process;
+  if (!name) return undefined;
+  const slug = input.project ?? manifest?.projectSlug;
+  if (!slug)
+    throw new SdodsError(
+      'CONFIG_INVALID',
+      `--process ${name} needs the project that defines it, and no run.json names one.`,
+      {
+        hint: `Pass -p <slug>: sdods report merge --process ${name} -p <slug> <dirs...>`,
+        exitCode: 2,
+      },
+    );
+  const proc = ctx.registry.processOf(slug, name);
+  if (!hasGates(proc.gates)) {
+    // Named explicitly, a process without gates is a mistake worth saying; inferred, it is not.
+    if (input.process)
+      warn(`process "${name}" of ${slug} declares no gates, so there is nothing to judge.`);
+    return undefined;
+  }
+  return { slug, process: proc };
+}
+
+/** Copies the blob reports of several shard report directories into one temporary directory. */
+function stageShardReports(dirs: string[]): string {
+  const staged = mkdtempSync(join(tmpdir(), 'sdods-merge-'));
+  dirs.forEach((dir, i) => {
+    for (const name of readdirSync(dir))
+      if (name.endsWith('.zip')) copyFileSync(join(dir, name), join(staged, `${i + 1}-${name}`));
+  });
+  return staged;
+}
+
+/** Writes the merged verdict where `sdods run --process` writes one, so ingest records it the same way. */
+function recordMergedGates(runDir: string, gates: GateResult): void {
+  writeFileSync(join(runDir, runFiles.gates), JSON.stringify(gates, null, 2));
+  const manifestFile = join(runDir, runFiles.manifest);
+  const manifest = readJsonFile<RunManifest>(manifestFile);
+  if (manifest)
+    writeFileSync(
+      manifestFile,
+      JSON.stringify({ ...manifest, gatesPassed: gates.passed }, null, 2),
+    );
+  const summaryFile = join(runDir, runFiles.summary);
+  const summary = readJsonFile<RunSummary>(summaryFile);
+  if (summary) writeFileSync(summaryFile, JSON.stringify({ ...summary, gates }, null, 2));
 }
 
 export function register(program: Command) {
@@ -188,6 +273,12 @@ export function register(program: Command) {
           artifactsRoot: root,
           replace: Boolean(opts.replace),
           env: opts.env,
+          // A run with no gates.json whose process declares gates is judged here, as the run would have been.
+          gates: ingestGateJudge({
+            manifest: manifest ?? m.readManifest(join(root, opts.runId)),
+            runDir: join(root, opts.runId),
+            processOf: (slug, name) => ctx.registry.processOf(slug, name),
+          }),
         });
         if (ctx.opts.json) return json(res);
         ok(
@@ -197,6 +288,19 @@ export function register(program: Command) {
         out(
           `${pc.green(`${t.passed} passed`)}  ${pc.red(`${t.failed} failed`)}  ${pc.yellow(`${t.flaky} flaky`)}  ${pc.dim(`${t.skipped} skipped`)}  → ${res.status}`,
         );
+        if (res.gates)
+          out(
+            `gates · process ${res.gates.process}: ${
+              res.gates.passed
+                ? pc.green('passed')
+                : pc.red(
+                    `FAILED (${res.gates.rows
+                      .filter((r) => !r.passed)
+                      .map((r) => r.gate)
+                      .join(', ')})`,
+                  )
+            }`,
+          );
         if (res.filesSkipped.length)
           out(pc.dim(`skipped (already ingested): ${res.filesSkipped.join(', ')}`));
         if (res.parseErrors) out(pc.yellow(`${res.parseErrors} unparsable line(s) skipped`));
@@ -207,9 +311,16 @@ export function register(program: Command) {
 
   report
     .command('merge <dirs...>')
-    .description('Merge sharded run reports into one HTML report and JUnit file')
+    .description(
+      'Merge sharded run reports into one HTML report and JUnit file, and judge process gates on the whole run',
+    )
     .option('--run <id>', 'run id to write the merged report into (default: latest)')
     .option('--reporter <list>', 'reporters for the merged output', 'html,junit')
+    .option(
+      '--process <name>',
+      "evaluate this process's gates over the merged shards; exit 1 when one is not met (default: the process in run.json, when it declares gates)",
+    )
+    .option('-p, --project <slug>', 'project that defines --process (default: from run.json)')
     .action(async (dirs: string[], opts, cmd) => {
       const ctx = createContext(cmd);
       const root = artifactsRoot(ctx.rootDir);
@@ -234,28 +345,93 @@ export function register(program: Command) {
           },
         );
       }
+      const shardDirs = dirs.map((d) => resolve(ctx.rootDir, d));
+
+      // The run directory each shard report sits in (`<run>/shard-reports`) holds that shard's
+      // @a11y and @perf scenario reports, which is the gate evidence the merged report lacks.
+      const shardRunDirs = shardDirs
+        .filter((d) =>
+          ([runFiles.shardReports, legacyRunFiles.shardReports] as string[]).includes(basename(d)),
+        )
+        .map((d) => dirname(d));
+      const gated = resolveMergeProcess(ctx, {
+        process: opts.process,
+        project: opts.project,
+        manifestDirs: [runDir, ...shardRunDirs],
+      });
+
+      const reporters = String(opts.reporter)
+        .split(',')
+        .map((r) => r.trim())
+        .filter(Boolean);
+      const mergedJson = join(runDir, runFiles.mergedResults);
+      if (gated && !reporters.includes('json')) reporters.push('json');
+      if (gated) mkdirSync(runDir, { recursive: true });
+
       // Shard reports are produced by `sdods run --reporter blob --shard i/n`; merging them
-      // rebuilds one HTML report and JUnit file for the whole matrix.
+      // rebuilds one HTML report and JUnit file for the whole matrix. `merge-reports` reads ONE
+      // directory, so the reports of several are staged into one first (each shard wrote its own
+      // directory; prefixed, because two runs' shard 1 carry the same file name).
+      const staged = shardDirs.length > 1 ? stageShardReports(shardDirs) : undefined;
       const args = [
         'playwright',
         'merge-reports',
         '--reporter',
-        opts.reporter,
-        ...dirs.map((d) => resolve(ctx.rootDir, d)),
+        reporters.join(','),
+        staged ?? shardDirs[0]!,
       ];
       const res = await execa('npx', args, {
         cwd: ctx.rootDir,
         reject: false,
-        env: { ...process.env, PLAYWRIGHT_HTML_OUTPUT_DIR: join(runDir, runFiles.htmlReport) },
+        env: {
+          ...process.env,
+          PLAYWRIGHT_HTML_OUTPUT_DIR: join(runDir, runFiles.htmlReport),
+          ...(gated ? { PLAYWRIGHT_JSON_OUTPUT_FILE: mergedJson } : {}),
+        },
       });
-      if (res.exitCode !== 0) {
-        throw new SdodsError('RUN_FAILED', `Merging shard reports failed (exit ${res.exitCode}).`, {
-          hint: res.stderr?.split('\n').slice(-3).join(' ') || undefined,
-        });
+
+      let gates: GateResult | undefined;
+      try {
+        if (res.exitCode !== 0) {
+          throw new SdodsError(
+            'RUN_FAILED',
+            `Merging shard reports failed (exit ${res.exitCode}).`,
+            { hint: res.stderr?.split('\n').slice(-3).join(' ') || undefined },
+          );
+        }
+        if (gated) {
+          const merged = readJsonFile<{ stats?: Parameters<typeof gateTotalsFromRunnerStats>[0] }>(
+            mergedJson,
+          );
+          gates = evaluateGates({
+            process: gated.process.name,
+            gates: gated.process.gates,
+            totals: gateTotalsFromRunnerStats(merged?.stats),
+            // The shards' run directories, and the reports attached in the blobs themselves: a
+            // download of the shard reports alone still carries its evidence.
+            evidence: collectGateEvidence(
+              [runDir, ...shardRunDirs],
+              gateReportsFromRunnerJson(merged),
+            ),
+          });
+          recordMergedGates(runDir, gates);
+        }
+      } finally {
+        if (staged) rmSync(staged, { recursive: true, force: true });
       }
+
       if (ctx.opts.json)
-        return json({ runId, merged: dirs.length, htmlReport: join(runDir, runFiles.htmlReport) });
-      ok(`Merged ${dirs.length} shard report dir(s) into ${join(runDir, runFiles.htmlReport)}`);
+        json({
+          runId,
+          merged: dirs.length,
+          htmlReport: join(runDir, runFiles.htmlReport),
+          ...(gates ? { gates } : {}),
+        });
+      else {
+        ok(`Merged ${dirs.length} shard report dir(s) into ${join(runDir, runFiles.htmlReport)}`);
+        if (gates) printGates(gates);
+      }
+      if (gates && !gates.passed) throw gateFailedError(gates, join(runDir, runFiles.gates));
     });
 
   report

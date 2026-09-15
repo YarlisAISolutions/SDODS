@@ -1,4 +1,4 @@
-import type { RunManifest, RunTotals, SuiteStatus } from '@sdods/contracts/types';
+import type { GateResult, RunManifest, RunTotals, SuiteStatus } from '@sdods/contracts/types';
 import type { SdodsDb } from '../create-db.js';
 
 export type { RunManifest, RunTotals, SuiteStatus };
@@ -16,6 +16,14 @@ export interface IngestRunOptions {
   /** git/ci/trigger overrides when there is no manifest */
   trigger?: string;
   env?: string;
+  /**
+   * The process gate verdict to record on the run. The `gates.json` the CLI wrote into the run
+   * directory (`sdods run --process`, `sdods report merge --process`) wins; without one, a function
+   * here judges the gates over the totals ingest computed (the database cannot evaluate them
+   * itself: the judge lives in core, which depends on this package); failing that, the verdict
+   * already recorded on the run is kept. A `GateResult` records that verdict; `null` records none.
+   */
+  gates?: GateResult | null | ((totals: RunTotals) => GateResult | undefined);
 }
 
 export interface IngestResult {
@@ -23,6 +31,8 @@ export interface IngestResult {
   projectSlug: string;
   totals: RunTotals;
   status: string;
+  /** The process gate verdict recorded on the run, when there was one. */
+  gates?: GateResult;
   scenarios: number;
   attempts: number;
   steps: number;

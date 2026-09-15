@@ -147,6 +147,46 @@ describe('resolveConfig precedence', () => {
     expect(viaCli.runtime.retries).toBe(1);
   });
 
+  it('a11y.scope defaults to final and an env yaml overrides it like the other a11y keys', () => {
+    const projectYaml = `slug: shop\nname: Shop\nlayers: [ui]\nenvs: { default: staging, available: [staging, local] }\na11y: { failOn: critical }\n`;
+    const defaults = scaffold({
+      projectYaml,
+      envYaml: `ui: { baseUrl: https://staging.example.com }\napi: { baseUrl: https://api.example.com }\n`,
+    });
+    const plain = resolveConfig({
+      rootDir: defaults.root,
+      projectRoot: defaults.proj,
+      processEnv: {} as any,
+    });
+    expect(plain.project.a11y).toEqual({
+      failOn: 'critical',
+      include: [],
+      exclude: [],
+      scope: 'final',
+    });
+
+    const widened = scaffold({
+      projectYaml,
+      envYaml: `ui: { baseUrl: https://staging.example.com }\napi: { baseUrl: https://api.example.com }\na11y: { scope: every-page }\n`,
+    });
+    const cfg = resolveConfig({
+      rootDir: widened.root,
+      projectRoot: widened.proj,
+      processEnv: {} as any,
+    });
+    expect(cfg.project.a11y.scope).toBe('every-page');
+    expect(cfg.project.a11y.failOn).toBe('critical'); // the rest of the section is kept
+    expect(cfg.provenance['project.a11y.scope']).toBe('envYaml');
+
+    const typo = scaffold({
+      projectYaml,
+      envYaml: `ui: { baseUrl: https://staging.example.com }\napi: { baseUrl: https://api.example.com }\na11y: { scope: every-url }\n`,
+    });
+    expect(() =>
+      resolveConfig({ rootDir: typo.root, projectRoot: typo.proj, processEnv: {} as any }),
+    ).toThrow(/scope/);
+  });
+
   it('reads CLI overrides from SDODS_CLI_OVERRIDES when none are passed', () => {
     const { root, proj } = scaffold();
     const cfg = resolveConfig({

@@ -276,6 +276,7 @@ export function normalizeRunDetail(d: Rec): RunDetail {
   return {
     ...item,
     totals: item.totals ?? summary?.totals ?? undefined,
+    gates: run.gates ?? run.totals?.gates ?? summary?.gates ?? undefined,
     command: d.manifest?.command ?? run.command,
     artifactsDir: run.artifactsDir ?? d.manifest?.artifactsDir,
     exitCode: d.live?.exitCode ?? run.exitCode,

@@ -1,4 +1,7 @@
-import type { RunTotals } from '@sdods/contracts/types';
+import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { runFiles } from '@sdods/contracts/names';
+import type { GateResult, RunTotals } from '@sdods/contracts/types';
 import { enc, nowIso, readBool, readJson, readTs } from '../col.js';
 import type { SdodsDb } from '../create-db.js';
 import { bumpLocatorStats, recomputeFlakyStats } from '../repos/improvement.js';
@@ -153,4 +156,72 @@ export async function finalizeRun(
   }
   void readBool;
   return { totals, status };
+}
+
+/** The gate verdict the CLI wrote into a run directory (`gates.json`), when there is one. */
+export function readGateVerdict(runDir: string): GateResult | undefined {
+  const file = join(runDir, runFiles.gates);
+  if (!existsSync(file)) return undefined;
+  try {
+    return gateResultOf(JSON.parse(readFileSync(file, 'utf8')));
+  } catch {
+    return undefined;
+  }
+}
+
+/** `value` when it has the shape of a gate verdict. */
+export function gateResultOf(value: unknown): GateResult | undefined {
+  const v = value as GateResult | null | undefined;
+  return v && typeof v === 'object' && typeof v.process === 'string' && Array.isArray(v.rows)
+    ? v
+    : undefined;
+}
+
+const GATE_ERROR_PREFIX = 'GATE_FAILED:';
+
+/**
+ * Records a process gate verdict on the run row: under `totals_json.gates`, and — when a gate failed
+ * — as the run's status, exit code and error. A run whose scenarios all passed and whose gates did
+ * not is a failed run; leaving it `passed` is exactly the claim the gate exists to stop. Used by
+ * ingest (CLI runs, merged shards) and by the server's run manager, so both record it the same way.
+ * Returns the run's status afterwards.
+ */
+export async function recordGateVerdict(
+  adb: SdodsDb,
+  input: { runId: string; gates: GateResult; cancelled?: boolean; exitCode?: number | null },
+): Promise<string | undefined> {
+  const { db } = adb;
+  const { runId, gates } = input;
+  const row = await db
+    .selectFrom('runs')
+    .select(['status', 'totals_json', 'exit_code', 'error_text'])
+    .where('id', '=', runId)
+    .executeTakeFirst();
+  if (!row) return undefined;
+  const prev = readJson<Record<string, unknown>>(row.totals_json) ?? {};
+  const cancelled = input.cancelled || row.status === 'cancelled';
+  const failed = gates.rows.filter((r) => !r.passed);
+  const breached = !gates.passed && !cancelled;
+  const status = breached ? 'failed' : row.status;
+  const staleGateError = !breached && row.error_text?.startsWith(GATE_ERROR_PREFIX);
+  await db
+    .updateTable('runs')
+    .set({
+      totals_json: enc.json({ ...prev, gates }),
+      status,
+      ...(breached
+        ? {
+            exit_code: input.exitCode || row.exit_code || 1,
+            error_text: `${GATE_ERROR_PREFIX} process "${gates.process}" did not meet ${failed
+              .map((r) => `${r.gate} (${r.actual}, needs ${r.threshold})`)
+              .join('; ')}`,
+          }
+        : staleGateError
+          ? { error_text: null }
+          : {}),
+      updated_at: nowIso(),
+    })
+    .where('id', '=', runId)
+    .execute();
+  return status;
 }

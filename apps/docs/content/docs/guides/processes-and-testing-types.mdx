@@ -104,7 +104,15 @@ CI workflows call processes by name, so a change of gate or browser list is a YA
 | `a11y`        | at least one `@a11y` audit ran and none found a violation at or above `a11y.failOn`                  |
 | `perfBudgets` | at least one `@perf` scenario was judged against a budget and none breached one                      |
 
-The verdict is written to `gates.json` in the run directory, added to `summary.json` and the `--json` output, and recorded on the run by the server, which marks a gated-out run failed. A sharded run (`--shard i/n`) is not gated per shard, because one shard is not the whole run. What `@a11y` and `@perf` check is described in [Accessibility and performance budgets](/docs/guides/accessibility-and-performance).
+The verdict is written to `gates.json` in the run directory and added to `summary.json` and the `--json` output. Ingest records it on the run, whether the CLI or the server started the run, and marks a gated-out run failed. The run page in the web UI shows the gate table.
+
+A sharded run (`--shard i/n`) is not gated per shard, because one shard is not the whole run. The gates are judged where the shards are merged:
+
+```bash
+sdods report merge --run gh-123 --process release-gate .sdods/runs/gh-123/shard-reports
+```
+
+`report merge --process` reads the merged results and the shards' `@a11y` and `@perf` reports, prints the same table and exits `1` with `GATE_FAILED`. See [Sharding and CI](/docs/guides/sharding-and-ci#gate-a-sharded-run). What `@a11y` and `@perf` check is described in [Accessibility and performance budgets](/docs/guides/accessibility-and-performance).
 
 ## Next steps
 

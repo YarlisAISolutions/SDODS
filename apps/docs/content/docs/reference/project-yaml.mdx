@@ -260,6 +260,12 @@ description: Field-by-field reference for the project file and the workspace fil
       default: '[]',
       description: 'Selectors the @a11y audit leaves out, such as a third-party widget.',
     },
+    'a11y.scope': {
+      type: "'final'|'every-page'",
+      default: "'final'",
+      description:
+        'Pages the @a11y audit covers: the page the scenario ends on, or also every distinct URL a step leaves it on, each reported on its own.',
+    },
   }}
 />
 

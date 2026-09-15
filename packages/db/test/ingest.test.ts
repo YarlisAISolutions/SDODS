@@ -1,8 +1,9 @@
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { sql } from 'kysely';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { attachmentNames } from '@sdods/contracts/names';
+import type { GateResult } from '@sdods/contracts/types';
 import type { SdodsDb } from '../src/create-db.js';
 import { ingestRun, moduleFromUri, selectorFromError, splitUri } from '../src/ingest/index.js';
 import { getRun, getRunScenarios, getScenarioDetail } from '../src/repos/runs.js';
@@ -532,5 +533,112 @@ describe('cucumber NDJSON ingest', () => {
     await expect(ingestRun(adb, { runId: 'run-empty', artifactsRoot: root })).rejects.toThrow(
       /No messages/,
     );
+  });
+});
+
+/**
+ * #176: a run started from the CLI and ingested keeps its process gate verdict in the database,
+ * exactly as a server-started run does, so the web UI shows the same thing for both.
+ */
+describe('process gate verdict on ingest', () => {
+  let adb: SdodsDb;
+  beforeAll(async () => {
+    adb = await testDb();
+    await ensureProject(adb.db, adb.driver, 'demo-shop', 'Demo Shop');
+  });
+  afterAll(() => adb.close());
+
+  const passing = () =>
+    buildMessages(
+      [
+        {
+          uri: 'features/ui/login.feature',
+          name: 'Login',
+          tags: ['@ui'],
+          scenarios: [
+            {
+              name: 'Successful login',
+              tags: ['@smoke'],
+              steps: [{ keyword: 'Given', text: 'I am on the login page' }],
+            },
+          ],
+        },
+      ],
+      { runnerProject: PW },
+    );
+  const failedGate: GateResult = {
+    process: 'release-gate',
+    passed: false,
+    rows: [
+      { gate: 'minPassRate', threshold: '≥ 100%', actual: '100% (1/1)', passed: true },
+      {
+        gate: 'a11y',
+        threshold: 'no blocking violation',
+        actual: '0 blocking in 0 audit(s)',
+        passed: false,
+        detail: 'no @a11y audit ran in this run, so the gate has nothing to prove',
+      },
+    ],
+  };
+
+  it('records the gates.json the CLI wrote under totals_json.gates, and fails the run on a breach', async () => {
+    const { root } = writeRun(
+      'run-gated',
+      { 'messages.ndjson': passing(), 'gates.json': JSON.stringify(failedGate) },
+      { process: 'release-gate', exitCode: 0 },
+    );
+    const res = await ingestRun(adb, { runId: 'run-gated', artifactsRoot: root });
+    expect(res.totals).toMatchObject({ total: 1, passed: 1 });
+    expect(res.status).toBe('failed');
+    expect(res.gates).toEqual(failedGate);
+
+    const run = await getRun(adb.db, 'run-gated');
+    expect(run?.status).toBe('failed');
+    expect(run?.exitCode).toBe(1);
+    expect(run?.errorText).toContain('GATE_FAILED');
+    expect(run?.errorText).toContain('a11y (0 blocking in 0 audit(s)');
+    expect(run?.gates).toEqual(failedGate);
+    expect((run?.totalsRaw.gates as GateResult).rows).toHaveLength(2);
+    expect(run?.totals?.passed).toBe(1);
+
+    // a re-ingest without the file keeps the verdict instead of resetting the run to passed
+    rmSync(join(root, 'run-gated', 'gates.json'));
+    const again = await ingestRun(adb, { runId: 'run-gated', artifactsRoot: root, replace: true });
+    expect(again.status).toBe('failed');
+    expect(again.gates?.process).toBe('release-gate');
+  });
+
+  it('judges the gates with the function it is given when the run directory has no verdict', async () => {
+    const { root } = writeRun(
+      'run-judged',
+      { 'messages.ndjson': passing() },
+      { process: 'pr-check', exitCode: 0 },
+    );
+    const seen: number[] = [];
+    const res = await ingestRun(adb, {
+      runId: 'run-judged',
+      artifactsRoot: root,
+      gates: (totals) => {
+        seen.push(totals.total);
+        return {
+          process: 'pr-check',
+          passed: true,
+          rows: [{ gate: 'minPassRate', threshold: '≥ 90%', actual: '100% (1/1)', passed: true }],
+        };
+      },
+    });
+    expect(seen).toEqual([1]);
+    expect(res.status).toBe('passed');
+    const run = await getRun(adb.db, 'run-judged');
+    expect(run?.gates?.process).toBe('pr-check');
+    expect(run?.status).toBe('passed');
+    expect(run?.errorText).toBeUndefined();
+  });
+
+  it('records nothing for a run with no process verdict', async () => {
+    const { root } = writeRun('run-ungated', { 'messages.ndjson': passing() });
+    const res = await ingestRun(adb, { runId: 'run-ungated', artifactsRoot: root });
+    expect(res.gates).toBeUndefined();
+    expect((await getRun(adb.db, 'run-ungated'))?.gates).toBeUndefined();
   });
 });

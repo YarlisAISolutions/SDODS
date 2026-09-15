@@ -15,6 +15,7 @@ import type {
   RunTotals,
   SuiteStatus,
   ApiSnapshot,
+  GateResult,
   HealEvent,
   TestingType,
 } from '@sdods/contracts';
@@ -32,6 +33,7 @@ export type {
   RunTotals,
   SuiteStatus,
   ApiSnapshot,
+  GateResult,
   HealEvent,
   TestingType,
 };
@@ -239,6 +241,8 @@ export interface ScenarioNode {
 }
 
 export interface RunDetail extends RunListItem {
+  /** The process gate verdict recorded on the run (CLI, merged shards or server). */
+  gates?: GateResult;
   command?: string;
   artifactsDir?: string;
   exitCode?: number;

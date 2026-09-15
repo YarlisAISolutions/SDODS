@@ -41,6 +41,7 @@ import {
 import { analyzeChangeImpact } from '@sdods/mcp';
 import { createContext } from '../context.js';
 import { browserStatuses } from './browsers.js';
+import { gateFailedError, printGates } from '../gates.js';
 import { maybeNotify, notifyRun, type AutoNotifyOutcome } from '../notify.js';
 import { installedPlaywrightVersion, stepResultsWarning } from '../runner-compat.js';
 import { collect, json, out, parseIntFlag, renderError, table, warn } from '../ui.js';
@@ -597,13 +598,14 @@ export async function runCommand(flags: RunFlags, cmd: Command): Promise<number>
 
   // Process gates are judged here, from the run that just finished, before anything publishes it.
   // One shard of several holds only part of the run, so its pass rate and its a11y/perf evidence
-  // are not the run's; a sharded process is gated where the shards are merged, not per shard.
+  // are not the run's; a sharded process is gated where the shards are merged
+  // (`sdods report merge --process`), not per shard.
   const shardTotal = cfg.runtime.shard?.total ?? 1;
   let gates: GateResult | undefined;
   if (proc && hasGates(proc.gates) && exitCode !== 130) {
     if (shardTotal > 1) {
       warn(
-        `process "${proc.name}" gates are not evaluated on shard ${cfg.runtime.shard?.current}/${shardTotal}: one shard is not the whole run.`,
+        `process "${proc.name}" gates are not evaluated on shard ${cfg.runtime.shard?.current}/${shardTotal}: one shard is not the whole run. Judge them on the merged shards with \`sdods report merge --process ${proc.name}\`.`,
       );
     } else {
       gates = evaluateGates({
@@ -712,19 +714,7 @@ export async function runCommand(flags: RunFlags, cmd: Command): Promise<number>
   if (ctx.opts.json) {
     json({ runId, runDir, exitCode: finalExit, summary, manifest, notify, gates });
   } else {
-    if (gates) {
-      out('');
-      out(pc.bold(`gates · process ${gates.process}`));
-      table(
-        gates.rows.map((r) => ({
-          gate: r.gate,
-          threshold: r.threshold,
-          actual: r.actual,
-          result: r.passed ? 'pass' : 'FAIL',
-          detail: r.detail ?? '',
-        })),
-      );
-    }
+    if (gates) printGates(gates);
     const t = summary?.totals;
     out('');
     out(
@@ -734,20 +724,8 @@ export async function runCommand(flags: RunFlags, cmd: Command): Promise<number>
     out(pc.dim(`html report: ${join(runDir, runFiles.htmlReport, 'index.html')}`));
     out(pc.dim(`dashboard:   ${join(runDir, runFiles.dashboard, 'index.html')}`));
   }
-  if (gates && !gates.passed) {
-    const failed = gates.rows.filter((r) => !r.passed);
-    renderError(
-      new SdodsError(
-        'GATE_FAILED',
-        `Process "${gates.process}" did not meet ${failed.length} gate(s): ${failed.map((r) => `${r.gate} (${r.actual}, needs ${r.threshold})`).join('; ')}.`,
-        {
-          hint: `The verdict is in ${join(runDir, runFiles.gates)}. Gates are set under processes[].gates in sdods.project.yaml.`,
-          docsPath: '/docs/guides/processes-and-testing-types',
-        },
-      ),
-      Boolean(ctx.opts.json),
-    );
-  }
+  if (gates && !gates.passed)
+    renderError(gateFailedError(gates, join(runDir, runFiles.gates)), Boolean(ctx.opts.json));
   return finalExit;
 }
 
