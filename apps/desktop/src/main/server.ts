@@ -21,7 +21,12 @@ export interface ServerHandle {
   url: string;
   /** Present only on a genuinely first run: the token that authorises admin creation. */
   setupToken: string | null;
-  stop: () => void;
+  /**
+   * Signal the server's process tree. The promise resolves `true` once the child has exited, or
+   * `false` if it is still running after `timeoutMs` -- in which case the pidfile should stay, so
+   * the next launch reaps it. Callers that cannot wait (the quit and signal paths) ignore it.
+   */
+  stop: (timeoutMs?: number) => Promise<boolean>;
 }
 
 export interface StartOptions {
@@ -120,7 +125,12 @@ export async function startServer(opts: StartOptions): Promise<ServerHandle> {
   child.stderr?.on('data', capture);
 
   let exited: number | null = null;
-  child.on('exit', (code) => (exited = code ?? 1));
+  const exit = new Promise<void>((resolve) =>
+    child.on('exit', (code) => {
+      exited = code ?? 1;
+      resolve();
+    }),
+  );
 
   const health = await pollHealth(url, 90_000);
   if (!health) {
@@ -138,8 +148,15 @@ export async function startServer(opts: StartOptions): Promise<ServerHandle> {
     port,
     url,
     setupToken,
-    stop: () => {
+    stop: (timeoutMs = 10_000) => {
+      if (exited !== null) return Promise.resolve(true);
       if (child.pid) killTree(child.pid);
+      let timer: NodeJS.Timeout | undefined;
+      const late = new Promise<boolean>((resolve) => {
+        timer = setTimeout(() => resolve(false), timeoutMs);
+        timer.unref();
+      });
+      return Promise.race([exit.then(() => true), late]).finally(() => clearTimeout(timer));
     },
   };
 }

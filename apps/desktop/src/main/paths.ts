@@ -31,6 +31,9 @@ export interface DesktopConfig {
   bootstrapped: boolean;
   /** Epoch ms of the last npm-registry upgrade check. */
   lastUpdateCheck?: number;
+  /** Check the desktop release feed on launch and every few hours. Absent means on; the menu's
+   *  "Check for Updates Automatically" writes it. A manual check works either way. */
+  autoUpdate?: boolean;
 }
 
 /** App-owned state. Local (non-roaming) on Windows. */
