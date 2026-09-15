@@ -1,6 +1,7 @@
 @ui @inventory @visual
 Feature: Inventory visual baseline
-  Pixel comparison against a per-browser baseline (run once with --update-snapshots).
+  Pixel comparison against a per-browser, per-platform baseline. Review a failure with
+  `sdods baselines diff` and accept it with `sdods baselines accept inventory --run <id>`.
 
   @regression
   Scenario: Inventory page matches its baseline

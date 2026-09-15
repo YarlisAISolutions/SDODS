@@ -1,10 +1,14 @@
-import type { ShotPolicy } from '@sdods/contracts';
+import type { BaselineConfig, ShotPolicy } from '@sdods/contracts';
 import type { ResolvedConfig } from '../config/resolve.js';
 
 export interface ShotPolicyResolved {
   mode: ShotPolicy;
   fullPage: boolean;
   mask: string[];
+  /** default share of pixels a visual baseline check may differ by */
+  maxDiffPixelRatio: number;
+  /** per-baseline mask and threshold, keyed by name without `.png` */
+  baselines: Record<string, BaselineConfig>;
   viewport: { width: number; height: number };
   /** scenario start/end captures */
   scenario: boolean;
@@ -35,6 +39,8 @@ export function resolvePolicy(tags: readonly string[], config: ResolvedConfig): 
     mode,
     fullPage: s.fullPage,
     mask: s.mask,
+    maxDiffPixelRatio: s.maxDiffPixelRatio ?? 0.01,
+    baselines: s.baselines ?? {},
     viewport: s.viewport,
     scenario: mode === 'scenario' || mode === 'step' || mode === 'visual',
     step: mode === 'step' || mode === 'visual',

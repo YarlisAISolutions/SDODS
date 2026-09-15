@@ -25,8 +25,9 @@ import {
   computeInsights,
 } from '@sdods/db';
 import { legacyRunFiles, runFiles } from '@sdods/contracts';
+import { acceptVisualFailures, listVisualFailures, selectVisualFailures } from '@sdods/core';
 
-import { CompareQuery, RunListQuery, StartRunBody } from '../schemas/index.js';
+import { AcceptBaselinesBody, CompareQuery, RunListQuery, StartRunBody } from '../schemas/index.js';
 import { badRequest, forbidden, notFound, parse } from '../errors.js';
 import { diffPngs, pngSize } from '../services/image-diff.js';
 import { ArchiveTooLargeError, extractArtifacts } from '../services/artifacts-archive.js';
@@ -447,6 +448,81 @@ export async function runRoutes(app: FastifyInstance) {
         mismatchRatio: diff.mismatchRatio,
         cached: diff.cached,
       };
+    },
+  );
+
+  // ── visual baselines ───────────────────────────────────────────────────
+  /** The run's failed visual checks (records the runtime writes), with image URLs. */
+  const visualFailuresOf = async (req: { principal: Principal | null }, id: string) => {
+    const dir = runDirOf(id);
+    const slug = await projectOfRun(app, id);
+    if (!slug) throw notFound('Run');
+    const role = await canSeeProject(req, slug);
+    // A record naming another project must not reach that project's tree.
+    const failures = listVisualFailures(dir).filter((f) => f.project === slug);
+    return { slug, role, dir, failures };
+  };
+  const fileUrl = (id: string, rel?: string) =>
+    rel ? `/api/runs/${id}/files/${rel.split('/').map(encodeURIComponent).join('/')}` : null;
+
+  app.get(
+    '/api/runs/:id/baselines',
+    { preHandler: [app.requireScope('artifacts:read')] },
+    async (req) => {
+      const { id } = req.params as { id: string };
+      const { failures } = await visualFailuresOf(req, id);
+      return {
+        runId: id,
+        failures: failures.map((f) => ({
+          ...f,
+          actualUrl: fileUrl(id, f.actual),
+          expectedUrl: fileUrl(id, f.expected),
+          diffUrl: fileUrl(id, f.diff),
+        })),
+      };
+    },
+  );
+
+  /**
+   * Accept reviewed screenshots as the new baselines: copies each actual image to
+   * `projects/<slug>/features/__screenshots__/<run target>/<platform>/`. Writes to the project
+   * tree, so it needs an editor, like saving a feature.
+   */
+  app.post(
+    '/api/runs/:id/baselines/accept',
+    { preHandler: [app.requireScope('features:write')] },
+    async (req) => {
+      const { id } = req.params as { id: string };
+      const body = parse(AcceptBaselinesBody, req.body ?? {});
+      const { slug, role, dir, failures } = await visualFailuresOf(req, id);
+      if (role === 'viewer') throw forbidden('Editor role required to accept baselines.');
+      if (!app.registry.has(slug)) throw notFound(`Project ${slug}`);
+      if (!failures.length) throw notFound('Failed visual check');
+      const picked = selectVisualFailures(failures, body);
+      const root = app.registry.rootOf(slug);
+      const accepted = acceptVisualFailures({
+        runDir: dir,
+        failures: picked,
+        projectRoot: () => root,
+      });
+      const out = accepted.map((a) => ({
+        name: a.name,
+        runnerProject: a.runnerProject,
+        platform: a.platform,
+        reason: a.reason,
+        diffRatio: a.diffRatio,
+        created: a.created,
+        baseline: relative(root, a.to).split(sep).join('/'),
+      }));
+      await audit(app.adb.db, {
+        actorUserId: req.principal!.userId,
+        actorType: req.principal!.via === 'token' ? 'token' : 'user',
+        action: 'baseline.accept',
+        targetType: 'run',
+        targetId: id,
+        details: { project: slug, accepted: out },
+      });
+      return { runId: id, project: slug, accepted: out };
     },
   );
 

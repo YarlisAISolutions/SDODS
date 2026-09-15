@@ -120,7 +120,24 @@ export const scenarioFiles = {
   healLog: 'heal.jsonl',
   perfJson: (stepIndex: number) => `perf/${pad2(stepIndex)}.json`,
   a11yJson: (stepIndex: number) => `a11y/${pad2(stepIndex)}.json`,
+  /**
+   * Images of a failed visual baseline check. Keyed by run target as well as name: one scenario
+   * directory is shared by every browser that ran it.
+   */
+  visualImage: (runnerProject: string, name: string, phase: 'expected' | 'actual' | 'diff') =>
+    `visual/${fileSafeName(runnerProject)}/${fileSafeName(name)}-${phase}.png`,
+  /** The `VisualFailure` record `sdods baselines` reads. */
+  visualFailure: (runnerProject: string, name: string) =>
+    `visual/${fileSafeName(runnerProject)}/${fileSafeName(name)}.failure.json`,
+  /** Written when the check passes, so a failure on an earlier retry is not offered for accept. */
+  visualPassed: (runnerProject: string, name: string) =>
+    `visual/${fileSafeName(runnerProject)}/${fileSafeName(name)}.passed.json`,
 } as const;
+
+/** File-name-safe form of an attachment or baseline name (matches the DB ingest's `safeName`). */
+export function fileSafeName(name: string): string {
+  return name.replace(/[^A-Za-z0-9._-]+/g, '_').replace(/^_+/, '') || 'attachment';
+}
 
 export const runFiles = {
   manifest: 'run.json',

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { useRun, useScenario } from '../../api/queries';
+import { useAuth } from '../../auth/AuthContext';
 import {
   Badge,
   Button,
@@ -18,6 +19,7 @@ export function ScenarioPage() {
   const q = useScenario(runId, sid);
   const run = useRun(runId);
   const [attemptIdx, setAttemptIdx] = useState<number | null>(null);
+  const { canEdit } = useAuth();
   if (q.isLoading) return <Spinner />;
   if (q.error || !q.data)
     return (
@@ -87,6 +89,9 @@ export function ScenarioPage() {
         attempt={attempt}
         projectSlug={run.data?.projectSlug ?? ''}
         fingerprint={s.fingerprint}
+        runId={runId}
+        runnerProject={s.runnerProject}
+        canAcceptBaseline={canEdit()}
       />
     </div>
   );
