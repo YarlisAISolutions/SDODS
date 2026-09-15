@@ -43,7 +43,9 @@ describe('preview-quota-gate.sh', () => {
     );
     expect(r.status).toBe(0);
     expect(r.stdout).toContain('::warning::No preview for automax-docs');
-    expect(r.calls).toContain('hosting:channel:create pr-172 --site automax-docs --project automax-docs');
+    expect(r.calls).toContain(
+      'hosting:channel:create pr-172 --site automax-docs --project automax-docs',
+    );
   });
 
   it('fails when the channel already existed, so the quota was not the cause', () => {

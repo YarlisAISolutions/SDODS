@@ -75,7 +75,10 @@ function checkout() {
   const fixture = join(root, '.fixture-stage');
   mkdirSync(join(root, 'scripts'), { recursive: true });
   mkdirSync(bin);
-  copyFileSync(join(repoRoot, 'scripts', 'publish-npm.sh'), join(root, 'scripts', 'publish-npm.sh'));
+  copyFileSync(
+    join(repoRoot, 'scripts', 'publish-npm.sh'),
+    join(root, 'scripts', 'publish-npm.sh'),
+  );
   // Tested on its own in tests/verify-staged-version.test.ts.
   writeFileSync(join(root, 'scripts', 'verify-staged-version.mjs'), '');
 
@@ -134,7 +137,13 @@ esac`,
   const npmCalls = () =>
     existsSync(join(root, 'npm.log')) ? readFileSync(join(root, 'npm.log'), 'utf8') : '';
   const tags = () => git('tag', '--list').stdout.split('\n').filter(Boolean).sort();
-  return { root, run, npmCalls, tags, output: join(root, 'runner-temp', 'changesets-output.ndjson') };
+  return {
+    root,
+    run,
+    npmCalls,
+    tags,
+    output: join(root, 'runner-temp', 'changesets-output.ndjson'),
+  };
 }
 
 const everyTag = [...workspace].map(([name, version]) => `${name}@${version}`).sort();
