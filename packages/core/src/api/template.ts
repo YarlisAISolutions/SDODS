@@ -73,6 +73,7 @@ export function renderJson(template: string, ...scopes: Scopes): unknown {
   } catch (e) {
     throw new Error(
       `Body is not valid JSON after rendering templates: ${(e as Error).message}\n${text}`,
+      { cause: e },
     );
   }
 }

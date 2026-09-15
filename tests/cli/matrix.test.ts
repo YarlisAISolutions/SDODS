@@ -83,6 +83,7 @@ describe('sdods matrix expand (#118)', () => {
 
     // Idempotent on disk, too.
     r = await cli(ws, 'matrix', 'expand', '-p', 'shop');
+    expect(r.exitCode, r.stdout + r.stderr).toBe(0);
     expect(readFileSync(feature, 'utf8')).toBe(expanded);
 
     // A matrix edit makes the committed feature stale again; lint sees it as a warning.

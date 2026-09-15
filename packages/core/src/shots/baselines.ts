@@ -85,7 +85,7 @@ export function listVisualFailures(runDir: string): VisualFailure[] {
     }
     for (const n of names) {
       const abs = join(dir, n);
-      let isDir = false;
+      let isDir: boolean;
       try {
         isDir = statSync(abs).isDirectory();
       } catch {

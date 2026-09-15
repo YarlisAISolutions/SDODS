@@ -55,7 +55,7 @@ export async function api<T>(
   });
   if (res.status === 204) return undefined as T;
   const text = await res.text();
-  let parsed: any = null;
+  let parsed: any;
   try {
     parsed = text ? JSON.parse(text) : null;
   } catch {

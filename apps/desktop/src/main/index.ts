@@ -72,7 +72,7 @@ function clearPidfile() {
 
 /** Kill a server left behind by a previous crash, so its port and database are free. */
 function reapOrphanServer() {
-  let record: { pid?: number } | null = null;
+  let record: { pid?: number } | null;
   try {
     record = JSON.parse(readFileSync(pidfilePath(), 'utf8')) as { pid?: number };
   } catch {

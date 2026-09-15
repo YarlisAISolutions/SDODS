@@ -19,6 +19,10 @@ export function Mermaid({ chart }: { chart: string }) {
         securityLevel: 'loose',
         fontFamily: 'inherit',
         theme: resolvedTheme === 'dark' ? 'dark' : 'neutral',
+        // Mermaid 12 defaults to ELK and the `neo` look. The diagrams on these pages (the C4 set
+        // in particular) were sized against dagre, so keep that layout and the classic look.
+        layout: 'dagre',
+        look: 'classic',
       });
       try {
         const { svg: out } = await mermaid.render(
