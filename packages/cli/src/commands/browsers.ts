@@ -91,7 +91,7 @@ export async function browserStatuses(
   return names.map((name) => {
     const engine = ENGINE_OF[name as BrowserName] ?? 'chromium';
     const channel = CHANNEL_OF[name as BrowserName] ?? null;
-    let executable: string | null = null;
+    let executable: string | null;
     try {
       executable = channel ? channelExecutable(channel) : (pw[engine].executablePath() as string);
     } catch {

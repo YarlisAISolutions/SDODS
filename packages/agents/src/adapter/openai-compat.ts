@@ -95,6 +95,7 @@ export class OpenAiCompatibleAdapter implements LlmAdapter {
         if (deadline.aborted)
           throw new Error(
             `${url} did not answer within ${Math.round(this.timeoutMs / 1000)}s. Raise agents.requestTimeoutMs, or check that the server is running and the model is loaded.`,
+            { cause: err },
           );
         throw err;
       }

@@ -273,7 +273,7 @@ export async function projectRoutes(app: FastifyInstance) {
     async (req, reply) => {
       const isMultipart = req.isMultipart();
       let args: string[];
-      let dryRun = false;
+      let dryRun: boolean;
       let temp: string | null = null;
 
       try {
@@ -356,7 +356,7 @@ export async function projectRoutes(app: FastifyInstance) {
         const raw = existsSync(file)
           ? (parseYaml(readFileSync(file, 'utf8')) as Record<string, unknown>)
           : null;
-        let resolved: { ui?: string; api?: string; error?: string } = {};
+        let resolved: { ui?: string; api?: string; error?: string };
         try {
           const cfg = app.registry.resolve(slug, name, {}, { ...process.env });
           resolved = { ui: cfg.env.ui.baseUrl, api: cfg.env.api.baseUrl };

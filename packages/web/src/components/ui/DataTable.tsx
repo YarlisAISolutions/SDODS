@@ -1,16 +1,40 @@
 import {
+  createSortedRowModel,
   flexRender,
-  getCoreRowModel,
-  getSortedRowModel,
-  useReactTable,
+  rowSortingFeature,
+  sortFn_alphanumeric,
+  sortFn_basic,
+  sortFn_datetime,
+  sortFn_text,
+  tableFeatures,
+  useTable,
   type ColumnDef,
+  type RowData,
   type SortingState,
 } from '@tanstack/react-table';
 import { useState } from 'react';
 import { cn } from '../../lib/utils';
 import { Skeleton } from './index';
 
-export function DataTable<T>({
+/**
+ * Sorting is the only feature the tables use. The sort functions are the ones a column's `auto`
+ * sort picks between (dates, strings with digits, strings, everything else), registered here
+ * because v9 bundles nothing it is not given.
+ */
+const features = tableFeatures({
+  rowSortingFeature,
+  sortedRowModel: createSortedRowModel(),
+  sortFns: {
+    alphanumeric: sortFn_alphanumeric,
+    basic: sortFn_basic,
+    datetime: sortFn_datetime,
+    text: sortFn_text,
+  },
+});
+
+export type DataTableColumn<T extends RowData> = ColumnDef<typeof features, T, any>;
+
+export function DataTable<T extends RowData>({
   columns,
   data,
   onRowClick,
@@ -19,7 +43,7 @@ export function DataTable<T>({
   isLoading,
   skeletonRows = 3,
 }: {
-  columns: ColumnDef<T, any>[];
+  columns: DataTableColumn<T>[];
   data: T[];
   onRowClick?: (row: T) => void;
   emptyText?: string;
@@ -29,13 +53,12 @@ export function DataTable<T>({
   skeletonRows?: number;
 }) {
   const [sorting, setSorting] = useState<SortingState>([]);
-  const table = useReactTable({
+  const table = useTable({
+    features,
     data,
     columns,
     state: { sorting },
     onSortingChange: setSorting,
-    getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
   });
   return (
     <div className="panel overflow-x-auto">
@@ -86,7 +109,7 @@ export function DataTable<T>({
               )}
               onClick={onRowClick ? () => onRowClick(r.original) : undefined}
             >
-              {r.getVisibleCells().map((c) => (
+              {r.getAllCells().map((c) => (
                 <td key={c.id} className={cn('px-3 align-middle', dense ? 'py-1.5' : 'py-2')}>
                   {flexRender(c.column.columnDef.cell, c.getContext())}
                 </td>

@@ -38,7 +38,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - id: creds
         shell: bash
         # The key is multi-line JSON, so it goes through the environment; interpolating it
@@ -50,11 +50,11 @@ jobs:
       - name: Validate Dockerfile (no credentials)
         if: steps.creds.outputs.present != 'true'
         run: docker build -t automax-api:ci . >/dev/null && echo "Dockerfile builds; skipping deploy (no GCP_SA_KEY_AUTOMAX secret)"
-      - uses: google-github-actions/auth@v2
+      - uses: google-github-actions/auth@v3
         if: steps.creds.outputs.present == 'true'
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY_AUTOMAX }}
-      - uses: google-github-actions/setup-gcloud@v2
+      - uses: google-github-actions/setup-gcloud@v3
         if: steps.creds.outputs.present == 'true'
       - name: Build image (Cloud Build)
         if: steps.creds.outputs.present == 'true'

@@ -86,7 +86,7 @@ export async function buildMaxiServer(deps: MaxiServerDeps): Promise<FastifyInst
           .send({ error: 'Maxi is still reading the docs. Try again in a minute.' });
       }
       const day = utcDay();
-      let spent = 0;
+      let spent: number;
       try {
         spent = await store.spentToday(day);
       } catch (e) {

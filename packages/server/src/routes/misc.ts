@@ -24,7 +24,7 @@ export async function miscRoutes(app: FastifyInstance) {
 
   app.get('/api/mcp/info', async (req) => {
     const base = app.config.publicUrl ?? `${req.protocol}://${req.headers.host}`;
-    let tools: Array<{ name: string; scope: string | null }> = [];
+    let tools: Array<{ name: string; scope: string | null }>;
     try {
       const mcp = await import('@sdods/mcp');
       const built = mcp.buildSdodsMcpServer({ rootDir: app.config.rootDir, caps: 'all' });

@@ -274,7 +274,7 @@ export class AuthStateCache {
         break;
       } catch (e) {
         if ((e as NodeJS.ErrnoException).code !== 'EEXIST') throw e;
-        let stale = false;
+        let stale: boolean;
         try {
           stale = Date.now() - statSync(lock).mtimeMs > LOCK_STALE_MS;
         } catch {

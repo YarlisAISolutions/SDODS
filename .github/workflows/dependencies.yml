@@ -8,6 +8,13 @@ name: dependencies
 #                build; the answer lives in one rolling issue. Offset from the upgrade so the month
 #                has a mid-point check rather than two reports on the same morning.
 #
+# Held back on purpose, so the freshness report will keep listing them (checked 2026-09-15):
+#   typescript 6.0 not 7       typescript-eslint supports <6.1; TS 7 is the native compiler.
+#   @types/node 22             it matches engines.node >=22, so types cannot promise newer APIs.
+#   cucumber-expressions 19.0.0  the exact version playwright-bdd pins; lint reuses its classes.
+#   desktop vite 7, plugin-react 5  electron-vite 5 supports vite <=7.
+#   changesets/action v1       v2 changes how releases and tags are made (see release.yml).
+#
 # GitHub cron is UTC and does not follow daylight saving: 12:07 UTC is 08:07 in EDT and 07:07 in
 # EST. Minutes are deliberately off the hour — every repository that asks for "8am" picks :00.
 
@@ -29,7 +36,7 @@ permissions:
   issues: write
 
 env:
-  BUN_VERSION: '1.4.0'
+  BUN_VERSION: '1.4.2'
 
 jobs:
   freshness:
@@ -38,11 +45,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: ${{ env.BUN_VERSION }}
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
       - run: bun install --frozen-lockfile
@@ -97,11 +104,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: ${{ env.BUN_VERSION }}
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
       - run: bun install --frozen-lockfile
@@ -145,7 +152,7 @@ jobs:
           bun run test
 
       - name: Open the pull request
-        uses: peter-evans/create-pull-request@v7
+        uses: peter-evans/create-pull-request@v8
         with:
           branch: chore/monthly-dependency-upgrade
           base: main

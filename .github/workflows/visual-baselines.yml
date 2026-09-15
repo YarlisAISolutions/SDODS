@@ -45,7 +45,7 @@ concurrency:
 
 env:
   CI: true
-  BUN_VERSION: '1.4.0'
+  BUN_VERSION: '1.4.2'
 
 jobs:
   render:
@@ -60,7 +60,7 @@ jobs:
       # Firefox refuses to start as root when HOME belongs to another user (the runner's).
       HOME: /root
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Install bun
         # The image ships Node; npm fetches the bun binary without relying on extra image tools.
         run: npm install -g bun@${{ env.BUN_VERSION }}
@@ -93,7 +93,7 @@ jobs:
           exit $status
       - name: Upload the linux baselines
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: linux-baselines
           path: projects/*/features/__screenshots__/*/linux/*.png
@@ -101,7 +101,7 @@ jobs:
           retention-days: 7
       - name: Upload the runs
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: visual-baselines-runs
           path: .sdods/runs
@@ -115,15 +115,15 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/download-artifact@v4
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
         with:
           name: linux-baselines
           path: projects
       - name: What changed
         run: git status --short -- 'projects/*/features/__screenshots__/*/linux/*.png'
       - name: Open the pull request
-        uses: peter-evans/create-pull-request@v7
+        uses: peter-evans/create-pull-request@v8
         with:
           branch: chore/linux-visual-baselines
           base: main
