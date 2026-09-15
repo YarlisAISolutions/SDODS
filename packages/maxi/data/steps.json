@@ -1221,6 +1221,11 @@
   },
   {
     "keyword": "Then",
+    "pattern": "the page should match the visual baseline {string} masking {string}",
+    "source": "project"
+  },
+  {
+    "keyword": "Then",
     "pattern": "the page should not contain the text {string}",
     "source": "project"
   },
