@@ -57,25 +57,26 @@ A wildcard over an empty array matches nothing: `$.items[*]` on `{ "items": [] }
 
 ## UI steps
 
-| Step                                                                            | Effect                            |
-| ------------------------------------------------------------------------------- | --------------------------------- |
-| `I navigate to the {string} page`                                               | route name from `routes`          |
-| `I click the {string} {role}`                                                   | heal-aware click by role and name |
-| `I fill the {string} field with {string}`                                       | heal-aware fill by label          |
-| `I click the element with test id {string}`                                     | heal-aware click by test id       |
-| `I fill the form:`                                                              | data table of `field`/`value`     |
-| `I should see the text {string}`                                                | visible text                      |
-| `I should not see the text {string}`                                            | no visible text                   |
-| `I should see the exact text {string}`                                          | visible text, whole-text match    |
-| `I should not see the exact text {string}`                                      | no visible exact text             |
-| `the page should not contain the text {string}`                                 | text absent from the DOM          |
-| `the {string} {role} should be visible`                                         | heal-aware visibility assertion   |
-| `the page URL should contain {string}`                                          | URL assertion                     |
-| `the page should match the visual baseline {string}`                            | `toHaveScreenshot`                |
-| `I mock {string} with JSON:`                                                    | route fulfilment                  |
-| `I upload {string} to the {string} field`                                       | file input                        |
-| `the page should have no accessibility violations of impact {string} or higher` | axe-core                          |
-| `the page should meet the performance budget`                                   | web vitals vs budgets             |
+| Step                                                                            | Effect                                                          |
+| ------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| `I navigate to the {string} page`                                               | route name from `routes`                                        |
+| `I click the {string} {role}`                                                   | heal-aware click by role and name                               |
+| `I fill the {string} field with {string}`                                       | heal-aware fill by label                                        |
+| `I click the element with test id {string}`                                     | heal-aware click by test id                                     |
+| `I fill the form:`                                                              | data table of `field`/`value`                                   |
+| `I should see the text {string}`                                                | visible text                                                    |
+| `I should not see the text {string}`                                            | no visible text                                                 |
+| `I should see the exact text {string}`                                          | visible text, whole-text match                                  |
+| `I should not see the exact text {string}`                                      | no visible exact text                                           |
+| `the page should not contain the text {string}`                                 | text absent from the DOM                                        |
+| `the {string} {role} should be visible`                                         | heal-aware visibility assertion                                 |
+| `the page URL should contain {string}`                                          | URL assertion                                                   |
+| `the page should match the visual baseline {string}`                            | `toHaveScreenshot`                                              |
+| `the page should match the visual baseline {string} masking {string}`           | `toHaveScreenshot`, comma-separated selectors added to the mask |
+| `I mock {string} with JSON:`                                                    | route fulfilment                                                |
+| `I upload {string} to the {string} field`                                       | file input                                                      |
+| `the page should have no accessibility violations of impact {string} or higher` | axe-core                                                        |
+| `the page should meet the performance budget`                                   | web vitals vs budgets                                           |
 
 ### Text assertions: visible, exact, or in the DOM
 

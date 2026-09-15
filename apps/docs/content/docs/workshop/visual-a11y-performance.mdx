@@ -63,9 +63,22 @@ projects/rwa-bank/features/__screenshots__/rwa-bank--ui--chromium/darwin/signin.
 <Callout type="warn">
   The path contains the browser **and** the platform, because font rendering differs between macOS
   and Linux. A baseline recorded on a laptop will not match on a CI runner: record the CI baseline
-  on CI (or in the same container), and keep visual scenarios out of the suite that gates a merge
-  until you have.
+  on CI with the `visual-baselines` workflow, and keep visual scenarios out of the suite that gates
+  a merge until you have.
 </Callout>
+
+When the page changes on purpose, the check fails with a diff. Review it and accept it rather than
+re-recording everything:
+
+```bash
+sdods baselines diff
+```
+
+```bash
+sdods baselines accept signin --run <runId>
+```
+
+See [Screenshots and visual testing](/docs/guides/screenshots-and-visual#reviewing-and-accepting-a-changed-baseline).
 
 ## What is not here yet
 

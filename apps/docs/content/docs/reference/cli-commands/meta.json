@@ -15,6 +15,7 @@
     "data-db",
     "report-heal-insights",
     "trace",
+    "baselines",
     "agent-proposals",
     "mcp-serve",
     "skills",

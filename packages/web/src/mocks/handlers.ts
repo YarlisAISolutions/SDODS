@@ -212,6 +212,28 @@ export const handlers = [
     if (r) r.status = 'cancelled';
     return json({ ok: true });
   }),
+  http.post('/api/runs/:id/baselines/accept', async ({ params, request }) => {
+    const body = (await request.json()) as { names?: string[]; all?: boolean };
+    const names = body.all ? ['demo-shop--ui--chromium/inventory'] : (body.names ?? []);
+    return json({
+      runId: params.id,
+      project: 'demo-shop',
+      accepted: names.map((n) => {
+        const [runnerProject, name] = n.includes('/')
+          ? (n.split('/') as [string, string])
+          : ['demo-shop--ui--chromium', n];
+        return {
+          name,
+          runnerProject,
+          platform: 'linux',
+          reason: 'changed',
+          diffRatio: 0.034,
+          created: false,
+          baseline: `features/__screenshots__/${runnerProject}/linux/${name}.png`,
+        };
+      }),
+    });
+  }),
   http.get('/api/runs/:id/scenarios/:sid', ({ params }) =>
     json(d.scenarioDetail(params.id as string, params.sid as string)),
   ),

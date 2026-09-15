@@ -27,6 +27,10 @@ export interface ScenarioInit {
 export class ScenarioMeta {
   readonly data: ScenarioMetaDto;
   readonly dir: string;
+  /** the run directory the scenario directory lives in */
+  readonly runDir: string;
+  /** root of the SDODS project (`projects/<slug>`) */
+  readonly projectRoot: string;
   readonly suiteTag?: string;
 
   constructor(init: ScenarioInit) {
@@ -42,6 +46,8 @@ export class ScenarioMeta {
       exampleIndex: null,
       layer,
     });
+    this.runDir = config.runtime.runDir;
+    this.projectRoot = config.project.root;
     this.dir = join(config.runtime.runDir, config.project.slug, fp, `r${testInfo.retry}`);
     this.suiteTag = suiteOfTags(
       tags,

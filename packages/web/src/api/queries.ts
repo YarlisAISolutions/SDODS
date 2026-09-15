@@ -186,6 +186,27 @@ export const useCompare = (before?: string, after?: string, enabled = true) =>
     queryFn: () => api<CompareResult>(`/api/artifacts/compare${qs({ before, after })}`),
     enabled: enabled && Boolean(before && after),
   });
+export interface AcceptedBaseline {
+  name: string;
+  runnerProject: string;
+  platform: string;
+  reason: 'changed' | 'size' | 'missing';
+  diffRatio?: number;
+  created: boolean;
+  baseline: string;
+}
+/** Copies a failed visual check's actual screenshot over its baseline (editor only). */
+export const useAcceptBaselines = (runId: string) => {
+  const inv = useInvalidate();
+  return useMutation({
+    mutationFn: (input: { names: string[] } | { all: true }) =>
+      api<{ runId: string; project: string; accepted: AcceptedBaseline[] }>(
+        `/api/runs/${runId}/baselines/accept`,
+        { json: input },
+      ),
+    onSuccess: () => inv(['run', runId], ['features']),
+  });
+};
 export const useFeatures = (slug: string) =>
   useQuery({
     queryKey: keys.features(slug),
