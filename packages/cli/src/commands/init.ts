@@ -190,12 +190,12 @@ export async function initWorkspace(target: string, flags: InitFlags): Promise<I
           // Gherkin step SKIPPED in messages.ndjson (see runner-compat.ts).
           '@playwright/test':
             flags.link && flags.pm === 'bun' ? 'link:@playwright/test' : '^1.63.0',
-          'playwright-bdd': flags.link && flags.pm === 'bun' ? 'link:playwright-bdd' : '^9.2.0',
+          'playwright-bdd': flags.link && flags.pm === 'bun' ? 'link:playwright-bdd' : '^9.2.1',
         },
         devDependencies: {
-          '@types/node': '^22.15.0',
-          typescript: '~5.9.3',
-          tsx: '^4.23.0',
+          '@types/node': '^22.20.2',
+          typescript: '~6.0.3',
+          tsx: '^4.23.13',
         },
         trustedDependencies: [
           '@playwright/test',
