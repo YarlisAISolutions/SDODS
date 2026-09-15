@@ -238,6 +238,51 @@ a person: Apple Developer Program ($99/yr), and for Windows **Azure Trusted Sign
 rather than a traditional OV certificate, which has required an FIPS hardware token since June 2023
 and does not fit CI. After signing lands, pass `--signed` to `desktop:sync-release`.
 
+**`CSC_LINK` also arms the macOS updater.** Squirrel.Mac will not install an update into an
+unsigned app, so `src/main/updater.ts` stays dormant on macOS unless the build says it is signed.
+That is a build-time constant, `__DESKTOP_SIGNED__`, which `electron.vite.config.ts` sets from
+`CSC_LINK`/`CSC_NAME` being present (override with `DESKTOP_SIGNED=1|0`). It is not probed at
+runtime because `after-pack.mjs` ad-hoc signs every macOS build, so "has a valid signature" is
+true of the unsigned ones too. The consequence: a Mac build signed some other way (a keychain
+identity with no `CSC_*` variable) ships with its updater off until you pass `DESKTOP_SIGNED=1`.
+
+## Updates
+
+Installed apps update themselves from the `latest*.yml` feeds every release carries. Where each
+install gets its updates:
+
+| Install | Updates through |
+|---|---|
+| Windows NSIS (incl. winget) | the app — works unsigned |
+| Linux AppImage | the app — works unsigned |
+| macOS `.dmg` | the app **once signed**; until then, a new download |
+| Linux `.deb` / apt | `apt upgrade`; the app never runs `dpkg` |
+| Scoop | `scoop update sdods` |
+
+The feed the app reads is `Resources/app-update.yml`, written from `publish:` in
+`electron-builder.yml`. **It must name `sdods-releases`**: through 0.1.1 it named the private
+source repo, where every asset 404s (those builds had no updater code either, so 0.1.x users move
+up by downloading once). `desktop.yml` now fails a build whose feed points anywhere else.
+
+The flow never restarts on its own: download in the background, then "SDODS x.y.z is ready —
+Restart to update" with Restart / Later. Restart stops `sdods serve` and **waits for it to exit**
+before `quitAndInstall` — on Windows the installer replaces the directory the child's `node.exe`
+runs from, and a relaunch would otherwise find the port still taken. If it has not exited after
+10 s the pidfile is left for the relaunch to reap. `autoInstallOnAppQuit` is off for the same
+reason. `SDODS_DESKTOP_NO_UPDATE=1` turns the whole thing off; the menu has "Check for Updates…" and
+a persisted "Check for Updates Automatically" (`autoUpdate` in `config.json`).
+
+**Linux constructs `AppImageUpdater` explicitly.** electron-updater's singleton picks `DebUpdater`
+whenever `resources/package-type` exists, and the deb target writes that file into `linux-unpacked`
+— the directory the x64 AppImage is built from.
+
+Prove a change against the real feed without Electron or installing anything — it bundles the
+updater through Rollup and pretends to be a packaged app at the given version:
+
+```bash
+bun run --cwd apps/desktop probe:update --version 0.1.0 --expect available
+```
+
 ## Files
 
 | Path | What it is |
@@ -247,7 +292,10 @@ and does not fit CI. After signing lands, pass `--signed` to `desktop:sync-relea
 | `apps/desktop/src/main/bootstrap.ts` | The five-step first-run install, and the 0.2.1 CLI bridge. |
 | `apps/desktop/src/main/server.ts` | Port choice, `sdods serve` child, health poll, setup-token capture. |
 | `apps/desktop/src/main/auth.ts` | Admin creation, safeStorage vault, cookie injection. |
+| `apps/desktop/src/main/updater.ts` | Self-update: the platform gate, six-hourly checks, the Restart prompt. |
+| `apps/desktop/test/updater.test.ts` | Gate matrix and restart ordering, electron and electron-updater mocked. |
 | `apps/desktop/scripts/probe.ts` | The runtime contract, provable without Electron. |
+| `apps/desktop/scripts/update-probe.ts` | A real update check against the release feed, without Electron. |
 | `apps/desktop/scripts/fetch-node-runtime.ts` | Downloads + SHASUMS-verifies + prunes Node. |
 | `scripts/sync-desktop-release.ts` | GitHub release → `apps/www/lib/desktop-release.ts`. |
 | `.github/workflows/desktop.yml` | Tag-gated matrix build, artifact verification, draft release. |
