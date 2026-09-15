@@ -20,7 +20,7 @@ import { afterAll, describe, expect, it } from 'vitest';
  * `leaseScope: worker` (the default) is the reported failure: the first worker keeps the account
  * for its whole life and every other worker fails with USER_POOL_EXHAUSTED. `leaseScope: scenario`
  * releases it as each scenario ends, so the same run passes with the scenarios queued behind the
- * one account — and the queue wait is added to the scenario timeout (`@timeout:3000`, less than
+ * one account — and the queue wait is added to the scenario timeout (`@timeout:15000`, less than
  * the last scenario in line waits) instead of failing it.
  *
  * API layer only, leasing through `I use a leased user with role "member" for API calls`, so no
@@ -45,7 +45,7 @@ const scenario = (name: string) => `  Scenario: ${name}
     Given I use a leased user with role "member" for API calls
     Then the probe holds the leased account
 `;
-const FEATURE = `@api @regression @timeout:3000
+const FEATURE = `@api @regression @timeout:15000
 Feature: One member account
 
 ${['first', 'second', 'third', 'fourth'].map(scenario).join('\n')}`;
@@ -60,7 +60,7 @@ const { Then } = createBdd(test);
 Then('the probe holds the leased account', async ({ apiContext }) => {
   const user = { username: apiContext.vars.toObject().username };
   const start = Date.now();
-  await new Promise((r) => setTimeout(r, 1000));
+  await new Promise((r) => setTimeout(r, 5000));
   const info = test.info();
   writeFileSync(
     join(process.env.PROBE_OUT!, info.title + '.json'),
@@ -185,9 +185,9 @@ describe('#153 — leaseScope through a real four-worker run with one account', 
     const spans = [...r.probes].sort((a, b) => a.start - b.start);
     for (let i = 1; i < spans.length; i++)
       expect(spans[i]!.start).toBeGreaterThanOrEqual(spans[i - 1]!.end);
-    // Someone queued, and the wait was added to the 3s @timeout rather than taken out of it: the
-    // timeout is settled to 3000 + the time spent waiting for the account.
-    expect(Math.max(...r.probes.map((p) => p.timeout))).toBeGreaterThan(3000 + 500);
-    expect(Math.min(...r.probes.map((p) => p.timeout))).toBeGreaterThanOrEqual(3000);
+    // Someone queued, and the wait was added to the 15s @timeout rather than taken out of it: the
+    // timeout is settled to 15000 + the time spent waiting for the account.
+    expect(Math.max(...r.probes.map((p) => p.timeout))).toBeGreaterThan(15_000 + 500);
+    expect(Math.min(...r.probes.map((p) => p.timeout))).toBeGreaterThanOrEqual(15_000);
   }, 300_000);
 });

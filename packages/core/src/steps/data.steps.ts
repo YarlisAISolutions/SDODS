@@ -190,7 +190,8 @@ async function leaseInScenario(
   role: string,
   testInfo: { parallelIndex: number; timeout: number; setTimeout(ms: number): void },
 ): Promise<LeasedUser> {
-  const clock = scenarioLeaseClock(config.project.data.userPool, testInfo);
+  // `data` is always present on a resolved config; unit tests hand steps a partial one.
+  const clock = scenarioLeaseClock(config.project.data?.userPool, testInfo);
   const user = await userPool.lease(role, testInfo.parallelIndex);
   clock.settle();
   return user;
