@@ -143,4 +143,25 @@ describe('install channels', () => {
       }
     }
   });
+
+  it('every apt address a reader is told to use is the one the probe checks', () => {
+    // The docs once told readers to fetch the keyring from GitHub Pages on sdods-releases, which
+    // was never switched on, while the repository itself was live on sdods.com/apt. The probe
+    // pointed at the same dead address, so the page reported a working channel as missing.
+    const sync = readFileSync(join(repoRoot, 'scripts/sync-channels.ts'), 'utf8');
+    const aptUrl = /const APT_URL = process\.env\.SDODS_APT_URL \?\? '([^']+)'/.exec(sync)?.[1];
+    expect(aptUrl).toBe('https://sdods.com/apt');
+    for (const file of [
+      'apps/docs/content/docs/getting-started/installation.mdx',
+      'apps/www/app/apt/page.tsx',
+    ]) {
+      const text = readFileSync(join(repoRoot, file), 'utf8');
+      const urls = text.match(/https:\/\/[^\s"'`)]+\/apt(?:\/[^\s"'`)]*)?/g) ?? [];
+      expect(urls.length, file).toBeGreaterThan(0);
+      expect(
+        urls.filter((u) => !u.startsWith(aptUrl!)),
+        file,
+      ).toEqual([]);
+    }
+  });
 });

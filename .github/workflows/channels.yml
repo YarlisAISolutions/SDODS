@@ -90,3 +90,46 @@ jobs:
             Merging it redeploys sdods.com/install through the `www` workflow. The run log lists
             which channels are live and which still need a person.
           delete-branch: true
+
+  apt:
+    # The probe above asks whether InRelease answers. This asks what a reader actually does: the
+    # documented setup lines, then `apt install`, in a clean Ubuntu. The repository once answered
+    # every curl and still failed every real `apt update` (a `./` path Firebase redirected), and a
+    # keyring URL in the docs 404ed while the repository itself was fine. Only running apt finds
+    # either. Runs on the same schedule, independent of the sync job.
+    name: apt · install from sdods.com
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    container: ubuntu:24.04
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - name: Add the repository the way the docs say
+        run: |
+          set -euo pipefail
+          apt-get update -qq && apt-get install -y -qq --no-install-recommends ca-certificates curl gnupg
+          curl -fsSL https://sdods.com/apt/sdods-archive-keyring.gpg | tee /usr/share/keyrings/sdods-archive-keyring.gpg > /dev/null
+          echo "deb [signed-by=/usr/share/keyrings/sdods-archive-keyring.gpg] https://sdods.com/apt stable main" | tee /etc/apt/sources.list.d/sdods.list
+          apt-get update
+      - name: Resolve and install sdods
+        run: |
+          set -euo pipefail
+          # Captured first: `grep -q` exits on the first match, and under pipefail the SIGPIPE it
+          # leaves apt-cache with would fail a repository that is perfectly fine.
+          policy=$(apt-cache policy sdods)
+          echo "$policy"
+          grep -q 'Candidate: [0-9]' <<<"$policy" || { echo "::error::sdods.com/apt has no installable sdods package"; exit 1; }
+          # --no-install-recommends keeps the container lean; the desktop app's hard dependencies
+          # (libasound2t64 | libasound2, GTK, NSS) still come in, which is part of what is tested.
+          DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends sdods
+          dpkg -s sdods | grep -E '^(Status|Version):'
+          # The package must put a runnable launcher on the system, wherever electron-builder chose.
+          files=$(dpkg -L sdods)
+          launcher=""
+          while read -r f; do
+            if [[ "$f" =~ ^/usr/bin/|^/opt/[^/]+/[^/]+$ ]] && [ -f "$f" ] && [ -x "$f" ]; then launcher="$f"; break; fi
+          done <<<"$files"
+          test -n "$launcher" || { echo "::error::sdods installed no executable"; head -40 <<<"$files"; exit 1; }
+          echo "launcher: $launcher"
