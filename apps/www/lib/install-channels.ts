@@ -89,7 +89,7 @@ export const INSTALL_CHANNELS: Channel[] = [
     os: ['macos', 'linux', 'windows'],
     kind: 'cli',
     command: 'npm install -g @sdods/cli',
-    note: 'Needs Node 22+. Currently @sdods/cli@0.9.0 — the same package the installer script fetches.',
+    note: 'Needs Node 22+. Currently @sdods/cli@0.10.0 — the same package the installer script fetches.',
     live: true,
   },
   {
@@ -98,7 +98,7 @@ export const INSTALL_CHANNELS: Channel[] = [
     os: ['macos', 'linux', 'windows'],
     kind: 'server',
     command: 'docker run --rm -p 8080:8080 -v sdods-data:/data ghcr.io/siri1410/sdods-server',
-    note: 'The server and web UI, browser engines included. linux/amd64 only.',
+    note: 'The server and web UI, browser engines included. Runs natively on Intel and Apple silicon.',
     live: true,
   },
   {
@@ -106,7 +106,7 @@ export const INSTALL_CHANNELS: Channel[] = [
     label: 'Linux packages',
     os: ['linux'],
     kind: 'desktop',
-    command: 'sudo apt install ./SDODS-0.1.1-linux-amd64.deb',
+    command: 'sudo apt install ./SDODS-0.1.2-linux-amd64.deb',
     note: 'The desktop app as a .deb, downloaded from the releases page first.',
     live: true,
   },
