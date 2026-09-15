@@ -51,6 +51,8 @@ export interface TestFixtures {
   $sdodsAnnotations: void;
   /** auto fixture: applies @env:, @skip:<browser>, @quarantine and @flag: */
   $sdodsTagGate: void;
+  /** auto fixture: releases the scenario's pool leases when `leaseScope: scenario` */
+  $sdodsScenarioLeases: void;
   /** What the scenario's @locale: @timezone: @theme: @viewport: @device: tags ask for. */
   $sdodsEmulation: Emulation;
 }

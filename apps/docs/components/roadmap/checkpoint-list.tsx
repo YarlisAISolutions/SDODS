@@ -12,7 +12,7 @@ const GROUPS: Array<{ title: string; blurb: string; of: (c: Checkpoint) => boole
   {
     title: 'The road behind',
     blurb:
-      'Five chapters, already delivered. They carry no dates: the work is in the repository and can be run, but nothing has been released yet, so a month against each one would be a number nobody could check.',
+      'Five chapters, already delivered. They carry no dates: they were built before the first release, in a repository whose history begins on 3 September 2026, so a month against each one would be a number nobody could check.',
     of: (c) => c.kind === 'chapter',
   },
   {

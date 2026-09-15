@@ -3,7 +3,14 @@ import { join } from 'node:path';
 import type { Command } from 'commander';
 import { execa } from 'execa';
 import pc from 'picocolors';
-import { collectVarRefs, loadDotEnvLayer, loadEnvFile } from '@sdods/core';
+import {
+  collectVarRefs,
+  describeWorkers,
+  effectiveWorkers,
+  loadDotEnvLayer,
+  loadEnvFile,
+  poolAccountsByEnv,
+} from '@sdods/core';
 import { createContext } from '../context.js';
 import { browserStatuses } from './browsers.js';
 import {
@@ -11,7 +18,7 @@ import {
   installedPlaywrightVersion,
   stepResultsWarning,
 } from '../runner-compat.js';
-import { json, out } from '../ui.js';
+import { json, out, parseIntFlag } from '../ui.js';
 
 interface Check {
   name: string;
@@ -28,6 +35,11 @@ export function registerDoctorCommand(program: Command) {
     .description('Check Node, Bun, browsers, projects, env vars and database reachability')
     .option('-p, --project <slug>', 'limit env-var checks to one project')
     .option('--fix', 'install missing browsers')
+    .option(
+      '-w, --workers <n>',
+      'worker count to check user pools against (default: SDODS_WORKERS, else Playwright default)',
+      parseIntFlag('workers'),
+    )
     .action(async (opts, cmd) => {
       const ctx = createContext(cmd);
       const checks: Check[] = [];
@@ -73,6 +85,9 @@ export function registerDoctorCommand(program: Command) {
         }).catch(() => undefined);
       }
 
+      const envWorkers = Number(process.env.SDODS_WORKERS);
+      const workers: number | undefined =
+        opts.workers ?? (Number.isInteger(envWorkers) && envWorkers > 0 ? envWorkers : undefined);
       const entries = opts.project
         ? [ctx.registry.entry(opts.project)]
         : ctx.registry.entriesList();
@@ -110,6 +125,14 @@ export function registerDoctorCommand(program: Command) {
               ? `Add ${missing.join(', ')} to ${join(e.root, `.env.${envName}`)}`
               : undefined,
           });
+          const pool = poolCheck(
+            e.slug,
+            envName,
+            { ...e.config, root: e.root },
+            envCfg.users.poolSize,
+            workers,
+          );
+          if (pool) checks.push(pool);
         }
       }
 
@@ -161,6 +184,48 @@ export function registerDoctorCommand(program: Command) {
       const blocking = checks.some((c) => !c.ok && !c.optional);
       if (blocking) process.exitCode = 1;
     });
+}
+
+/**
+ * #153: accounts per role in an exclusive, worker-held pool against the worker count. Advisory —
+ * doctor does not know which roles a run will select; `sdods run` makes the real decision and
+ * fails with USER_POOL_TOO_SMALL. Undefined when there is nothing to compare.
+ */
+function poolCheck(
+  slug: string,
+  envName: string,
+  project: Parameters<typeof poolAccountsByEnv>[0],
+  poolSize: number | undefined,
+  workers: number | undefined,
+): Check | undefined {
+  const pool = project.data.userPool;
+  if (!pool) return undefined;
+  const name = `${slug}/${envName} user pool`;
+  if (pool.mode === 'shared' || pool.leaseScope === 'scenario') {
+    return {
+      name,
+      ok: true,
+      detail: pool.mode === 'shared' ? 'mode: shared (no leases)' : 'leaseScope: scenario (queues)',
+    };
+  }
+  const accounts = poolAccountsByEnv(project, {
+    envs: [envName],
+    poolSize: () => poolSize,
+  })?.get(envName);
+  if (!accounts) return undefined; // not file-backed
+  const n = effectiveWorkers(workers);
+  const short = [...accounts].filter(([, count]) => count < n);
+  return {
+    name,
+    ok: short.length === 0,
+    optional: true,
+    detail:
+      `${[...accounts].map(([role, count]) => `${role} ${count}`).join(', ') || 'no accounts'} ` +
+      `vs ${describeWorkers(workers)}`,
+    fix: short.length
+      ? `fewer accounts than workers for ${short.map(([r]) => r).join(', ')}: sdods run stops with USER_POOL_TOO_SMALL when more of their @user: scenarios could run at once than there are accounts. Set data.userPool.leaseScope: scenario, add accounts, or lower --workers.`
+      : undefined,
+  };
 }
 
 type Requirement = 'mandatory' | 'one-of' | 'optional' | 'ci-only';

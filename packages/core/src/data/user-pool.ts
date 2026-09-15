@@ -7,9 +7,13 @@ import {
   readdirSync,
   statSync,
   unlinkSync,
+  utimesSync,
+  writeFileSync,
   writeSync,
 } from 'node:fs';
+import { cpus } from 'node:os';
 import { join } from 'node:path';
+import type { UserPoolConfig } from '@sdods/contracts';
 import type { ResolvedConfig } from '../config/resolve.js';
 import { SdodsError } from '../errors.js';
 import { Logger } from '../logger.js';
@@ -94,33 +98,95 @@ export interface UserPoolOptions {
   owner: string;
   store?: LeaseStore;
   waitMs?: number;
+  /** Where waiters take their place in line. Default: `.queue` beside the lease files. */
+  queueDir?: string;
+}
+
+/** `data.userPool.waitMs` when unset and leases are held per worker. */
+export const DEFAULT_LEASE_WAIT_MS = 30_000;
+const POLL_MS = 500;
+/** A waiter refreshes its ticket every poll; one untouched this long belongs to a waiter that is gone. */
+const TICKET_STALE_MS = 10_000;
+
+/**
+ * The worker count Playwright will actually use: `--workers` / `SDODS_WORKERS` when set (both land
+ * in `runtime.workers`), else Playwright's own default of half the logical cores.
+ *
+ * Every browser and layer of one `sdods run` shares this pool: the CLI starts ONE `playwright test`
+ * with a `--project` per run target, and Playwright's `workers` caps the whole invocation.
+ */
+export function effectiveWorkers(workers?: number): number {
+  return workers ?? Math.max(1, Math.floor(cpus().length / 2));
+}
+
+/** How long a lease request waits for a free account (see `data.userPool.waitMs`). */
+export function leaseWaitMs(
+  pool: Pick<UserPoolConfig, 'waitMs' | 'leaseScope' | 'leaseTtlMs'>,
+): number {
+  if (pool.waitMs !== undefined) return pool.waitMs;
+  return pool.leaseScope === 'scenario' ? pool.leaseTtlMs : DEFAULT_LEASE_WAIT_MS;
+}
+
+/**
+ * With `leaseScope: scenario`, waiting for an account is how one account serialises the scenarios
+ * that need it, so the wait must not count against the scenario's own timeout: a scenario third in
+ * line would otherwise fail having done nothing. The timeout is raised by the longest possible wait
+ * before leasing, then settled to what was actually waited.
+ */
+export function scenarioLeaseClock(
+  pool: UserPoolConfig | undefined,
+  testInfo: { timeout: number; setTimeout(ms: number): void },
+): { settle(): void } {
+  const base = testInfo.timeout;
+  if (pool?.leaseScope !== 'scenario' || pool.mode === 'shared' || base <= 0) {
+    return { settle: () => undefined };
+  }
+  const started = Date.now();
+  testInfo.setTimeout(base + leaseWaitMs(pool));
+  return { settle: () => testInfo.setTimeout(base + (Date.now() - started)) };
 }
 
 /**
  * Pool of accounts from the configured dataset, partitioned by role and capped by env.users.poolSize.
- * Leases are keyed by owner (`runId:shardOffset+parallelIndex`) and released on worker teardown.
+ * Leases are keyed by owner (`runId:shardOffset+parallelIndex`) and released on worker teardown, or
+ * at scenario teardown with `leaseScope: scenario`.
  */
 export class FileUserPool implements UserPool {
   private readonly log = new Logger('pool');
   private readonly leased = new Map<string, LeasedUser>(); // by role
   private rows?: Promise<Row[]>;
-  private readonly store: LeaseStore;
+  private storeInstance?: LeaseStore;
+  private readonly leaseDir: string;
 
   constructor(
     private readonly config: ResolvedConfig,
     private readonly data: DataProvider,
     private readonly opts: UserPoolOptions,
   ) {
-    this.store =
-      opts.store ??
-      new FileLeaseStore(
-        join(config.runtime.artifactsDir, '..', 'leases', config.project.slug, config.env.name),
-      );
+    this.leaseDir = join(
+      config.runtime.artifactsDir,
+      '..',
+      'leases',
+      config.project.slug,
+      config.env.name,
+    );
+    this.storeInstance = opts.store;
+  }
+
+  /**
+   * Created on first use. Every scenario depends on the pool (the scenario-scope release fixture is
+   * automatic), and a project that never leases must not grow a lease directory for it.
+   */
+  private get store(): LeaseStore {
+    return (this.storeInstance ??= new FileLeaseStore(this.leaseDir));
   }
 
   static ownerFor(config: ResolvedConfig, parallelIndex: number): string {
     const shard = config.runtime.shard;
-    const offset = shard ? (shard.current - 1) * (config.runtime.workers ?? 1) : 0;
+    // Shards each number their workers from 0, so the offset must span a whole shard's workers.
+    // It used `workers ?? 1`, which let shard 2's worker 0 share an owner with shard 1's worker 1
+    // whenever --workers was left to Playwright's default.
+    const offset = shard ? (shard.current - 1) * effectiveWorkers(config.runtime.workers) : 0;
     return `${config.runtime.runId}:${offset + parallelIndex}`;
   }
 
@@ -187,47 +253,121 @@ export class FileUserPool implements UserPool {
     }
 
     const ttl = pool.leaseTtlMs;
-    const waitMs = this.opts.waitMs ?? pool.waitMs;
+    const waitMs = this.opts.waitMs ?? leaseWaitMs(pool);
     const started = Date.now();
-    while (true) {
-      for (const { r, index } of candidates) {
-        const id = String(r.id ?? r.username ?? index);
-        if (await this.store.tryAcquire(id, this.opts.owner, ttl)) {
-          const user: LeasedUser = {
-            id,
-            username: String(r.username ?? id),
-            password: String(r.password ?? ''),
-            role,
-            index,
-            extra: r,
-            leaseKey: id,
-            owner: this.opts.owner,
-          };
-          this.leased.set(role, user);
-          this.log.debug(`leased ${user.username} (${role}) for ${this.opts.owner}`);
-          return user;
+    const ticket = this.queueTicket(role, started);
+    try {
+      while (true) {
+        // First come, first served. Without a queue the worker that just released an account won
+        // it straight back: its next scenario asks within milliseconds while every waiter polls
+        // every 500ms, so under `leaseScope: scenario` the same waiters lost round after round and
+        // failed on the timeout while the account changed hands the whole time.
+        if (ticket.ahead() < candidates.length) {
+          for (const { r, index } of candidates) {
+            const id = String(r.id ?? r.username ?? index);
+            if (await this.store.tryAcquire(id, this.opts.owner, ttl)) {
+              const user: LeasedUser = {
+                id,
+                username: String(r.username ?? id),
+                password: String(r.password ?? ''),
+                role,
+                index,
+                extra: r,
+                leaseKey: id,
+                owner: this.opts.owner,
+              };
+              this.leased.set(role, user);
+              this.log.debug(`leased ${user.username} (${role}) for ${this.opts.owner}`);
+              return user;
+            }
+          }
         }
+        if (Date.now() - started > waitMs) {
+          const owners = await this.store.owners();
+          throw new SdodsError(
+            'USER_POOL_EXHAUSTED',
+            `All ${candidates.length} user(s) with role "${role}" are leased.`,
+            {
+              hint:
+                `Owners: ${JSON.stringify(owners)}. Waited ${Math.round(waitMs / 1000)}s. ` +
+                `Four ways out, in the order worth trying: (1) if these scenarios do not ` +
+                `mutate user-scoped state, set data.userPool.mode: shared — one account ` +
+                `then serves every worker, which is what a read-only suite needs; ` +
+                `(2) add more accounts with role "${role}" to dataset "${pool.dataset}"; ` +
+                `(3) set data.userPool.leaseScope: scenario, so an account is released when ` +
+                `each scenario ends rather than when its worker exits, or raise ` +
+                `data.userPool.waitMs (currently ${waitMs}ms); (4) lower --workers. ` +
+                `Note env.users.poolSize slices the dataset BEFORE role filtering, so a ` +
+                `small value can starve a role on its own.`,
+            },
+          );
+        }
+        await new Promise((r) => setTimeout(r, POLL_MS));
+        ticket.touch();
       }
-      if (Date.now() - started > waitMs) {
-        const owners = await this.store.owners();
-        throw new SdodsError(
-          'USER_POOL_EXHAUSTED',
-          `All ${candidates.length} user(s) with role "${role}" are leased.`,
-          {
-            hint:
-              `Owners: ${JSON.stringify(owners)}. Waited ${Math.round(waitMs / 1000)}s. ` +
-              `Four ways out, in the order worth trying: (1) if these scenarios do not ` +
-              `mutate user-scoped state, set data.userPool.mode: shared — one account ` +
-              `then serves every worker, which is what a read-only suite needs; ` +
-              `(2) add more accounts with role "${role}" to dataset "${pool.dataset}"; ` +
-              `(3) raise data.userPool.waitMs (currently ${waitMs}ms); (4) lower --workers. ` +
-              `Note env.users.poolSize slices the dataset BEFORE role filtering, so a ` +
-              `small value can starve a role on its own.`,
-          },
-        );
-      }
-      await new Promise((r) => setTimeout(r, 500));
+    } finally {
+      ticket.drop();
     }
+  }
+
+  /**
+   * A place in line for `role`: an empty file named by arrival time and owner, refreshed while its
+   * waiter polls. `ahead()` counts live tickets that arrived earlier, and a waiter only tries to
+   * acquire while fewer are ahead of it than the role has accounts. A ticket nobody refreshes (its
+   * worker crashed) goes stale and stops holding the line.
+   */
+  private queueTicket(role: string, arrivedAt: number) {
+    const dir = join(this.opts.queueDir ?? join(this.leaseDir, '.queue'), encodeURIComponent(role));
+    const name = `${String(arrivedAt).padStart(15, '0')}-${encodeURIComponent(this.opts.owner)}`;
+    const file = join(dir, name);
+    const write = () => {
+      try {
+        mkdirSync(dir, { recursive: true });
+        writeFileSync(file, '');
+      } catch {
+        /* a queue that cannot be written degrades to unordered polling */
+      }
+    };
+    write();
+    return {
+      ahead: (): number => {
+        let names: string[];
+        try {
+          names = readdirSync(dir);
+        } catch {
+          return 0;
+        }
+        let ahead = 0;
+        for (const other of names) {
+          if (other >= name) continue;
+          try {
+            if (Date.now() - statSync(join(dir, other)).mtimeMs > TICKET_STALE_MS) {
+              unlinkSync(join(dir, other));
+              continue;
+            }
+          } catch {
+            continue; // dropped by its owner between readdir and stat
+          }
+          ahead++;
+        }
+        return ahead;
+      },
+      touch: () => {
+        try {
+          const now = new Date();
+          utimesSync(file, now, now);
+        } catch {
+          write(); // removed as stale while this worker was blocked: back in, same place
+        }
+      },
+      drop: () => {
+        try {
+          unlinkSync(file);
+        } catch {
+          /* already gone */
+        }
+      },
+    };
   }
 
   async release(user: LeasedUser) {
@@ -238,7 +378,8 @@ export class FileUserPool implements UserPool {
   }
 
   async releaseAll() {
-    await this.store.releaseAll(this.opts.owner);
+    // A store that was never created holds nothing to release.
+    if (this.storeInstance) await this.storeInstance.releaseAll(this.opts.owner);
     this.leased.clear();
   }
 

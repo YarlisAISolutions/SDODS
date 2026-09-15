@@ -1,4 +1,5 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { execa } from 'execa';
 import { describe, expect, it } from 'vitest';
@@ -213,4 +214,106 @@ describe('sdods CLI (end to end against projects/demo-shop)', () => {
     expect(`${r.stdout}${r.stderr}`).toMatch(/edge is not installed/);
     expect(`${r.stdout}${r.stderr}`).toMatch(/sdods browsers install -b edge/);
   });
+});
+
+/**
+ * #153: one `member` account and four `@user:member` scenarios at --workers 4 used to start, then
+ * fail three workers' scenarios 30s in with USER_POOL_EXHAUSTED. It now stops before any spec is
+ * generated, names the role and the counts, and exits 2.
+ */
+describe('sdods run refuses a user pool too small for its workers (#153)', () => {
+  const workspace = (poolExtra: readonly string[] = []) => {
+    const ws = mkdtempSync(join(tmpdir(), 'sdods-pool-run-'));
+    const proj = join(ws, 'projects', 'shop');
+    mkdirSync(join(proj, 'envs'), { recursive: true });
+    mkdirSync(join(proj, 'features', 'members'), { recursive: true });
+    mkdirSync(join(proj, 'data'), { recursive: true });
+    writeFileSync(
+      join(ws, 'sdods.workspace.yaml'),
+      'organization:\n  slug: t\n  name: T\nworkspaces:\n  - slug: default\n    name: D\n    organization: t\ndefaultWorkspace: default\n',
+    );
+    writeFileSync(
+      join(proj, 'sdods.project.yaml'),
+      [
+        'slug: shop',
+        'name: Shop',
+        'organization: t',
+        'workspace: default',
+        'layers: [api]',
+        'envs: { default: staging, available: [staging] }',
+        'data:',
+        '  sources:',
+        '    users: { type: csv, path: data/users.csv }',
+        '  userPool:',
+        '    dataset: users',
+        ...poolExtra.map((l) => `    ${l}`),
+        '',
+      ].join('\n'),
+    );
+    writeFileSync(
+      join(proj, 'envs', 'staging.yaml'),
+      'ui: { baseUrl: "https://example.test" }\napi: { baseUrl: "https://api.example.test" }\n',
+    );
+    writeFileSync(join(proj, 'data', 'users.csv'), 'id,username,password,role\n1,m1,x,member\n');
+    writeFileSync(
+      join(proj, 'features', 'members', 'members.feature'),
+      `@api @regression @user:member\nFeature: Members\n\n${['one', 'two', 'three', 'four']
+        .map((n) => `  Scenario: ${n}\n    Given I load dataset "users" row 0\n`)
+        .join('\n')}`,
+    );
+    return ws;
+  };
+  const runIn = (ws: string, ...args: string[]) =>
+    execa('node', ['--import', 'tsx', 'packages/cli/src/bin.ts', '--cwd', ws, 'run', ...args], {
+      cwd: root,
+      reject: false,
+      env: { ...process.env, FORCE_COLOR: '0' },
+    });
+
+  it('exits 2 with USER_POOL_TOO_SMALL, naming the role, the accounts and the workers', async () => {
+    const ws = workspace();
+    try {
+      const r = await runIn(ws, '-p', 'shop', '-e', 'staging', '-l', 'api', '--workers', '4');
+      const text = `${r.stdout}${r.stderr}`;
+      expect(r.exitCode, text).toBe(2);
+      expect(text).toContain('USER_POOL_TOO_SMALL');
+      expect(text).toContain('role "member" has 1 account(s) but 4 of its scenarios');
+      expect(text).toContain('4 worker(s)');
+    } finally {
+      rmSync(ws, { recursive: true, force: true });
+    }
+  }, 120_000);
+
+  it('does not refuse what cannot starve: one worker, leaseScope: scenario, mode: shared', async () => {
+    const cases: Array<[string[], string[]]> = [
+      [[], ['--workers', '1']],
+      [['leaseScope: scenario'], ['--workers', '4']],
+      [['mode: shared'], ['--workers', '4']],
+    ];
+    for (const [extra, args] of cases) {
+      const ws = workspace(extra);
+      try {
+        // The workspace has no runner config, so a run that gets past the pool check stops at
+        // CONFIG_NOT_FOUND, which comes after it.
+        const r = await runIn(ws, '-p', 'shop', '-e', 'staging', '-l', 'api', ...args);
+        const text = `${r.stdout}${r.stderr}`;
+        expect(text, text).not.toContain('USER_POOL_TOO_SMALL');
+        expect(text, text).toContain('No runner config');
+      } finally {
+        rmSync(ws, { recursive: true, force: true });
+      }
+    }
+  }, 180_000);
+
+  it('rejects leaseStore: db as a config error that points at #153', async () => {
+    const ws = workspace(['leaseStore: db']);
+    try {
+      const r = await runIn(ws, '-p', 'shop', '-e', 'staging', '-l', 'api');
+      const text = `${r.stdout}${r.stderr}`;
+      expect(r.exitCode, text).toBe(2);
+      expect(text).toContain("leaseStore 'db' was never implemented; use 'file' (see #153)");
+    } finally {
+      rmSync(ws, { recursive: true, force: true });
+    }
+  }, 120_000);
 });

@@ -1,6 +1,6 @@
 @ui @auth @pool
 Feature: User pool
-  Accounts are leased per worker from the pool dataset; login state is cached as storageState.
+  Accounts are leased per scenario from the pool dataset; login state is cached as storageState.
 
   @sanity @user:standard
   Scenario: A leased standard user starts logged in through cached storage state
