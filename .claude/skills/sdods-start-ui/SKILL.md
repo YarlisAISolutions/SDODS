@@ -161,11 +161,12 @@ Defaults: **`http://127.0.0.1:4444`** for the CLI, **`http://localhost:8080`** f
 image binds `0.0.0.0:8080`). `--open` launches the browser (`open` / `start` / `xdg-open` by
 platform). `--host 0.0.0.0` exposes it on the LAN — only do that deliberately.
 
-On Apple silicon the published image is `linux/amd64` only, and Docker refuses the pull rather
-than emulating. Add the platform flag:
+The image is published for `linux/amd64` and `linux/arm64`, so the same command runs natively on
+Apple silicon and arm64 servers. Tags up to `0.9.0` carry amd64 only, and Docker refuses that pull
+on arm64 rather than emulating; for those, add the platform flag:
 
 ```bash
-docker run --rm --platform linux/amd64 -p 8080:8080 -v sdods-data:/data ghcr.io/siri1410/sdods-server
+docker run --rm --platform linux/amd64 -p 8080:8080 -v sdods-data:/data ghcr.io/siri1410/sdods-server:0.9.0
 ```
 
 If the run must come from a source checkout, `bun run web:build` is not optional — see
@@ -278,7 +279,7 @@ the API running **without** the UI bundle — that is the source-checkout case, 
 | Fresh install, but `/login` says "ask an admin" | the login page does not redirect to `/setup` | open the `/setup?token=…` URL from the `serve` output, or `sdods users create --admin` |
 | Global CLI errors on a repo project (`CONFIG_INVALID`, unknown browser) | version skew between the global CLI and the checkout | use `bun run sdods` inside a checkout; upgrade the global one otherwise |
 | `sdods: command not found` after installing | the bin dir is not on PATH — `~/.local/bin`, or `%LOCALAPPDATA%\SDODS\bin` on Windows | add it, or re-run the installer with `--modify-path` / `-ModifyPath` |
-| Docker: `no matching manifest for linux/arm64/v8` | amd64-only image on Apple silicon | add `--platform linux/amd64` |
+| Docker: `no matching manifest for linux/arm64/v8` | an amd64-only tag (`0.9.0` or earlier) on Apple silicon or arm64 | pull a newer tag, or add `--platform linux/amd64` |
 | UI loads, runs never start | browser engines missing | `sdods browsers install -b chromium` (the positional `sdods browsers install chromium` also works on current versions, and failed with `too many arguments` before). Bare `sdods browsers install` installs all engines; on Linux `--with-deps` needs root |
 | Node too old | SDODS needs Node 22+ | `nvm use 22` / `fnm use 22`. On macOS/Linux the installer also takes `--install-node`; **`install.ps1` has no such flag** — it exits and tells you to run `winget install OpenJS.NodeJS.LTS`, `scoop install nodejs-lts` or `nvm install 22` |
 | Anything else | — | `sdods doctor` first; it reports what it found, not what it expected |

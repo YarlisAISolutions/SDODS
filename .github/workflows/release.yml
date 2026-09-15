@@ -161,6 +161,14 @@ jobs:
       LOCAL: sdods-server:smoke
     steps:
       - uses: actions/checkout@v7
+      - name: Free disk space
+        # Loading the image to run it holds it twice, in BuildKit's store and in Docker's, and the
+        # Playwright base alone is several GB unpacked. With the runner's preinstalled SDKs in place
+        # the amd64 leg ran out of disk importing the image.
+        run: |
+          df -h /
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache/CodeQL
+          df -h /
       - uses: docker/setup-buildx-action@v4
       - name: Build (linux/${{ matrix.arch }})
         uses: docker/build-push-action@v7
