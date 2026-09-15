@@ -21,7 +21,7 @@ Lists every failed visual check of a run. For each one it shows the run target, 
 | `--artifacts-dir` | where runs live (default `.sdods/runs`, or `SDODS_ARTIFACTS_DIR`) |
 | `--json`          | `{ runId, failures: [...] }` with absolute image paths            |
 
-A check that failed and then passed on a retry is not listed.
+A check that failed and then passed on a retry is not listed. A `new baseline` row has no expected or diff image. By default Playwright has already written the actual image to the baseline path on the machine that ran, so the scenario fails once and passes on the next run. On CI that file is lost with the runner, so `accept` on the downloaded run is how it reaches the repository.
 
 ## `accept`
 

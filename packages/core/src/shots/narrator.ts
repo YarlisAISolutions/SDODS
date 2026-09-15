@@ -106,6 +106,7 @@ export class ScreenshotNarrator {
     const { page, policy, testInfo } = this.deps;
     const fileName = name.endsWith('.png') ? name : `${name}.png`;
     const opts = visualCheckOptions(fileName, policy, extraMask);
+    const hadBaseline = existsSync(testInfo.snapshotPath(fileName));
     try {
       await expect(page).toHaveScreenshot(fileName, {
         fullPage: policy.fullPage,
@@ -118,7 +119,17 @@ export class ScreenshotNarrator {
       this.recordVisualFailure(fileName, stepIndex, opts.maxDiffPixelRatio, e);
       throw e;
     }
-    this.recordVisualPass(fileName);
+    // With Playwright's default `updateSnapshots: 'missing'` a missing baseline does not throw: it
+    // writes the actual image as the baseline and fails the test afterwards (a soft error). That is
+    // the first run on a new platform, and exactly the check `sdods baselines` must offer.
+    if (!hadBaseline && testInfo.config.updateSnapshots === 'missing')
+      this.recordVisualFailure(
+        fileName,
+        stepIndex,
+        opts.maxDiffPixelRatio,
+        new Error("A snapshot doesn't exist, writing actual."),
+      );
+    else this.recordVisualPass(fileName);
     const snapshot = testInfo.snapshotPath(fileName);
     if (existsSync(snapshot))
       await testInfo.attach(attachmentNames.visual(stepIndex, name), {
@@ -166,8 +177,11 @@ export class ScreenshotNarrator {
         const p = att ?? testInfo.outputPath(`${base}-${phase}.png`);
         return existsSync(p) ? p : undefined;
       };
+      const parsed = parseVisualError((error as Error)?.message ?? String(error));
       const copies: Partial<Record<'actual' | 'expected' | 'diff', string>> = {};
       for (const phase of ['actual', 'expected', 'diff'] as const) {
+        // A missing baseline's "expected" attachment is the actual image Playwright just wrote.
+        if (phase !== 'actual' && parsed.reason === 'missing') continue;
         const src = source(phase);
         if (!src) continue;
         const dest = scenario.file(scenarioFiles.visualImage(id.runnerProject, id.name, phase));
@@ -176,7 +190,6 @@ export class ScreenshotNarrator {
       }
       // No actual image means the page could not be captured at all: nothing to accept.
       if (!copies.actual) return;
-      const parsed = parseVisualError((error as Error)?.message ?? String(error));
       const size = pngSize(
         scenario.file(scenarioFiles.visualImage(id.runnerProject, id.name, 'actual')),
       );
