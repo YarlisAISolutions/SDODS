@@ -58,8 +58,8 @@ export function register(program: Command) {
     .option('--list', 'list trace files instead of opening them')
     .action(async (zip: string | undefined, opts, cmd) => {
       const ctx = createContext(cmd);
-      let zips: string[] = [];
-      let source = '';
+      let zips: string[];
+      let source: string;
       if (zip) {
         const p = resolvePath(ctx.opts.cwd ?? process.cwd(), zip);
         if (!existsSync(p))

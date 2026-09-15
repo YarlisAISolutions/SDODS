@@ -645,7 +645,7 @@ export function poolAccountsByEnv(
       out.set(env, new Map());
       continue;
     }
-    let rows: Array<Record<string, unknown>> = [];
+    let rows: Array<Record<string, unknown>>;
     try {
       const text = readFileSync(file, 'utf8');
       if (spec.type === 'csv')

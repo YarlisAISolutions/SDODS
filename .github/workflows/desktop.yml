@@ -26,7 +26,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  BUN_VERSION: '1.4.0'
+  BUN_VERSION: '1.4.2'
 
 jobs:
   build:
@@ -44,12 +44,12 @@ jobs:
           - { name: windows · x64 + arm64, os: windows-latest, flags: --win }
           - { name: linux · x64 + arm64, os: ubuntu-latest, flags: --linux }
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: ${{ env.BUN_VERSION }}
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
 
@@ -58,7 +58,7 @@ jobs:
       # The staged runtimes are large and version-pinned, so a cache hit skips ~250 MB of
       # downloads per runner. Keyed on the pinned version in fetch-node-runtime.ts.
       - name: Cache the bundled Node runtimes
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: apps/desktop/resources/node
           key: node-runtime-${{ runner.os }}-${{ hashFiles('apps/desktop/scripts/fetch-node-runtime.ts') }}
@@ -155,7 +155,7 @@ jobs:
           done
           [ "$found" -gt 0 ] || { echo 'no packaged app directories found'; exit 1; }
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: sdods-desktop-${{ runner.os }}
           path: |
@@ -178,16 +178,16 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: ${{ env.BUN_VERSION }}
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
       - run: bun install --frozen-lockfile
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           pattern: sdods-desktop-*
           path: artifacts
@@ -213,7 +213,7 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/desktop-v') || inputs.publish
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           pattern: sdods-desktop-*
           path: artifacts
@@ -237,7 +237,7 @@ jobs:
       # Requires a DESKTOP_RELEASE_TOKEN secret: a fine-grained PAT with Contents: read+write on
       # the releases repo only. GITHUB_TOKEN cannot write to another repository.
       - name: Attach the installers to the public release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           repository: ${{ vars.DESKTOP_RELEASE_REPO || 'siri1410/sdods-releases' }}
           token: ${{ secrets.DESKTOP_RELEASE_TOKEN }}

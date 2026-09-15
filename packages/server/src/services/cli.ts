@@ -58,7 +58,7 @@ export async function runCliJson<T = unknown>(
       resolve(1);
     });
   });
-  let data: T | null = null;
+  let data: T | null;
   try {
     data = stdout.trim() ? (JSON.parse(stdout) as T) : null;
   } catch {

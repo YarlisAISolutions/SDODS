@@ -33,7 +33,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - id: creds
         shell: bash
         env:
@@ -43,11 +43,11 @@ jobs:
       - name: Validate Dockerfile (no credentials)
         if: steps.creds.outputs.present != 'true'
         run: docker build -f packages/maxi/Dockerfile -t maxi:ci . >/dev/null && echo "Dockerfile builds; skipping deploy (no GCP_SA_KEY_AUTOMAX secret)"
-      - uses: google-github-actions/auth@v2
+      - uses: google-github-actions/auth@v3
         if: steps.creds.outputs.present == 'true'
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY_AUTOMAX }}
-      - uses: google-github-actions/setup-gcloud@v2
+      - uses: google-github-actions/setup-gcloud@v3
         if: steps.creds.outputs.present == 'true'
       - name: Check one-time setup
         id: setup

@@ -21,7 +21,7 @@ concurrency:
 env:
   CI: true
   # NOTE: do not export SDODS_ENV globally — unit tests build fixture projects with their own envs.
-  BUN_VERSION: '1.4.0'
+  BUN_VERSION: '1.4.2'
   DEMO_ENV: staging
   RUN_ID: gh-${{ github.run_id }}
 
@@ -31,11 +31,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: ${{ env.BUN_VERSION }}
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
       - run: bun install --frozen-lockfile
@@ -50,11 +50,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: ${{ env.BUN_VERSION }}
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
       - run: bun install --frozen-lockfile
@@ -68,11 +68,11 @@ jobs:
       matrix: ${{ steps.m.outputs.matrix }}
       live: ${{ steps.m.outputs.live }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: ${{ env.BUN_VERSION }}
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
       - run: bun install --frozen-lockfile
@@ -119,11 +119,11 @@ jobs:
       # offline replay of the committed HAR fixtures unless this is the nightly live run
       HAR_FLAGS: ${{ needs.matrix.outputs.live == 'true' && '' || '--har-replay --strict' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: ${{ env.BUN_VERSION }}
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
       - run: bun install --frozen-lockfile
@@ -148,7 +148,7 @@ jobs:
           for dir in .sdods/runs/${RUN_ID}-*; do
             tar -czf "$dir/artifacts.tgz" -C "$dir" --exclude=artifacts.tgz --exclude=html-report --exclude=runner-output . || true
           done
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: sdods-${{ matrix.project }}-${{ matrix.browser }}-${{ matrix.shard }}
@@ -178,7 +178,7 @@ jobs:
       matrix:
         include: ${{ fromJson(needs.matrix.outputs.matrix) }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Install bun
         # The image ships Node and the browsers; npm fetches the bun binary.
         run: npm install -g bun@${{ env.BUN_VERSION }}
@@ -200,7 +200,7 @@ jobs:
           for dir in ".sdods/runs/${RUN_ID}-"*; do
             tar -czf "$dir/artifacts.tgz" -C "$dir" --exclude=artifacts.tgz --exclude=html-report --exclude=runner-output . || true
           done
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           # `sdods baselines diff --run <id>` reads these after download into .sdods/runs.
@@ -218,11 +218,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: ${{ env.BUN_VERSION }}
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
       - run: bun install --frozen-lockfile
@@ -239,7 +239,7 @@ jobs:
         run: >
           bun run sdods run -p demo-shop -e staging -l ui -b edge -t @smoke
           --run-id ${{ env.RUN_ID }}-demo-shop-edge --no-ingest --har-replay --strict
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: sdods-demo-shop-edge
@@ -254,17 +254,17 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: ${{ env.BUN_VERSION }}
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
       - run: bun install --frozen-lockfile
       - run: npx playwright install --with-deps chromium
       - run: bun run dogfood
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: sdods-dogfood
@@ -285,7 +285,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Build a throwaway .deb
         run: |
           set -euo pipefail
@@ -325,8 +325,8 @@ jobs:
       matrix:
         os: [ubuntu-latest, macos-latest]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
       - name: Lint the shell script
@@ -370,8 +370,8 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
       - name: Parse install.ps1
@@ -392,15 +392,15 @@ jobs:
     if: always()
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: ${{ env.BUN_VERSION }}
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
       - run: bun install --frozen-lockfile
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           pattern: sdods-*
           path: .sdods/runs
@@ -444,7 +444,7 @@ jobs:
             id=$(basename "$dir")
             bun run sdods integrations notify --run-id "$id" --from-files || echo "notify failed for $id"
           done
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: sdods-report

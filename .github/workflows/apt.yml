@@ -30,7 +30,7 @@ jobs:
     name: build · sign · publish
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # The key is the whole security model: without it apt has no reason to trust these bytes, and
       # an unsigned repo is one a user can only add with [trusted=yes], which disables the check

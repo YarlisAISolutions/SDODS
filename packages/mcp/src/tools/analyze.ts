@@ -651,7 +651,7 @@ export function analyzeLocators(root: string) {
 }
 
 export function analyzeChangeImpact(root: string, rootDir: string, range: string) {
-  let changed: string[] = [];
+  let changed: string[];
   try {
     changed = execFileSync('git', ['diff', '--name-only', range], {
       cwd: rootDir,

@@ -249,6 +249,7 @@ export class GitHubBranchEvidence {
         if ((status !== 422 && status !== 409) || attempt >= this.maxAttempts) {
           throw new Error(
             `github evidence: cannot update ${this.fullName}@${this.branch} after ${attempt} attempt(s): ${(e as Error).message}`,
+            { cause: e },
           );
         }
         const wait = 250 * 2 ** (attempt - 1) + Math.floor(Math.random() * 100);
@@ -272,7 +273,7 @@ export class GitHubBranchEvidence {
       })
       .catch((e: unknown) => {
         // the git data API cannot write to a repository without any commit
-        if (statusOf(e) === 409) throw new Error(this.emptyRepoMessage());
+        if (statusOf(e) === 409) throw new Error(this.emptyRepoMessage(), { cause: e });
         throw e;
       });
     const { data: commit } = await this.octokit.rest.git.createCommit({
@@ -375,7 +376,7 @@ export class GitHubBranchEvidence {
     } catch (e) {
       if (statusOf(e) === 404) return null;
       // GitHub answers 409 ("repository is empty"), not 404, for a ref of a repo without a commit
-      if (statusOf(e) === 409) throw new Error(this.emptyRepoMessage());
+      if (statusOf(e) === 409) throw new Error(this.emptyRepoMessage(), { cause: e });
       throw e;
     }
   }

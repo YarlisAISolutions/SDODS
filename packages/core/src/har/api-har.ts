@@ -177,7 +177,7 @@ export function snapshotToEntry(snap: ApiSnapshot): SdodsHarEntry {
 
 export function entryToResponse(entry: SdodsHarEntry): ApiSnapshot['response'] {
   const text = entry.response.content.text ?? '';
-  let body: unknown = text;
+  let body: unknown;
   try {
     body = text.length ? JSON.parse(text) : null;
   } catch {
