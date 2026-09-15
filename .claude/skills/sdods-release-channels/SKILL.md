@@ -16,7 +16,7 @@ someone who is not you.
 | Homebrew  | the CLI           | `siri1410/homebrew-sdods`     | you, `git push`           |
 | Scoop     | the desktop app   | `siri1410/scoop-sdods`        | you, `git push`           |
 | winget    | the desktop app   | `microsoft/winget-pkgs`       | **Microsoft's reviewers** |
-| apt       | the desktop app   | Pages on `sdods-releases`     | `apt.yml`, run by hand    |
+| apt       | the desktop app   | `sdods.com/apt` (site PR)     | `apt.yml`, run by hand    |
 
 ## The one rule
 
@@ -183,8 +183,13 @@ packages .` writes `Filename: ./pool/...` and that is the same broken segment on
 it splits the index per architecture with awk rather than `apt-ftparchive --arch`, which matches
 nothing here and silently writes an empty `Packages`.
 
-**GitHub Pages has to be enabled on the releases repository** — Settings → Pages → source
-`gh-pages` — or the workflow pushes the branch and the URL keeps 404ing.
+**It is served from sdods.com/apt, not GitHub Pages.** The workflow opens a PR that commits the
+signed metadata to `apps/www/public/apt`; merging it deploys the repository with the site. The
+`.deb` files never enter the site: `pool/<tag>/<file>` is a 302 in `firebase.json` to the asset on
+the public release, and apt checks the download against the SHA-256 in `Packages`. So after a
+desktop release, run the workflow and **merge its PR**, or `sdods.com/apt` keeps serving the
+previous version. GitHub Pages on `sdods-releases` was the original plan and was never switched on;
+a probe still pointing there reported this live repository as missing.
 
 ## Adding a seventh channel
 

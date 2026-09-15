@@ -138,7 +138,7 @@ export const INSTALL_CHANNELS: Channel[] = [
     command: 'sudo apt update && sudo apt install sdods',
     note: 'After adding the signed SDODS repository once — the docs have the two setup lines.',
     under: 'linux-packages',
-    live: false,
+    live: true,
   },
 ];
 
