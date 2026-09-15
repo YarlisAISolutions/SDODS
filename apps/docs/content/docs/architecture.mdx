@@ -121,26 +121,12 @@ flowchart TB
   style hosted fill:none,stroke:#94A3B8,stroke-width:2px,stroke-dasharray:6 4
 ```
 
-## Level 3: Components of the runtime and the server
+## Level 3: Components of the runtime
 
-Inside `@sdods/core`, which a `sdods run` executes on Playwright workers, and inside
-`@sdods/server`, which turns HTTP requests and cron schedules into CLI runs.
+Inside `@sdods/core`, which a `sdods run` executes on Playwright workers.
 
 ```mermaid
-flowchart TB
-  web["<b>Web UI</b><br/>[Container: React SPA]"]:::container
-  mcpc["<b>MCP clients</b><br/>[External]"]:::external
-
-  subgraph server["@sdods/server [Container: Fastify 5]"]
-    direction LR
-    plugins["<b>Plugins</b><br/>[Component]<br/>auth: sessions, CSRF, scoped tokens<br/>db · mcp · sse · static reports"]:::component
-    routes["<b>Routes</b><br/>[Component]<br/>auth · hierarchy · projects<br/>runs · schedules · agents"]:::component
-    runmgr["<b>RunManager</b><br/>[Component]<br/>spawns sdods run, buffers logs"]:::component
-    sched["<b>Scheduler</b><br/>[Component: croner]<br/>cron schedules to runs"]:::component
-    agentmgr["<b>AgentManager</b><br/>[Component]<br/>spawns sdods agent jobs"]:::component
-    diff["<b>Image diff</b><br/>[Component: pixelmatch]<br/>before/after pixel diff"]:::component
-  end
-
+flowchart LR
   cli["<b>CLI</b><br/>[Container: Node 22, commander]"]:::container
 
   subgraph core["@sdods/core [Container: runtime on Playwright + playwright-bdd]"]
@@ -160,16 +146,10 @@ flowchart TB
     reporters["<b>Reporters · Evidence</b><br/>[Component]<br/>dashboard, zips, trace redaction"]:::component
   end
 
-  db[("<b>@sdods/db</b><br/>[Container: SQLite ⇄ Postgres]<br/>ingest · insights · migrations")]:::container
-  pw["<b>Browsers · app under test</b><br/>[External]"]:::external
   ext["<b>Mailpit · k6</b><br/>[External]"]:::external
+  pw["<b>Browsers · app under test</b><br/>[External]"]:::external
+  db[("<b>@sdods/db</b><br/>[Container: SQLite ⇄ Postgres]<br/>ingest · insights · migrations")]:::container
 
-  web -->|"REST + SSE"| routes
-  mcpc -->|"/mcp"| plugins
-  routes --> runmgr & agentmgr & diff
-  sched --> runmgr
-  runmgr & agentmgr -->|"spawn"| cli
-  plugins --> db
   cli --> config & lint & matrix & rec & load
   cli -->|"ingests the run"| db
   config --> fixtures
@@ -186,8 +166,44 @@ flowchart TB
   classDef container fill:#2F5BFF,stroke:#1E3FB8,color:#FFFFFF
   classDef component fill:#DCE4FF,stroke:#2F5BFF,color:#0B1020
   classDef external fill:#64748B,stroke:#475569,color:#FFFFFF
-  style server fill:none,stroke:#FFB020,stroke-width:2px,stroke-dasharray:6 4
   style core fill:none,stroke:#FFB020,stroke-width:2px,stroke-dasharray:6 4
+```
+
+## Level 3: Components of the server
+
+Inside `@sdods/server`, which turns HTTP requests and cron schedules into CLI runs.
+
+```mermaid
+flowchart TB
+  web["<b>Web UI</b><br/>[Container: React SPA]"]:::container
+  mcpc["<b>MCP clients</b><br/>[External]"]:::external
+
+  subgraph server["@sdods/server [Container: Fastify 5]"]
+    direction LR
+    plugins["<b>Plugins</b><br/>[Component]<br/>auth: sessions, CSRF, scoped tokens<br/>db · mcp · sse · static reports"]:::component
+    routes["<b>Routes</b><br/>[Component]<br/>auth · hierarchy · projects<br/>runs · schedules · agents"]:::component
+    runmgr["<b>RunManager</b><br/>[Component]<br/>spawns sdods run, buffers logs"]:::component
+    sched["<b>Scheduler</b><br/>[Component: croner]<br/>cron schedules to runs"]:::component
+    agentmgr["<b>AgentManager</b><br/>[Component]<br/>spawns sdods agent jobs"]:::component
+    diff["<b>Image diff</b><br/>[Component: pixelmatch]<br/>before/after pixel diff"]:::component
+  end
+
+  cli["<b>CLI</b><br/>[Container: Node 22, commander]"]:::container
+  db[("<b>@sdods/db</b><br/>[Container: SQLite ⇄ Postgres]<br/>ingest · insights · migrations")]:::container
+
+  web -->|"REST + SSE"| routes
+  mcpc -->|"/mcp"| plugins
+  routes --> runmgr & agentmgr & diff
+  sched -->|"due schedules"| runmgr
+  runmgr & agentmgr -->|"spawn"| cli
+  plugins -->|"sessions, tokens, history"| db
+
+  classDef person fill:#FFB020,stroke:#B87800,color:#0B1020
+  classDef system fill:#1E3FB8,stroke:#FFB020,stroke-width:3px,color:#FFFFFF
+  classDef container fill:#2F5BFF,stroke:#1E3FB8,color:#FFFFFF
+  classDef component fill:#DCE4FF,stroke:#2F5BFF,color:#0B1020
+  classDef external fill:#64748B,stroke:#475569,color:#FFFFFF
+  style server fill:none,stroke:#FFB020,stroke-width:2px,stroke-dasharray:6 4
 ```
 
 ## The package graph
