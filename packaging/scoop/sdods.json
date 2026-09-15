@@ -4,18 +4,18 @@
     "Scoop's schema sets additionalProperties:false and '##' is the only comment key it allows, so every note lives in this one array — a '##installer' key fails validation.",
     "electron-builder's NSIS takes /S for silent and /D for the target directory. /D must come last and must not be quoted — that is an NSIS rule, not a Scoop one, and quoting it silently installs to the default location instead."
   ],
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "BDD test automation for UI, API and hybrid flows",
   "homepage": "https://sdods.com",
   "license": "Apache-2.0",
   "architecture": {
     "64bit": {
-      "url": "https://github.com/siri1410/sdods-releases/releases/download/desktop-v0.1.1/SDODS-Setup-0.1.1-win-x64.exe#/setup.exe",
-      "hash": "08a6520cd3a37edb3e071c42d97a0161a87eeb1466747934aeb75d8023bcbf1a"
+      "url": "https://github.com/siri1410/sdods-releases/releases/download/desktop-v0.1.2/SDODS-Setup-0.1.2-win-x64.exe#/setup.exe",
+      "hash": "eebad5cf3e99d841260b364559010af225e4a207c943a57011a31d24681b62c7"
     },
     "arm64": {
-      "url": "https://github.com/siri1410/sdods-releases/releases/download/desktop-v0.1.1/SDODS-Setup-0.1.1-win-arm64.exe#/setup.exe",
-      "hash": "44dd92467c80e9a1a9fb9080a23e36a6541f302fc9c2f4f56ce665d27ba3e110"
+      "url": "https://github.com/siri1410/sdods-releases/releases/download/desktop-v0.1.2/SDODS-Setup-0.1.2-win-arm64.exe#/setup.exe",
+      "hash": "010c2594382a6c7d25d3a0d38f7b27feb63063e7a0f49528304dc5f9523ca645"
     }
   },
   "installer": {
