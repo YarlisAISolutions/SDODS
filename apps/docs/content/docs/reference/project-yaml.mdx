@@ -161,7 +161,7 @@ description: Field-by-field reference for the project file and the workspace fil
   }}
 />
 
-### Screenshots, healing, timeouts, retries, performance
+### Screenshots, healing, timeouts, retries, performance, accessibility
 
 <TypeTable
   type={{
@@ -237,7 +237,29 @@ description: Field-by-field reference for the project file and the workspace fil
       description:
         'Tag expression for scenarios that must pass first (probes, login, seeding). See "Setup scenarios" below.',
     },
-    'perf.budgets': { type: '{ pageLoadMs?, lcpMs?, fcpMs?, ttfbMs?, apiP95Ms? }', default: '{}' },
+    'perf.budgets': {
+      type: '{ pageLoadMs?, lcpMs?, fcpMs?, ttfbMs?, apiP95Ms? }',
+      default: '{}',
+      description:
+        'Enforced at the end of every @perf scenario, and by the explicit budget steps. See Accessibility and performance.',
+    },
+    'a11y.failOn': {
+      type: "'minor'|'moderate'|'serious'|'critical'",
+      default: "'serious'",
+      description:
+        'Weakest axe impact that fails an @a11y scenario. Violations below it are reported, not failed.',
+    },
+    'a11y.include': {
+      type: 'string[]',
+      default: '[]',
+      description:
+        'Selectors the @a11y audit is limited to. One that matches nothing fails the audit.',
+    },
+    'a11y.exclude': {
+      type: 'string[]',
+      default: '[]',
+      description: 'Selectors the @a11y audit leaves out, such as a third-party widget.',
+    },
   }}
 />
 

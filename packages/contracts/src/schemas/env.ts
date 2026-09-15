@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import {
+  A11yPatchSchema,
   EvidencePatchSchema,
   HealConfigSchema,
   PerfBudgetsSchema,
@@ -71,6 +72,7 @@ export const EnvConfigSchema = z.object({
   heal: HealConfigSchema.partial().optional(),
   timeouts: TimeoutsSchema.partial().optional(),
   perf: z.object({ budgets: PerfBudgetsSchema.partial() }).optional(),
+  a11y: A11yPatchSchema.optional(),
   ci: z.boolean().optional(),
   /** Opt-in for `sdods load`; absent means load tests are refused. */
   load: EnvLoadSchema.optional(),

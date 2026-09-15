@@ -71,14 +71,14 @@ processes:
 
 The workspace file declares the same `pr-check`, `nightly-regression` (with `schedule: '0 2 * * *'`) and `release-gate` under `defaults.processes`; the project's entries override them by name, so `sdods processes list -p demo-shop` shows four processes.
 
-| Field                                          | Purpose                                                                                                                                  |
-| ---------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `trigger`                                      | when the process is meant to run: `manual`, `pr`, `merge`, `nightly`, `release`, `schedule`, `webhook`                                   |
-| `env`, `tags`, `layers`, `browsers`, `modules` | what to select                                                                                                                           |
-| `workers`, `retries`, `harMode`, `failOnFlaky` | how to execute                                                                                                                           |
-| `gates`                                        | conditions that fail the run even when every scenario passed: minimum pass rate, maximum flaky count, performance budgets, accessibility |
-| `notify`                                       | integrations to call after the run                                                                                                       |
-| `schedule`                                     | a cron expression; `sdods schedule sync` turns it into a schedule                                                                        |
+| Field                                          | Purpose                                                                                                                 |
+| ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `trigger`                                      | when the process is meant to run: `manual`, `pr`, `merge`, `nightly`, `release`, `schedule`, `webhook`                  |
+| `env`, `tags`, `layers`, `browsers`, `modules` | what to select                                                                                                          |
+| `workers`, `retries`, `harMode`, `failOnFlaky` | how to execute                                                                                                          |
+| `gates`                                        | conditions `sdods run --process` checks after the run, failing it even when every scenario passed (see [Gates](#gates)) |
+| `notify`                                       | integrations to call after the run                                                                                      |
+| `schedule`                                     | a cron expression; `sdods schedule sync` turns it into a schedule                                                       |
 
 Workspace-level processes under `defaults.processes` apply to every project; a project process with the same name overrides it.
 
@@ -92,6 +92,19 @@ bun run sdods run -p demo-shop --module cart -t @regression
 ```
 
 CI workflows call processes by name, so a change of gate or browser list is a YAML edit, not a workflow edit.
+
+## Gates
+
+`sdods run --process <name>` evaluates the process's `gates` against the run it just finished, prints one row per gate and exits `1` with `GATE_FAILED` when any gate is not met:
+
+| Gate          | Passes when                                                                                          |
+| ------------- | ---------------------------------------------------------------------------------------------------- |
+| `minPassRate` | (passed + flaky) ÷ (total − skipped) × 100 is at least the value. A run that executed nothing fails. |
+| `maxFlaky`    | no more scenarios than the value failed first and passed on a retry                                  |
+| `a11y`        | at least one `@a11y` audit ran and none found a violation at or above `a11y.failOn`                  |
+| `perfBudgets` | at least one `@perf` scenario was judged against a budget and none breached one                      |
+
+The verdict is written to `gates.json` in the run directory, added to `summary.json` and the `--json` output, and recorded on the run by the server, which marks a gated-out run failed. A sharded run (`--shard i/n`) is not gated per shard, because one shard is not the whole run. What `@a11y` and `@perf` check is described in [Accessibility and performance budgets](/docs/guides/accessibility-and-performance).
 
 ## Next steps
 

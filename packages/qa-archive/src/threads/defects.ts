@@ -815,7 +815,7 @@ product — every count you took from it is a count of the pool.`,
 
 If your nightly runs a browser matrix as parallel jobs, each job is a separate machine with its
 own \`.sdods/leases\` directory. \`leaseStore: file\` is single-machine by design, and
-\`leaseStore: db\` is declared in the schema but has no implementation behind it — the file pool
+\`leaseStore: db\` is declared in the schema but, as of this writing, has no implementation — the file pool
 wins regardless. So three matrix jobs will lease the same real accounts at the same time,
 happily, with no contention visible to any of them.
 

@@ -330,7 +330,7 @@ Three ways out, in the order I would try them:
 2. Cap \`-w\` at the number of accounts for your busiest role.
 3. Split the role's scenarios into their own run with its own worker count, and let the rest of the suite run wide.
 
-One thing to know before you go to CI with sharding: the owner key includes a shard offset so two shards never generate the same owner string. With \`leaseStore: file\` each machine has its own lease directory anyway, so three shards at four workers each need twelve accounts, not four. With \`leaseStore: db\` they contend for the same rows and the arithmetic is the same.`,
+One thing to know before you go to CI with sharding: the owner key includes a shard offset so two shards never generate the same owner string. With \`leaseStore: file\` each machine has its own lease directory anyway, so three shards at four workers each need twelve accounts, not four. \`leaseStore: db\` is in the schema too, but nothing implements it yet, so do the arithmetic per machine.`,
       },
       {
         id: 'a2',
@@ -760,7 +760,7 @@ This is really a local-machine problem, and only with \`leaseStore: file\`.`,
         by: 'sergio-alcaraz',
         on: '2025-02-04',
         votes: 4,
-        body: `Following on: with \`leaseStore: db\` the locks are rows in \`user_leases\` rather than files, so there is no directory to delete — which is the point of that store, since a lease taken on one machine has to be visible from another. If you are sharding across machines against a shared account estate, the file store is not doing what you think it is doing.`,
+        body: `Following on: do not reach for \`leaseStore: db\` to make leases visible across machines. It is in the schema, but as of today nothing implements it and the file store runs whatever you set. If you are sharding across machines against a shared account estate, the file store is not doing what you think it is doing.`,
       },
     ],
     acceptedAnswerId: 'a1',

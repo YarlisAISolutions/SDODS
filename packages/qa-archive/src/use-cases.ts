@@ -423,13 +423,13 @@ Two muted text steps on the dark hero failed as well, at 4.48:1 and 3.15:1 — o
 Eighteen failing nodes on the landing page alone, and all eighteen were repetitions of those five combinations across repeated cards. The primary call to action on the highest-traffic page in the product was the worst offender.
 
 The reporting shape is the lesson. Thirty-three failures across five feature files looks like thirty-three defects and gets triaged as a suite problem. Every one of them resolved to a single custom property.`,
-    approach: `Be exact about what SDODS gives you here, because the answer is less than people expect.
+    approach: `Be exact about what SDODS gives you here, because it is a floor rather than a verdict.
 
-- \`@a11y\` is a real scenario tag from the optional set.
-- \`gates.a11y\` is a real field on a process in \`sdods.project.yaml\`.
-- Neither is implemented. No shipped step runs axe-core, and the gate is schema-only — it is declared and inert. The same is true of the performance budgets (\`pageLoadMs\`, \`lcpMs\`, \`apiP95Ms\`): they validate, they are stored, and nothing enforces them.
+- \`@a11y\` audits the page a UI scenario ends on with axe-core (WCAG A and AA) and fails on anything at or above \`a11y.failOn\`, which is \`serious\` unless the project says otherwise. The full result is attached as \`sdods/a11y-scenario\`.
+- \`the page should have no colour-contrast violations\` isolates the contrast rule, so a token change fails on contrast rather than inside a general violation list. It has a \`within {string}\` form for one region.
+- \`gates.a11y\` on a process fails \`sdods run --process\` when an audit found a blocking violation, or when no audit ran at all.
 
-So an accessibility module today is carried by project-local steps: load axe-core in a page object, expose one Gherkin phrase of your own, and tag the scenarios \`@a11y\` so they are selectable even though the tag does not yet enable anything.
+What axe will not do for you is group findings or read your design tokens. That part is still project-local.
 
 What the failure shape teaches, which is the transferable part:
 
@@ -439,9 +439,9 @@ What the failure shape teaches, which is the transferable part:
 - Root-cause the halves separately. The public surfaces were root-caused to the token; the authenticated and admin surfaces, which were the larger half, had not been. Keyboard order, focus visibility and landmark semantics are separate assertions with separate causes, and folding them into one number hides that.`,
     sketch: `\`\`\`gherkin
 @ui @regression @a11y
-Scenario: The landing page has no serious contrast violations
+Scenario: The landing page has no contrast violations
   Given I navigate to the "landing" page
-  Then the page should have no contrast violations below 4.5
+  Then the page should have no colour-contrast violations
 
 @ui @regression @a11y
 Scenario: The primary call to action meets the normal-text threshold
@@ -449,9 +449,9 @@ Scenario: The primary call to action meets the normal-text threshold
   Then the element with test id "hero-cta-signup" should meet a contrast ratio of 4.5
 \`\`\`
 
-Both \`Then\` steps are project-local. They are not in \`@sdods/core/steps\` and nothing in the shared library will resolve them — write them in your project's steps directory over axe-core, and phrase them in the same style as the shared steps so the feature file reads as one library.
+The first \`Then\` is in \`@sdods/core/steps\`, and the \`@a11y\` tag audits the whole page again at the end of each scenario. The second is project-local: nothing in the shared library asserts a ratio on one element, so write it in your project's steps directory and phrase it in the same style as the shared steps.
 
-Until \`gates.a11y\` is implemented, gate on the module in CI instead: \`sdods run -p <slug> -e staging -m a11y -t @regression\` and let the exit code do the work.`,
+Gate on it in CI with a process whose \`gates\` include \`a11y: true\`, and let \`sdods run --process\` fail the run.`,
   },
 
   {
