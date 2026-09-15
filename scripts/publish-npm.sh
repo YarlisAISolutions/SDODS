@@ -4,6 +4,7 @@
 #   bash scripts/publish-npm.sh <otp>     # one-time password from your authenticator
 #   NPM_TOKEN=<automation token> bash scripts/publish-npm.sh
 #   SDODS_NPM_TOKEN_SECRET=automax-npm-token bash scripts/publish-npm.sh   # from Secret Manager
+#   bash scripts/publish-npm.sh --dry-run  # or SDODS_PUBLISH_DRY_RUN=1: build and stage, publish nothing
 #
 # An npm *automation* token bypasses 2FA; a classic publish token does not and will fail with
 # EOTP, in which case pass an OTP instead. The token is written to a private temp .npmrc that is
@@ -13,9 +14,20 @@
 # scripts/stage-npm-packages.ts): the staging step applies the `publishConfig` field overrides that
 # point `exports` at dist/ and pins `workspace:*` to real versions — npm does neither on its own.
 # Versions already on the registry are skipped, so re-running is safe.
+#
+# A dry run does everything except the two irreversible parts, `npm publish` and `git tag`: it
+# still builds, stages, verifies, asks the registry what is already there, prints the `New tag:`
+# lines and writes $CHANGESETS_OUTPUT, so the contract with release.yml can be checked without a
+# release. tests/publish-npm.test.ts runs it that way.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
+DRY_RUN="${SDODS_PUBLISH_DRY_RUN:-}"
+[ "$DRY_RUN" = 0 ] && DRY_RUN=
+if [ "${1:-}" = --dry-run ]; then
+  DRY_RUN=1
+  shift
+fi
 OTP="${1:-}"
 PKGS=(contracts core db mcp integrations agents server cli)
 STAGE=.publish-stage
@@ -42,7 +54,10 @@ if [ -n "${NPM_TOKEN:-}" ]; then
   trap 'rm -f "$NPMRC"' EXIT INT TERM
   host=${REGISTRY#https:}; host=${host#http:}
   printf '%s/:_authToken=%s\nregistry=%s/\n' "${host%/}" "$NPM_TOKEN" "${REGISTRY%/}" > "$NPMRC"
-  export npm_config_userconfig="$NPMRC"
+  # Both spellings. actions/setup-node exports NPM_CONFIG_USERCONFIG for its own .npmrc, npm reads
+  # npm_config_* case-insensitively, and when both are set whichever it meets last in the
+  # environment wins -- so exporting only the lowercase one leaves the choice of file to chance.
+  export npm_config_userconfig="$NPMRC" NPM_CONFIG_USERCONFIG="$NPMRC"
 fi
 
 # A CLEAN build, not `tsc -b`. `tsc -b` is incremental: it trusts .tsbuildinfo and emits nothing
@@ -101,26 +116,42 @@ for p in "${PKGS[@]}"; do
   fi
   # Print only after the publish lands: announcing it first made a failed publish read as a
   # success line immediately followed by an unrelated-looking error.
-  ( cd "$dir" && npm publish "${npm_args[@]}" >/dev/null ) || {
-    printf '  ! %-26s %s failed to publish\n' "$name" "$version" >&2
-    exit 1
-  }
-  printf '  + %-26s %s\n' "$name" "$version"
-  # changesets/action decides its `published` output by scanning this stdout for "New tag:" lines.
-  # It is the only signal it accepts, and without it a successful publish reads as "nothing was
-  # published" -- which is why the GHCR image job never ran.
+  if [ -n "$DRY_RUN" ]; then
+    printf '  ~ %-26s %s would publish (dry run)\n' "$name" "$version"
+  else
+    ( cd "$dir" && npm publish "${npm_args[@]}" >/dev/null ) || {
+      printf '  ! %-26s %s failed to publish\n' "$name" "$version" >&2
+      exit 1
+    }
+    printf '  + %-26s %s\n' "$name" "$version"
+  fi
+  # The line changesets/action v1 scanned stdout for. v2 no longer reads stdout (see below); the
+  # line stays because it is what a person searches a release log for, spelled like the tag.
   printf 'New tag: %s@%s\n' "$name" "$version"
-  # ...and actually CREATE that tag. changesets/action reads the line above to learn what was
-  # published, then runs `git push origin <name>@<version>` for each one. `changeset publish`
-  # tags as it goes; this script replaced it (see the release.yml comment) and did not, so every
-  # push failed with "src refspec <name>@<version> does not match any" and the release job went
-  # red AFTER a completely successful publish. A red job on a good release is worse than a
-  # cosmetic bug: it trains people to ignore the one signal that says whether a release worked.
+  # changesets/action v2 sets `published` and `published-packages`, and creates the GitHub releases
+  # and tags, from this file alone: one JSON event per line, the shape `changeset publish` appends
+  # when CHANGESETS_OUTPUT is set. This script replaced `changeset publish` (see release.yml), so it
+  # writes the file itself. Without it a successful publish reads as "nothing was published", no
+  # release or tag is made and the GHCR image job never runs -- the v1 bug again, one file over.
+  # Appended per package, straight after its publish, so a run that fails halfway still reports
+  # the packages that reached the registry. Outside the action the variable is unset: no file.
+  if [ -n "${CHANGESETS_OUTPUT:-}" ]; then
+    mkdir -p "$(dirname "$CHANGESETS_OUTPUT")"
+    node -e '
+      const [tag, packageName] = process.argv.slice(1);
+      process.stdout.write(JSON.stringify({ type: "git-tag", tag, packageName }) + "\n");
+    ' "$name@$version" "$name" >> "$CHANGESETS_OUTPUT"
+  fi
+  # A local tag too, for a person publishing by hand. In CI the action creates the remote tag from
+  # the file above, through the GitHub API, at the commit being released -- the commit HEAD is on
+  # here -- so this one is never pushed and cannot collide with it.
   #
   # Not fatal if it fails. The packages are already on the registry at this point and nothing can
   # take them back, so aborting here would leave the release half-done for no gain. Outside a git
   # checkout (someone running this by hand from a tarball) there is nothing to tag at all.
-  if git rev-parse --git-dir >/dev/null 2>&1; then
+  if [ -n "$DRY_RUN" ]; then
+    :
+  elif git rev-parse --git-dir >/dev/null 2>&1; then
     git tag "$name@$version" >/dev/null 2>&1 ||
       echo "  . $name@$version: git tag not created (it may already exist)" >&2
   fi
@@ -128,5 +159,9 @@ for p in "${PKGS[@]}"; do
 done
 
 echo
+if [ -n "$DRY_RUN" ]; then
+  echo "dry run: would publish $published, skipped $skipped"
+  exit 0
+fi
 echo "published $published, skipped $skipped"
 echo "install: npm i -g @sdods/cli   →   sdods --help"

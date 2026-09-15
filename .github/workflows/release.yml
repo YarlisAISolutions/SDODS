@@ -70,18 +70,30 @@ jobs:
       - name: Create release PR or publish
         id: changesets
         if: steps.creds.outputs.present == 'true'
-        uses: changesets/action@v1
+        uses: changesets/action@v2
         with:
-          version: bunx changeset version
+          # v2 reads the token from this input only, and refuses to run when a GITHUB_TOKEN env var
+          # disagrees with it -- so the token lives here and not in `env:` below.
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          version-script: bunx changeset version
           # Not `changeset publish`: it packs each package directory as-is, and npm does not apply
           # `publishConfig` field overrides (a pnpm/yarn feature), so the tarballs would ship
           # `exports` pointing at src/*.ts that `files: ["dist"]` excludes. scripts/publish-npm.sh
           # stages the manifests and the init/dashboard assets first — same path a human uses.
-          publish: bash scripts/publish-npm.sh
-          commit: 'chore(release): version packages'
-          title: 'chore(release): version packages'
+          #
+          # v2 learns what was published from the $CHANGESETS_OUTPUT file it hands the script, not
+          # from stdout; the script writes one event per package (tests/publish-npm.test.ts).
+          publish-script: bash scripts/publish-npm.sh
+          commit-message: 'chore(release): version packages'
+          pr-title: 'chore(release): version packages'
+          # push-with-git-cli stays at its default, false: the version commit and the per-package
+          # tags go through the GitHub API, tags at the commit being released. The script only
+          # tags locally and never pushes, so there is no second push to collide with.
+        # v2 no longer writes an .npmrc from NPM_TOKEN. It does pass the step's environment to the
+        # publish script, which writes its own private userconfig from NPM_TOKEN; NODE_AUTH_TOKEN
+        # is for the .npmrc that setup-node's `registry-url` wrote above. With neither secret set,
+        # npm falls through to trusted publishing (OIDC).
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
@@ -92,7 +104,7 @@ jobs:
         id: version
         if: steps.changesets.outputs.published == 'true'
         env:
-          PACKAGES: ${{ steps.changesets.outputs.publishedPackages }}
+          PACKAGES: ${{ steps.changesets.outputs['published-packages'] }}
         run: |
           version=$(node -e "
             const pkgs = JSON.parse(process.env.PACKAGES || '[]');

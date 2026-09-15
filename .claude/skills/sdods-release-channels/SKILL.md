@@ -55,10 +55,19 @@ desktop-v* tag → workflow drafts → a PERSON publishes the release      →  
 
 ### npm — automatic
 
-`release.yml` runs changesets on every push to `main`. `scripts/publish-npm.sh` prints a
-`New tag: <pkg>@<version>` line per package, which is the **only** signal changesets/action reads
-to set its `published` output. Do not remove it: without it a successful publish reads as "nothing
-published" and the image job below never runs. That was the actual bug.
+`release.yml` runs `changesets/action@v2` on every push to `main`. For each package it publishes,
+`scripts/publish-npm.sh` appends one line to the file named by `$CHANGESETS_OUTPUT`:
+
+```
+{"type":"git-tag","tag":"@sdods/cli@0.9.0","packageName":"@sdods/cli"}
+```
+
+That file is the **only** signal v2 reads to set `published` and `published-packages` and to create
+the GitHub releases and tags. Do not remove it: without it a successful publish reads as "nothing
+published" and the image job below never runs. That was the actual bug under v1, which scanned
+stdout for the `New tag: <pkg>@<version>` lines the script still prints for people reading the log.
+`tests/publish-npm.test.ts` runs the script against the action's own reader, and
+`bash scripts/publish-npm.sh --dry-run` shows the file without publishing anything.
 
 ### Docker — automatic, after npm
 

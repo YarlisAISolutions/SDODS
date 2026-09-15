@@ -13,7 +13,6 @@ name: dependencies
 #   @types/node 22             it matches engines.node >=22, so types cannot promise newer APIs.
 #   cucumber-expressions 19.0.0  the exact version playwright-bdd pins; lint reuses its classes.
 #   desktop vite 7, plugin-react 5  electron-vite 5 supports vite <=7.
-#   changesets/action v1       v2 changes how releases and tags are made (see release.yml).
 #
 # GitHub cron is UTC and does not follow daylight saving: 12:07 UTC is 08:07 in EDT and 07:07 in
 # EST. Minutes are deliberately off the hour — every repository that asks for "8am" picks :00.
