@@ -20,7 +20,7 @@ WORKDIR /app
 # Bun 1.4 as package manager + bundler (pinned)
 # python3/make/g++ let node-gyp build native modules when no prebuilt binary matches the image's Node ABI
 RUN apt-get update && apt-get install -y --no-install-recommends curl unzip ca-certificates python3 make g++ \
-    && curl -fsSL https://bun.sh/install | bash -s "bun-v1.4.0" \
+    && curl -fsSL https://bun.sh/install | bash -s "bun-v1.4.2" \
     && apt-get purge -y unzip && apt-get autoremove -y && rm -rf /var/lib/apt/lists/*
 
 # Dependencies (native modules: prebuilt binaries when available, otherwise compiled above)

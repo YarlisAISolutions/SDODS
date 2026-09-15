@@ -21,7 +21,7 @@ concurrency:
 env:
   CI: true
   # NOTE: do not export SDODS_ENV globally — unit tests build fixture projects with their own envs.
-  BUN_VERSION: '1.4.0'
+  BUN_VERSION: '1.4.2'
   DEMO_ENV: staging
   RUN_ID: gh-${{ github.run_id }}
 

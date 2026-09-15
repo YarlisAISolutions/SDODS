@@ -27,7 +27,7 @@ DOCS_URL='https://docs.sdods.com'
 # Mirrors SPONSOR_ENABLED in packages/contracts/src/sponsor.ts (tests/sponsor.test.ts checks it).
 SPONSOR_ENABLED=0
 NODE_MIN_MAJOR=22
-BUN_VERSION_PIN='1.4.0'
+BUN_VERSION_PIN='1.4.2'
 INSTALLER_VERSION='1.0.0'
 
 # ── options (every flag has an environment equivalent) ───────────────────────────────────────

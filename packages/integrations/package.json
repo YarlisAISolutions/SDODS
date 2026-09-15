@@ -23,7 +23,7 @@
   "dependencies": {
     "@sdods/contracts": "workspace:*",
     "@octokit/rest": "^22.0.1",
-    "zod": "^4.5.4"
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "msw": "^2.15.0"

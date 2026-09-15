@@ -4,7 +4,7 @@
 # The service is bundled into one file, so the runtime image is plain Node with no node_modules,
 # no browsers and no native modules.
 
-FROM oven/bun:1.4.0 AS build
+FROM oven/bun:1.4.2 AS build
 WORKDIR /repo
 COPY package.json bun.lock tsconfig.base.json ./
 COPY packages ./packages
