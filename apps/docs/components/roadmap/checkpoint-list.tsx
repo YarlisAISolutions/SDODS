@@ -5,7 +5,7 @@
  * survives having no JavaScript, being printed, and being read by anything that does not run
  * a browser.
  */
-import { CHECKPOINTS, isChapter, type Checkpoint } from '@sdods/roadmap';
+import { CHECKPOINTS, type Checkpoint } from '@sdods/roadmap';
 import { whenOf } from './checkpoint-card';
 
 const GROUPS: Array<{ title: string; blurb: string; of: (c: Checkpoint) => boolean }> = [
@@ -17,7 +17,8 @@ const GROUPS: Array<{ title: string; blurb: string; of: (c: Checkpoint) => boole
   },
   {
     title: 'The next twelve months',
-    blurb: 'Close enough to promise, and ordered by what the one before it makes possible.',
+    blurb:
+      'Close enough to promise, and ordered by what the one before it makes possible. A month marked delivered lists what actually landed, and its proof is a command you can run today.',
     of: (c) => c.kind === 'month',
   },
   {
@@ -53,7 +54,7 @@ export function RoadmapChecklist() {
                 </ul>
                 <p className="mt-2 text-sm">
                   <span className="font-semibold">
-                    {isChapter(checkpoint) ? 'Proof. ' : 'Landed when. '}
+                    {checkpoint.state === 'delivered' ? 'Proof. ' : 'Landed when. '}
                   </span>
                   <span className="text-fd-muted-foreground">{checkpoint.proof}</span>
                 </p>

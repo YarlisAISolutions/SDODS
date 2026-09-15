@@ -801,24 +801,24 @@ Delivered, as five chapters. Every phase inside them ends runnable.
 | Agents | 7, 8 | The suite becomes something an agent can read |
 | A platform | 9, 10, 11, 12, 13 | A team, not a script |
 
-Next twelve months, in the order they are expected to land.
+The twelve months, in the order they land. A delivered month lists what actually shipped.
 
-| When | Checkpoint |
-|---|---|
-| Oct 2026 | Every claim on this site is true |
-| Nov 2026 | A first real release |
-| Dec 2026 | CI and your laptop agree about a screenshot |
-| Jan 2027 | A suite that runs with the network unplugged |
-| Feb 2027 | Flake becomes a number, not an argument |
-| Mar 2027 | One sign-in for the whole team |
-| Apr 2027 | History leaves the laptop |
-| May 2027 | Runs that know what changed |
-| Jun 2027 | Agents open pull requests |
-| Jul 2027 | One incident is one item |
-| Aug 2027 | Coverage measured against reality |
-| Sep 2027 | 1.0, with a promise attached |
+| When | Checkpoint | Status |
+|---|---|---|
+| Oct 2026 | Every claim on this site is true | Delivered |
+| Nov 2026 | A first real release | Delivered |
+| Dec 2026 | CI and your laptop agree about a screenshot | Delivered |
+| Jan 2027 | A suite that runs with the network unplugged | In progress |
+| Feb 2027 | Flake becomes a number, not an argument | Planned |
+| Mar 2027 | One sign-in for the whole team | Planned |
+| Apr 2027 | History leaves the laptop | Planned |
+| May 2027 | Runs that know what changed | Planned |
+| Jun 2027 | Agents open pull requests | Planned |
+| Jul 2027 | One incident is one item | Planned |
+| Aug 2027 | Coverage measured against reality | Planned |
+| Sep 2027 | 1.0, with a promise attached | Planned |
 
-Verified on 2026-09-05: unit and cli end-to-end tests 221 passed, 1 skipped; web ui component tests 9 passed; demo api layer, no browser 10 passed, 0 failed; types, lint and formatting clean; documentation build 3835 internal links across 92 pages, 0 broken.
+Verified on 2026-09-15: unit and cli end-to-end tests 1391 passed, 1 skipped; web ui component tests 15 passed; demo api layer, no browser 10 passed, 0 failed; types, lint and formatting clean; linux visual, accessibility and performance suites @regression green on chromium, firefox and webkit; documentation build 4434 internal links across 100 pages, 0 broken.
 
 The full road — the chapters, the twelve months and the horizon to 2030 — is at
 <https://docs.sdods.com/docs/roadmap/>.
