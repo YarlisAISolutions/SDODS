@@ -34,6 +34,7 @@ envs:
   default: local
   available:
     - local
+    - ci
 modules:
   - name: account
     path: account
@@ -241,7 +242,11 @@ retries:
   local: 0
 
 # The workshop project drives cypress-io/cypress-realworld-app, which has to be cloned and started
-# next to this checkout, so it cannot run in the generic browser matrix. Follow the workshop, or
-# start the app and run it by hand: `sdods run -p rwa-bank -e local -t @smoke`.
+# next to this checkout. Locally, follow the workshop: `sdods run -p rwa-bank -e local -t @smoke`.
+#
+# In CI the app is started inside the job (.github/actions/start-rwa) and the suite runs against
+# env `ci`, in the dedicated nightly/manual `rwa-bank` job in ci.yml. It stays out of the generic
+# matrix: that matrix also drives the pull-request job, which replays HARs with no app running.
 ci:
   enabled: false
+  env: ci

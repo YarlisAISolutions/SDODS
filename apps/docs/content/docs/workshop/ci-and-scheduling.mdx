@@ -92,6 +92,62 @@ Two things make this survive contact with a real repository:
   you keep a merge gate from depending on somebody's staging environment being up
   ([chapter 6](/docs/workshop/record-and-har/)).
 
+### Starting the application in the job
+
+`-e ci` above needs an application at the URLs `envs/ci.yaml` names. Replaying HARs is one answer;
+the other is to start the application inside the job, which is how the SDODS repository runs this
+very project every night. `projects/rwa-bank/envs/ci.yaml` points at `localhost:3000` and `:3001`,
+and a composite action brings the Real World App up before the suite runs:
+
+```yaml title=".github/actions/start-rwa/action.yml (abridged)"
+runs:
+  using: composite
+  steps:
+    - uses: actions/checkout@v7
+      with:
+        repository: cypress-io/cypress-realworld-app
+        ref: 79aa5b126fdd951aab2263c8201b52aeb5f2a43c # pinned: upstream cannot move the suite
+        path: .rwa
+    - shell: bash
+      run: npm install -g yarn@1.22.22
+    - shell: bash
+      working-directory: .rwa
+      env: { CYPRESS_INSTALL_BINARY: '0', HUSKY: '0' }
+      run: yarn install --frozen-lockfile && yarn db:seed:dev && yarn build:ci
+    - shell: bash
+      working-directory: .rwa
+      run: |
+        setsid nohup yarn start:ci > "$RUNNER_TEMP/rwa.log" 2>&1 < /dev/null &
+        # ...then wait until :3000 and :3001 both answer
+```
+
+```yaml title=".github/workflows/ci.yml (the rwa-bank job, abridged)"
+rwa-bank:
+  name: rwa-bank · chromium · @regression
+  if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+  container:
+    image: mcr.microsoft.com/playwright:v1.63.0-noble
+  steps:
+    - uses: actions/checkout@v7
+    - run: npm install -g bun@1.4.2 && bun install --frozen-lockfile
+    - uses: ./.github/actions/start-rwa
+    - run: bun run sdods run -p rwa-bank -e ci -l api
+    - run: bun run sdods run -p rwa-bank -e ci -l ui -b chromium -t @smoke
+    - run: bun run sdods run -p rwa-bank -e ci -l ui -b chromium -t @regression
+```
+
+Three choices in it are deliberate:
+
+- **Scheduled, not on every pull request.** Installing and building a full application takes
+  minutes. A pull request keeps its fast HAR-replay gate; the live run happens nightly.
+- **Inside the Playwright container.** `@regression` includes the `@visual` sign-in baseline from
+  [chapter 7](/docs/workshop/visual-a11y-performance/), and a baseline only matches pixels from the
+  same fonts and browser build. The `linux/` baseline is rendered in the same image by the
+  `visual-baselines` workflow, which starts the app the same way.
+- **A separate `ci` env, not `local`.** The URLs are the same, but `har/local` holds recordings, and
+  a scenario tagged `@har:profile` replays one whenever it exists for the env. Under `ci` it talks to
+  the live application.
+
 Results can flow back into the shared database and onto the pull request:
 
 ```bash

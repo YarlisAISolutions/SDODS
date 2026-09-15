@@ -1,0 +1,92 @@
+name: Start cypress-realworld-app
+description: >-
+  Check out cypress-io/cypress-realworld-app at a pinned commit, seed its database, build it and
+  start it in the background (front end on :3000, API on :3001), then wait until both answer. The
+  rwa-bank project's `ci` env points at it. Used by ci.yml and visual-baselines.yml.
+
+# Runs inside the Playwright container in both callers, so the pixels a @visual scenario renders
+# against the app are the ones the baseline was rendered from. The container ships Node; everything
+# else the app needs is installed here.
+
+inputs:
+  ref:
+    description: cypress-realworld-app commit to run. Pinned so an upstream change cannot move the suite or its baselines.
+    default: 79aa5b126fdd951aab2263c8201b52aeb5f2a43c
+  path:
+    description: Where to check the app out, relative to the workspace
+    default: .rwa
+
+outputs:
+  log:
+    description: The app's combined output, for upload when a run fails
+    value: ${{ steps.start.outputs.log }}
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/checkout@v7
+      with:
+        repository: cypress-io/cypress-realworld-app
+        ref: ${{ inputs.ref }}
+        path: ${{ inputs.path }}
+        persist-credentials: false
+
+    - name: Install yarn classic
+      # The app refuses Yarn Modern; its packageManager field pins 1.22.22.
+      shell: bash
+      run: npm install -g yarn@1.22.22
+
+    - name: Cache the yarn download cache
+      uses: actions/cache@v6
+      with:
+        path: /usr/local/share/.cache/yarn
+        key: rwa-yarn-${{ runner.os }}-${{ runner.arch }}-${{ inputs.ref }}
+
+    - name: Install the app
+      shell: bash
+      working-directory: ${{ inputs.path }}
+      env:
+        # The app's own Cypress binary, Puppeteer's Chromium and husky's git hooks are not needed to
+        # serve it. Scripts stay on, so patch-package still applies the app's patches.
+        CYPRESS_INSTALL_BINARY: '0'
+        PUPPETEER_SKIP_DOWNLOAD: 'true'
+        PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: 'true'
+        HUSKY: '0'
+      run: yarn install --frozen-lockfile --non-interactive
+
+    - name: Seed and build
+      # The app's own CI path: a production build served by scripts/testServer.ts, rather than the
+      # Vite dev server, which compiles each module on first request and is slower and less stable
+      # for a screenshot. db:seed:dev resets data/database.json to the committed seed (Heath93 et al).
+      shell: bash
+      working-directory: ${{ inputs.path }}
+      run: |
+        yarn db:seed:dev
+        yarn build:ci
+
+    - name: Start the app and wait for :3000 and :3001
+      id: start
+      shell: bash
+      working-directory: ${{ inputs.path }}
+      run: |
+        log="$RUNNER_TEMP/rwa.log"
+        echo "log=$log" >> "$GITHUB_OUTPUT"
+        # setsid + nohup: the app outlives this step and runs until the job ends.
+        setsid nohup yarn start:ci > "$log" 2>&1 < /dev/null &
+        # Node rather than curl: the Playwright image does not ship curl.
+        node -e '
+          const urls = ["http://localhost:3000/signin", "http://localhost:3001/"];
+          const deadline = Date.now() + 180_000;
+          const up = (u) => fetch(u).then((r) => r.ok, () => false);
+          (async () => {
+            for (;;) {
+              const ok = await Promise.all(urls.map(up));
+              if (ok.every(Boolean)) return console.log("cypress-realworld-app is up:", urls.join(" "));
+              if (Date.now() > deadline) {
+                console.error("::error::cypress-realworld-app did not answer within 180s:", urls.filter((_, i) => !ok[i]).join(" "));
+                process.exit(1);
+              }
+              await new Promise((r) => setTimeout(r, 2000));
+            }
+          })();
+        ' || { tail -100 "$log"; exit 1; }
