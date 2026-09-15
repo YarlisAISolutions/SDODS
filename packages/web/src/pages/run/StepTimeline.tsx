@@ -7,10 +7,16 @@ export function StepTimeline({
   attempt,
   projectSlug,
   fingerprint,
+  runId,
+  runnerProject,
+  canAcceptBaseline,
 }: {
   attempt: AttemptView;
   projectSlug: string;
   fingerprint: string;
+  runId?: string;
+  runnerProject?: string;
+  canAcceptBaseline?: boolean;
 }) {
   return (
     <div className="space-y-4">
@@ -29,7 +35,15 @@ export function StepTimeline({
       )}
       <ol className="relative space-y-3 border-l border-line pl-1">
         {attempt.steps.map((s) => (
-          <StepCard key={s.id} step={s} projectSlug={projectSlug} fingerprint={fingerprint} />
+          <StepCard
+            key={s.id}
+            step={s}
+            projectSlug={projectSlug}
+            fingerprint={fingerprint}
+            runId={runId}
+            runnerProject={runnerProject}
+            canAcceptBaseline={canAcceptBaseline}
+          />
         ))}
       </ol>
       {attempt.failure && (

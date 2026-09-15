@@ -28,6 +28,8 @@ The runner's own `trace`, `screenshot`, `video` and `<name>-expected.png`/`-actu
   html-report/  dashboard/  runner-output/  junit.xml
   <slug>/<fingerprint>/r<retry>/
     meta.json
+    visual/<run target>/<name>-expected.png  <name>-actual.png  <name>-diff.png
+    visual/<run target>/<name>.failure.json   # read by `sdods baselines`
     scenario-start.png  scenario-end.png  failure.png
     NN-before.png  NN-after.png
     api/NN-n-request.json  api/NN-n-response.json

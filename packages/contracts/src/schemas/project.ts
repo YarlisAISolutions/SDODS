@@ -129,10 +129,23 @@ export const ProjectAuthSchema = z.object({
     .optional(),
 });
 
+/**
+ * Settings for one named visual baseline (`the page should match the visual baseline "<name>"`).
+ * `mask` is added to the project/env `screenshots.mask`, never a replacement for it.
+ */
+export const BaselineConfigSchema = z.object({
+  mask: z.array(z.string()).optional(),
+  maxDiffPixelRatio: z.number().min(0).max(1).optional(),
+});
+
 export const ScreenshotConfigSchema = z.object({
   policy: z.record(z.string(), ShotPolicySchema).default({ default: 'on-failure' }),
   fullPage: z.boolean().default(false),
   mask: z.array(z.string()).default([]),
+  /** Share of pixels allowed to differ before a visual baseline check fails (0.01 = 1%). */
+  maxDiffPixelRatio: z.number().min(0).max(1).default(0.01),
+  /** Per-baseline overrides, keyed by the baseline name without `.png`. */
+  baselines: z.record(z.string(), BaselineConfigSchema).default({}),
   viewport: z
     .object({ width: z.number().int().positive(), height: z.number().int().positive() })
     .default({ width: 1280, height: 720 }),
@@ -649,6 +662,8 @@ export const ProjectConfigSchema = z.object({
     policy: { default: 'on-failure' },
     fullPage: false,
     mask: [],
+    maxDiffPixelRatio: 0.01,
+    baselines: {},
     viewport: { width: 1280, height: 720 },
     onlyOnFailure: false,
   }),
@@ -737,6 +752,7 @@ export type TestingType = z.infer<typeof TestingTypeSchema>;
 export type ProjectConfig = z.infer<typeof ProjectConfigSchema>;
 export type ProjectConfigInput = z.input<typeof ProjectConfigSchema>;
 export type ScreenshotConfig = z.infer<typeof ScreenshotConfigSchema>;
+export type BaselineConfig = z.infer<typeof BaselineConfigSchema>;
 export type EvidenceConfig = z.infer<typeof EvidenceSchema>;
 export type CanvasConfig = z.infer<typeof CanvasConfigSchema>;
 export type SetupConfig = z.infer<typeof SetupSchema>;

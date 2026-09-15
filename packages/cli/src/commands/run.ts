@@ -149,7 +149,10 @@ function addRunOptions(cmd: Command): Command {
     .option('--har-update', 'record/refresh HAR files for @har scenarios')
     .option('--har-replay', 'replay HAR files for @har scenarios')
     .option('--strict', 'with --har-replay: abort on any request not in the HAR (offline)')
-    .option('--update-snapshots', 'update visual baselines')
+    .option(
+      '--update-snapshots',
+      'overwrite visual baselines without review (prefer `sdods baselines diff` / `accept`)',
+    )
     .option('--ui', 'interactive UI mode')
     .option('--debug', 'step debugger')
     .option('--list', 'list the run targets and tests that would run')
@@ -271,6 +274,11 @@ export async function runCommand(flags: RunFlags, cmd: Command): Promise<number>
   if (stepResults) warn(stepResults);
 
   const runId = flags.runId ?? newRunId();
+  if (flags.updateSnapshots)
+    warn(
+      '--update-snapshots overwrites every compared baseline without showing the diff. ' +
+        `Prefer a normal run, then \`sdods baselines diff --run ${runId}\` and \`sdods baselines accept <name> --run ${runId}\`.`,
+    );
   const cli: CliOverrides = {
     env: envName,
     headed: flags.headed,

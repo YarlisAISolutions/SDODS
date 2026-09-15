@@ -172,6 +172,17 @@ description: Field-by-field reference for the project file and the workspace fil
     },
     'screenshots.fullPage': { type: 'boolean', default: 'false' },
     'screenshots.mask': { type: 'string[]', default: '[]' },
+    'screenshots.maxDiffPixelRatio': {
+      type: 'number 0–1',
+      default: '0.01',
+      description: 'Share of pixels a visual baseline check may differ by before it fails.',
+    },
+    'screenshots.baselines': {
+      type: 'Record<name, { mask?: string[]; maxDiffPixelRatio?: number }>',
+      default: '{}',
+      description:
+        'Per-baseline settings, keyed by the baseline name without `.png`. `mask` adds to `screenshots.mask`; `maxDiffPixelRatio` replaces the project threshold for that baseline.',
+    },
     'screenshots.viewport': { type: '{ width, height }', default: '{ 1280, 720 }' },
     'screenshots.onlyOnFailure': { type: 'boolean', default: 'false' },
     'heal.enabled': { type: 'boolean', default: 'true' },

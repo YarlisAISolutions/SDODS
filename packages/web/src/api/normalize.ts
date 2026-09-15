@@ -316,10 +316,25 @@ export function normalizeScenarioDetail(d: Rec): ScenarioDetail {
     const heals = arr(a.heals);
     const byPhase = (phase: string) => artifactRef(scenarioShots.find((x) => x.phase === phase));
     const steps: StepView[] = arr(a.steps).map((s) => {
-      const visuals = artifacts.filter((x) => x.kind === 'visual' && x.stepIndex === s.stepIndex);
+      let visuals = artifacts.filter((x) => x.kind === 'visual' && x.stepIndex === s.stepIndex);
+      // A failed check's expected/actual/diff images are ingested without a step index; pair
+      // them with the step that names the baseline.
+      const named = /visual baseline "([^"]+)"/.exec(str(s.text))?.[1]?.replace(/\.png$/, '');
+      if (!visuals.length && named)
+        visuals = artifacts.filter(
+          (x) =>
+            x.kind === 'visual' &&
+            x.stepIndex == null &&
+            str(x.fileName).split('/').pop()!.startsWith(`${named}-`),
+        );
       const vis = visuals.length
         ? {
-            name: str(visuals[0]?.fileName).replace(/-(expected|actual|diff)\.png$/, ''),
+            name:
+              named ??
+              str(visuals[0]?.fileName)
+                .split('/')
+                .pop()!
+                .replace(/-(expected|actual|diff)\.png$/, ''),
             expected: artifactRef(visuals.find((x) => x.phase === 'expected')),
             actual: artifactRef(visuals.find((x) => x.phase === 'actual')),
             diff: artifactRef(visuals.find((x) => x.phase === 'diff')),

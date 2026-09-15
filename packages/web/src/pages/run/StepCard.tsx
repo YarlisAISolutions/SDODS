@@ -5,15 +5,23 @@ import { Badge, Button, StatusPill } from '../../components/ui';
 import { fmtDuration } from '../../lib/utils';
 import { ScreenshotCompare } from './ScreenshotCompare';
 import { ApiPanel } from './ApiPanel';
+import { AcceptBaseline } from './AcceptBaseline';
 
 export function StepCard({
   step,
   projectSlug,
   fingerprint,
+  runId,
+  runnerProject,
+  canAcceptBaseline = false,
 }: {
   step: StepView;
   projectSlug: string;
   fingerprint: string;
+  runId?: string;
+  runnerProject?: string;
+  /** editors may accept a failed visual check's actual screenshot as the baseline */
+  canAcceptBaseline?: boolean;
 }) {
   const [showStack, setShowStack] = useState(false);
   return (
@@ -100,8 +108,22 @@ export function StepCard({
         )}
         {step.visual && (
           <div className="mt-3">
-            <div className="mb-1 text-xs font-medium">
-              Visual baseline <span className="mono">{step.visual.name}</span>
+            <div className="mb-1 flex flex-wrap items-center gap-2 text-xs font-medium">
+              <span>
+                Visual baseline <span className="mono">{step.visual.name}</span>
+              </span>
+              {canAcceptBaseline && runId && step.status === 'failed' && (
+                <span className="ml-auto">
+                  <AcceptBaseline
+                    runId={runId}
+                    runnerProject={runnerProject}
+                    name={step.visual.name}
+                    expected={step.visual.expected}
+                    actual={step.visual.actual}
+                    diff={step.visual.diff}
+                  />
+                </span>
+              )}
             </div>
             <ScreenshotCompare
               before={step.visual.expected}

@@ -156,3 +156,17 @@ describe('sdods trace / watch / upgrade help', () => {
     expect(res.stderr).toMatch(/No runs|not found/);
   });
 });
+
+describe('sdods baselines', () => {
+  it('accept refuses to run without --run', async () => {
+    const res = await sdods(['--cwd', join(tmp, 'ws'), 'baselines', 'accept', '--all']);
+    expect(res.exitCode).not.toBe(0);
+    expect(res.stderr).toMatch(/--run/);
+  });
+
+  it('diff reports a clear error when there are no runs', async () => {
+    const res = await sdods(['--cwd', join(tmp, 'ws'), 'baselines', 'diff']);
+    expect(res.exitCode).toBe(2);
+    expect(res.stderr).toMatch(/No runs|not found/);
+  });
+});
