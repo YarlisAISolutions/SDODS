@@ -1,18 +1,18 @@
 Package: sdods
 Architecture: arm64
-Version: 0.1.0
+Version: 0.1.2
 Priority: optional
 Section: default
 Maintainer: SDODS <admin@sdods.com>
-Installed-Size: 423741
-Depends: libgtk-3-0, libnotify4, libnss3, libxss1, libxtst6, xdg-utils, libatspi2.0-0, libsecret-1-0
+Installed-Size: 424065
+Depends: libgtk-3-0, libnotify4, libnss3, libxss1, libxtst6, xdg-utils, libatspi2.0-0, libsecret-1-0, libasound2t64 | libasound2
 Recommends: libappindicator3-1
-Filename: pool/desktop-v0.1.0/SDODS-0.1.0-linux-arm64.deb
-Size: 127812548
-MD5sum: ffb444ed0db76aec323f368bf3c165b3
-SHA1: a9afebad09ae6abe3f33407e77b1f39ff8f6ad36
-SHA256: efb62ed5fb64ad38549f621def2447cb6d52c8cb950a7f5dc7254bb89dde05f4
-SHA512: 06f90aed183177578c8d6fe8040390ce32fe62f6257251cdfd430c578e3d4616a67700adaa3d7b9897abda04149d4e4f2f75e586280f30d0727e8bcc9c1a68b3
+Filename: pool/desktop-v0.1.2/SDODS-0.1.2-linux-arm64.deb
+Size: 127842128
+MD5sum: c1a7854c73e54c0a3f09f45007acff04
+SHA1: aa234f0577e1d324761a9147f37c50ed6854317b
+SHA256: 9de4bfd4a2a43f8297451ba95f4cc372ade7224802c1f54295f206d160a7b729
+SHA512: 2b5d9860e71654eddf4cf7a963e4155b2ca80857aad115cc8bf062de008890a038c0d5a82c0d43b9f05b75a3a7b6d991c33fc5ce1557d0ce64e548c516941ddb
 Homepage: https://sdods.com
 Description: BDD test automation for UI, API and hybrid flows
   SDODS runs BDD test suites across UI, API and hybrid layers, with self-healing locators, data-driven scenarios and a local results dashboard. The desktop app bundles a Node runtime and manages the SDODS workspace, server and Playwright browsers for you.
