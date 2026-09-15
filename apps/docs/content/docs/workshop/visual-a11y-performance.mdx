@@ -1,11 +1,11 @@
 ---
 title: 7 · Screenshots and visual baselines
-description: Before-and-after captures per step, a baseline that fails the first time on purpose, and what is not implemented yet.
+description: Before-and-after captures per step, a baseline that fails the first time on purpose, and the @a11y and @perf tags.
 ---
 
 <Learn>
   What SDODS captures during a run and when, how a visual baseline is created and compared, why the
-  first run of a baseline scenario always fails, and which parts of this area are still roadmap.
+  first run of a baseline scenario always fails, and what the `@a11y` and `@perf` tags add.
 </Learn>
 
 **Time:** 15 minutes · **You need:** chapter 6 finished, the application running.
@@ -80,17 +80,25 @@ sdods baselines accept signin --run <runId>
 
 See [Screenshots and visual testing](/docs/guides/screenshots-and-visual#reviewing-and-accepting-a-changed-baseline).
 
-## What is not here yet
+## Accessibility and performance
 
-The tag taxonomy reserves `@a11y` and `@perf`, and the project schema accepts accessibility and
-performance gates on a process. **Neither is implemented in the runner today** — an `@a11y`
-scenario runs as an ordinary scenario, and a performance budget is not enforced. They are on the
-[roadmap](/docs/roadmap/); [Known limitations](/docs/reference/known-limitations/) is where the
-current state is recorded.
+Two more tags turn an ordinary scenario into a check:
 
-Until then, the honest way to cover accessibility in this suite is with the locator strategy itself:
-scenarios written against roles and labels fail when the accessible name disappears, which is a
-large share of what an automated accessibility check would have told you.
+- **`@a11y`**: when the scenario ends, SDODS audits the page it finished on with axe-core (WCAG A
+  and AA). The scenario fails on any violation at or above `a11y.failOn` in the project yaml
+  (`serious` by default).
+- **`@perf`**: SDODS records the vitals of every page the scenario loads and compares them with
+  `perf.budgets` (`pageLoadMs`, `lcpMs`, `fcpMs`, `ttfbMs`), and compares the p95 of its API calls
+  with `apiP95Ms`. An environment with no budgets fails the scenario instead of passing it.
+
+Try it on the sign-in baseline scenario above: add `@a11y` to it and run it again. If axe finds a serious
+violation, the error names the rule and the elements, and the full result is attached as
+`sdods/a11y-scenario`. For `@perf`, first add a `perf:` block with budgets to the project yaml.
+Without one, a `@perf` scenario fails with `CONFIG_INVALID`.
+
+A process can require both with `gates: { a11y: true, perfBudgets: true }`. The options, the
+explicit steps and the gates are covered in
+[Accessibility and performance budgets](/docs/guides/accessibility-and-performance/).
 
 ## Checkpoint
 

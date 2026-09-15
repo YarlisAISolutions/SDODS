@@ -27,6 +27,8 @@ export interface RunManifest {
   playwrightVersion?: string;
   exitCode?: number;
   ingestedAt?: string;
+  /** Whether the process gates passed, when the run was `--process` with gates. */
+  gatesPassed?: boolean;
 }
 
 export interface RunTotals {
@@ -301,6 +303,26 @@ export interface RunSummary {
   failed: Array<{ fingerprint: string; title: string; runnerProject: string; error?: string }>;
   flaky: Array<{ fingerprint: string; title: string; runnerProject: string }>;
   reportPaths: { html?: string; dashboard?: string; messages?: string; junit?: string };
+  /** The process gate verdict, when the run was `--process` with gates. */
+  gates?: GateResult;
+}
+
+/** One evaluated process gate (`gates:` on a process). */
+export interface GateRow {
+  gate: 'minPassRate' | 'maxFlaky' | 'a11y' | 'perfBudgets';
+  /** What the process asks for, as written. */
+  threshold: string;
+  /** What the run produced. */
+  actual: string;
+  passed: boolean;
+  detail?: string;
+}
+
+/** Every gate a process declares, evaluated over one run. Written to `gates.json` in the run dir. */
+export interface GateResult {
+  process: string;
+  passed: boolean;
+  rows: GateRow[];
 }
 
 // ── Onboarding analysis (`sdods analyze`) and coverage ─────────────────────

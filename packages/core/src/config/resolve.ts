@@ -192,7 +192,7 @@ export function resolveConfig(opts: ResolveOptions): ResolvedConfig {
 
   // env-level overrides of project sections
   let projectMerged: ProjectConfig = project;
-  for (const section of ['screenshots', 'heal', 'timeouts', 'perf', 'evidence'] as const) {
+  for (const section of ['screenshots', 'heal', 'timeouts', 'perf', 'a11y', 'evidence'] as const) {
     const patch = (envYaml as Record<string, unknown>)[section];
     if (patch) {
       projectMerged = {

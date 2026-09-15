@@ -79,8 +79,19 @@ export class ScenarioMeta {
     this.write();
   }
 
+  /**
+   * The first failure an after-scenario hook (`@a11y`, `@perf`) raised. Playwright marks the test
+   * failed only once every after-hook has returned, so `sdods:finalize` would otherwise record a
+   * scenario those hooks failed as passed.
+   */
+  hookFailure?: string;
+
   get fingerprint() {
     return this.data.fingerprint;
+  }
+
+  noteFailure(message: string): void {
+    this.hookFailure ??= message;
   }
 
   file(rel: string): string {

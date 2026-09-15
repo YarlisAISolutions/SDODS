@@ -1,5 +1,9 @@
+import { mkdirSync, mkdtempSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
-import { describe, expect, it } from 'vitest';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { chromium, type Browser, type BrowserContext, type Page } from '@playwright/test';
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import {
   assertAxeChecked,
   assertGathered,
@@ -21,6 +25,8 @@ import {
   type A11yViolation,
 } from '../src/steps/a11y.steps.js';
 import { SdodsError } from '../src/errors.js';
+import { markPageAudited } from '../src/a11y/audit.js';
+import { auditScenarioEnd, type A11yScenarioReport } from '../src/quality/a11y-scenario.js';
 
 /**
  * The library's contract is "no step may pass vacuously". Every judge is therefore tested three
@@ -381,5 +387,150 @@ describe('audit scope is pinned', () => {
   it('audits WCAG A/AA only, so a new axe release cannot move the verdict on its own', () => {
     expect(WCAG_AA_TAGS).toEqual(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']);
     expect(WCAG_AA_TAGS).not.toContain('best-practice');
+  });
+});
+
+/* ── the @a11y tag audit, against a real page ─────────────────────────── */
+
+/**
+ * The tag hook is the one path where nobody wrote a step, so nothing else in a run would notice
+ * if it quietly stopped failing. These run the real axe audit in Chromium against pages served
+ * through a fulfilled route: a page with known violations must fail, the same page must pass when
+ * the threshold or the scope honestly excludes them, and the report must be written either way.
+ */
+describe('@a11y scenario audit in a real browser', () => {
+  let browser: Browser;
+  let context: BrowserContext;
+  let page: Page;
+
+  // image-alt is critical; color-contrast is serious; a <main> keeps landmark rules quiet.
+  const BROKEN = `<!doctype html><html lang="en"><head><title>Broken</title></head><body><main>
+    <h1>Shop</h1>
+    <div id="hero"><img src="data:image/gif;base64,R0lGODlhAQABAAAAACw="></div>
+    <p id="faint" style="color:#ccc;background:#fff">Low contrast text</p>
+  </main></body></html>`;
+  const CLEAN = `<!doctype html><html lang="en"><head><title>Clean</title></head><body><main>
+    <h1>Shop</h1><p>Readable text</p></main></body></html>`;
+
+  beforeAll(async () => {
+    browser = await chromium.launch();
+  }, 120_000);
+  afterAll(async () => {
+    await browser?.close();
+  });
+  beforeEach(async () => {
+    await context?.close();
+    // @axe-core/playwright refuses a page from browser.newPage(); fixtures hand it a context page.
+    context = await browser.newContext();
+    page = await context.newPage();
+  });
+
+  async function serve(body: string) {
+    await page.route('**/*', (route) =>
+      route.fulfill({ status: 200, contentType: 'text/html', body }),
+    );
+    await page.goto('http://a11y.sdods.test/', { waitUntil: 'load' });
+  }
+
+  function deps(a11y: Record<string, unknown> = {}, status = 'passed') {
+    const dir = mkdtempSync(join(tmpdir(), 'sdods-a11y-'));
+    const attached: string[] = [];
+    const scenario = {
+      data: { runnerProject: 'shop--ui--chromium', fingerprint: '0123456789abcdef', retry: 0 },
+      file: (rel: string) => {
+        mkdirSync(join(dir, rel, '..'), { recursive: true });
+        return join(dir, rel);
+      },
+    };
+    return {
+      dir,
+      attached,
+      scenario,
+      input: {
+        page,
+        config: { project: { a11y } },
+        scenario,
+        testInfo: {
+          status,
+          attach: async (name: string) => {
+            attached.push(name);
+          },
+        },
+      },
+    };
+  }
+
+  const report = (dir: string): A11yScenarioReport =>
+    JSON.parse(
+      readFileSync(join(dir, 'a11y', 'scenario--shop--ui--chromium.json'), 'utf8'),
+    ) as A11yScenarioReport;
+
+  it('fails the scenario on violations at or above the default serious threshold', async () => {
+    await serve(BROKEN);
+    const d = deps();
+    const error = await auditScenarioEnd(d.input as never).then(
+      () => undefined,
+      (e: Error) => e,
+    );
+    expect(error?.message).toContain('@a11y:');
+    expect(error?.message).toContain('image-alt');
+    expect(error?.message).toContain('color-contrast');
+    const written = report(d.dir);
+    expect(written.status).toBe('audited');
+    expect(written.blocking).toBeGreaterThanOrEqual(2);
+    expect(written.blockingRules).toEqual(expect.arrayContaining(['image-alt', 'color-contrast']));
+    expect(d.attached).toEqual(['sdods/a11y-scenario']);
+  });
+
+  it('applies a11y.failOn: critical fails on image-alt but not on contrast alone', async () => {
+    await serve(BROKEN);
+    const d = deps({ failOn: 'critical' });
+    await expect(auditScenarioEnd(d.input as never)).rejects.toThrow(/image-alt/);
+    expect(report(d.dir).blockingRules).toEqual(['image-alt']);
+  });
+
+  it('honours exclude: leaving out the regions that violate passes, and says so in the report', async () => {
+    await serve(BROKEN);
+    const d = deps({ exclude: ['#hero', '#faint'] });
+    const result = await auditScenarioEnd(d.input as never);
+    expect(result.blocking).toBe(0);
+    expect(result.exclude).toEqual(['#hero', '#faint']);
+  });
+
+  it('honours include, and an include that matches nothing fails instead of scanning the void', async () => {
+    await serve(BROKEN);
+    expect((await auditScenarioEnd(deps({ include: ['h1'] }).input as never)).blocking).toBe(0);
+    await expect(
+      auditScenarioEnd(deps({ include: ['#does-not-exist'] }).input as never),
+    ).rejects.toThrow(/found nothing to scan/);
+  });
+
+  it('passes a clean page and still writes the evidence', async () => {
+    await serve(CLEAN);
+    const d = deps();
+    const result = await auditScenarioEnd(d.input as never);
+    expect(result.status).toBe('audited');
+    expect(result.violations).toBe(0);
+    expect(result.results?.passes.length).toBeGreaterThan(0);
+  });
+
+  it('does not audit twice a URL an explicit whole-page step already audited', async () => {
+    await serve(BROKEN);
+    const d = deps();
+    markPageAudited(d.scenario, page.url());
+    const result = await auditScenarioEnd(d.input as never);
+    expect(result.status).toBe('covered-by-step');
+    expect(result.results).toBeUndefined();
+  });
+
+  it('skips a scenario that already failed, rather than burying its error', async () => {
+    await serve(BROKEN);
+    const result = await auditScenarioEnd(deps({}, 'failed').input as never);
+    expect(result.status).toBe('skipped');
+  });
+
+  it('fails a scenario that never navigated: there is no page to audit', async () => {
+    const d = deps();
+    await expect(auditScenarioEnd(d.input as never)).rejects.toThrow(/never navigated/);
   });
 });

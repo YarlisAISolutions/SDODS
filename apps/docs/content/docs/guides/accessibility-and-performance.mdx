@@ -1,25 +1,81 @@
 ---
 title: Accessibility and performance budgets
-description: Gate scenarios on axe-core violations and web-vitals budgets per environment.
+description: What the @a11y and @perf tags check, the steps that check more, and the process gates that read both.
 ---
 
 <Learn>
-  How `@a11y` runs axe-core after each page, how `@perf` collects navigation and paint timings, and
-  how budgets are declared per project and per environment.
+  What `@a11y` and `@perf` do at the end of a scenario, how to configure the threshold and the
+  budgets per project and per environment, which explicit steps go further, and how the `a11y` and
+  `perfBudgets` process gates use the results.
 </Learn>
 
 ## Accessibility
 
-```gherkin
-@ui @regression @a11y
-Scenario: The inventory page has no serious accessibility violations
-  Given I am on the inventory page
-  Then the page should have no accessibility violations of impact "serious" or higher
+### The `@a11y` tag
+
+Tag a UI or hybrid scenario `@a11y` and, when the scenario ends, SDODS audits the page it finished on with [axe-core](https://github.com/dequelabs/axe-core) through `@axe-core/playwright`. The audit covers WCAG 2.0, 2.1 and 2.2 level A and AA rules, and nothing else.
+
+```gherkin title="projects/demo-shop/features/inventory/accessibility.feature"
+@ui @inventory @a11y
+Feature: Inventory accessibility
+
+  @regression
+  Scenario: The inventory page has no serious accessibility violations
+    Given I am on the login page
+    When I login with "standard_user" and "{{standardPassword}}"
+    Then I should be on the inventory page
+    And there should be 6 products listed
 ```
 
-`@a11y` registers a hook that runs `@axe-core/playwright` after each UI step; violations are attached as JSON (`sdods/a11y/<step>`) and counted per impact. The assertion step lets you choose the threshold.
+The scenario fails when axe reports any violation at or above `a11y.failOn`. Either way, the full axe result is attached as `sdods/a11y-scenario`.
+
+```yaml title="sdods.project.yaml"
+a11y:
+  failOn: serious # minor | moderate | serious | critical; the default is serious
+  include: [] # limit the audit to these selectors
+  exclude: ['#third-party-chat'] # leave these selectors out
+```
+
+An environment file can override single keys, for example `a11y: { failOn: critical }` while a team works through its backlog.
+
+What the tag does not do:
+
+- **It audits only the final page.** It does not audit every page the scenario passed through. To check a page in the middle of a flow, add an explicit step after navigating to it.
+- **It skips a scenario that already failed.** The page that scenario stopped on proves nothing, and a list of violations on top of the error would only bury it. The attachment records the skip.
+- **It does not audit a URL twice.** If a whole-page audit step already ran on the final URL, the tag leaves it to that step's threshold.
+- **It fails when nothing can be audited.** A scenario that never navigated fails. So does an `include` selector that matches nothing, or an audit in which axe examined no rule at all.
+
+Automated rules cover only part of WCAG, so a passing audit is a floor, not a certificate.
+
+<Callout>
+  The demo-shop scenario needs no `include` or `exclude`. SauceDemo's login, inventory and cart
+  pages have no WCAG A or AA violations that axe can detect.
+</Callout>
+
+### Accessibility steps
+
+The steps give you finer control than the tag:
+
+| Step                                                                                             | Checks                                                   |
+| ------------------------------------------------------------------------------------------------ | -------------------------------------------------------- |
+| `the page should have no accessibility violations`                                               | every WCAG A/AA violation, at any impact                 |
+| `the page should have no accessibility violations of impact {string} or worse`                   | violations at or above an impact level                   |
+| `the page should have no accessibility violations within {string}`                               | one region                                               |
+| `the page should have no accessibility violations of impact {string} or worse within {string}`   | one region, from an impact level up                      |
+| `the page should have no accessibility violations of rule {string}`                              | one axe rule; fails if the rule never ran                |
+| `the page should have no colour-contrast violations` (and `within {string}`)                     | WCAG AA contrast only                                    |
+| `the page should have exactly one level-1 heading`, `the heading levels should not skip a level` | document outline                                         |
+| `every image on the page should carry an alt attribute` (and `within {string}`)                  | a missing `alt`, as opposed to `alt=""`                  |
+| `every icon-only control within {string} should expose an accessible name`                       | unnamed icon buttons, including unresolved i18n keys     |
+| `every focusable element within {string} should show a visible focus indicator`                  | a focus style that a CSS reset removed, which axe misses |
+
+Each axe step attaches its result as `sdods/a11y/<step>`.
 
 ## Performance
+
+### Budgets
+
+Budgets are set in configuration, never in the feature file. An environment overrides single keys.
 
 ```yaml title="sdods.project.yaml"
 perf:
@@ -31,18 +87,73 @@ perf:
   budgets: { pageLoadMs: 5000 } # looser on staging
 ```
 
-```gherkin
-@ui @regression @perf
-Scenario: Inventory loads within budget
-  Given I am on the inventory page
-  Then the page should meet the performance budget
+| Budget       | Compared with                                                                                |
+| ------------ | -------------------------------------------------------------------------------------------- |
+| `pageLoadMs` | `loadEventEnd` of the navigation                                                             |
+| `lcpMs`      | largest contentful paint                                                                     |
+| `fcpMs`      | first contentful paint                                                                       |
+| `ttfbMs`     | time to first byte (`responseStart`)                                                         |
+| `apiP95Ms`   | nearest-rank p95 of the scenario's live API response times, plus any latency samples it took |
+
+### The `@perf` tag
+
+While a UI or hybrid `@perf` scenario runs, SDODS records the vitals of every document the main frame loads. Each document reports once it has loaded, painted and let largest contentful paint settle. When the scenario ends, SDODS compares every recording with every configured page budget, and the p95 of the scenario's API calls with `apiP95Ms`. API calls are timed in every layer, so an `@api @perf` scenario is judged on `apiP95Ms` alone.
+
+```gherkin title="projects/demo-shop/features/cart/performance.feature"
+@ui @cart @perf
+Feature: Cart performance
+
+  @regression @skip:webkit
+  Scenario: The login and cart pages load within their budgets
+    Given I am on the login page
+    When I login with "standard_user" and "{{standardPassword}}"
+    And I add "{{defaultProduct}}" to the cart
+    And I navigate to the "cart" page
+    Then the cart should list "{{defaultProduct}}"
 ```
 
-Metrics come from the Navigation Timing, Resource Timing and Paint Timing APIs (TTFB, DOMContentLoaded, load, FCP, LCP, resource count and size) and are attached as `sdods/perf/<step>`. API latency per endpoint is collected from every API step and compared with `apiP95Ms` in insights.
+The measurements, budgets and any breaches are attached as `sdods/perf-scenario`. The scenario fails in these cases:
+
+- **A budget is breached.** The message names the vital, the page, the value and the limit.
+- **A budgeted vital was never measured.** For example, WebKit does not implement largest contentful paint, so with `lcpMs` configured the demo scenario carries `@skip:webkit`. A missing value is never treated as 0.
+- **The environment has no budgets at all.** This fails with `CONFIG_INVALID`.
+- **No configured budget applies to what the scenario measured.** For example, a UI scenario with only `apiP95Ms` configured and no API calls proves nothing.
+- **Every API call was replayed from a HAR.** A replayed call reports the recording's timing, not this environment's.
+
+The tag does not judge a scenario that already failed. A document the scenario left before it could report (a navigation away before it painted) is listed as `unreported` in the attachment, not failed.
+
+### Performance steps
+
+For a measurement at a specific point in the flow, or a limit that belongs to one scenario, use the steps:
+
+| Step                                                                                 | Effect                                                 |
+| ------------------------------------------------------------------------------------ | ------------------------------------------------------ |
+| `I record the page vitals`                                                           | records the current page, attaches `sdods/perf/<step>` |
+| `the recorded {string} should be within its configured budget`                       | compares a vital with `perf.budgets`                   |
+| `the recorded {string} should be under {int} ms`                                     | a limit that belongs to this scenario                  |
+| `the recorded {string} should be no worse than the previous recording plus {int} ms` | warm path against cold path                            |
+| `the perf budgets {string} should be configured`                                     | fails early if the environment lacks a budget          |
+| `I sample the latency of {method} {string} over {int} requests`                      | sequential latency sample                              |
+| `the sampled p95 should be within the configured apiP95Ms budget`                    | p95 against `apiP95Ms`                                 |
+| `every latency sample should have returned status {int}`                             | proves the timed responses were the right ones         |
 
 ## In processes
 
-A [process](/docs/guides/processes-and-testing-types) can require both gates: `gates: { a11y: true, perfBudgets: true }` fails the run when any tagged scenario breaks its budget.
+A [process](/docs/guides/processes-and-testing-types) can require both results:
+
+```yaml
+processes:
+  - name: release-gate
+    tags: '@smoke or @regression'
+    gates: { minPassRate: 100, maxFlaky: 0, perfBudgets: true, a11y: true }
+```
+
+`sdods run --process release-gate` evaluates the gates after the run and prints one row per gate. If any gate fails, the command exits with code 1 and error `GATE_FAILED`. It does this even when every scenario passed.
+
+- `a11y: true` fails on any blocking violation in an `@a11y` audit. It also fails when no `@a11y` audit ran.
+- `perfBudgets: true` fails on any breach in an `@perf` scenario. It also fails when no `@perf` scenario was judged.
+
+Selecting nothing the gate can check is not a pass. The verdict is written to `gates.json` in the run directory, and the server records it on the run.
 
 ## Next steps
 

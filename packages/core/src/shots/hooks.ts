@@ -34,8 +34,8 @@ AfterScenario({ name: 'sdods:shots:end', tags: UI }, async ({ shots, $testInfo }
 
 AfterScenario({ name: 'sdods:finalize' }, async ({ scenario, apiContext, heal, $testInfo }) => {
   scenario.finalize({
-    status: ($testInfo.status as any) ?? 'unknown',
-    errorMessage: $testInfo.error?.message,
+    status: scenario.hookFailure ? 'failed' : (($testInfo.status as any) ?? 'unknown'),
+    errorMessage: $testInfo.error?.message ?? scenario.hookFailure,
     apiCalls: apiContext.history.length,
     heals: heal.events.length,
   });

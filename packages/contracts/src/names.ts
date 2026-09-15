@@ -28,6 +28,14 @@ export const attachmentNames = {
   heal: (stepIndex: number, n: number) => `sdods/heal/${pad2(stepIndex)}/${n}`,
   perf: (stepIndex: number) => `sdods/perf/${pad2(stepIndex)}`,
   a11y: (stepIndex: number) => `sdods/a11y/${pad2(stepIndex)}`,
+  /**
+   * The end-of-scenario audit an `@a11y` tag runs, and the budget verdict an `@perf` tag produces.
+   * Deliberately NOT `sdods/a11y/<NN>` / `sdods/perf/<NN>`: those are keyed by step index (the perf
+   * one is ingested into `steps.perf_json` as `PerformanceMetrics`), and a scenario-level report
+   * parked at a step index would overwrite the explicit step that ran there.
+   */
+  a11yScenario: 'sdods/a11y-scenario',
+  perfScenario: 'sdods/perf-scenario',
   cleanupErrors: 'sdods/cleanup-errors',
   meta: 'sdods/meta',
 } as const;
@@ -40,6 +48,8 @@ export type ParsedAttachment =
   | { kind: 'heal'; stepIndex: number; n: number }
   | { kind: 'perf'; stepIndex: number }
   | { kind: 'a11y'; stepIndex: number }
+  | { kind: 'a11y-scenario' }
+  | { kind: 'perf-scenario' }
   | { kind: 'cleanup-errors' }
   | { kind: 'meta' }
   | { kind: 'visual-baseline'; phase: 'expected' | 'actual' | 'diff'; name: string }
@@ -84,6 +94,10 @@ export function parseAttachmentName(name: string): ParsedAttachment {
       case 'a11y':
         if (segs[1] !== undefined) return { kind: 'a11y', stepIndex: Number(segs[1]) };
         break;
+      case 'a11y-scenario':
+        return { kind: 'a11y-scenario' };
+      case 'perf-scenario':
+        return { kind: 'perf-scenario' };
       case 'cleanup-errors':
         return { kind: 'cleanup-errors' };
       case 'meta':
@@ -132,6 +146,12 @@ export const scenarioFiles = {
   /** Written when the check passes, so a failure on an earlier retry is not offered for accept. */
   visualPassed: (runnerProject: string, name: string) =>
     `visual/${fileSafeName(runnerProject)}/${fileSafeName(name)}.passed.json`,
+  /**
+   * Scenario-level reports. The attempt directory is shared by every browser (the fingerprint
+   * leaves the browser out), so the runner project name is part of the file name.
+   */
+  a11yScenarioJson: (runnerProject: string) => `a11y/scenario--${fileSafeName(runnerProject)}.json`,
+  perfScenarioJson: (runnerProject: string) => `perf/scenario--${fileSafeName(runnerProject)}.json`,
 } as const;
 
 /** File-name-safe form of an attachment or baseline name (matches the DB ingest's `safeName`). */
@@ -150,6 +170,8 @@ export const runFiles = {
   junit: 'junit.xml',
   log: 'run.log',
   summary: 'summary.json',
+  /** Process gate verdict, written by `sdods run --process` after the run. */
+  gates: 'gates.json',
   shardReports: 'shard-reports',
 } as const;
 
