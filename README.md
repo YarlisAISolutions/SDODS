@@ -5,9 +5,28 @@
   </picture>
 </p>
 
+<h3 align="center"><strong>Test automation you can defend.</strong></h3>
+
 <p align="center">
-  <strong>Automation and orchestration for reliable business workflows</strong><br>
   BDD for UI, API and hybrid flows · multi-project, multi-environment · data-driven · self-healing · before/after screenshot narratives · SQLite ⇄ Postgres · MCP server · AI agents · GitHub &amp; Jira · cron schedules · web UI.
+</p>
+
+<p align="center">
+  <a href="https://sdods.com"><b>sdods.com</b></a>
+  &nbsp;·&nbsp;
+  <a href="https://docs.sdods.com"><b>docs.sdods.com</b></a>
+  &nbsp;·&nbsp;
+  <a href="#install-in-one-line"><b>Install</b></a>
+  &nbsp;·&nbsp;
+  <a href="#architecture-c4"><b>Architecture</b></a>
+</p>
+
+<p align="center">
+  <a href="https://www.npmjs.com/package/@sdods/cli"><img alt="npm version of @sdods/cli" src="https://img.shields.io/npm/v/%40sdods%2Fcli?label=%40sdods%2Fcli&color=2F5BFF&labelColor=0B1020&logo=npm"></a>
+  <img alt="BDD: UI, API and hybrid" src="https://img.shields.io/badge/BDD-UI%20%C2%B7%20API%20%C2%B7%20hybrid-2F5BFF?labelColor=0B1020">
+  <img alt="MCP server" src="https://img.shields.io/badge/MCP-server-FFB020?labelColor=0B1020">
+  <img alt="Agents propose, people accept" src="https://img.shields.io/badge/agents-propose%2C%20people%20accept-2F5BFF?labelColor=0B1020">
+  <img alt="SQLite or Postgres" src="https://img.shields.io/badge/SQLite-%E2%87%84%20Postgres-FFB020?labelColor=0B1020">
 </p>
 
 <p align="center">
@@ -26,24 +45,28 @@ SDODS is an automation and orchestration platform. You describe behaviour in Ghe
 ## Table of contents
 
 1. [Why SDODS](#why-sdods)
-2. [Five-minute quickstart](#five-minute-quickstart)
-3. [How it works](#how-it-works)
-4. [Architecture](#architecture)
-5. [Projects, environments and configuration](#projects-environments-and-configuration)
-6. [Writing tests](#writing-tests)
-7. [Test data and user pools](#test-data-and-user-pools)
-8. [Tags and suites](#tags-and-suites)
-9. [Screenshot narratives](#screenshot-narratives)
-10. [Record, playback and HAR](#record-playback-and-har)
-11. [Database: SQLite or Postgres](#database-sqlite-or-postgres)
-12. [Web UI](#web-ui)
-13. [MCP server](#mcp-server)
-14. [AI agents](#ai-agents)
-15. [GitHub and Jira](#github-and-jira)
-16. [Scheduling](#scheduling)
-17. [CLI reference](#cli-reference)
-18. [Development process](#development-process)
-19. [Roadmap and status](#roadmap-and-status)
+2. [Install in one line](#install-in-one-line)
+3. [Five-minute quickstart (from a clone)](#five-minute-quickstart-from-a-clone)
+4. [How it works](#how-it-works)
+5. [The loop, in six panels](#the-loop-in-six-panels)
+6. [Architecture (C4)](#architecture-c4)
+7. [Projects, environments and configuration](#projects-environments-and-configuration)
+8. [Writing tests](#writing-tests)
+9. [Test data and user pools](#test-data-and-user-pools)
+10. [Tags and suites](#tags-and-suites)
+11. [Screenshot narratives](#screenshot-narratives)
+12. [Record, playback and HAR](#record-playback-and-har)
+13. [Database: SQLite or Postgres](#database-sqlite-or-postgres)
+14. [Web UI](#web-ui)
+15. [MCP server](#mcp-server)
+16. [AI agents](#ai-agents)
+17. [Use with Claude Code and Codex CLI](#use-with-claude-code-and-codex-cli)
+18. [Tokens and keys](#tokens-and-keys)
+19. [GitHub and Jira](#github-and-jira)
+20. [Scheduling](#scheduling)
+21. [CLI reference](#cli-reference)
+22. [Development process](#development-process)
+23. [Roadmap and status](#roadmap-and-status)
 <!-- sponsor: shown once SPONSOR_ENABLED is on
 20. [Support SDODS](#support-sdods)
 -->
@@ -68,11 +91,15 @@ So the questions that actually decide a release have an answer:
 
 ## Install in one line
 
-```bash
-# macOS / Linux
-curl -fsSL https://sdods.com/install.sh | sh
+macOS and Linux:
 
-# Windows (PowerShell)
+```bash
+curl -fsSL https://sdods.com/install.sh | sh
+```
+
+Windows (PowerShell):
+
+```powershell
 irm https://sdods.com/install.ps1 | iex
 ```
 
@@ -170,24 +197,207 @@ flowchart LR
 
 Everything is **CLI-first**. The web UI, the MCP server and the scheduler spawn the same `sdods` commands and stream their output. That keeps CI simple and means nothing needs a database until you want history.
 
-## Architecture
+## The loop, in six panels
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/sdods-sdlc-comic-dark.svg">
+    <img src="docs/assets/sdods-sdlc-comic.svg" alt="Six-panel comic. Maxi, the SDODS assistant, and a developer go from Plan to Code, Test, Heal, Release and Operate, and what Operate learns feeds the next Plan." width="1200">
+  </picture>
+</p>
+
+<details>
+<summary>Text version of the six panels</summary>
+
+1. **Plan.** The planner reads the app and its OpenAPI spec. Maxi: "I read your routes and the OpenAPI spec. Here is a plan, tagged and ready to write." The plan carries `@ui`, `@api` and `@smoke`. Developer: "Tagged before I even asked. Nice."
+2. **Code.** A feature is written in Gherkin. Maxi: "The generator proposes two steps and a page object. Your working tree stays untouched." Developer, pressing Accept: "Read the diff. Accepted."
+3. **Test.** `sdods run -t @smoke` passes on the ui, api and hybrid layers, with before and after screenshots. Maxi: "ui, api and hybrid: all green. A screenshot before and after every step, too." Developer: "So when it breaks, I see why."
+4. **Heal.** The `#buy-btn` locator drifts and is found again by role and name. Maxi: "#buy-btn is gone. I found it by role and name, and wrote the smallest fix as a proposal." Developer: "Accept it on a branch. I will open the PR."
+5. **Release.** The release gate passes. Maxi: "release-gate passed. The check run has the summary, and every step has its screenshots." Developer, thumbs up: "Ship it. This one I can defend."
+6. **Operate.** A nightly schedule (`0 2 * * *`) runs and insights count flaky scenarios and fragile locators. Maxi: "Nightly ran at 02:00. Two flaky scenarios, one fragile locator. Numbers, not opinions." Developer: "Good. Put them in the next plan." An arrow runs from Operate back to Plan.
+
+</details>
+
+Agents only ever write proposals; a person accepts them (`sdods proposals accept <id> --branch sdods/<id>`) and opens the pull request.
+
+## Architecture (C4)
+
+Three zoom levels in [C4](https://c4model.com) notation. Amber boxes are people, the deep-blue box is SDODS as a whole, blue boxes are containers (things that run or store data), pale-blue boxes are components inside a container, grey boxes are external systems, and dashed outlines are boundaries.
+
+### Level 1: System context
+
+Who uses SDODS, and what it talks to.
+
+```mermaid
+flowchart LR
+  qa["<b>QA engineer</b><br/>[Person]<br/>writes features, reads the evidence"]:::person
+  dev["<b>Developer</b><br/>[Person]<br/>runs suites in CI, accepts proposals"]:::person
+  ai["<b>AI coding assistant</b><br/>[Software system: MCP client]<br/>Claude Code · Cursor · VS Code · Codex"]:::external
+
+  sdods["<b>SDODS</b><br/>[Software system]<br/>Gherkin suites for UI, API and hybrid flows,<br/>run history, self-healing, agents that propose"]:::system
+
+  aut["<b>Application under test</b><br/>[External system]<br/>web UI and HTTP API, per environment"]:::external
+  browsers["<b>Playwright browsers</b><br/>[External]<br/>chromium · firefox · webkit · Edge"]:::external
+  gh["<b>GitHub</b><br/>[External]<br/>check runs · PR comments · issues"]:::external
+  jira["<b>Jira</b><br/>[External]<br/>issues · links · transitions"]:::external
+  llm["<b>LLM providers</b><br/>[External]<br/>Anthropic · OpenAI-compatible · Ollama<br/>Claude Code and Codex logins"]:::external
+  mailpit["<b>Mailpit</b><br/>[External]<br/>catches sign-up and reset email"]:::external
+  k6["<b>k6</b><br/>[External]<br/>load profiles"]:::external
+  dist["<b>npm · GHCR</b><br/>[External]<br/>@sdods/* packages · server image"]:::external
+
+  qa -->|"writes Gherkin, reviews runs"| sdods
+  dev -->|"sdods run, proposals accept"| sdods
+  ai -->|"MCP tools over stdio or HTTP"| sdods
+  sdods -->|"drives the UI, calls the API"| aut
+  sdods -->|"launches"| browsers
+  sdods -->|"reads mail"| mailpit
+  sdods -->|"runs generated scripts"| k6
+  sdods -->|"reports, opens issues"| gh
+  sdods -->|"opens and links issues"| jira
+  sdods -->|"plan · generate · heal · upgrade · review"| llm
+  dist -.->|"installs"| sdods
+
+  classDef person fill:#FFB020,stroke:#B87800,color:#0B1020
+  classDef system fill:#1E3FB8,stroke:#FFB020,stroke-width:3px,color:#FFFFFF
+  classDef container fill:#2F5BFF,stroke:#1E3FB8,color:#FFFFFF
+  classDef component fill:#DCE4FF,stroke:#2F5BFF,color:#0B1020
+  classDef external fill:#64748B,stroke:#475569,color:#FFFFFF
+```
+
+### Level 2: Containers
+
+What SDODS is made of, and which process calls which. The server and the MCP server do not reimplement anything: they spawn the same `sdods` commands you run yourself.
 
 ```mermaid
 flowchart TB
-  contracts["@sdods/contracts<br/>schemas · ids · names · scopes · DTOs"]
-  core["@sdods/core<br/>config · fixtures · steps · data · shots · heal<br/>recorder · har · lint · analyze · reporters"]
-  db["@sdods/db<br/>Kysely · migrations · ingest · insights"]
-  mcp["@sdods/mcp<br/>ToolRegistry · stdio · HTTP"]
-  integrations["@sdods/integrations<br/>GitHub · Jira"]
-  agents["@sdods/agents<br/>LlmAdapter · roles · proposals"]
-  server["@sdods/server<br/>Fastify · SSE · auth · scheduler"]
-  web["@sdods/web<br/>React · run viewer · editor"]
-  cli["@sdods/cli<br/>sdods"]
-  contracts --> core --> db --> mcp --> integrations --> agents --> server --> web
-  cli -.-> core & db & mcp & agents & integrations & server
+  people["<b>QA engineer · Developer</b><br/>[Person]"]:::person
+  ai["<b>AI coding assistant</b><br/>[External: MCP client]"]:::external
+
+  subgraph sdods["SDODS [Software system]"]
+    direction TB
+    desktop["<b>Desktop app</b><br/>[Container: Electron]<br/>installs, launches and upgrades"]:::container
+    web["<b>Web UI</b><br/>[Container: React SPA]<br/>run viewer, editor, proposals, schedules"]:::container
+    cli["<b>CLI</b><br/>[Container: Node 22, commander]<br/>sdods run · lint · record · analyze · agent · serve"]:::container
+    server["<b>Server</b><br/>[Container: Node 22, Fastify 5]<br/>REST · SSE · /mcp · sessions and tokens · cron"]:::container
+    mcp["<b>MCP server</b><br/>[Container: stdio and streamable HTTP]<br/>one ToolRegistry, proposals"]:::container
+    agents["<b>Agents</b><br/>[Container: Node library]<br/>planner · generator · healer · upgrader · reviewer"]:::container
+    core["<b>Runtime</b><br/>[Container: @sdods/core, Playwright + playwright-bdd]<br/>config, fixtures, steps, heal, screenshots"]:::container
+    integ["<b>Integrations</b><br/>[Container: Node library]<br/>GitHub and Jira providers, dedupe"]:::container
+    db[("<b>Platform database</b><br/>[Container: SQLite ⇄ Postgres, Kysely]<br/>runs, heal events, insights")]:::container
+    runs[("<b>Run directory</b><br/>[Container: files, .sdods/runs]<br/>NDJSON, screenshots, traces")]:::container
+  end
+
+  subgraph hosted["sdods.com [Hosted]"]
+    direction TB
+    www["<b>www and docs</b><br/>[Container: Next.js static export, Firebase Hosting]"]:::container
+    maxi["<b>Maxi</b><br/>[Container: Node 22, Fastify on Cloud Run]<br/>docs assistant grounded in the docs"]:::container
+  end
+
+  aut["<b>Application under test</b><br/>[External] in Playwright browsers"]:::external
+  gh["<b>GitHub · Jira</b><br/>[External]"]:::external
+  llm["<b>LLM providers</b><br/>[External]"]:::external
+
+  people -->|"commands"| cli
+  people -->|"HTTPS"| web
+  people -.->|"one click"| desktop
+  ai -->|"MCP"| mcp
+  desktop -->|"starts"| server
+  web -->|"REST + SSE"| server
+  server -->|"spawns runs and agent jobs"| cli
+  server -->|"hosts /mcp"| mcp
+  server --> db
+  cli -->|"bddgen, playwright test"| core
+  cli -->|"ingests the run"| db
+  cli -->|"notify"| integ
+  mcp -->|"runs sdods commands"| cli
+  mcp -->|"reads results"| runs
+  cli -->|"sdods agent"| agents
+  agents -->|"tools"| mcp
+  agents -->|"prompts"| llm
+  core -->|"browser and HTTP"| aut
+  core -->|"writes"| runs
+  integ -->|"check runs, issues"| gh
+  www -->|"chat widget"| maxi
+  maxi -->|"prompts"| llm
+
+  classDef person fill:#FFB020,stroke:#B87800,color:#0B1020
+  classDef system fill:#1E3FB8,stroke:#FFB020,stroke-width:3px,color:#FFFFFF
+  classDef container fill:#2F5BFF,stroke:#1E3FB8,color:#FFFFFF
+  classDef component fill:#DCE4FF,stroke:#2F5BFF,color:#0B1020
+  classDef external fill:#64748B,stroke:#475569,color:#FFFFFF
+  style sdods fill:none,stroke:#FFB020,stroke-width:2px,stroke-dasharray:6 4
+  style hosted fill:none,stroke:#94A3B8,stroke-width:2px,stroke-dasharray:6 4
 ```
 
-The dependency graph is acyclic and enforced by TypeScript project references. Details, decisions and trade-offs live in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+### Level 3: Components of the runtime and the server
+
+Inside `@sdods/core`, which a `sdods run` executes on Playwright workers, and inside `@sdods/server`, which turns HTTP requests and cron schedules into CLI runs.
+
+```mermaid
+flowchart TB
+  web["<b>Web UI</b><br/>[Container: React SPA]"]:::container
+  mcpc["<b>MCP clients</b><br/>[External]"]:::external
+
+  subgraph server["@sdods/server [Container: Fastify 5]"]
+    direction LR
+    plugins["<b>Plugins</b><br/>[Component]<br/>auth: sessions, CSRF, scoped tokens<br/>db · mcp · sse · static reports"]:::component
+    routes["<b>Routes</b><br/>[Component]<br/>auth · hierarchy · projects<br/>runs · schedules · agents"]:::component
+    runmgr["<b>RunManager</b><br/>[Component]<br/>spawns sdods run, buffers logs"]:::component
+    sched["<b>Scheduler</b><br/>[Component: croner]<br/>cron schedules to runs"]:::component
+    agentmgr["<b>AgentManager</b><br/>[Component]<br/>spawns sdods agent jobs"]:::component
+    diff["<b>Image diff</b><br/>[Component: pixelmatch]<br/>before/after pixel diff"]:::component
+  end
+
+  cli["<b>CLI</b><br/>[Container: Node 22, commander]"]:::container
+
+  subgraph core["@sdods/core [Container: runtime on Playwright + playwright-bdd]"]
+    direction LR
+    config["<b>Config</b><br/>[Component: Zod]<br/>six-layer precedence, ProjectRegistry,<br/>runner config per project × layer × browser"]:::component
+    lint["<b>Lint · Analyze</b><br/>[Component]<br/>tag taxonomy, Gherkin,<br/>framework, routes, OpenAPI"]:::component
+    matrix["<b>Matrix</b><br/>[Component]<br/>--project-matrix expansion"]:::component
+    fixtures["<b>Fixtures</b><br/>[Component]<br/>one merged test: api · pages · data<br/>user · shots · heal"]:::component
+    steps["<b>Step library</b><br/>[Component]<br/>HTTP, UI, data, email, a11y, perf, mocks"]:::component
+    pages["<b>Pages + Healer</b><br/>[Component]<br/>page objects, scored locators, heal history"]:::component
+    api["<b>ApiClient · Auth</b><br/>[Component]<br/>requests, schema checks, login state"]:::component
+    data["<b>DataProvider · UserPool</b><br/>[Component]<br/>CSV, JSON, YAML, DB, faker, leases"]:::component
+    shots["<b>ScreenshotNarrator</b><br/>[Component]<br/>before/after policy, visual baselines"]:::component
+    rec["<b>Recorder · HAR</b><br/>[Component]<br/>codegen, record and replay"]:::component
+    mail["<b>Mail</b><br/>[Component]<br/>Mailpit inbox"]:::component
+    load["<b>Load</b><br/>[Component]<br/>generated k6 scripts"]:::component
+    reporters["<b>Reporters · Evidence</b><br/>[Component]<br/>dashboard, zips, trace redaction"]:::component
+  end
+
+  db[("<b>@sdods/db</b><br/>[Container: SQLite ⇄ Postgres]<br/>ingest · insights · migrations")]:::container
+  pw["<b>Browsers · app under test</b><br/>[External]"]:::external
+  ext["<b>Mailpit · k6</b><br/>[External]"]:::external
+
+  web -->|"REST + SSE"| routes
+  mcpc -->|"/mcp"| plugins
+  routes --> runmgr & agentmgr & diff
+  sched --> runmgr
+  runmgr & agentmgr -->|"spawn"| cli
+  plugins --> db
+  cli --> config & lint & matrix & rec & load
+  cli -->|"ingests the run"| db
+  config --> fixtures
+  fixtures --> steps & pages & api & data & shots
+  steps --> mail
+  pages & api -->|"drive"| pw
+  mail & load --> ext
+  data -.->|"DB datasets, leases"| db
+  shots --> reporters
+  rec --> pw
+
+  classDef person fill:#FFB020,stroke:#B87800,color:#0B1020
+  classDef system fill:#1E3FB8,stroke:#FFB020,stroke-width:3px,color:#FFFFFF
+  classDef container fill:#2F5BFF,stroke:#1E3FB8,color:#FFFFFF
+  classDef component fill:#DCE4FF,stroke:#2F5BFF,color:#0B1020
+  classDef external fill:#64748B,stroke:#475569,color:#FFFFFF
+  style server fill:none,stroke:#FFB020,stroke-width:2px,stroke-dasharray:6 4
+  style core fill:none,stroke:#FFB020,stroke-width:2px,stroke-dasharray:6 4
+```
+
+The package graph (`contracts → core → db → mcp → integrations → agents → server → web`, with the CLI importing each lazily) is acyclic and enforced by TypeScript project references. Details, decisions and trade-offs live in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), and the same diagrams are on the [architecture page](https://docs.sdods.com/docs/architecture/) of the docs.
 
 **Runtime split.** The test workers, vitest and the native database drivers run on **Node 22**. **Bun** is used as the package manager, script runner and bundler because it is measurably faster there; nothing executes tests under Bun. pnpm works too.
 
@@ -555,7 +765,7 @@ bun run roadmap:sync     # rewrite the roadmap block in this README from package
 
 - Branch from `main`, keep commits focused, and add or update tests with every change.
 - CI runs lint, typecheck, unit tests, the demo suite on chromium (PRs) and the full browser matrix nightly.
-- Versioning uses changesets. Nothing has been released yet; the first tagged release will publish `@sdods/*` to npm and a server image to GHCR.
+- Versioning uses changesets. `@sdods/cli` 0.8.0 and the other `@sdods/*` packages are on npm, releases are tagged on GitHub, and the server image is on GHCR.
 - Security issues: see [SECURITY.md](SECURITY.md).
 
 ## Roadmap and status
