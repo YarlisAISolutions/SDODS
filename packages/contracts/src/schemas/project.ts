@@ -333,11 +333,18 @@ export const A11yImpactSchema = z.enum(['minor', 'moderate', 'serious', 'critica
  * these selectors out (a third-party widget the team does not own, for instance). Both are passed
  * to axe as they are, so a selector that matches nothing in `include` fails the audit rather than
  * scanning an empty page.
+ *
+ * `scope` decides which pages that audit covers. `final` (the default) audits the page the scenario
+ * ends on. `every-page` also audits each distinct URL the scenario reaches, once the step that
+ * reached it has finished and the page has settled, and reports every URL on its own.
  */
+export const A11yScopeSchema = z.enum(['final', 'every-page']);
+
 export const A11yConfigSchema = z.object({
   failOn: A11yImpactSchema.default('serious'),
   include: z.array(z.string().min(1)).default([]),
   exclude: z.array(z.string().min(1)).default([]),
+  scope: A11yScopeSchema.default('final'),
 });
 
 /** The env-level patch: every key optional and default-free, for the reason `EvidencePatchSchema` gives. */
@@ -345,6 +352,7 @@ export const A11yPatchSchema = z.object({
   failOn: A11yImpactSchema.optional(),
   include: z.array(z.string().min(1)).optional(),
   exclude: z.array(z.string().min(1)).optional(),
+  scope: A11yScopeSchema.optional(),
 });
 
 /** Branch names `integrations.github.evidence.branch` refuses: prune force-rewrites the branch. */
@@ -715,7 +723,12 @@ export const ProjectConfigSchema = z.object({
   fullyParallel: z.boolean().default(true),
   setup: SetupSchema.optional(),
   perf: z.object({ budgets: PerfBudgetsSchema.default({}) }).default({ budgets: {} }),
-  a11y: A11yConfigSchema.default({ failOn: 'serious', include: [], exclude: [] }),
+  a11y: A11yConfigSchema.default({
+    failOn: 'serious',
+    include: [],
+    exclude: [],
+    scope: 'final',
+  }),
   integrations: IntegrationsSchema.default({ custom: [] }),
   mcp: McpConfigSchema.default({ servers: {} }),
   agents: AgentsConfigSchema.default({
@@ -786,6 +799,7 @@ export type TraceabilityConfig = z.infer<typeof TraceabilitySchema>;
 export type HealConfig = z.infer<typeof HealConfigSchema>;
 export type A11yConfig = z.infer<typeof A11yConfigSchema>;
 export type A11yImpact = z.infer<typeof A11yImpactSchema>;
+export type A11yScope = z.infer<typeof A11yScopeSchema>;
 export type ProcessGates = ProcessConfig['gates'];
 export type TimeoutsConfig = z.infer<typeof TimeoutsSchema>;
 export type ProjectAuthConfig = z.infer<typeof ProjectAuthSchema>;

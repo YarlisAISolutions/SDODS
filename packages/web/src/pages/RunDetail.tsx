@@ -15,6 +15,7 @@ import {
 import { Tabs } from '../components/ui/Tabs';
 import { fmtDate, fmtDuration, shortSha } from '../lib/utils';
 import { ScenarioTree } from './run/ScenarioTree';
+import { GatesTable } from './run/GatesTable';
 import { LiveLog } from './run/LiveLog';
 
 export function RunDetailPage() {
@@ -38,6 +39,14 @@ export function RunDetailPage() {
             <span className="mono">{run.projectSlug}</span>
             <span className="muted font-normal">{run.env}</span>
             {run.process && <Badge tone="purple">{run.process}</Badge>}
+            {run.gates && (
+              <Badge
+                tone={run.gates.passed ? 'green' : 'red'}
+                title={`process ${run.gates.process} gates`}
+              >
+                gates {run.gates.passed ? 'passed' : 'failed'}
+              </Badge>
+            )}
             {run.suiteTag && <Badge>{run.suiteTag}</Badge>}
           </span>
         }
@@ -113,6 +122,11 @@ export function RunDetailPage() {
                 <Card title="By browser">
                   <BrowserSummary scenarios={run.scenarios} />
                 </Card>
+                {run.gates && (
+                  <Card title={`Gates · process ${run.gates.process}`} className="lg:col-span-3">
+                    <GatesTable gates={run.gates} />
+                  </Card>
+                )}
               </div>
             ),
           },

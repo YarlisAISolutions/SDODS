@@ -34,15 +34,30 @@ a11y:
   failOn: serious # minor | moderate | serious | critical; the default is serious
   include: [] # limit the audit to these selectors
   exclude: ['#third-party-chat'] # leave these selectors out
+  scope: final # final | every-page; the default is final
 ```
 
 An environment file can override single keys, for example `a11y: { failOn: critical }` while a team works through its backlog.
 
+### Every page a scenario visits
+
+By default the tag audits the page the scenario ends on. A flow that goes login → inventory → cart audits only the cart. Set `scope: every-page` to audit every distinct URL the scenario reaches:
+
+```yaml title="envs/staging.yaml"
+a11y:
+  scope: every-page
+```
+
+- **Each URL is audited after the step that reached it.** The audit waits until the page has settled at the same point the `@perf` tag reads a page: the load event, the first contentful paint, then a short settle window. Nothing else drives the page between two steps, so an audit never races the next click.
+- **Each URL is audited once.** A later step on the same URL does not audit it again. The page the scenario ends on is audited as it stands at the end, as with `final`.
+- **Violations fail the scenario once, at its end.** The error lists the violations under each URL that has them. The `sdods/a11y-scenario` attachment carries a `pages` list with each URL, its status and its own axe result, and the `a11y` process gate counts one audit per URL.
+- **A URL the scenario left inside a single step** (a redirect, or one step that clicks through two pages) is listed as `not-audited`, so the gap is visible. It is not a failure.
+
 What the tag does not do:
 
-- **It audits only the final page.** It does not audit every page the scenario passed through. To check a page in the middle of a flow, add an explicit step after navigating to it.
+- **With `scope: final`, it audits only the final page.** To check a page in the middle of a flow, set `scope: every-page`, or add an explicit step after navigating to it.
 - **It skips a scenario that already failed.** The page that scenario stopped on proves nothing, and a list of violations on top of the error would only bury it. The attachment records the skip.
-- **It does not audit a URL twice.** If a whole-page audit step already ran on the final URL, the tag leaves it to that step's threshold.
+- **It does not audit a URL twice.** If a whole-page audit step already ran on a URL, the tag leaves that URL to the step's threshold, even when the step ran after the tag's own audit.
 - **It fails when nothing can be audited.** A scenario that never navigated fails. So does an `include` selector that matches nothing, or an audit in which axe examined no rule at all.
 
 Automated rules cover only part of WCAG, so a passing audit is a floor, not a certificate.

@@ -70,6 +70,25 @@ interface PerfWatch {
 const watches = new WeakMap<object, PerfWatch>();
 
 /**
+ * Resolves once the document has painted its first content, or after `paintWaitMs` when it never
+ * does. Runs in the page: it is serialised into the init script below and into `waitForSettle`, so
+ * the `@perf` and `@a11y` hooks agree on when a page has settled.
+ */
+export function firstPaintOrTimeout(paintWaitMs: number): Promise<void> {
+  return new Promise<void>((resolve) => {
+    if (performance.getEntriesByName('first-contentful-paint').length) return resolve();
+    setTimeout(resolve, paintWaitMs);
+    try {
+      new PerformanceObserver((list) => {
+        if (list.getEntries().some((e) => e.name === 'first-contentful-paint')) resolve();
+      }).observe({ type: 'paint', buffered: true });
+    } catch {
+      resolve();
+    }
+  });
+}
+
+/**
  * The script every document in the page runs. Only the top-level document reports: after its load
  * event, once it has painted (or `paintWaitMs` has passed), and after the same LCP settle window the
  * explicit `I record the page vitals` step uses, so both measure a page the same way.
@@ -82,20 +101,10 @@ export function vitalsInitScript(
   return `(() => {
   if (window.top !== window) return;
   const collect = ${collectRawVitals.toString()};
-  const painted = () => new Promise((resolve) => {
-    if (performance.getEntriesByName('first-contentful-paint').length) return resolve();
-    setTimeout(resolve, ${paintWaitMs});
-    try {
-      new PerformanceObserver((list) => {
-        if (list.getEntries().some((e) => e.name === 'first-contentful-paint')) resolve();
-      }).observe({ type: 'paint', buffered: true });
-    } catch (e) {
-      resolve();
-    }
-  });
+  const painted = ${firstPaintOrTimeout.toString()};
   addEventListener('load', () => {
     setTimeout(() => {
-      painted()
+      painted(${paintWaitMs})
         .then(() => collect(${settleMs}))
         .then((raw) => {
           const report = window[${JSON.stringify(binding)}];
@@ -104,6 +113,25 @@ export function vitalsInitScript(
     }, 0);
   }, { once: true });
 })();`;
+}
+
+/**
+ * Waits, from Node, for the point at which the `@perf` init script reads a document: its load event
+ * (bounded by `LOAD_WAIT_MS`), its first contentful paint (bounded by `PAINT_WAIT_MS`), then the LCP
+ * settle window. Never throws: a page that will not settle is audited as it stands, and a page that
+ * navigates away while this waits is the caller's to notice.
+ */
+export async function waitForSettle(
+  page: Page,
+  opts: { paintWaitMs?: number; settleMs?: number; loadWaitMs?: number } = {},
+): Promise<void> {
+  const { paintWaitMs = PAINT_WAIT_MS, settleMs = LCP_SETTLE_MS, loadWaitMs = LOAD_WAIT_MS } = opts;
+  await page.waitForLoadState('load', { timeout: loadWaitMs }).catch(() => undefined);
+  await page
+    .evaluate(
+      `(${firstPaintOrTimeout.toString()})(${paintWaitMs}).then(() => new Promise((r) => setTimeout(r, ${settleMs})))`,
+    )
+    .catch(() => undefined);
 }
 
 /**

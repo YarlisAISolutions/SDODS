@@ -19,6 +19,26 @@ sdods report merge --run gh-123 .sdods/runs/gh-123/shard-reports
 
 All shards share the `runId`, so user-pool leases stay unique (`shardOffset + parallelIndex`) and ingest merges the NDJSON files of every shard into one run.
 
+## Gate a sharded run
+
+A process's gates are not judged on a single shard. Pass the process to the merge instead. On one machine, give each shard its own run id, because a blob reporter clears its directory when it starts:
+
+```bash
+bun run sdods run -p demo-shop -e staging -b chromium --process release-gate --shard 1/2 --run-id gh-123-1 --reporter blob
+```
+
+```bash
+bun run sdods run -p demo-shop -e staging -b chromium --process release-gate --shard 2/2 --run-id gh-123-2 --reporter blob
+```
+
+```bash
+sdods report merge --run gh-123-1 --process release-gate .sdods/runs/gh-123-1/shard-reports .sdods/runs/gh-123-2/shard-reports
+```
+
+The merge prints the gate table for the whole run, writes `gates.json` into the `--run` directory and exits `1` with `GATE_FAILED` when a gate is not met. Ingest that run afterwards, and the verdict is recorded on it in the database. The `@a11y` and `@perf` evidence is read from the shards' run directories and from the reports attached in the blobs, so a download of the `shard-reports` directories alone is enough. Without `--process`, the merge judges the process named in `run.json`, when that process declares gates.
+
+In a pipeline, point `--run` at the run directory you ingest, and let the merge step's exit code fail the job.
+
 ## The workflow
 
 ```mermaid
