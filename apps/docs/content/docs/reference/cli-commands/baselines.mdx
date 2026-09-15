@@ -1,0 +1,64 @@
+---
+title: sdods baselines
+description: Review the visual checks that failed in a run and accept the new screenshots as baselines.
+---
+
+```text
+sdods baselines diff [--run <id>] [--artifacts-dir <dir>] [--json]
+sdods baselines accept <name...> --run <id> [--artifacts-dir <dir>] [--json]
+sdods baselines accept --all --run <id> [--artifacts-dir <dir>] [--json]
+```
+
+When a `the page should match the visual baseline …` step fails, the run keeps the expected, actual and diff images. It also writes a `<name>.failure.json` record under `<slug>/<fingerprint>/r<retry>/visual/<run target>/` in the run directory. `baselines` reads those records, so it works on a local run, on a run started from the web UI, and on a CI run downloaded into `.sdods/runs/<id>`.
+
+## `diff`
+
+Lists every failed visual check of a run. For each one it shows the run target, the platform, why the check failed (`changed` with the share of differing pixels, `size changed`, or `new baseline` when none existed), the scenario, the baseline path and the three image paths.
+
+| Flag              | Meaning                                                           |
+| ----------------- | ----------------------------------------------------------------- |
+| `--run <id>`      | the run to read (default: the most recent run)                    |
+| `--artifacts-dir` | where runs live (default `.sdods/runs`, or `SDODS_ARTIFACTS_DIR`) |
+| `--json`          | `{ runId, failures: [...] }` with absolute image paths            |
+
+A check that failed and then passed on a retry is not listed. A `new baseline` row has no expected or diff image. By default Playwright has already written the actual image to the baseline path on the machine that ran, so the scenario fails once and passes on the next run. On CI that file is lost with the runner, so `accept` on the downloaded run is how it reaches the repository.
+
+## `accept`
+
+Copies the **actual** image of each selected check over its baseline:
+
+```text
+projects/<slug>/features/__screenshots__/<run target>/<platform>/<name>.png
+```
+
+`<platform>` is the platform the run happened on, not the machine you run `accept` on. Downloading a Linux CI run and accepting it on a Mac writes the `linux/` baseline.
+
+| Argument / flag | Meaning                                                                                                |
+| --------------- | ------------------------------------------------------------------------------------------------------ |
+| `name...`       | `inventory`, `inventory.png`, or `<run target>/inventory` to accept only one browser's screenshot      |
+| `--run <id>`    | **required**: the run whose screenshots become the baselines                                           |
+| `--all`         | every failed visual check of the run (instead of names)                                                |
+| `--json`        | `{ runId, accepted: [{ name, runnerProject, platform, reason, diffRatio, from, to, created, diff }] }` |
+
+The command checks every entry before writing: an unknown name, a missing actual image, or a baseline path outside `features/__screenshots__/` writes nothing. It prints each baseline it created or updated with the diff image it accepted. Commit the PNGs yourself.
+
+<Callout type="warn">
+  `accept` writes to the project tree, like `sdods run --update-snapshots`. A person reviews the
+  diff and runs it; an agent does not.
+</Callout>
+
+```bash
+sdods run -p demo-shop -e staging -l ui -b chromium -t @visual
+```
+
+```bash
+sdods baselines diff
+```
+
+```bash
+sdods baselines accept inventory --run 0193f0c2-…
+```
+
+Exit code `2` when the run is not found, nothing failed, or a name matches no failed check.
+
+The web UI offers the same action as **Accept as baseline** on a failed visual step (editors only), backed by `POST /api/runs/:id/baselines/accept`. See [Screenshots and visual testing](/docs/guides/screenshots-and-visual#reviewing-and-accepting-a-changed-baseline).

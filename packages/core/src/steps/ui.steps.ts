@@ -6,6 +6,7 @@ import type { Healer } from '../heal/healer.js';
 import { withActionRole } from '../heal/strategies.js';
 import type { AriaRole, HealAction } from '../heal/types.js';
 import { SdodsError } from '../errors.js';
+import { parseMaskArgument } from '../shots/baselines.js';
 
 /*
  * Every string argument goes through `renderStrict()`: `{{vars}}` resolve against the scenario
@@ -272,6 +273,18 @@ Then(
   'the page should match the visual baseline {string}',
   async ({ shots, $bddContext, apiContext, env }, name: string) => {
     await shots.visual(arg({ apiContext, env }, name), $bddContext.stepIndex);
+  },
+);
+
+/** Masks comma-separated selectors on top of `screenshots.mask` and the baseline's own mask. */
+Then(
+  'the page should match the visual baseline {string} masking {string}',
+  async ({ shots, $bddContext, apiContext, env }, name: string, selectors: string) => {
+    await shots.visual(
+      arg({ apiContext, env }, name),
+      $bddContext.stepIndex,
+      parseMaskArgument(arg({ apiContext, env }, selectors)),
+    );
   },
 );
 

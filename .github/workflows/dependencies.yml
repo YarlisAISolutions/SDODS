@@ -128,6 +128,16 @@ jobs:
         run: |
           echo "pw=$(node -p "require('./node_modules/@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
 
+      # The nightly @regression job and visual-baselines.yml run in the Playwright container, and
+      # a baseline only matches pixels from the same Playwright. Move the image with the client
+      # (tests/playwright-image.test.ts fails the suite below if they disagree). Linux baselines
+      # may need re-rendering afterwards: run the visual-baselines workflow on this branch.
+      - name: Move the Playwright container image with the client
+        if: steps.before.outputs.pw != steps.after.outputs.pw
+        run: |
+          sed -i "s#mcr.microsoft.com/playwright:v${{ steps.before.outputs.pw }}-noble#mcr.microsoft.com/playwright:v${{ steps.after.outputs.pw }}-noble#g" \
+            .github/workflows/ci.yml .github/workflows/visual-baselines.yml
+
       - name: Prove it still works
         run: |
           bun run typecheck

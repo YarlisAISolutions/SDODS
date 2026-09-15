@@ -181,6 +181,17 @@ export const CompareQuery = z.object({
   threshold: z.coerce.number().min(0).max(1).default(0.1),
 });
 
+/** `names` match `inventory`, `inventory.png` or `<run target>/inventory`; or `all: true`. */
+export const AcceptBaselinesBody = z
+  .object({
+    names: z.array(z.string().min(1)).max(200).optional(),
+    all: z.boolean().optional(),
+  })
+  .refine((b) => b.all === true || (b.names?.length ?? 0) > 0, {
+    message: 'Pass the baseline names to accept, or all: true.',
+  })
+  .refine((b) => !(b.all && b.names?.length), { message: 'Pass names or all, not both.' });
+
 export type LoginBody = z.infer<typeof LoginBody>;
 export type StartRunBody = z.infer<typeof StartRunBody>;
 export type AgentJobBody = z.infer<typeof AgentJobBody>;

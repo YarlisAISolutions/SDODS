@@ -44,7 +44,7 @@ sdods run [-p <slug>] [-e <env>] [-t <expr>] [-l <layer>]... [-b <browser>]... [
 | `--har-update`             | record or refresh HAR files for `@har` scenarios                                                                                             |
 | `--har-replay`             | replay HAR files for `@har` scenarios                                                                                                        |
 | `--strict`                 | with `--har-replay`: abort any request that is not in the HAR (offline run)                                                                  |
-| `--update-snapshots`       | refresh `@visual` baselines                                                                                                                  |
+| `--update-snapshots`       | overwrite `@visual` baselines without review and print a warning; prefer [`sdods baselines`](/docs/reference/cli-commands/baselines)         |
 | `--ui`, `--debug`          | interactive UI mode, step debugger                                                                                                           |
 | `--list`                   | print the run targets and tests that would run, then stop                                                                                    |
 | `--repeat-each <n>`        | repeat each test n times                                                                                                                     |

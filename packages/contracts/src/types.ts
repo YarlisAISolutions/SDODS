@@ -142,6 +142,39 @@ export interface StepResult {
   finishedAt?: string;
 }
 
+/**
+ * One failed visual baseline check, written next to the scenario's screenshots
+ * (`<runDir>/<slug>/<fingerprint>/r<retry>/visual/<name>.failure.json`) so it survives the CI
+ * artifact upload and ingest. `sdods baselines` and the server's accept route read it.
+ */
+export interface VisualFailure {
+  /** baseline name without `.png` */
+  name: string;
+  /** the file name Playwright compared, e.g. `inventory.png` */
+  snapshot: string;
+  project: string;
+  runnerProject: string;
+  /** `process.platform` of the machine that ran the check: the baseline belongs to it */
+  platform: string;
+  fingerprint: string;
+  scenarioName: string;
+  featureUri: string;
+  retry: number;
+  stepIndex: number;
+  /** `changed`: pixels differ; `size`: dimensions differ; `missing`: no baseline yet */
+  reason: 'changed' | 'size' | 'missing';
+  /** baseline path, relative to the project root */
+  baseline: string;
+  /** image paths, relative to the run directory */
+  actual: string;
+  expected?: string;
+  diff?: string;
+  diffPixels?: number;
+  diffRatio?: number;
+  maxDiffPixelRatio: number;
+  recordedAt: string;
+}
+
 export type ArtifactKind =
   'screenshot' | 'trace' | 'video' | 'har' | 'log' | 'report' | 'visual' | 'diff' | 'attachment';
 export type ArtifactPhase =

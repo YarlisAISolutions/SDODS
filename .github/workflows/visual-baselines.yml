@@ -1,0 +1,147 @@
+name: visual-baselines
+
+# Linux visual baselines, made where the nightly run compares them.
+#
+# A baseline is a promise about pixels on one platform: fonts, anti-aliasing and GPU paths differ
+# between macOS and Linux, so a darwin PNG can never pass on ubuntu. This workflow renders every
+# @visual scenario inside the Playwright container pinned to the repository's exact Playwright
+# version -- the same image the nightly @regression job in ci.yml runs in -- with
+# --update-snapshots, and opens a pull request that contains ONLY the linux/ PNGs it wrote. A
+# person reviews the images in the PR before they become the promise.
+#
+# Run it by hand after a deliberate UI change, a Playwright upgrade (the monthly dependencies
+# workflow bumps the image tag together with the client), or when a new @visual scenario lands.
+#
+# The PR is opened with GITHUB_TOKEN, and GitHub does not start workflows for events that token
+# creates: push an empty commit to the branch (or close and reopen the PR) to run CI on it.
+
+on:
+  workflow_dispatch:
+    inputs:
+      projects:
+        description: Projects to render, space- or comma-separated (each needs an env CI can reach)
+        type: string
+        default: demo-shop
+      env:
+        description: Environment to run against
+        type: string
+        default: staging
+      browsers:
+        description: Browsers, space- or comma-separated
+        type: string
+        default: chromium firefox webkit
+      tags:
+        description: Tag expression selecting the scenarios with baselines
+        type: string
+        default: '@visual'
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: visual-baselines
+  cancel-in-progress: false
+
+env:
+  CI: true
+  BUN_VERSION: '1.4.0'
+
+jobs:
+  render:
+    name: render · linux baselines
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    container:
+      # Keep in lock-step with @playwright/test (tests/playwright-image.test.ts checks it).
+      image: mcr.microsoft.com/playwright:v1.63.0-noble
+      options: --ipc=host
+    env:
+      # Firefox refuses to start as root when HOME belongs to another user (the runner's).
+      HOME: /root
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install bun
+        # The image ships Node; npm fetches the bun binary without relying on extra image tools.
+        run: npm install -g bun@${{ env.BUN_VERSION }}
+      - run: bun install --frozen-lockfile
+      - name: Render @visual with --update-snapshots
+        shell: bash
+        env:
+          PROJECTS: ${{ inputs.projects }}
+          ENV_NAME: ${{ inputs.env }}
+          BROWSERS: ${{ inputs.browsers }}
+          TAGS: ${{ inputs.tags }}
+        run: |
+          set -u
+          status=0
+          for project in ${PROJECTS//,/ }; do
+            for browser in ${BROWSERS//,/ }; do
+              echo "::group::$project · $browser"
+              bun run sdods run -p "$project" -e "$ENV_NAME" -l ui -b "$browser" -t "$TAGS" \
+                --update-snapshots --no-ingest \
+                --run-id "baselines-${GITHUB_RUN_ID}-${project}-${browser}" || status=1
+              echo "::endgroup::"
+            done
+          done
+          echo "Baselines written:"
+          find projects -path '*/__screenshots__/*/linux/*.png' -print
+          exit $status
+      - name: Upload the linux baselines
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-baselines
+          path: projects/*/features/__screenshots__/*/linux/*.png
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Upload the runs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-baselines-runs
+          path: .sdods/runs
+          if-no-files-found: ignore
+          retention-days: 7
+
+  pull-request:
+    # On the plain runner, so git sees a checkout it owns; only PNGs cross from the container.
+    name: open the review PR
+    needs: [render]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: linux-baselines
+          path: projects
+      - name: What changed
+        run: git status --short -- 'projects/*/features/__screenshots__/*/linux/*.png'
+      - name: Open the pull request
+        uses: peter-evans/create-pull-request@v7
+        with:
+          branch: chore/linux-visual-baselines
+          base: main
+          add-paths: projects/*/features/__screenshots__/*/linux/*.png
+          title: 'chore(visual): linux baselines for ${{ inputs.projects }}'
+          commit-message: |
+            chore(visual): linux baselines for ${{ inputs.projects }}
+
+            Rendered by the visual-baselines workflow in mcr.microsoft.com/playwright:v1.63.0-noble
+            (${{ inputs.browsers }}; tags ${{ inputs.tags }}; env ${{ inputs.env }}).
+          body: |
+            Opened by the `visual-baselines` workflow ([run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})).
+
+            Linux baselines rendered in the Playwright container the nightly `@regression` job
+            uses, so the pixels are the ones CI will compare against.
+
+            - projects: `${{ inputs.projects }}` · env `${{ inputs.env }}`
+            - browsers: `${{ inputs.browsers }}` · tags `${{ inputs.tags }}`
+
+            **Review every image in the Files tab before merging** — merging makes these pixels
+            the promise. Only `**/__screenshots__/**/linux/*.png` is included.
+
+            CI does not start on a PR opened with `GITHUB_TOKEN`: push an empty commit to this
+            branch to run it.
+          delete-branch: true

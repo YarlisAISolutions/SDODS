@@ -24,6 +24,7 @@ import { register as registerCoverage } from './commands/coverage.js';
 import { register as registerBrowsers } from './commands/browsers.js';
 import { register as registerWatch } from './commands/watch.js';
 import { register as registerTrace } from './commands/trace.js';
+import { register as registerBaselines } from './commands/baselines.js';
 import { register as registerAgent } from './commands/agent.js';
 import { register as registerProposals } from './commands/proposals.js';
 import { register as registerMcp } from './commands/mcp.js';
@@ -87,6 +88,7 @@ export function buildProgram(): Command {
   registerBrowsers(program);
   registerWatch(program);
   registerTrace(program);
+  registerBaselines(program);
   registerAgent(program);
   registerProposals(program);
   registerMcp(program);

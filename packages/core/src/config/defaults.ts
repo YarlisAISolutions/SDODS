@@ -13,6 +13,8 @@ export const FRAMEWORK_DEFAULTS: Partial<ProjectConfigInput> = {
     },
     fullPage: false,
     mask: [],
+    maxDiffPixelRatio: 0.01,
+    baselines: {},
     viewport: { width: 1280, height: 720 },
     onlyOnFailure: false,
   },

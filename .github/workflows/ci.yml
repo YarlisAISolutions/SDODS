@@ -140,12 +140,6 @@ jobs:
           bun run sdods run -p ${{ matrix.project }} -e ${{ matrix.env }} -l ui -b ${{ matrix.browser }}
           -t @smoke --shard ${{ matrix.shard }}/${{ matrix.total }} --reporter blob
           --run-id ${{ env.RUN_ID }}-${{ matrix.project }}-${{ matrix.browser }} --no-ingest $HAR_FLAGS
-      - name: UI layer · @regression (nightly, live)
-        if: needs.matrix.outputs.live == 'true'
-        run: >
-          bun run sdods run -p ${{ matrix.project }} -e ${{ matrix.env }} -l ui -b ${{ matrix.browser }}
-          -t @regression --shard ${{ matrix.shard }}/${{ matrix.total }} --reporter blob
-          --run-id ${{ env.RUN_ID }}-${{ matrix.project }}-${{ matrix.browser }}-regression --no-ingest
       - name: Pack run artifacts (screenshots, api snapshots, meta) for ingest
         if: always()
         shell: bash
@@ -158,6 +152,55 @@ jobs:
         if: always()
         with:
           name: sdods-${{ matrix.project }}-${{ matrix.browser }}-${{ matrix.shard }}
+          path: .sdods/runs
+          retention-days: 14
+          if-no-files-found: ignore
+
+  regression:
+    # Nightly / manual @regression, which includes @visual. It runs inside the Playwright container
+    # pinned to the repo's exact Playwright version -- the image visual-baselines.yml renders the
+    # linux/ baselines in -- because a baseline only matches pixels from the same fonts and
+    # rendering stack. On the bare runner, an OS image update alone could move them.
+    name: ${{ matrix.project }} · ${{ matrix.browser }} · @regression · ${{ matrix.shard }}/${{ matrix.total }}
+    needs: [matrix]
+    if: needs.matrix.outputs.live == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    container:
+      # Keep in lock-step with @playwright/test (tests/playwright-image.test.ts checks it).
+      image: mcr.microsoft.com/playwright:v1.63.0-noble
+      options: --ipc=host
+    env:
+      # Firefox refuses to start as root when HOME belongs to another user (the runner's).
+      HOME: /root
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJson(needs.matrix.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install bun
+        # The image ships Node and the browsers; npm fetches the bun binary.
+        run: npm install -g bun@${{ env.BUN_VERSION }}
+      - run: bun install --frozen-lockfile
+      - name: UI layer · @regression (live)
+        run: >
+          bun run sdods run -p ${{ matrix.project }} -e ${{ matrix.env }} -l ui -b ${{ matrix.browser }}
+          -t @regression --shard ${{ matrix.shard }}/${{ matrix.total }} --reporter blob
+          --run-id ${{ env.RUN_ID }}-${{ matrix.project }}-${{ matrix.browser }}-regression --no-ingest
+      - name: Pack run artifacts (screenshots, visual diffs, api snapshots, meta) for ingest
+        if: always()
+        shell: bash
+        run: |
+          shopt -s nullglob
+          for dir in ".sdods/runs/${RUN_ID}-"*; do
+            tar -czf "$dir/artifacts.tgz" -C "$dir" --exclude=artifacts.tgz --exclude=html-report --exclude=runner-output . || true
+          done
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          # `sdods baselines diff --run <id>` reads these after download into .sdods/runs.
+          name: sdods-${{ matrix.project }}-${{ matrix.browser }}-${{ matrix.shard }}-regression
           path: .sdods/runs
           retention-days: 14
           if-no-files-found: ignore
@@ -341,7 +384,7 @@ jobs:
 
   report:
     name: report · ingest · notify
-    needs: [test]
+    needs: [test, regression]
     if: always()
     runs-on: ubuntu-latest
     steps:
