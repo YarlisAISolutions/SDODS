@@ -1,0 +1,407 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="888" viewBox="0 0 1200 888" role="img" aria-labelledby="t d">
+  <title id="t">Plan to production with SDODS: a six-panel comic</title>
+  <desc id="d">Maxi, the SDODS assistant, and a developer go through Plan, Code, Test, Heal, Release and Operate; what Operate learns loops back into the next Plan.</desc>
+  <style>
+    text { font-family: system-ui, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif; }
+    .h1 { font-size: 30px; font-weight: 800; letter-spacing: -0.3px; }
+    .sub { font-size: 15px; }
+    .ptitle { font-size: 21px; font-weight: 800; }
+    .caption { font-size: 13px; }
+    .num { font-size: 17px; font-weight: 800; }
+    .say { font-size: 14px; font-weight: 500; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, 'Liberation Mono', monospace; font-size: 10.5px; }
+    .chip { font-size: 11px; font-weight: 700; }
+    .btn { font-size: 13px; font-weight: 700; }
+    .tiny { font-size: 10px; }
+    .loop { font-size: 13px; font-weight: 600; }
+  </style>
+    
+    <g transform="translate(68 56) scale(0.44)" fill="none" stroke-linecap="round">
+    <path d="M-40 -26 A 30 30 0 0 0 -40 26" stroke="#F8FAFC" stroke-width="11"/>
+    <path d="M40 -26 A 30 30 0 0 1 40 26" stroke="#F8FAFC" stroke-width="11"/>
+    <circle r="20" stroke="#F8FAFC" stroke-width="11"/>
+    <circle r="7" fill="#FFB020" stroke="none"/>
+  </g>
+    <text x="108" y="52" class="h1" fill="#F8FAFC">Plan to production, and round again</text>
+    <text x="108" y="80" class="sub" fill="#A3AFC6">Six panels of the software lifecycle with SDODS, starring Maxi and a developer.</text>
+  <path d="M982 840 V854 Q982 868 968 868 H31 Q17 868 17 854 V276 Q17 262 29 262 H30"
+      fill="none" stroke="#6B8BFF" stroke-width="3" stroke-dasharray="9 7" stroke-linecap="round"/>
+    <path d="M26 255 L36 262 L26 269 Z" fill="#6B8BFF"/>
+    <rect x="450" y="854" width="300" height="28" rx="14" fill="#131B36" stroke="#6B8BFF" stroke-width="2"/>
+    <text x="600" y="873" text-anchor="middle" class="loop" fill="#F8FAFC">what Operate learns becomes the next Plan</text>
+  <g transform="translate(38 112)" data-panel="1">
+    <rect x="3" y="5" width="360" height="350" rx="20" fill="#0A0F22"/>
+    <rect x="0" y="0" width="360" height="350" rx="20" fill="#131B36" stroke="#AEB9D0" stroke-width="2.5"/>
+    <circle cx="34" cy="34" r="17" fill="#2F5BFF"/>
+    <text x="34" y="40" text-anchor="middle" class="num" fill="#FFFFFF">1</text>
+    <text x="60" y="33" class="ptitle" fill="#F8FAFC">Plan</text>
+    <text x="60" y="51" class="caption" fill="#A3AFC6">the planner reads the app and its OpenAPI</text>
+    
+      <rect x="108" y="198" width="104" height="64" rx="9" fill="#1D2749" stroke="#3A4775" stroke-width="1.6" transform="rotate(-5 160 230)"/>
+      <g transform="rotate(-5 160 230)">
+        <text x="118" y="216" class="mono" fill="#94A3B8">openapi.yaml</text>
+        <path d="M118 228h40" stroke="#3A4775" stroke-width="3" stroke-linecap="round"/>
+      </g>
+      <rect x="150" y="236" width="106" height="98" rx="9" fill="#1D2749" stroke="#3A4775" stroke-width="1.6" />
+      <text x="162" y="256" class="mono" fill="#E2E8F0" font-weight="700">plan.md</text>
+      <path d="M162 266h80" stroke="#3A4775" stroke-width="3" stroke-linecap="round"/>
+      <rect x="160" y="280" width="34" height="18" rx="9" fill="#2F5BFF"/><text x="177" y="293" text-anchor="middle" class="chip" fill="#FFFFFF">@ui</text>
+      <rect x="198" y="280" width="46" height="18" rx="9" fill="#FFB020"/><text x="221" y="293" text-anchor="middle" class="chip" fill="#0B1020">@api</text>
+      <rect x="160" y="304" width="60" height="18" rx="9" fill="#F8FAFC"/><text x="190" y="317" text-anchor="middle" class="chip" fill="#131B36">@smoke</text>
+      <g transform="translate(12 214) scale(1.2)">
+    <ellipse cx="38" cy="92" rx="22" ry="4" fill="#cbd5e1" opacity="0.5"/>
+    <rect x="24" y="8" width="3.5" height="12" rx="1.75" fill="#94a3b8"/>
+    <circle cx="25.7" cy="7" r="4.5" fill="#f59e0b"/>
+    <rect x="6" y="20" width="64" height="46" rx="16" fill="#6366f1"/>
+    <rect x="14" y="29" width="48" height="28" rx="11" fill="#ffffff"/>
+    <g stroke="#1f2937" stroke-width="2.6" stroke-linecap="round" fill="none"><path d="M26 40h7"/><path d="M43 40h7"/></g>
+    <path d="M32 49q6 7 12 0" stroke="#1f2937" stroke-width="2.4" stroke-linecap="round" fill="none"/>
+    <rect x="0" y="34" width="8" height="22" rx="4" fill="#4338ca"/>
+    <rect x="68" y="34" width="8" height="22" rx="4" fill="#4338ca"/>
+    <rect x="18" y="66" width="40" height="20" rx="8" fill="#4338ca"/>
+    <rect x="27" y="72" width="22" height="8" rx="4" fill="#2dd4bf"/>
+  </g>
+      <g transform="translate(266 214)">
+    <ellipse cx="40" cy="119" rx="28" ry="4" fill="#0A0F22"/>
+    <path d="M8 118 V94 Q8 72 40 72 Q72 72 72 94 V118 Z" fill="#FFB020" stroke="#0B1020" stroke-width="2"/>
+    <path d="M28 74 Q40 90 52 74" fill="none" stroke="#0B1020" stroke-width="2" stroke-linecap="round"/>
+    <path d="M36 84v14M44 84v14" stroke="#0B1020" stroke-width="1.6" stroke-linecap="round"/>
+    
+    <circle cx="40" cy="46" r="23" fill="#F2C3A0" stroke="#0B1020" stroke-width="2"/>
+    <path d="M17 44 Q16 20 40 20 Q65 20 63 44 Q60 32 48 30 Q42 36 30 33 Q21 35 17 44 Z" fill="#3B2A20"/>
+    <circle cx="32" cy="46" r="2.4" fill="#0B1020"/><circle cx="48" cy="46" r="2.4" fill="#0B1020"/>
+    <circle cx="26" cy="53" r="3" fill="#F59E9E" opacity="0.55"/><circle cx="54" cy="53" r="3" fill="#F59E9E" opacity="0.55"/>
+    
+    <path d="M34 56q6 5 12 0" stroke="#0B1020" stroke-width="2.4" stroke-linecap="round" fill="none"/>
+  </g>
+      <g data-bubble="maxi">
+    <rect x="14" y="64" width="250" height="72" rx="14" fill="#F8FAFC" stroke="#F8FAFC" stroke-width="2"/>
+    <path d="M41 135 Q48 168 52 200 Q58 164 63 135" fill="#F8FAFC" stroke="#F8FAFC" stroke-width="2" stroke-linejoin="round"/>
+    <rect x="42" y="133" width="20" height="4" fill="#F8FAFC"/>
+    <rect x="15" y="76" width="3.5" height="48" rx="1.75" fill="#6366f1"/>
+    <text class="say" fill="#0B1020"><tspan x="28" y="87">I read your routes and the</tspan><tspan x="28" y="105">OpenAPI spec. Here is a plan,</tspan><tspan x="28" y="123">tagged and ready to write.</tspan></text>
+  </g>
+      <g data-bubble="dev">
+    <rect x="160" y="144" width="188" height="54" rx="14" fill="#F8FAFC" stroke="#F8FAFC" stroke-width="2"/>
+    <path d="M293 197 Q300 202 304 206 Q310 198 315 197" fill="#F8FAFC" stroke="#F8FAFC" stroke-width="2" stroke-linejoin="round"/>
+    <rect x="294" y="195" width="20" height="4" fill="#F8FAFC"/>
+    <rect x="161" y="156" width="3.5" height="30" rx="1.75" fill="#FFB020"/>
+    <text class="say" fill="#0B1020"><tspan x="174" y="167">Tagged before I</tspan><tspan x="174" y="185">even asked. Nice.</tspan></text>
+  </g>
+    
+  </g>
+<g transform="translate(420 112)" data-panel="2">
+    <rect x="3" y="5" width="360" height="350" rx="20" fill="#0A0F22"/>
+    <rect x="0" y="0" width="360" height="350" rx="20" fill="#131B36" stroke="#AEB9D0" stroke-width="2.5"/>
+    <circle cx="34" cy="34" r="17" fill="#2F5BFF"/>
+    <text x="34" y="40" text-anchor="middle" class="num" fill="#FFFFFF">2</text>
+    <text x="60" y="33" class="ptitle" fill="#F8FAFC">Code</text>
+    <text x="60" y="51" class="caption" fill="#A3AFC6">a feature in Gherkin; a person accepts</text>
+    
+      <rect x="104" y="206" width="156" height="88" rx="9" fill="#1D2749" stroke="#3A4775" stroke-width="1.6" />
+      <circle cx="116" cy="217" r="3" fill="#FB7185"/><circle cx="126" cy="217" r="3" fill="#FFB020"/><circle cx="136" cy="217" r="3" fill="#22C55E"/>
+      <text x="114" y="238" class="mono" fill="#2F5BFF" font-weight="700">Feature:<tspan fill="#E2E8F0" font-weight="400"> Checkout</tspan></text>
+      <text x="122" y="254" class="mono" fill="#2F5BFF" font-weight="700">Scenario:<tspan fill="#E2E8F0" font-weight="400"> pay</tspan></text>
+      <text x="130" y="270" class="mono" fill="#94A3B8">Given I use a</text>
+      <text x="130" y="284" class="mono" fill="#94A3B8">leased user</text>
+      <rect x="150" y="304" width="96" height="28" rx="14" fill="#2F5BFF"/>
+      <path d="M163 318 l3.5 3.5 l7 -7.5" stroke="#FFFFFF" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="208" y="323" text-anchor="middle" class="btn" fill="#FFFFFF">Accept</text>
+      <g transform="translate(12 214) scale(1.2)">
+    <ellipse cx="38" cy="92" rx="22" ry="4" fill="#cbd5e1" opacity="0.5"/>
+    <rect x="24" y="8" width="3.5" height="12" rx="1.75" fill="#94a3b8"/>
+    <circle cx="25.7" cy="7" r="4.5" fill="#f59e0b"/>
+    <rect x="6" y="20" width="64" height="46" rx="16" fill="#6366f1"/>
+    <rect x="14" y="29" width="48" height="28" rx="11" fill="#ffffff"/>
+    <g stroke="#1f2937" stroke-width="2.6" stroke-linecap="round" fill="none"><path d="M26 40h7"/><path d="M43 40h7"/></g>
+    <path d="M32 51q6 4 12 0" stroke="#1f2937" stroke-width="2.4" stroke-linecap="round" fill="none"/>
+    <rect x="0" y="34" width="8" height="22" rx="4" fill="#4338ca"/>
+    <rect x="68" y="34" width="8" height="22" rx="4" fill="#4338ca"/>
+    <rect x="18" y="66" width="40" height="20" rx="8" fill="#4338ca"/>
+    <rect x="27" y="72" width="22" height="8" rx="4" fill="#2dd4bf"/>
+  </g>
+      <g transform="translate(266 214)">
+    <ellipse cx="40" cy="119" rx="28" ry="4" fill="#0A0F22"/>
+    <path d="M8 118 V94 Q8 72 40 72 Q72 72 72 94 V118 Z" fill="#FFB020" stroke="#0B1020" stroke-width="2"/>
+    <path d="M28 74 Q40 90 52 74" fill="none" stroke="#0B1020" stroke-width="2" stroke-linecap="round"/>
+    <path d="M36 84v14M44 84v14" stroke="#0B1020" stroke-width="1.6" stroke-linecap="round"/>
+    <path d="M16 100 Q2 92 2 72" stroke="#0B1020" stroke-width="13" stroke-linecap="round" fill="none"/><path d="M16 100 Q2 92 2 72" stroke="#FFB020" stroke-width="9" stroke-linecap="round" fill="none"/><circle cx="2" cy="64" r="6.5" fill="#F2C3A0" stroke="#0B1020" stroke-width="1.8"/>
+    <circle cx="40" cy="46" r="23" fill="#F2C3A0" stroke="#0B1020" stroke-width="2"/>
+    <path d="M17 44 Q16 20 40 20 Q65 20 63 44 Q60 32 48 30 Q42 36 30 33 Q21 35 17 44 Z" fill="#3B2A20"/>
+    <circle cx="32" cy="46" r="2.4" fill="#0B1020"/><circle cx="48" cy="46" r="2.4" fill="#0B1020"/>
+    <circle cx="26" cy="53" r="3" fill="#F59E9E" opacity="0.55"/><circle cx="54" cy="53" r="3" fill="#F59E9E" opacity="0.55"/>
+    
+    <path d="M34 56q6 5 12 0" stroke="#0B1020" stroke-width="2.4" stroke-linecap="round" fill="none"/>
+  </g>
+      <g data-bubble="maxi">
+    <rect x="14" y="64" width="250" height="72" rx="14" fill="#F8FAFC" stroke="#F8FAFC" stroke-width="2"/>
+    <path d="M41 135 Q48 168 52 200 Q58 164 63 135" fill="#F8FAFC" stroke="#F8FAFC" stroke-width="2" stroke-linejoin="round"/>
+    <rect x="42" y="133" width="20" height="4" fill="#F8FAFC"/>
+    <rect x="15" y="76" width="3.5" height="48" rx="1.75" fill="#6366f1"/>
+    <text class="say" fill="#0B1020"><tspan x="28" y="87">The generator proposes two</tspan><tspan x="28" y="105">steps and a page object. Your</tspan><tspan x="28" y="123">working tree stays untouched.</tspan></text>
+  </g>
+      <g data-bubble="dev">
+    <rect x="160" y="144" width="188" height="54" rx="14" fill="#F8FAFC" stroke="#F8FAFC" stroke-width="2"/>
+    <path d="M293 197 Q300 202 304 206 Q310 198 315 197" fill="#F8FAFC" stroke="#F8FAFC" stroke-width="2" stroke-linejoin="round"/>
+    <rect x="294" y="195" width="20" height="4" fill="#F8FAFC"/>
+    <rect x="161" y="156" width="3.5" height="30" rx="1.75" fill="#FFB020"/>
+    <text class="say" fill="#0B1020"><tspan x="174" y="167">Read the diff.</tspan><tspan x="174" y="185">Accepted.</tspan></text>
+  </g>
+    
+  </g>
+<g transform="translate(802 112)" data-panel="3">
+    <rect x="3" y="5" width="360" height="350" rx="20" fill="#0A0F22"/>
+    <rect x="0" y="0" width="360" height="350" rx="20" fill="#131B36" stroke="#AEB9D0" stroke-width="2.5"/>
+    <circle cx="34" cy="34" r="17" fill="#2F5BFF"/>
+    <text x="34" y="40" text-anchor="middle" class="num" fill="#FFFFFF">3</text>
+    <text x="60" y="33" class="ptitle" fill="#F8FAFC">Test</text>
+    <text x="60" y="51" class="caption" fill="#A3AFC6">sdods run across ui, api and hybrid</text>
+    
+      <rect x="104" y="204" width="156" height="30" rx="8" fill="#0B1020" stroke="#3A4775" stroke-width="1.6"/>
+      <text x="114" y="224" class="mono" fill="#E2E8F0"><tspan fill="#FFB020">$</tspan> sdods run -t @smoke</text>
+      <rect x="104" y="242" width="40" height="22" rx="11" fill="#1D2749" stroke="#4ADE80" stroke-width="1.6"/><path d="M111 253 l2.4499999999999997 2.4499999999999997 l4.8999999999999995 -5.25" stroke="#4ADE80" stroke-width="1.68" fill="none" stroke-linecap="round" stroke-linejoin="round"/><text x="130.5" y="257" text-anchor="middle" class="chip" fill="#E2E8F0">ui</text><rect x="151" y="242" width="44" height="22" rx="11" fill="#1D2749" stroke="#4ADE80" stroke-width="1.6"/><path d="M158 253 l2.4499999999999997 2.4499999999999997 l4.8999999999999995 -5.25" stroke="#4ADE80" stroke-width="1.68" fill="none" stroke-linecap="round" stroke-linejoin="round"/><text x="179.5" y="257" text-anchor="middle" class="chip" fill="#E2E8F0">api</text><rect x="202" y="242" width="58" height="22" rx="11" fill="#1D2749" stroke="#4ADE80" stroke-width="1.6"/><path d="M209 253 l2.4499999999999997 2.4499999999999997 l4.8999999999999995 -5.25" stroke="#4ADE80" stroke-width="1.68" fill="none" stroke-linecap="round" stroke-linejoin="round"/><text x="237.5" y="257" text-anchor="middle" class="chip" fill="#E2E8F0">hybrid</text>
+      <rect x="104" y="274" width="70" height="58" rx="9" fill="#1D2749" stroke="#3A4775" stroke-width="1.6" />
+      <rect x="111" y="282" width="56" height="10" rx="3" fill="#3A4775"/>
+      <rect x="112" y="298" width="36" height="12" rx="6" fill="#3A4775"/>
+      <text x="139" y="325" text-anchor="middle" class="tiny" fill="#94A3B8">before</text>
+      <path d="M178 303l5 0" stroke="#A3AFC6" stroke-width="2" stroke-linecap="round"/><path d="M180.5 299.5l3.5 3.5l-3.5 3.5" stroke="#A3AFC6" stroke-width="2" fill="none" stroke-linecap="round"/>
+      <rect x="190" y="274" width="70" height="58" rx="9" fill="#1D2749" stroke="#3A4775" stroke-width="1.6" />
+      <rect x="197" y="282" width="56" height="10" rx="3" fill="#3A4775"/>
+      <rect x="197" y="298" width="36" height="12" rx="6" fill="#2F5BFF"/>
+      <path d="M239 304 l2.4499999999999997 2.4499999999999997 l4.8999999999999995 -5.25" stroke="#4ADE80" stroke-width="1.68" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="225" y="325" text-anchor="middle" class="tiny" fill="#94A3B8">after</text>
+      <g transform="translate(12 214) scale(1.2)">
+    <ellipse cx="38" cy="92" rx="22" ry="4" fill="#cbd5e1" opacity="0.5"/>
+    <rect x="24" y="8" width="3.5" height="12" rx="1.75" fill="#94a3b8"/>
+    <circle cx="25.7" cy="7" r="4.5" fill="#22c55e"/>
+    <rect x="6" y="20" width="64" height="46" rx="16" fill="#6366f1"/>
+    <rect x="14" y="29" width="48" height="28" rx="11" fill="#ffffff"/>
+    <g stroke="#1f2937" stroke-width="2.6" stroke-linecap="round" fill="none"><path d="M26 42q3.5 -6 7 0"/><path d="M43 42q3.5 -6 7 0"/></g>
+    <path d="M31 48q7 9 14 0z" fill="#1f2937"/>
+    <rect x="0" y="34" width="8" height="22" rx="4" fill="#4338ca"/>
+    <rect x="68" y="34" width="8" height="22" rx="4" fill="#4338ca"/>
+    <rect x="18" y="66" width="40" height="20" rx="8" fill="#4338ca"/>
+    <rect x="27" y="72" width="22" height="8" rx="4" fill="#2dd4bf"/>
+  </g>
+      <g transform="translate(266 214)">
+    <ellipse cx="40" cy="119" rx="28" ry="4" fill="#0A0F22"/>
+    <path d="M8 118 V94 Q8 72 40 72 Q72 72 72 94 V118 Z" fill="#FFB020" stroke="#0B1020" stroke-width="2"/>
+    <path d="M28 74 Q40 90 52 74" fill="none" stroke="#0B1020" stroke-width="2" stroke-linecap="round"/>
+    <path d="M36 84v14M44 84v14" stroke="#0B1020" stroke-width="1.6" stroke-linecap="round"/>
+    
+    <circle cx="40" cy="46" r="23" fill="#F2C3A0" stroke="#0B1020" stroke-width="2"/>
+    <path d="M17 44 Q16 20 40 20 Q65 20 63 44 Q60 32 48 30 Q42 36 30 33 Q21 35 17 44 Z" fill="#3B2A20"/>
+    <circle cx="32" cy="46" r="2.4" fill="#0B1020"/><circle cx="48" cy="46" r="2.4" fill="#0B1020"/>
+    <circle cx="26" cy="53" r="3" fill="#F59E9E" opacity="0.55"/><circle cx="54" cy="53" r="3" fill="#F59E9E" opacity="0.55"/>
+    <path d="M28 37l7 -2M45 35l7 2" stroke="#3B2A20" stroke-width="2.2" stroke-linecap="round"/>
+    <ellipse cx="40" cy="57" rx="3.2" ry="4" fill="#0B1020"/>
+  </g>
+      <g data-bubble="maxi">
+    <rect x="14" y="64" width="250" height="72" rx="14" fill="#F8FAFC" stroke="#F8FAFC" stroke-width="2"/>
+    <path d="M41 135 Q48 168 52 200 Q58 164 63 135" fill="#F8FAFC" stroke="#F8FAFC" stroke-width="2" stroke-linejoin="round"/>
+    <rect x="42" y="133" width="20" height="4" fill="#F8FAFC"/>
+    <rect x="15" y="76" width="3.5" height="48" rx="1.75" fill="#6366f1"/>
+    <text class="say" fill="#0B1020"><tspan x="28" y="87">ui, api and hybrid: all green.</tspan><tspan x="28" y="105">A screenshot before and after</tspan><tspan x="28" y="123">every step, too.</tspan></text>
+  </g>
+      <g data-bubble="dev">
+    <rect x="160" y="144" width="188" height="54" rx="14" fill="#F8FAFC" stroke="#F8FAFC" stroke-width="2"/>
+    <path d="M293 197 Q300 202 304 206 Q310 198 315 197" fill="#F8FAFC" stroke="#F8FAFC" stroke-width="2" stroke-linejoin="round"/>
+    <rect x="294" y="195" width="20" height="4" fill="#F8FAFC"/>
+    <rect x="161" y="156" width="3.5" height="30" rx="1.75" fill="#FFB020"/>
+    <text class="say" fill="#0B1020"><tspan x="174" y="167">So when it breaks,</tspan><tspan x="174" y="185">I see why.</tspan></text>
+  </g>
+    
+  </g>
+<g transform="translate(38 484)" data-panel="4">
+    <rect x="3" y="5" width="360" height="350" rx="20" fill="#0A0F22"/>
+    <rect x="0" y="0" width="360" height="350" rx="20" fill="#131B36" stroke="#AEB9D0" stroke-width="2.5"/>
+    <circle cx="34" cy="34" r="17" fill="#2F5BFF"/>
+    <text x="34" y="40" text-anchor="middle" class="num" fill="#FFFFFF">4</text>
+    <text x="60" y="33" class="ptitle" fill="#F8FAFC">Heal</text>
+    <text x="60" y="51" class="caption" fill="#A3AFC6">a locator drifts; the healer proposes a fix</text>
+    
+      <rect x="104" y="204" width="156" height="64" rx="9" fill="#1D2749" stroke="#3A4775" stroke-width="1.6" />
+      <text x="114" y="224" class="mono" fill="#FB7185" text-decoration="line-through">#buy-btn</text>
+      <path d="M176 220h10" stroke="#A3AFC6" stroke-width="2" stroke-linecap="round"/><path d="M183 216l4 4l-4 4" stroke="#A3AFC6" stroke-width="2" fill="none" stroke-linecap="round"/>
+      <text x="193" y="224" class="mono" fill="#94A3B8">score .94</text>
+      <text x="114" y="246" class="mono" fill="#4ADE80" font-weight="700">role=button</text>
+      <text x="114" y="260" class="mono" fill="#4ADE80">name="Buy now"</text>
+      <rect x="112" y="280" width="84" height="26" rx="13" fill="#FFB020" transform="rotate(4 154 293)"/>
+      <text x="154" y="297" text-anchor="middle" class="btn" fill="#0B1020" transform="rotate(4 154 293)">Buy now</text>
+      <g transform="translate(206 282)" stroke="#2F5BFF" stroke-width="2.4" fill="none" stroke-linecap="round">
+        <circle cx="6" cy="6" r="4"/><circle cx="6" cy="38" r="4"/><circle cx="34" cy="16" r="4"/>
+        <path d="M6 10v24M34 20q0 10 -24 16"/>
+      </g>
+      <text x="224" y="340" text-anchor="middle" class="tiny" fill="#94A3B8">branch</text>
+      <g transform="translate(12 214) scale(1.2)">
+    <ellipse cx="38" cy="92" rx="22" ry="4" fill="#cbd5e1" opacity="0.5"/>
+    <rect x="24" y="8" width="3.5" height="12" rx="1.75" fill="#94a3b8"/>
+    <circle cx="25.7" cy="7" r="4.5" fill="#f59e0b"/>
+    <rect x="6" y="20" width="64" height="46" rx="16" fill="#6366f1"/>
+    <rect x="14" y="29" width="48" height="28" rx="11" fill="#ffffff"/>
+    <g stroke="#1f2937" stroke-width="2.6" stroke-linecap="round" fill="none"><path d="M26 41h7"/><path d="M43 38h7"/></g>
+    <path d="M33 52q5 -3 10 0" stroke="#1f2937" stroke-width="2.4" stroke-linecap="round" fill="none"/>
+    <rect x="0" y="34" width="8" height="22" rx="4" fill="#4338ca"/>
+    <rect x="68" y="34" width="8" height="22" rx="4" fill="#4338ca"/>
+    <rect x="18" y="66" width="40" height="20" rx="8" fill="#4338ca"/>
+    <rect x="27" y="72" width="22" height="8" rx="4" fill="#2dd4bf"/>
+  </g>
+      <g transform="translate(266 214)">
+    <ellipse cx="40" cy="119" rx="28" ry="4" fill="#0A0F22"/>
+    <path d="M8 118 V94 Q8 72 40 72 Q72 72 72 94 V118 Z" fill="#FFB020" stroke="#0B1020" stroke-width="2"/>
+    <path d="M28 74 Q40 90 52 74" fill="none" stroke="#0B1020" stroke-width="2" stroke-linecap="round"/>
+    <path d="M36 84v14M44 84v14" stroke="#0B1020" stroke-width="1.6" stroke-linecap="round"/>
+    
+    <circle cx="40" cy="46" r="23" fill="#F2C3A0" stroke="#0B1020" stroke-width="2"/>
+    <path d="M17 44 Q16 20 40 20 Q65 20 63 44 Q60 32 48 30 Q42 36 30 33 Q21 35 17 44 Z" fill="#3B2A20"/>
+    <circle cx="32" cy="46" r="2.4" fill="#0B1020"/><circle cx="48" cy="46" r="2.4" fill="#0B1020"/>
+    <circle cx="26" cy="53" r="3" fill="#F59E9E" opacity="0.55"/><circle cx="54" cy="53" r="3" fill="#F59E9E" opacity="0.55"/>
+    
+    <path d="M34 56q6 5 12 0" stroke="#0B1020" stroke-width="2.4" stroke-linecap="round" fill="none"/>
+  </g>
+      <g data-bubble="maxi">
+    <rect x="14" y="64" width="250" height="72" rx="14" fill="#F8FAFC" stroke="#F8FAFC" stroke-width="2"/>
+    <path d="M41 135 Q48 168 52 200 Q58 164 63 135" fill="#F8FAFC" stroke="#F8FAFC" stroke-width="2" stroke-linejoin="round"/>
+    <rect x="42" y="133" width="20" height="4" fill="#F8FAFC"/>
+    <rect x="15" y="76" width="3.5" height="48" rx="1.75" fill="#6366f1"/>
+    <text class="say" fill="#0B1020"><tspan x="28" y="87">#buy-btn is gone. I found it</tspan><tspan x="28" y="105">by role and name, and wrote</tspan><tspan x="28" y="123">the smallest fix as a proposal.</tspan></text>
+  </g>
+      <g data-bubble="dev">
+    <rect x="160" y="144" width="188" height="54" rx="14" fill="#F8FAFC" stroke="#F8FAFC" stroke-width="2"/>
+    <path d="M293 197 Q300 202 304 206 Q310 198 315 197" fill="#F8FAFC" stroke="#F8FAFC" stroke-width="2" stroke-linejoin="round"/>
+    <rect x="294" y="195" width="20" height="4" fill="#F8FAFC"/>
+    <rect x="161" y="156" width="3.5" height="30" rx="1.75" fill="#FFB020"/>
+    <text class="say" fill="#0B1020"><tspan x="174" y="167">Accept it on a branch.</tspan><tspan x="174" y="185">I will open the PR.</tspan></text>
+  </g>
+    
+  </g>
+<g transform="translate(420 484)" data-panel="5">
+    <rect x="3" y="5" width="360" height="350" rx="20" fill="#0A0F22"/>
+    <rect x="0" y="0" width="360" height="350" rx="20" fill="#131B36" stroke="#AEB9D0" stroke-width="2.5"/>
+    <circle cx="34" cy="34" r="17" fill="#2F5BFF"/>
+    <text x="34" y="40" text-anchor="middle" class="num" fill="#FFFFFF">5</text>
+    <text x="60" y="33" class="ptitle" fill="#F8FAFC">Release</text>
+    <text x="60" y="51" class="caption" fill="#A3AFC6">gates pass; the evidence rides on the check</text>
+    
+      <rect x="104" y="204" width="156" height="76" rx="9" fill="#1D2749" stroke="#3A4775" stroke-width="1.6" />
+      <circle cx="122" cy="224" r="10" fill="#4ADE80"/><path d="M117 224 l2.625 2.625 l5.25 -5.625" stroke="#FFFFFF" stroke-width="1.7999999999999998" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="138" y="228" class="mono" fill="#E2E8F0" font-weight="700">release-gate</text>
+      <text x="114" y="250" class="mono" fill="#94A3B8">passed · 0 failed</text>
+      <g transform="translate(114 258)" stroke="#94A3B8" stroke-width="1.8" fill="none" stroke-linecap="round">
+        <path d="M9 4 v9 a3 3 0 0 1 -6 0 v-10 a4.5 4.5 0 0 1 9 0 v10"/>
+      </g>
+      <text x="134" y="272" class="mono" fill="#94A3B8">screenshots</text>
+      <g transform="translate(166 286)">
+        <path d="M22 0 Q36 12 34 36 H10 Q8 12 22 0 Z" fill="#1D2749" stroke="#F8FAFC" stroke-width="2"/>
+        <circle cx="22" cy="18" r="5" fill="#2F5BFF"/>
+        <path d="M10 26 L0 40 L10 36 Z M34 26 L44 40 L34 36 Z" fill="#2F5BFF"/>
+        <path d="M16 38 Q22 52 28 38" fill="#FFB020"/>
+      </g>
+      <g transform="translate(12 214) scale(1.2)">
+    <ellipse cx="38" cy="92" rx="22" ry="4" fill="#cbd5e1" opacity="0.5"/>
+    <rect x="24" y="8" width="3.5" height="12" rx="1.75" fill="#94a3b8"/>
+    <circle cx="25.7" cy="7" r="4.5" fill="#22c55e"/>
+    <rect x="6" y="20" width="64" height="46" rx="16" fill="#6366f1"/>
+    <rect x="14" y="29" width="48" height="28" rx="11" fill="#ffffff"/>
+    <g stroke="#1f2937" stroke-width="2.6" stroke-linecap="round" fill="none"><path d="M26 42q3.5 -6 7 0"/><path d="M43 42q3.5 -6 7 0"/></g>
+    <path d="M31 48q7 9 14 0z" fill="#1f2937"/>
+    <rect x="0" y="34" width="8" height="22" rx="4" fill="#4338ca"/>
+    <rect x="68" y="34" width="8" height="22" rx="4" fill="#4338ca"/>
+    <rect x="18" y="66" width="40" height="20" rx="8" fill="#4338ca"/>
+    <rect x="27" y="72" width="22" height="8" rx="4" fill="#2dd4bf"/>
+  </g>
+      <g transform="translate(266 214)">
+    <ellipse cx="40" cy="119" rx="28" ry="4" fill="#0A0F22"/>
+    <path d="M8 118 V94 Q8 72 40 72 Q72 72 72 94 V118 Z" fill="#FFB020" stroke="#0B1020" stroke-width="2"/>
+    <path d="M28 74 Q40 90 52 74" fill="none" stroke="#0B1020" stroke-width="2" stroke-linecap="round"/>
+    <path d="M36 84v14M44 84v14" stroke="#0B1020" stroke-width="1.6" stroke-linecap="round"/>
+    <path d="M16 100 Q2 96 3 80" stroke="#0B1020" stroke-width="13" stroke-linecap="round" fill="none"/><path d="M16 100 Q2 96 3 80" stroke="#FFB020" stroke-width="9" stroke-linecap="round" fill="none"/><rect x="-4" y="68" width="13" height="12" rx="4" fill="#F2C3A0" stroke="#0B1020" stroke-width="1.8"/><rect x="0" y="57" width="5.5" height="13" rx="2.75" fill="#F2C3A0" stroke="#0B1020" stroke-width="1.6"/>
+    <circle cx="40" cy="46" r="23" fill="#F2C3A0" stroke="#0B1020" stroke-width="2"/>
+    <path d="M17 44 Q16 20 40 20 Q65 20 63 44 Q60 32 48 30 Q42 36 30 33 Q21 35 17 44 Z" fill="#3B2A20"/>
+    <circle cx="32" cy="46" r="2.4" fill="#0B1020"/><circle cx="48" cy="46" r="2.4" fill="#0B1020"/>
+    <circle cx="26" cy="53" r="3" fill="#F59E9E" opacity="0.55"/><circle cx="54" cy="53" r="3" fill="#F59E9E" opacity="0.55"/>
+    
+    <path d="M33 54q7 9 14 0z" fill="#0B1020"/>
+  </g>
+      <g data-bubble="maxi">
+    <rect x="14" y="64" width="250" height="72" rx="14" fill="#F8FAFC" stroke="#F8FAFC" stroke-width="2"/>
+    <path d="M41 135 Q48 168 52 200 Q58 164 63 135" fill="#F8FAFC" stroke="#F8FAFC" stroke-width="2" stroke-linejoin="round"/>
+    <rect x="42" y="133" width="20" height="4" fill="#F8FAFC"/>
+    <rect x="15" y="76" width="3.5" height="48" rx="1.75" fill="#6366f1"/>
+    <text class="say" fill="#0B1020"><tspan x="28" y="87">release-gate passed. The check</tspan><tspan x="28" y="105">run has the summary, and every</tspan><tspan x="28" y="123">step has its screenshots.</tspan></text>
+  </g>
+      <g data-bubble="dev">
+    <rect x="160" y="144" width="188" height="54" rx="14" fill="#F8FAFC" stroke="#F8FAFC" stroke-width="2"/>
+    <path d="M293 197 Q300 202 304 206 Q310 198 315 197" fill="#F8FAFC" stroke="#F8FAFC" stroke-width="2" stroke-linejoin="round"/>
+    <rect x="294" y="195" width="20" height="4" fill="#F8FAFC"/>
+    <rect x="161" y="156" width="3.5" height="30" rx="1.75" fill="#FFB020"/>
+    <text class="say" fill="#0B1020"><tspan x="174" y="167">Ship it. This one</tspan><tspan x="174" y="185">I can defend.</tspan></text>
+  </g>
+    
+  </g>
+<g transform="translate(802 484)" data-panel="6">
+    <rect x="3" y="5" width="360" height="350" rx="20" fill="#0A0F22"/>
+    <rect x="0" y="0" width="360" height="350" rx="20" fill="#131B36" stroke="#AEB9D0" stroke-width="2.5"/>
+    <circle cx="34" cy="34" r="17" fill="#2F5BFF"/>
+    <text x="34" y="40" text-anchor="middle" class="num" fill="#FFFFFF">6</text>
+    <text x="60" y="33" class="ptitle" fill="#F8FAFC">Operate</text>
+    <text x="60" y="51" class="caption" fill="#A3AFC6">schedules, insights, flake measured</text>
+    
+      <rect x="104" y="204" width="70" height="62" rx="9" fill="#1D2749" stroke="#3A4775" stroke-width="1.6" />
+      <circle cx="139" cy="230" r="17" fill="none" stroke="#E2E8F0" stroke-width="2"/>
+      <path d="M139 230v-10M139 230l7 4" stroke="#E2E8F0" stroke-width="2.2" stroke-linecap="round"/>
+      <text x="139" y="260" text-anchor="middle" class="tiny" fill="#94A3B8">0 2 * * *</text>
+      <rect x="182" y="204" width="78" height="62" rx="9" fill="#1D2749" stroke="#3A4775" stroke-width="1.6" />
+      <text x="190" y="219" class="tiny" fill="#94A3B8">flaky %</text>
+      <rect x="191" y="232" width="8" height="26" rx="2" fill="#2F5BFF"/><rect x="203" y="238" width="8" height="20" rx="2" fill="#2F5BFF"/><rect x="215" y="243" width="8" height="15" rx="2" fill="#2F5BFF"/><rect x="227" y="249" width="8" height="9" rx="2" fill="#2F5BFF"/><rect x="239" y="253" width="8" height="5" rx="2" fill="#FFB020"/>
+      <rect x="104" y="276" width="156" height="56" rx="9" fill="#1D2749" stroke="#3A4775" stroke-width="1.6" />
+      <text x="114" y="296" class="mono" fill="#E2E8F0">insights</text>
+      <rect x="114" y="304" width="60" height="18" rx="9" fill="#FFB020"/><text x="144" y="317" text-anchor="middle" class="chip" fill="#0B1020">2 flaky</text>
+      <rect x="180" y="304" width="70" height="18" rx="9" fill="#F8FAFC"/><text x="215" y="317" text-anchor="middle" class="chip" fill="#131B36">1 fragile</text>
+      <g transform="translate(12 214) scale(1.2)">
+    <ellipse cx="38" cy="92" rx="22" ry="4" fill="#cbd5e1" opacity="0.5"/>
+    <rect x="24" y="8" width="3.5" height="12" rx="1.75" fill="#94a3b8"/>
+    <circle cx="25.7" cy="7" r="4.5" fill="#f59e0b"/>
+    <rect x="6" y="20" width="64" height="46" rx="16" fill="#6366f1"/>
+    <rect x="14" y="29" width="48" height="28" rx="11" fill="#ffffff"/>
+    <g stroke="#1f2937" stroke-width="2.6" stroke-linecap="round" fill="none"><path d="M26 40h7"/><path d="M43 40h7"/></g>
+    <path d="M32 49q6 7 12 0" stroke="#1f2937" stroke-width="2.4" stroke-linecap="round" fill="none"/>
+    <rect x="0" y="34" width="8" height="22" rx="4" fill="#4338ca"/>
+    <rect x="68" y="34" width="8" height="22" rx="4" fill="#4338ca"/>
+    <rect x="18" y="66" width="40" height="20" rx="8" fill="#4338ca"/>
+    <rect x="27" y="72" width="22" height="8" rx="4" fill="#2dd4bf"/>
+  </g>
+      <g transform="translate(266 214)">
+    <ellipse cx="40" cy="119" rx="28" ry="4" fill="#0A0F22"/>
+    <path d="M8 118 V94 Q8 72 40 72 Q72 72 72 94 V118 Z" fill="#FFB020" stroke="#0B1020" stroke-width="2"/>
+    <path d="M28 74 Q40 90 52 74" fill="none" stroke="#0B1020" stroke-width="2" stroke-linecap="round"/>
+    <path d="M36 84v14M44 84v14" stroke="#0B1020" stroke-width="1.6" stroke-linecap="round"/>
+    
+    <circle cx="40" cy="46" r="23" fill="#F2C3A0" stroke="#0B1020" stroke-width="2"/>
+    <path d="M17 44 Q16 20 40 20 Q65 20 63 44 Q60 32 48 30 Q42 36 30 33 Q21 35 17 44 Z" fill="#3B2A20"/>
+    <circle cx="32" cy="46" r="2.4" fill="#0B1020"/><circle cx="48" cy="46" r="2.4" fill="#0B1020"/>
+    <circle cx="26" cy="53" r="3" fill="#F59E9E" opacity="0.55"/><circle cx="54" cy="53" r="3" fill="#F59E9E" opacity="0.55"/>
+    <path d="M28 38h7M45 36l7 1" stroke="#3B2A20" stroke-width="2.2" stroke-linecap="round"/>
+    <path d="M34 57q7 3 12 -3" stroke="#0B1020" stroke-width="2.4" stroke-linecap="round" fill="none"/>
+  </g>
+      <g data-bubble="maxi">
+    <rect x="14" y="64" width="250" height="72" rx="14" fill="#F8FAFC" stroke="#F8FAFC" stroke-width="2"/>
+    <path d="M41 135 Q48 168 52 200 Q58 164 63 135" fill="#F8FAFC" stroke="#F8FAFC" stroke-width="2" stroke-linejoin="round"/>
+    <rect x="42" y="133" width="20" height="4" fill="#F8FAFC"/>
+    <rect x="15" y="76" width="3.5" height="48" rx="1.75" fill="#6366f1"/>
+    <text class="say" fill="#0B1020"><tspan x="28" y="87">Nightly ran at 02:00. Two flaky</tspan><tspan x="28" y="105">scenarios, one fragile locator.</tspan><tspan x="28" y="123">Numbers, not opinions.</tspan></text>
+  </g>
+      <g data-bubble="dev">
+    <rect x="160" y="144" width="188" height="54" rx="14" fill="#F8FAFC" stroke="#F8FAFC" stroke-width="2"/>
+    <path d="M293 197 Q300 202 304 206 Q310 198 315 197" fill="#F8FAFC" stroke="#F8FAFC" stroke-width="2" stroke-linejoin="round"/>
+    <rect x="294" y="195" width="20" height="4" fill="#F8FAFC"/>
+    <rect x="161" y="156" width="3.5" height="30" rx="1.75" fill="#FFB020"/>
+    <text class="say" fill="#0B1020"><tspan x="174" y="167">Good. Put them in</tspan><tspan x="174" y="185">the next plan.</tspan></text>
+  </g>
+    
+  </g>
+  <circle cx="409" cy="146" r="10" fill="#FFB020"/><path d="M406.5 141.5 l5 4.5 l-5 4.5" stroke="#0B1020" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="791" cy="146" r="10" fill="#FFB020"/><path d="M788.5 141.5 l5 4.5 l-5 4.5" stroke="#0B1020" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="409" cy="518" r="10" fill="#FFB020"/><path d="M406.5 513.5 l5 4.5 l-5 4.5" stroke="#0B1020" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="791" cy="518" r="10" fill="#FFB020"/><path d="M788.5 513.5 l5 4.5 l-5 4.5" stroke="#0B1020" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

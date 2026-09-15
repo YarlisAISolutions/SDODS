@@ -2,6 +2,8 @@
 
 This document explains how SDODS is put together, why, and what each package owns. It is the reference for contributors; the user-facing guides live on the documentation site.
 
+The same system drawn as C4 diagrams (context, containers, and the components of the runtime and the server) is on the [architecture page](https://docs.sdods.com/docs/architecture/) of the docs and in the [README](../README.md#architecture-c4).
+
 ## 1. Principles
 
 1. **CLI-first.** Every capability is a `sdods` command that works with no server and no database. The web UI, the MCP server and the scheduler spawn those commands and stream their output. CI therefore needs nothing but Node and the repo.
