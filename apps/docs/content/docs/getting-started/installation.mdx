@@ -186,6 +186,31 @@ echo "deb [signed-by=/usr/share/keyrings/sdods-archive-keyring.gpg] https://sdod
 sudo apt update && sudo apt install sdods
 ```
 
+### Keeping the desktop app current
+
+The desktop app checks for a new release once its dashboard is up and every six hours after that.
+It downloads the update in the background, then asks: **SDODS x.y.z is ready — Restart to update**.
+Choose **Later** and the update waits: nothing installs when you quit, and the app asks again the
+next time it starts or when you pick **SDODS ▸ Check for Updates…**. Restarting stops the local
+server first, so a run in progress ends there; your workspace, database and results are untouched.
+
+Who updates the app depends on how you installed it:
+
+| Installed with                   | Updates                                                       |
+| -------------------------------- | ------------------------------------------------------------- |
+| the Windows installer, or winget | in the app                                                    |
+| the Linux AppImage               | in the app                                                    |
+| the macOS `.dmg`                 | in the app once builds are signed; until then, a new download |
+| the apt repository               | `sudo apt update && sudo apt upgrade`                         |
+| a downloaded `.deb`              | a new download, or add the repository above                   |
+| Scoop                            | `scoop update sdods`                                          |
+
+On installs the app does not update, **Check for Updates…** says which of these applies instead.
+To stop the background checks, untick **SDODS ▸ Check for Updates Automatically**; the manual check
+still works. To switch the updater off entirely, for example on a machine whose software is
+managed centrally, launch the app with `SDODS_DESKTOP_NO_UPDATE=1` set. What each check found is
+written to `desktop.log` (**SDODS ▸ Open Logs Folder**).
+
 <RepoOnly>
 ### From source
 

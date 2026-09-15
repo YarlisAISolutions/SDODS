@@ -1,11 +1,12 @@
 /**
  * Application menu. Deliberately small: the product UI lives in the served SPA, so this covers
  * only the things the web app cannot do for itself — reaching the workspace on disk, revealing the
- * credentials the app generated, and getting at logs when something goes wrong.
+ * credentials the app generated, getting at logs when something goes wrong, and updating the app.
  */
 import { app, Menu, clipboard, dialog, shell, type MenuItemConstructorOptions } from 'electron';
 import { logsDir } from './paths.js';
 import type { Credentials } from './auth.js';
+import type { UpdateController } from './updater.js';
 
 // A copy of SPONSOR_ENABLED in @sdods/contracts/sponsor, which the desktop app does not bundle;
 // tests/sponsor.test.ts keeps the two in step.
@@ -15,10 +16,28 @@ export interface MenuContext {
   workspace: string;
   serverUrl: string;
   credentials: () => Credentials | null;
+  updates?: UpdateController;
 }
 
 export function buildMenu(ctx: MenuContext): void {
   const isMac = process.platform === 'darwin';
+  const updates = ctx.updates;
+
+  // "Check for Updates…" is always there, and explains itself on an install that cannot update
+  // (a .deb, an unsigned Mac build). The automatic toggle is only offered where it would do anything.
+  const updateItems: MenuItemConstructorOptions[] = updates
+    ? [
+        { type: 'separator' },
+        { label: 'Check for Updates…', click: () => void updates.checkNow() },
+        {
+          label: 'Check for Updates Automatically',
+          type: 'checkbox',
+          checked: updates.gate.active && updates.autoCheck(),
+          enabled: updates.gate.active,
+          click: (item) => updates.setAutoCheck(item.checked),
+        },
+      ]
+    : [];
 
   const sdodsMenu: MenuItemConstructorOptions = {
     label: 'SDODS',
@@ -60,6 +79,7 @@ export function buildMenu(ctx: MenuContext): void {
         label: 'Open Logs Folder',
         click: () => void shell.openPath(logsDir()),
       },
+      ...updateItems,
       ...(SPONSOR_ENABLED
         ? ([
             { type: 'separator' },

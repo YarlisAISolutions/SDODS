@@ -21,7 +21,7 @@ const STEPS: Array<[string, string]> = [
   ],
   [
     'Stay current',
-    'When a newer SDODS is published, the app offers a one-click update and restarts itself. Your workspace and results are untouched.',
+    'The app checks for new releases, downloads them in the background and asks before it restarts. The Linux .deb updates through apt, and macOS joins once the app is signed. Your workspace and results are untouched.',
   ],
 ];
 

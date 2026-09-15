@@ -125,7 +125,7 @@ jobs:
       # (`lib/node_modules/npm`). Every Windows installer for 0.1.0 therefore shipped without npm
       # and could not run its own first-run install, while this step reported "ok". Checking only
       # the thing that broke last time is how the next hollow artifact gets published.
-      - name: Verify each app bundles its Node runtime and npm
+      - name: Verify each app bundles its Node runtime, npm and update feed
         working-directory: apps/desktop
         shell: bash
         run: |
@@ -150,7 +150,18 @@ jobs:
               echo "     first-run cannot install @sdods/cli without it"
               exit 1
             fi
-            echo "ok   $dir (node + npm)"
+            # electron-updater reads this feed. It once named the private source repository,
+            # where every release asset 404s, so an installed app could never have updated.
+            case "$dir" in
+              *mac*) feed="$dir"SDODS.app/Contents/Resources/app-update.yml ;;
+              *)     feed="$dir"resources/app-update.yml ;;
+            esac
+            if ! grep -q '^repo: sdods-releases$' "$feed" 2>/dev/null; then
+              echo "FAIL $dir has no app-update.yml pointing at sdods-releases ($feed)"
+              cat "$feed" 2>/dev/null || true
+              exit 1
+            fi
+            echo "ok   $dir (node + npm + update feed)"
             found=$((found + 1))
           done
           [ "$found" -gt 0 ] || { echo 'no packaged app directories found'; exit 1; }

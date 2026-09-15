@@ -28,6 +28,7 @@ import { authenticate, loadCredentials } from './auth.js';
 import { buildMenu } from './menu.js';
 import { log } from './log.js';
 import { ensureChromium, chromiumPresent } from './browsers.js';
+import { createUpdater, SERVER_STOP_TIMEOUT_MS, type UpdateController } from './updater.js';
 
 // Keep the userData path free of spaces and out of the roaming profile's way. Must run before
 // `app.whenReady()`, because Electron resolves userData on first access.
@@ -36,6 +37,7 @@ app.setName('SDODS');
 let win: BrowserWindow | null = null;
 let server: ServerHandle | null = null;
 let starting = false;
+let updates: UpdateController | null = null;
 
 /**
  * Teardown that does not depend on the app being asked politely.
@@ -215,9 +217,14 @@ async function startup(config: DesktopConfig) {
       workspace: config.workspace,
       serverUrl: server.url,
       credentials: () => loadCredentials(),
+      updates: updates ?? undefined,
     });
     await win?.loadURL(server.url);
     log.info('window: loaded the dashboard');
+
+    // After the server is healthy, never before: a first launch is busy installing, and an update
+    // prompt that restarts the app mid-bootstrap would only make it start over.
+    updates?.start();
 
     // Only now, with the dashboard on screen, fetch the browser engine. SDODS launches a browser
     // for every layer -- api runs included -- so nothing can run until this lands; doing it before
@@ -258,6 +265,15 @@ if (!app.requestSingleInstanceLock()) {
     const config = loadOrCreateConfig();
     reapOrphanServer();
 
+    updates = createUpdater({
+      stopServer: stopServerAndWait,
+      autoCheck: () => config.autoUpdate !== false,
+      setAutoCheck: (on) => {
+        config.autoUpdate = on;
+        writeConfig(config);
+      },
+    });
+
     ipcMain.handle('bootstrap:retry', () => startup(config));
     ipcMain.handle('app:info', () => ({
       workspace: config.workspace,
@@ -280,9 +296,33 @@ if (!app.requestSingleInstanceLock()) {
 
 /** Stop the server tree whenever the app goes away, however it goes away. */
 function shutdown() {
-  server?.stop();
+  updates?.dispose();
+  if (!server) return;
+  void server.stop();
   server = null;
   clearPidfile();
+}
+
+/**
+ * The same teardown, for a caller that can wait for it: restarting into an update. The installer
+ * replaces the directory the server's node binary runs from (on Windows a running .exe cannot be
+ * overwritten), and a relaunched app would otherwise find port 4444 still held and move to another.
+ * If the child outlives the timeout the pidfile stays, so the relaunch reaps it like any orphan.
+ */
+async function stopServerAndWait() {
+  const running = server;
+  server = null;
+  if (!running) return;
+  if (await running.stop(SERVER_STOP_TIMEOUT_MS)) {
+    clearPidfile();
+    log.info('server: stopped');
+  } else {
+    log.warn(
+      'server: still running after',
+      String(SERVER_STOP_TIMEOUT_MS),
+      'ms, leaving the pidfile',
+    );
+  }
 }
 app.on('before-quit', shutdown);
 app.on('will-quit', shutdown);
