@@ -1,5 +1,14 @@
 # @sdods/mcp
 
+## 0.9.0
+
+### Patch Changes
+
+- Updated dependencies [47ac9e2]
+- Updated dependencies [dd24cdb]
+- Updated dependencies [3fb1773]
+  - @sdods/contracts@0.9.0
+
 ## 0.8.0
 
 ### Minor Changes
