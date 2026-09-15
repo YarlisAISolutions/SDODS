@@ -89,7 +89,7 @@ export const INSTALL_CHANNELS: Channel[] = [
     os: ['macos', 'linux', 'windows'],
     kind: 'cli',
     command: 'npm install -g @sdods/cli',
-    note: 'Needs Node 22+. Currently @sdods/cli@0.2.2 — the same package the installer script fetches.',
+    note: 'Needs Node 22+. Currently @sdods/cli@0.9.0 — the same package the installer script fetches.',
     live: true,
   },
   {
@@ -106,9 +106,9 @@ export const INSTALL_CHANNELS: Channel[] = [
     label: 'Linux packages',
     os: ['linux'],
     kind: 'desktop',
-    command: 'sudo apt install ./SDODS-linux-amd64.deb',
+    command: 'sudo apt install ./SDODS-0.1.1-linux-amd64.deb',
     note: 'The desktop app as a .deb, downloaded from the releases page first.',
-    live: false,
+    live: true,
   },
   {
     id: 'scoop',
@@ -118,7 +118,7 @@ export const INSTALL_CHANNELS: Channel[] = [
     command: 'scoop bucket add sdods https://github.com/siri1410/scoop-sdods',
     note: 'Then: scoop install sdods — the desktop app, updated by scoop update.',
     under: 'script-windows',
-    live: false,
+    live: true,
   },
   {
     id: 'winget',

@@ -22,6 +22,7 @@ on:
       - 'firebase.json'
       - '.firebaserc'
       - '.github/workflows/www.yml'
+      - 'scripts/preview-quota-gate.sh'
   workflow_dispatch:
 
 permissions:
@@ -76,12 +77,33 @@ jobs:
         with:
           name: www-site
           path: apps/www/out
-      - name: Deploy to Firebase Hosting
+      - name: Deploy to Firebase Hosting (live)
+        if: github.event_name != 'pull_request'
         uses: FirebaseExtended/action-hosting-deploy@v0
         with:
           repoToken: ${{ secrets.GITHUB_TOKEN }}
           firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_AUTOMAX_DOCS }}
           projectId: automax-docs
           target: www
-          channelId: ${{ github.event_name == 'pull_request' && format('pr-{0}', github.event.number) || 'live' }}
-          expires: 7d
+          channelId: live
+      # previews.yml deletes the channel when the PR closes; `expires` is the backstop. The quota
+      # gate below decides whether a failure here fails the job.
+      - name: Deploy to Firebase Hosting (preview)
+        id: preview
+        if: github.event_name == 'pull_request'
+        continue-on-error: true
+        uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_AUTOMAX_DOCS }}
+          projectId: automax-docs
+          target: www
+          channelId: pr-${{ github.event.number }}
+          expires: 3d
+      - name: Tolerate a full channel quota, and nothing else
+        if: steps.preview.outcome == 'failure'
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_AUTOMAX_DOCS }}
+          SITE: sdods-automax
+          CHANNEL: pr-${{ github.event.number }}
+        run: bash scripts/preview-quota-gate.sh
