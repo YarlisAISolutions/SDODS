@@ -182,6 +182,10 @@ jobs:
       - name: Install bun
         # The image ships Node and the browsers; npm fetches the bun binary.
         run: npm install -g bun@${{ env.BUN_VERSION }}
+      - name: Install build tools
+        # better-sqlite3 has no prebuilt binary for the image's Node, so it compiles on install; the
+        # Playwright image ships Python but not make or a C++ compiler.
+        run: apt-get update -qq && apt-get install -y --no-install-recommends build-essential
       - run: bun install --frozen-lockfile
       - name: UI layer · @regression (live)
         run: >
