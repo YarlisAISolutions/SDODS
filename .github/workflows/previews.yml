@@ -1,0 +1,75 @@
+name: previews
+
+# Deletes a pull request's Firebase Hosting preview channels when it closes.
+#
+# docs.yml and www.yml deploy every same-repository PR to a `pr-<n>` channel on their site. A site
+# holds a limited number of channels, and `expires` only removes one days later: on 2026-09-15
+# automax-docs held 52, 49 of them for PRs already merged or closed, and every new preview failed
+# with "429 ... channel quota reached" until they were deleted by hand. Removing the channel the
+# moment its PR closes keeps the count at the number of open PRs.
+#
+# One workflow for both sites rather than a `closed` job in each: those two are path-filtered, so a
+# PR that stopped touching apps/docs would never run the docs cleanup, and adding `closed` to their
+# `pull_request` types would also mean guarding every build and deploy job against it. Here there
+# is no path filter, and a channel that was never created is not an error.
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: read
+
+jobs:
+  delete:
+    name: delete pr-${{ github.event.number }} · ${{ matrix.site }}
+    # Fork PRs never get a preview (the deploy jobs skip them) and cannot read the secret.
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        # The hosting sites behind the `docs` and `www` targets in .firebaserc.
+        site: [automax-docs, sdods-automax]
+    steps:
+      # firebase-tools refuses to run without a firebase.json; nothing else is needed.
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.pull_request.base.ref }}
+          sparse-checkout: |
+            firebase.json
+            .firebaserc
+          sparse-checkout-cone-mode: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Delete the channel
+        env:
+          # The same service account the deploy jobs use.
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_AUTOMAX_DOCS }}
+          CHANNEL: pr-${{ github.event.number }}
+          SITE: ${{ matrix.site }}
+        run: |
+          creds="$RUNNER_TEMP/firebase-service-account.json"
+          ( umask 077 && printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$creds" )
+          export GOOGLE_APPLICATION_CREDENTIALS="$creds"
+
+          set +e
+          out=$(npx -y firebase-tools@latest hosting:channel:delete "$CHANNEL" \
+            --site "$SITE" --project automax-docs --force --non-interactive 2>&1)
+          status=$?
+          set -e
+          rm -f "$creds"
+          printf '%s\n' "$out"
+
+          if [ "$status" -eq 0 ]; then
+            echo "deleted $CHANNEL from $SITE"
+          # No channel: the PR never deployed to this site (it did not touch it), or the channel
+          # already expired. Only that is tolerated -- a bare `|| true` would also hide a revoked key.
+          elif printf '%s' "$out" | grep -q 'HTTP Error: 404'; then
+            echo "::notice::$SITE has no $CHANNEL channel; nothing to delete"
+          else
+            echo "::error::could not delete $CHANNEL from $SITE"
+            exit "$status"
+          fi

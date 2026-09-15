@@ -16,22 +16,41 @@ The same system drawn as C4 diagrams (context, containers, and the components of
 
 ## 2. Package graph
 
+Each package and what it depends on (its `tsconfig.json` references):
+
 ```
-contracts → core → db → mcp → integrations → agents → server → web
-                         cli ─┘ (depends on all, imports lazily)
+contracts      nothing in the repo
+db             contracts
+core           contracts, db (imported lazily)
+mcp            contracts
+integrations   contracts
+agents         contracts, mcp
+server         contracts, core, db, mcp
+cli            all of the above, each command importing its implementation lazily
+web            contracts only; built on its own, and server serves the output
+maxi           mcp
 ```
 
 | Package | Owns | Never imports |
 |---|---|---|
 | `@sdods/contracts` | Zod schemas for project/env yaml, ids (fingerprint, uuid v7, Playwright project naming), attachment naming, scopes/roles, DTO types | anything else in the repo |
-| `@sdods/core` | config precedence, `ProjectRegistry`, `buildRunnerConfig`, merged fixtures, step libraries, `DataProvider` + `UserPool`, `ScreenshotNarrator`, `Healer`, recorder/HAR/auth capture, lint, analyze, reporters, insights math | `db` statically (lazy `import('@sdods/db')` in the db fixture and loader) |
-| `@sdods/db` | Kysely `Database` interface, driver factory (`DB_DRIVER`), `col()` dialect helper, migrations, repos, NDJSON and PW-json ingest, `db switch` | server, web |
-| `@sdods/mcp` | `ToolRegistry` (one definition → MCP server, Agent SDK tools, OpenAI functions), tools, resources, prompts, stdio and HTTP transports | agents |
+| `@sdods/core` | config precedence, `ProjectRegistry`, `buildRunnerConfig`, merged fixtures, step libraries, `DataProvider` + `UserPool`, `ScreenshotNarrator`, `Healer`, recorder/HAR/auth capture, lint, analyze, reporters | `db` statically (lazy `import('@sdods/db')` in the db fixture and loader) |
+| `@sdods/db` | Kysely `Database` interface, driver factory (`DB_DRIVER`), `col()` dialect helper, migrations, repos, NDJSON and PW-json ingest, insights math (flakiness, locator fragility), `db switch` | server, web |
+| `@sdods/mcp` | `ToolRegistry` (one definition → MCP server, Agent SDK tools, OpenAI functions), tools, resources, prompts, proposals (`ProposalStore`, the only write path for agents and MCP write tools), stdio and HTTP transports | agents |
 | `@sdods/integrations` | `IntegrationProvider`, GitHub and Jira providers, issue dedupe | server |
-| `@sdods/agents` | `LlmAdapter`, Claude/OpenAI-compatible/Fake adapters, roles, proposals, jobs | server |
+| `@sdods/agents` | `LlmAdapter`, Claude, Claude Code, Codex, OpenAI-compatible, Ollama and Fake adapters, roles, jobs (which record the proposals a role wrote through `@sdods/mcp`) | server |
 | `@sdods/server` | Fastify app: REST, SSE, `/mcp`, sessions, roles, API tokens, run manager, scheduler, static reports and trace viewer | web (serves its build output only) |
-| `@sdods/web` | React app | node-only packages (type-only imports of server schemas) |
+| `@sdods/web` | React app | anything but `@sdods/contracts` (its API types mirror the server's zod schemas by hand) |
 | `@sdods/cli` | commander program; each command imports its implementation lazily | — |
+
+The private packages behind the websites sit outside that graph:
+
+| Package | Owns | Never imports |
+|---|---|---|
+| `@sdods/maxi` | Maxi, the docs assistant: the streaming chat service, its corpus, tools and limits | anything but `@sdods/mcp` |
+| `@sdods/qa-archive` | the sdods.com/questions archive as data: threads, answers, people, tags | anything else in the repo |
+| `@sdods/roadmap` | the roadmap as data: delivered chapters, checkpoints, history | anything else in the repo |
+| `@sdods/site-kit` | shared site components: the agent install widget, the support prompt, the Maxi widget | anything else in the repo |
 
 TypeScript project references enforce the graph; a cycle fails `tsc -b`.
 

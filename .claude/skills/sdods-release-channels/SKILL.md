@@ -35,6 +35,10 @@ bun run channels:sync
 bun run channels:sync -- --check   # non-zero if the committed state has drifted
 ```
 
+Nobody has to remember to run it: `.github/workflows/channels.yml` runs the sync after every
+`release` run on `main`, daily, and on demand, and opens or refreshes the `chore/channels-sync` PR
+when anything drifted. Merge that PR; do not edit its diff.
+
 Every SHA-256 in `packaging/` is computed from bytes the script downloaded. Do not transcribe one
 from a release page — it is the single field where being wrong means the package manager refuses
 to install at all, after every check here has passed.
@@ -55,10 +59,19 @@ desktop-v* tag → workflow drafts → a PERSON publishes the release      →  
 
 ### npm — automatic
 
-`release.yml` runs changesets on every push to `main`. `scripts/publish-npm.sh` prints a
-`New tag: <pkg>@<version>` line per package, which is the **only** signal changesets/action reads
-to set its `published` output. Do not remove it: without it a successful publish reads as "nothing
-published" and the image job below never runs. That was the actual bug.
+`release.yml` runs `changesets/action@v2` on every push to `main`. For each package it publishes,
+`scripts/publish-npm.sh` appends one line to the file named by `$CHANGESETS_OUTPUT`:
+
+```
+{"type":"git-tag","tag":"@sdods/cli@0.9.0","packageName":"@sdods/cli"}
+```
+
+That file is the **only** signal v2 reads to set `published` and `published-packages` and to create
+the GitHub releases and tags. Do not remove it: without it a successful publish reads as "nothing
+published" and the image job below never runs. That was the actual bug under v1, which scanned
+stdout for the `New tag: <pkg>@<version>` lines the script still prints for people reading the log.
+`tests/publish-npm.test.ts` runs the script against the action's own reader, and
+`bash scripts/publish-npm.sh --dry-run` shows the file without publishing anything.
 
 ### Docker — automatic, after npm
 

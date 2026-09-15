@@ -1,0 +1,92 @@
+name: channels
+
+# Keeps sdods.com/install honest without a person remembering to.
+#
+# `bun run channels:sync` probes every distribution channel against the registry that serves it
+# and rewrites apps/www/lib/install-channels.ts and the packaging/ manifests from what it finds.
+# The registries move on their own schedules -- npm and GHCR after `release`, the desktop release
+# when a person publishes it in sdods-releases, the tap and bucket when someone pushes them -- and
+# nothing here changes when they do. So this runs after every release and once a day, and when the
+# committed files no longer match, it opens (or refreshes) one pull request with the difference.
+# No drift, no PR.
+#
+# Not a check in ci.yml: drift between a release and the sync PR merging is expected, and it says
+# nothing about the change under review.
+#
+# The probes read siri1410/homebrew-sdods, scoop-sdods and sdods-releases through the contents and
+# releases APIs. All three are public, so the workflow's own token can read them; it is passed only
+# because anonymous API calls from shared runner addresses hit the rate limit.
+#
+# A PR opened with GITHUB_TOKEN does not trigger other workflows, so ci/www do not run on it until
+# someone pushes to the branch or closes and reopens it. The diff is data, not code.
+
+on:
+  workflow_run:
+    workflows: [release]
+    types: [completed]
+  schedule:
+    - cron: '41 11 * * *' # daily, off the hour
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: channels
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    name: sync · install channels
+    # After a release only when it ran on main; a failed release can still have published a
+    # package, so the conclusion is not a filter.
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.head_branch == 'main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.4.2'
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - run: bun install --frozen-lockfile
+
+      - name: Probe the registries and rewrite what drifted
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: bun run channels:sync
+
+      # The same test ci.yml runs, so a rewrite that breaks the page's invariants fails here rather
+      # than as a PR nobody should merge.
+      - name: Check the rewritten manifest
+        run: bunx vitest run tests/install-channels.test.ts
+
+      - name: Open the pull request
+        uses: peter-evans/create-pull-request@v8
+        with:
+          branch: chore/channels-sync
+          base: main
+          title: 'chore(www): sync install channels with the registries'
+          commit-message: |
+            chore(www): sync install channels with the registries
+
+            Written by `bun run channels:sync` in the channels workflow.
+          add-paths: |
+            apps/www/lib/install-channels.ts
+            packaging/**
+          body: |
+            Opened by the `channels` workflow (${{ github.event_name }}).
+
+            `bun run channels:sync` probed every distribution channel and the committed state no
+            longer matches what the registries serve. This PR is its output, unedited: the
+            `live:` flags, the version-bearing commands in `apps/www/lib/install-channels.ts`, and
+            the rendered `packaging/` manifests with SHA-256s computed from downloaded bytes.
+
+            Merging it redeploys sdods.com/install through the `www` workflow. The run log lists
+            which channels are live and which still need a person.
+          delete-branch: true
