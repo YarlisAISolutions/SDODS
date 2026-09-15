@@ -6,6 +6,8 @@ import { tokenFileFor } from '../auth/capture.js';
 import type { AuthStrategy, PoolUserLike } from '../auth/index.js';
 import type { ResolvedConfig } from '../config/resolve.js';
 import { renderStrict } from '../api/template.js';
+import { scenarioLeaseClock } from '../data/user-pool.js';
+import type { LeasedUser, UserPool } from '../data/types.js';
 import { SdodsError } from '../errors.js';
 import { Logger } from '../logger.js';
 
@@ -45,10 +47,10 @@ Given(
 Given(
   'I use a leased user with role {string}',
   async (
-    { userPool, authCache, auth, sdods, apiContext, page, context, browser, $testInfo },
+    { userPool, authCache, auth, sdods, apiContext, page, context, browser, config, $testInfo },
     role: string,
   ) => {
-    const user = await userPool.lease(role, $testInfo.parallelIndex);
+    const user = await leaseInScenario(userPool, config, role, $testInfo);
     apiContext.vars.setAll({
       username: user.username,
       password: user.password,
@@ -63,11 +65,11 @@ Given(
 
 Given(
   'I use the user {string} from the pool',
-  async ({ userPool, apiContext, $testInfo }, username: string) => {
+  async ({ userPool, apiContext, config, $testInfo }, username: string) => {
     const status = await userPool.status();
     const entry = status.find((u) => u.username === username);
     if (!entry) throw new SdodsError('DATASET_ROW_NOT_FOUND', `No pool user named "${username}".`);
-    const user = await userPool.lease(entry.role, $testInfo.parallelIndex);
+    const user = await leaseInScenario(userPool, config, entry.role, $testInfo);
     apiContext.vars.setAll({
       username: user.username,
       password: user.password,
@@ -117,7 +119,7 @@ Given(
 Given(
   'I use a leased user with role {string} for API calls',
   async ({ userPool, apiContext, auth, config, $testInfo }, role: string) => {
-    const user = await userPool.lease(role, $testInfo.parallelIndex);
+    const user = await leaseInScenario(userPool, config, role, $testInfo);
     apiContext.vars.setAll({
       username: user.username,
       password: user.password,
@@ -177,6 +179,22 @@ Given(
 
 /** The user the scenario leased, so the explicit token step authenticates as that same account. */
 const LEASED = new WeakMap<object, PoolUserLike>();
+
+/**
+ * Lease for this scenario. With `leaseScope: scenario` the wait for a free account is added to the
+ * scenario's timeout, and `$sdodsScenarioLeases` releases the account when the scenario ends.
+ */
+async function leaseInScenario(
+  userPool: UserPool,
+  config: ResolvedConfig,
+  role: string,
+  testInfo: { parallelIndex: number; timeout: number; setTimeout(ms: number): void },
+): Promise<LeasedUser> {
+  const clock = scenarioLeaseClock(config.project.data.userPool, testInfo);
+  const user = await userPool.lease(role, testInfo.parallelIndex);
+  clock.settle();
+  return user;
+}
 
 function apiTokenMode(
   config: ResolvedConfig,

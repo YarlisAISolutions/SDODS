@@ -29,7 +29,19 @@ export type DataSource = z.infer<typeof DataSourceSchema>;
 export const UserPoolSchema = z.object({
   dataset: z.string(),
   roleColumn: z.string().default('role'),
-  leaseStore: z.enum(['file', 'db']).default('file'),
+  /**
+   * Where leases are recorded. Only `file` exists: O_EXCL lock files under `.sdods/leases`, which
+   * every worker on one machine sees. `db` was accepted here for a long time and silently ignored,
+   * so a sharded run that believed its machines shared leases did not (#153).
+   */
+  leaseStore: z
+    .enum(['file'], {
+      error: (issue) =>
+        issue.input === 'db'
+          ? "leaseStore 'db' was never implemented; use 'file' (see #153)"
+          : `leaseStore must be 'file' (got ${JSON.stringify(issue.input)})`,
+    })
+    .default('file'),
   leaseTtlMs: z
     .number()
     .int()
@@ -54,9 +66,29 @@ export const UserPoolSchema = z.object({
    * explicit exclusive lease even in a shared pool.
    */
   mode: z.enum(['exclusive', 'shared']).default('exclusive'),
-  /** How long to wait for a free account before failing. Was hard-coded at 30s. */
-  waitMs: z.number().int().positive().default(30_000),
+  /**
+   * How long to wait for a free account before failing. Unset, it is 30s with `leaseScope: worker`.
+   * With `leaseScope: scenario` waiting is the expected path rather than a symptom, so unset it is
+   * `leaseTtlMs` — the longest a live scenario may legitimately hold an account — and the time
+   * spent waiting is added to the scenario's timeout instead of eating into it.
+   */
+  waitMs: z.number().int().positive().optional(),
+  /**
+   * How long an exclusive lease is held.
+   *
+   * `worker` (default) — from the first scenario that asks until the Playwright worker exits. A
+   * worker keeps one account across its scenarios, which suits per-worker setup, but a role with
+   * fewer accounts than `--workers` starves every other worker: each waits `waitMs` and fails with
+   * USER_POOL_EXHAUSTED (#153).
+   *
+   * `scenario` — released when the scenario ends, including leases taken by the
+   * `I use a leased user …` steps. One account then serialises the scenarios that need it instead
+   * of starving whole workers; waiters queue in arrival order.
+   */
+  leaseScope: z.enum(['scenario', 'worker']).default('worker'),
 });
+
+export type UserPoolConfig = z.infer<typeof UserPoolSchema>;
 
 export const AuthStrategySchema = z.enum([
   'none',

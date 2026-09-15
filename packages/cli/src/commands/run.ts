@@ -16,6 +16,8 @@ import {
   SdodsError,
   CLI_OVERRIDES_ENV,
   VERSION,
+  checkPoolCapacity,
+  effectiveWorkers,
   formatFindings,
   lintProject,
   listGeneratedProjects,
@@ -23,6 +25,9 @@ import {
   moduleDir,
   normalizeTagExpr,
   parseTagExpr,
+  poolAccountsFor,
+  poolDemandByRole,
+  poolTooSmallError,
   redactRunTraces,
   serializeCliOverrides,
   setupTierOf,
@@ -77,6 +82,7 @@ export interface RunFlags {
   trigger?: string;
   allowEmpty?: boolean;
   notify?: boolean;
+  allowPoolContention?: boolean;
 }
 
 const RECORDING_MODES = RecordingModeSchema.options.join(' | ');
@@ -119,6 +125,10 @@ function addRunOptions(cmd: Command): Command {
     .option('--device <name>', 'device name for mobile emulation, e.g. "iPhone 15"')
     .option('--headed', 'run headed')
     .option('-w, --workers <n>', 'parallel workers', parseIntFlag('workers'))
+    .option(
+      '--allow-pool-contention',
+      'run even when a @user: role has fewer pool accounts than the workers that need it',
+    )
     .option('--shard <i/n>', 'shard, e.g. 1/3')
     .option('--retries <n>', 'retries per test', parseIntFlag('retries'))
     .option('--trace <mode>', `Playwright trace: ${RECORDING_MODES} (default: evidence.trace)`)
@@ -325,6 +335,66 @@ export async function runCommand(flags: RunFlags, cmd: Command): Promise<number>
       process.stderr.write(formatFindings(result) + '\n');
   }
 
+  // --since selects features by git range; resolved here so the pool check counts the same selection.
+  const impact = flags.since
+    ? analyzeChangeImpact(cfg.project.root, ctx.rootDir, flags.since)
+    : undefined;
+
+  // #153: refuse, before generating anything, a run whose user pool cannot cover its workers.
+  // Listing runs nothing, and --ui / --debug run one scenario at a time by hand.
+  if (!flags.list && !flags.ui && !flags.debug) {
+    const poolCfg = cfg.project.data.userPool;
+    const accounts =
+      poolCfg && poolCfg.mode !== 'shared' && poolCfg.leaseScope !== 'scenario'
+        ? poolAccountsFor(cfg)
+        : undefined;
+    if (accounts) {
+      const moduleRels = modules.map((m) =>
+        relative(cfg.project.root, moduleDir(cfg.project.root, moduleByName(projectCfg, m)))
+          .replace(/\\/g, '/')
+          .concat('/'),
+      );
+      const impactedRels = impact ? new Set(impact.impacted.map((r) => r.feature)) : undefined;
+      const grep = flags.grep ? safeRegExp(flags.grep) : undefined;
+      const features = cfg.env.vars?.features;
+      const demand = poolDemandByRole(cfg.project, cfg.env.name, {
+        layers: layers.length ? layers : (projectCfg.layers as Layer[]),
+        browsers: browsers.length ? browsers : (projectCfg.browsers as BrowserName[]),
+        tags,
+        setupTags: setup?.tags,
+        flags:
+          typeof features === 'string'
+            ? features
+                .split(',')
+                .map((f) => f.trim())
+                .filter(Boolean)
+            : undefined,
+        quarantine: process.env.SDODS_QUARANTINE === 'run' ? 'run' : 'skip',
+        fullyParallel: proc?.fullyParallel ?? projectCfg.fullyParallel,
+        includeFeature: (rel) =>
+          (!featureRel || rel === featureRel) &&
+          (!moduleRels.length || moduleRels.some((m) => rel.startsWith(m))) &&
+          (!impactedRels || impactedRels.has(rel)),
+        includeScenario: (name) =>
+          (!flags.scenario || name.includes(flags.scenario)) &&
+          (!flags.grep || (grep?.test(name) ?? false)),
+        repeatEach: flags.repeatEach,
+        shardTotal: cfg.runtime.shard?.total,
+      });
+      const shortfalls = checkPoolCapacity({
+        pool: poolCfg,
+        accounts,
+        demand,
+        workers: effectiveWorkers(cfg.runtime.workers),
+      });
+      if (shortfalls.length) {
+        const error = poolTooSmallError(cfg, shortfalls, cfg.runtime.workers);
+        if (!flags.allowPoolContention) throw error;
+        warn(`${error.message} Running anyway (--allow-pool-contention).`);
+      }
+    }
+  }
+
   const selection: RunnerSelection = {
     project: entry.slug,
     env: cfg.env.name,
@@ -431,8 +501,7 @@ export async function runCommand(flags: RunFlags, cmd: Command): Promise<number>
   // `analyzeChangeImpact` has existed for a while and was reachable only
   // through MCP, so it could advise a human and could not select a run. This is
   // the seam that was missing; the mapping itself is unchanged.
-  if (flags.since) {
-    const impact = analyzeChangeImpact(cfg.project.root, ctx.rootDir, flags.since);
+  if (flags.since && impact) {
     if (impact.impacted.length === 0) {
       // Deliberately NOT "run everything" and deliberately not a silent empty
       // run. A run that registered zero scenarios exits 0 and looks identical
@@ -633,6 +702,15 @@ function projectFeaturePath(projectRoot: string, repoRoot: string, input: string
       exitCode: 2,
     });
   return rel;
+}
+
+/** `--grep` as the pool check reads it; a pattern Playwright would reject matches no scenario. */
+function safeRegExp(pattern: string): RegExp | undefined {
+  try {
+    return new RegExp(pattern);
+  } catch {
+    return undefined;
+  }
 }
 
 function escapeRe(s: string) {

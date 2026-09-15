@@ -3,12 +3,12 @@ title: Exit codes
 description: What each exit code of the sdods command means.
 ---
 
-| Code  | Meaning                      | Typical cause                                                                                                |
-| ----- | ---------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `0`   | success                      | all scenarios passed, or a read-only command completed                                                       |
-| `1`   | failure                      | scenario failures, a gate not met, failed k6 thresholds in `sdods load`, or an unexpected runtime error      |
-| `2`   | configuration or usage error | unknown project, missing environment file, invalid YAML, unresolved `${VAR}`, literal secret, bad flag value |
-| `3`   | lint errors                  | tag taxonomy or Gherkin errors from `sdods lint` (also when `run` lints first)                               |
-| `130` | cancelled                    | Ctrl-C, `run_cancel`, or the server stopping a run                                                           |
+| Code  | Meaning                      | Typical cause                                                                                                                                                               |
+| ----- | ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `0`   | success                      | all scenarios passed, or a read-only command completed                                                                                                                      |
+| `1`   | failure                      | scenario failures, a gate not met, failed k6 thresholds in `sdods load`, or an unexpected runtime error                                                                     |
+| `2`   | configuration or usage error | unknown project, missing environment file, invalid YAML, unresolved `${VAR}`, literal secret, bad flag value, a user pool too small for the workers (`USER_POOL_TOO_SMALL`) |
+| `3`   | lint errors                  | tag taxonomy or Gherkin errors from `sdods lint` (also when `run` lints first)                                                                                              |
+| `130` | cancelled                    | Ctrl-C, `run_cancel`, or the server stopping a run                                                                                                                          |
 
 Structured errors carry `code`, `message`, `hint` and `docsUrl`; with `--json` they are printed as JSON on stderr.

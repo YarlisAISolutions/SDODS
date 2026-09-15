@@ -83,6 +83,9 @@ data:
     dataset: users
     roleColumn: role
     leaseStore: file
+    # One admin account serves every @user:admin scenario: release it when each scenario ends so
+    # workers queue for it instead of one worker holding it for the whole run (#153).
+    leaseScope: scenario
 
 auth:
   strategy: form
