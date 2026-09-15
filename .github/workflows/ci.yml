@@ -209,6 +209,77 @@ jobs:
           retention-days: 14
           if-no-files-found: ignore
 
+  rwa-bank:
+    # The workshop project drives cypress-io/cypress-realworld-app, so the app is started inside
+    # this job (.github/actions/start-rwa) and the suite runs against env `ci`. It is kept out of
+    # the generic matrix with `ci.enabled: false`: that matrix also drives the pull-request `test`
+    # job, which replays HARs with no application running. Nightly and manual only, so PR CI time
+    # does not change. Same container as `regression`, because @regression includes @visual and the
+    # linux/ baseline was rendered in it (visual-baselines.yml).
+    name: rwa-bank · chromium · @regression
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    container:
+      # Keep in lock-step with @playwright/test (tests/playwright-image.test.ts checks it).
+      image: mcr.microsoft.com/playwright:v1.63.0-noble
+      options: --ipc=host
+    env:
+      HOME: /root
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install bun
+        run: npm install -g bun@${{ env.BUN_VERSION }}
+      - name: Install build tools
+        # better-sqlite3 compiles on install in this image (see `regression`).
+        run: apt-get update -qq && apt-get install -y --no-install-recommends build-essential
+      - run: bun install --frozen-lockfile
+      - name: Start cypress-realworld-app (:3000 UI, :3001 API)
+        id: app
+        uses: ./.github/actions/start-rwa
+      # Each layer runs even when an earlier one failed, as long as the app came up.
+      - name: API layer (live)
+        if: ${{ !cancelled() && steps.app.outcome == 'success' }}
+        run: >
+          bun run sdods run -p rwa-bank -e ci -l api
+          --run-id ${{ env.RUN_ID }}-rwa-bank-api --no-ingest
+      - name: UI layer · @smoke
+        if: ${{ !cancelled() && steps.app.outcome == 'success' }}
+        run: >
+          bun run sdods run -p rwa-bank -e ci -l ui -b chromium -t @smoke
+          --run-id ${{ env.RUN_ID }}-rwa-bank-chromium --no-ingest
+      - name: UI layer · @regression (includes @visual)
+        if: ${{ !cancelled() && steps.app.outcome == 'success' }}
+        run: >
+          bun run sdods run -p rwa-bank -e ci -l ui -b chromium -t @regression
+          --run-id ${{ env.RUN_ID }}-rwa-bank-chromium-regression --no-ingest
+      - name: Hybrid layer · @regression
+        if: ${{ !cancelled() && steps.app.outcome == 'success' }}
+        run: >
+          bun run sdods run -p rwa-bank -e ci -l hybrid -b chromium -t @regression
+          --run-id ${{ env.RUN_ID }}-rwa-bank-hybrid --no-ingest
+      - name: Pack run artifacts (screenshots, visual diffs, api snapshots, meta) for ingest
+        if: always()
+        shell: bash
+        run: |
+          shopt -s nullglob
+          for dir in ".sdods/runs/${RUN_ID}-"*; do
+            tar -czf "$dir/artifacts.tgz" -C "$dir" --exclude=artifacts.tgz --exclude=html-report --exclude=runner-output . || true
+          done
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: sdods-rwa-bank-chromium-regression
+          path: .sdods/runs
+          retention-days: 14
+          if-no-files-found: ignore
+      - uses: actions/upload-artifact@v7
+        if: failure() && steps.app.outputs.log != ''
+        with:
+          name: rwa-app-log
+          path: ${{ steps.app.outputs.log }}
+          retention-days: 7
+
   edge:
     # Edge is a system browser, not a Playwright download, so it is kept out of the generic matrix
     # via `ci.browsers` in demo-shop's project yaml and exercised here instead. Scheduled and
@@ -388,7 +459,7 @@ jobs:
 
   report:
     name: report · ingest · notify
-    needs: [test, regression]
+    needs: [test, regression, rwa-bank]
     if: always()
     runs-on: ubuntu-latest
     steps:

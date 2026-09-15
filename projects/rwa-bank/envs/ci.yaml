@@ -1,0 +1,16 @@
+name: ci
+description: >-
+  cypress-realworld-app started inside the CI job by .github/actions/start-rwa, at the commit that
+  action pins, on its freshly seeded database. Same ports as local; a separate env so that
+  har/local recordings are not replayed in place of the live app.
+ui:
+  # localhost, not 127.0.0.1: the RWA API only accepts cross-origin calls from http://localhost:3000.
+  baseUrl: http://localhost:3000
+api:
+  baseUrl: http://localhost:3001
+  headers: { Accept: application/json }
+  auth: { type: none }
+users:
+  poolSize: 2
+vars:
+  rwaPassword: '${RWA_PASSWORD:-s3cret}'

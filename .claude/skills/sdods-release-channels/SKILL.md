@@ -80,14 +80,43 @@ nothing in this repository creates one, so the job had never run and the image d
 Do not "fix" it by pushing a tag from CI: a tag pushed with `GITHUB_TOKEN` does not trigger
 workflows, so the job still would not run.
 
-**The image is `linux/amd64` only, and Docker does not emulate a missing architecture** — it
-refuses the pull with `no matching manifest for linux/arm64/v8`. Apple silicon needs
-`--platform linux/amd64`. Building arm64 in CI was tried and abandoned: under QEMU on an amd64
-runner the arm64 stage did not finish in 90 minutes, because `bun install`, the native module
-builds and the web bundle all run emulated. Fixing it properly means either a native arm64 runner
-(a paid tier for a private repository) or splitting the Dockerfile so the arch-independent web
-bundle builds on `$BUILDPLATFORM`. `channels:sync` reads the architectures out of the manifest and
-writes the note from them, so the page cannot claim an arch the image does not carry.
+**The image is built for `linux/amd64` and `linux/arm64`, each on its own architecture.** Docker
+does not emulate a missing architecture — it refuses the pull with
+`no matching manifest for linux/arm64/v8` — so an amd64-only image does not run on Apple silicon or
+Graviton at all. `0.9.0` and earlier carry amd64 only; `--platform linux/amd64` is the workaround
+for those tags.
+
+How it is built, and why that way:
+
+- **Native runners, not QEMU.** The `docker` job is a matrix: `ubuntu-latest` builds amd64 and
+  `ubuntu-24.04-arm` builds arm64, from the unchanged Dockerfile (the Playwright base and the bun
+  installer are both multi-arch). Emulating arm64 on an amd64 runner was tried first and did not
+  finish in 90 minutes, because `bun install`, the native module builds and the web bundle all ran
+  emulated. The arm64 runner is available to this private repository; a one-job probe on
+  `ubuntu-24.04-arm` got a runner in seconds.
+- **Every image runs before it is pushed.** Each leg loads the image and, natively: checks the
+  architecture, `pwuser`, the entrypoint and the healthcheck; runs `--version`; loads
+  `better-sqlite3` and `argon2` (from `packages/db` and `packages/server` — the isolated linker
+  puts them there, not in `/app/node_modules`); starts `serve`, curls `/api/health` and waits for
+  Docker to report the container `healthy`; and runs demo-shop `@smoke` in the container with HAR
+  replay, which is the path a UI run started from the web UI takes.
+- **Push by digest, then join.** Each leg pushes its image untagged; `docker-manifest` joins the two
+  digests with `docker buildx imagetools create` under the release tags and fails unless the
+  published index lists both platforms. Build caches are scoped per architecture, or each leg
+  evicts the other's layers.
+
+Prove a change without publishing: dispatch `release.yml` with `image_only` ticked and `push`
+unticked. Both legs build and run every smoke check; nothing logs in to GHCR and `docker-manifest`
+is skipped.
+
+```bash
+gh workflow run release.yml --ref <branch> -f image_only=true -f push=false
+```
+
+Merging a change here publishes nothing on its own: the job runs after changesets publishes, or on
+that dispatch with `push` ticked. `channels:sync` reads the architectures out of the manifest and
+writes the install page note from them, so the page cannot claim an arch the image does not carry —
+it keeps saying `linux/amd64 only` until a multi-arch `latest` actually exists.
 
 **GHCR packages default to private, and visibility is a UI-only setting.** After the first push:
 Profile → Packages → `sdods-server` → Package settings → Change visibility → Public. Until then

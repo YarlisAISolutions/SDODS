@@ -112,19 +112,27 @@ installing does.
 The image is the server and the web UI, with the browser engines already inside — this is the one
 channel that needs nothing installed on the host at all.
 
-The published image is `linux/amd64` today. **Docker does not fall back to emulation for a missing
-architecture — it refuses the pull**, so on Apple silicon this fails with
-`no matching manifest for linux/arm64/v8` rather than running slowly. Until the multi-architecture
-image is published, ask for the platform explicitly and let Rosetta handle it:
-
-```bash
-docker run --rm --platform linux/amd64 -p 8080:8080 -v sdods-data:/data ghcr.io/siri1410/sdods-server
-```
-
-On an Intel machine, or once the arm64 image is published, no flag is needed:
+The image is published for `linux/amd64` and `linux/arm64`, each built and tested on its own
+architecture, so it runs natively on Intel, Apple silicon and arm64 servers such as Graviton. No
+flag is needed:
 
 ```bash
 docker run --rm -p 8080:8080 -v sdods-data:/data ghcr.io/siri1410/sdods-server
+```
+
+Tags up to `0.9.0` carry `linux/amd64` only. **Docker does not fall back to emulation for a missing
+architecture — it refuses the pull**, so on arm64 those tags fail with
+`no matching manifest for linux/arm64/v8`. To run one of them there, ask for the platform
+explicitly:
+
+```bash
+docker run --rm --platform linux/amd64 -p 8080:8080 -v sdods-data:/data ghcr.io/siri1410/sdods-server:0.9.0
+```
+
+Check which platforms a tag carries before you pull it:
+
+```bash
+docker buildx imagetools inspect ghcr.io/siri1410/sdods-server
 ```
 
 Any CLI command works as the argument, so the same image runs a suite in CI:
