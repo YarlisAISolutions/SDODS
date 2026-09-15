@@ -101,6 +101,9 @@ data:
     roleColumn: role
     leaseStore: file
     leaseTtlMs: 600000
+    # One account per role after poolSize, and `release:check:live` runs three browsers in one
+    # invocation: release each account when its scenario ends so the browsers queue for it (#153).
+    leaseScope: scenario
 
 auth:
   strategy: form
