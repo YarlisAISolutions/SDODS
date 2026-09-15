@@ -19,8 +19,11 @@ on:
         required: false
         type: string
 
+# write: the last step pushes a branch and opens a PR in this repository with the workflow's own
+# token. DESKTOP_RELEASE_TOKEN is scoped to the releases repository only and cannot do either.
 permissions:
-  contents: read
+  contents: write
+  pull-requests: write
 
 concurrency:
   group: apt-repo
@@ -61,6 +64,9 @@ jobs:
           [ -n "$TAG" ] && [ "$TAG" != "null" ] || {
             echo "::error::No published desktop-v* release in $RELEASE_REPO."; exit 1; }
           echo "packaging $TAG"
+          # Later steps build pool/$TAG and name the PR after it; a shell variable does not survive
+          # the step, and an empty TAG once wrote a pool path every download 404s on.
+          echo "TAG=$TAG" >> "$GITHUB_ENV"
           gh release download "$TAG" -R "$RELEASE_REPO" -p '*.deb' -D debs
           ls -la debs
 
@@ -72,6 +78,7 @@ jobs:
           # The pool path carries the tag so one redirect rule serves every release:
           # firebase.json maps /apt/pool/:tag/:file to the release asset, and that pattern
           # needs two segments. A bare `pool` writes one, and every download 404s.
+          test -n "${TAG:-}" || { echo "::error::TAG was not resolved by the download step"; exit 1; }
           packaging/apt/build-repo.sh debs site/apt "pool/$TAG"
 
       # A local proof before anyone's machine trusts it: apt resolves the package from the repo as
@@ -85,16 +92,19 @@ jobs:
             | sudo tee /etc/apt/sources.list.d/sdods-local.list
           sudo apt-get update -o Dir::Etc::sourcelist=/etc/apt/sources.list.d/sdods-local.list \
                               -o Dir::Etc::sourceparts=- -o APT::Get::List-Cleanup=0
-          apt-cache policy sdods
-          apt-cache policy sdods | grep -q 'Candidate: [0-9]' || {
+          # Captured first: under pipefail, `grep -q` exiting on its first match leaves apt-cache
+          # with a SIGPIPE that fails a perfectly good repository.
+          policy=$(apt-cache policy sdods)
+          echo "$policy"
+          grep -q 'Candidate: [0-9]' <<<"$policy" || {
             echo "::error::apt found the repository but no installable sdods package."; exit 1; }
 
       - name: Open a PR that publishes the metadata to sdods.com/apt
         env:
-          GH_TOKEN: ${{ secrets.DESKTOP_RELEASE_TOKEN }}
-          RELEASE_REPO: ${{ vars.DESKTOP_RELEASE_REPO || 'siri1410/sdods-releases' }}
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+          test -n "${TAG:-}" || { echo "::error::TAG was not resolved by the download step"; exit 1; }
           # The payload is deleted now, not skipped earlier: the metadata above records each file's
           # size and SHA-256, and the verify step needed the real bytes to check them against.
           find site/apt -name '*.deb' -delete
@@ -111,7 +121,7 @@ jobs:
           git diff --quiet --cached && { echo 'apt metadata unchanged'; exit 0; }
           git commit -m "chore(apt): repository metadata for $TAG"
           git push -u origin "$branch"
-          gh pr create --fill --base main --head "$branch" \
+          gh pr create --base main --head "$branch" \
             --title "chore(apt): repository metadata for $TAG" \
             --body "Signed apt repository metadata for \`$TAG\`, built and verified by the apt workflow.
 
