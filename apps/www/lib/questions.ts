@@ -1,12 +1,15 @@
 import {
   addDoc,
   collection,
+  doc,
   getDocs,
   limit,
   orderBy,
   query,
   serverTimestamp,
   where,
+  writeBatch,
+  type DocumentReference,
   type Timestamp,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -35,6 +38,8 @@ export type Answer = {
   id: string;
   body: string;
   name: string;
+  /** Empty for an answer to the question; otherwise the id of the answer this replies to. */
+  parentId: string;
   createdAt: Date | null;
 };
 
@@ -79,6 +84,7 @@ export async function listQuestions(): Promise<Question[]> {
           id: a.id,
           body: String(a.data().body ?? ''),
           name: String(a.data().name ?? ''),
+          parentId: String(a.data().parentId ?? ''),
           createdAt: toDate(a.data().createdAt),
         })),
       };
@@ -95,34 +101,97 @@ export type Submission = {
 };
 
 /**
+ * Write a post and its private contact document in one batch.
+ *
+ * The email never goes on the post itself: once a post is published anyone can read the whole
+ * document with the SDK, so the address sits in `<post>/private/contact`, which only the moderator
+ * can read. The rules require both halves to land in the same write.
+ */
+async function createWithContact(
+  post: DocumentReference,
+  data: Record<string, unknown>,
+  email: string,
+): Promise<void> {
+  const batch = writeBatch(db());
+  batch.set(post, { ...data, status: 'pending', createdAt: serverTimestamp() });
+  batch.set(doc(post, 'private', 'contact'), {
+    email: email.trim(),
+    createdAt: serverTimestamp(),
+  });
+  await batch.commit();
+}
+
+/**
  * Submit a question. It is stored as `pending` and is invisible to everyone
  * (including this site) until a moderator publishes it — the rules enforce the
  * status, so there is no way for a caller to publish its own post.
  */
 export async function submitQuestion(input: Submission): Promise<void> {
-  await addDoc(collection(db(), 'questions'), {
-    name: input.name.trim(),
-    email: input.email.trim(),
-    title: input.title.trim(),
-    body: input.body.trim(),
-    category: input.category,
-    status: 'pending',
-    createdAt: serverTimestamp(),
-  });
+  await createWithContact(
+    doc(collection(db(), 'questions')),
+    {
+      name: input.name.trim(),
+      title: input.title.trim(),
+      body: input.body.trim(),
+      category: input.category,
+    },
+    input.email,
+  );
 }
 
-/** Answer a published question. Also pending until moderated. */
-export async function submitAnswer(
-  questionId: string,
-  input: { name: string; email: string; body: string },
-): Promise<void> {
-  await addDoc(collection(db(), 'questions', questionId, 'answers'), {
-    name: input.name.trim(),
-    email: input.email.trim(),
-    body: input.body.trim(),
-    status: 'pending',
-    createdAt: serverTimestamp(),
-  });
+export type AnswerInput = { name: string; email: string; body: string; parentId?: string };
+
+/** Answer a published question, or reply to one of its answers. Also pending until moderated. */
+export async function submitAnswer(questionId: string, input: AnswerInput): Promise<void> {
+  await createWithContact(
+    doc(collection(db(), 'questions', questionId, 'answers')),
+    { name: input.name.trim(), body: input.body.trim(), parentId: input.parentId ?? '' },
+    input.email,
+  );
+}
+
+/**
+ * Answers and replies on a static archive thread, keyed by its slug. Archive threads are not
+ * Firestore documents, so these live in their own collection rather than under a parent.
+ */
+export async function listThreadAnswers(slug: string): Promise<Answer[]> {
+  const snap = await getDocs(
+    query(
+      collection(db(), 'threadAnswers'),
+      where('slug', '==', slug),
+      where('status', '==', 'published'),
+      orderBy('createdAt', 'asc'),
+    ),
+  );
+  return snap.docs.map((d) => ({
+    id: d.id,
+    body: String(d.data().body ?? ''),
+    name: String(d.data().name ?? ''),
+    parentId: String(d.data().parentId ?? ''),
+    createdAt: toDate(d.data().createdAt),
+  }));
+}
+
+export async function submitThreadAnswer(slug: string, input: AnswerInput): Promise<void> {
+  await createWithContact(
+    doc(collection(db(), 'threadAnswers')),
+    {
+      slug,
+      parentId: input.parentId ?? '',
+      name: input.name.trim(),
+      body: input.body.trim(),
+    },
+    input.email,
+  );
+}
+
+/** Where a post goes: a live Firestore question, or an archive thread by slug. */
+export type AnswerTarget = { kind: 'live'; questionId: string } | { kind: 'thread'; slug: string };
+
+export function submitTo(target: AnswerTarget, input: AnswerInput): Promise<void> {
+  return target.kind === 'live'
+    ? submitAnswer(target.questionId, input)
+    : submitThreadAnswer(target.slug, input);
 }
 
 export type FeedbackKindStored = 'feature' | 'bug' | 'feedback';
