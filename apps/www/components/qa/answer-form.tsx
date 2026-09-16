@@ -1,56 +1,79 @@
 'use client';
 
 import { useState } from 'react';
-import { submitAnswer } from '@/lib/questions';
+import type { AnswerTarget } from '@/lib/questions';
 
 const MAX_BODY = 5000;
 
 /**
- * Answer a published question.
+ * Answer a question, or reply to an answer.
  *
- * Only reachable from a question that lives in Firestore: the rules require the parent document to
- * exist and be published before an answer can be created, and an archive thread has no such parent.
- * Like a question, an answer is stored `pending` and is invisible — to this site included — until a
- * moderator publishes it, so nothing here can put text in front of a reader on its own.
+ * Works for both halves of the Q&A: a live Firestore question and a static archive thread (by slug).
+ * Whatever is posted is stored `pending` and is invisible — to this site included — until a moderator
+ * publishes it, so nothing here can put text in front of a reader on its own. Firestore is imported
+ * on submit, so a page that only shows the form does not pay for the SDK up front.
  */
-export function AnswerForm({ questionId }: { questionId: string }) {
+export function AnswerForm({
+  target,
+  parentId,
+  replyTo,
+  onCancel,
+}: {
+  target: AnswerTarget;
+  /** Set for a reply: the answer it belongs under. */
+  parentId?: string;
+  /** Display name being replied to; the body starts with `@name`. */
+  replyTo?: string;
+  onCancel?: () => void;
+}) {
+  const reply = parentId !== undefined;
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [body, setBody] = useState('');
+  const [body, setBody] = useState(replyTo ? `@${replyTo} ` : '');
   const [state, setState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
 
   if (state === 'sent') {
     return (
-      <div className="card mt-10 p-6" role="status">
+      <div className={`card p-5 ${reply ? 'mt-3' : 'mt-10'}`} role="status">
         <h2 className="font-semibold">Thanks — that&rsquo;s in.</h2>
         <p className="muted mt-2 text-sm">
-          Your answer is waiting to be reviewed. Once it is published it appears on this page.
+          Your {reply ? 'reply' : 'answer'} is waiting to be reviewed. Once it is published it
+          appears on this page.
         </p>
       </div>
     );
   }
 
+  const input = 'w-full rounded-lg border border-[var(--line)] bg-transparent px-3 py-2';
+
   return (
     <form
-      className="card mt-10 p-6"
+      className={reply ? 'mt-3 rounded-lg border border-[var(--line)] p-4' : 'card mt-10 p-6'}
       onSubmit={async (e) => {
         e.preventDefault();
         setState('sending');
         try {
-          await submitAnswer(questionId, { name, email, body });
+          const { submitTo } = await import('@/lib/questions');
+          await submitTo(target, { name, email, body, parentId });
           setState('sent');
         } catch {
           setState('error');
         }
       }}
     >
-      <h2 className="font-semibold">Know the answer?</h2>
-      <p className="muted mt-1 text-sm">
-        Reviewed before it appears. Wrap commands and output in triple backticks and they will
-        render as a code block.
-      </p>
+      {reply ? (
+        <h3 className="text-sm font-semibold">Reply{replyTo ? ` to ${replyTo}` : ''}</h3>
+      ) : (
+        <>
+          <h2 className="font-semibold">Know the answer?</h2>
+          <p className="muted mt-1 text-sm">
+            Reviewed before it appears. Wrap commands and output in triple backticks and they will
+            render as a code block.
+          </p>
+        </>
+      )}
 
-      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+      <div className="mt-3 grid gap-3 sm:grid-cols-2">
         <label className="text-sm">
           <span className="mb-1 block font-medium">Name</span>
           <input
@@ -58,7 +81,7 @@ export function AnswerForm({ questionId }: { questionId: string }) {
             maxLength={100}
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full rounded-lg border border-[var(--line)] bg-transparent px-3 py-2"
+            className={input}
           />
         </label>
         <label className="text-sm">
@@ -69,21 +92,21 @@ export function AnswerForm({ questionId }: { questionId: string }) {
             maxLength={254}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full rounded-lg border border-[var(--line)] bg-transparent px-3 py-2"
+            className={input}
           />
           <span className="muted mt-1 block text-xs">Never shown publicly.</span>
         </label>
       </div>
 
       <label className="mt-3 block text-sm">
-        <span className="mb-1 block font-medium">Answer</span>
+        <span className="mb-1 block font-medium">{reply ? 'Reply' : 'Answer'}</span>
         <textarea
           required
-          rows={8}
+          rows={reply ? 4 : 8}
           maxLength={MAX_BODY}
           value={body}
           onChange={(e) => setBody(e.target.value)}
-          className="w-full rounded-lg border border-[var(--line)] bg-transparent px-3 py-2 font-mono text-sm"
+          className={`${input} font-mono text-sm`}
         />
         <span className="muted mt-1 block text-xs tabular-nums">
           {body.length} / {MAX_BODY}
@@ -92,8 +115,13 @@ export function AnswerForm({ questionId }: { questionId: string }) {
 
       <div className="mt-4 flex flex-wrap items-center gap-3">
         <button type="submit" className="btn btn-primary" disabled={state === 'sending'}>
-          {state === 'sending' ? 'Sending…' : 'Post answer'}
+          {state === 'sending' ? 'Sending…' : reply ? 'Post reply' : 'Post answer'}
         </button>
+        {onCancel && (
+          <button type="button" className="btn btn-secondary" onClick={onCancel}>
+            Cancel
+          </button>
+        )}
         {state === 'error' && (
           <span role="status" className="muted text-sm">
             That did not go through. Try again in a moment.

@@ -177,7 +177,7 @@ export function QaBrowser({
           date: (q.createdAt ?? new Date()).toISOString().slice(0, 10),
           tags: q.category === 'other' ? [] : [q.category],
           votes: null,
-          answers: q.answers.length,
+          answers: q.answers.filter((a) => !a.parentId).length,
           accepted: false,
           views: null,
         }));

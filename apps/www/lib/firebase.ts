@@ -24,6 +24,3 @@ export function app(): FirebaseApp {
 export function db(): Firestore {
   return getFirestore(app());
 }
-
-/** The one account `firestore.rules` accepts as a moderator. */
-export const MODERATOR_EMAIL = 'admin@sdods.com';
