@@ -58,8 +58,12 @@ describe('sponsorship', () => {
     for (const [path, text] of Object.entries(visible)) {
       expect(text.includes(SPONSOR_URL), path).toBe(SPONSOR_ENABLED);
     }
-    // The code surfaces link through the switch rather than unconditionally.
-    for (const path of ['packages/cli/src/program.ts', 'packages/web/src/app-shell.tsx']) {
+    // The code surfaces link through the switch rather than unconditionally. In the web UI the
+    // link lives in the account menu.
+    for (const path of [
+      'packages/cli/src/program.ts',
+      'packages/web/src/components/UserMenu.tsx',
+    ]) {
       expect(read(path), path).toContain('SPONSOR_ENABLED');
     }
     for (const path of ['apps/www/app/sponsor/page.tsx', 'apps/www/app/sponsor/thanks/page.tsx']) {
@@ -82,7 +86,10 @@ describe('sponsorship', () => {
       expect(text, path).not.toMatch(/(buy|billing)\.stripe\.com/);
     }
     // The CLI and web UI take the URL and the switch from @sdods/contracts.
-    for (const path of ['packages/cli/src/program.ts', 'packages/web/src/app-shell.tsx']) {
+    for (const path of [
+      'packages/cli/src/program.ts',
+      'packages/web/src/components/UserMenu.tsx',
+    ]) {
       const text = read(path);
       expect(text, path).toContain(
         "import { SPONSOR_ENABLED, SPONSOR_URL } from '@sdods/contracts/sponsor';",

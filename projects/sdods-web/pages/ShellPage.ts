@@ -3,11 +3,15 @@ import { Fixture, Given, Then, When } from 'playwright-bdd/decorators';
 import { BasePage } from '@sdods/core/pages';
 import type { test } from '../steps/fixtures.js';
 
-/** The application shell: organization select, workspace list with role badges, sign out. */
+/** The application shell: organization select, workspace list with role badges, account menu. */
 @Fixture<typeof test>('shell')
 export class ShellPage extends BasePage {
   readonly organization = this.page.getByLabel('Organization');
   readonly workspaceList = this.page.getByRole('list', { name: 'Workspaces' });
+  readonly userMenu = this.h(this.page.getByTestId('user-menu'), {
+    description: 'account menu at the foot of the sidebar',
+    testId: 'user-menu',
+  });
 
   workspace(slug: string) {
     return this.page.getByTestId(`workspace-${slug}`);
@@ -55,9 +59,22 @@ export class ShellPage extends BasePage {
     }).click();
   }
 
+  @When('I open the account menu item {string}')
+  async openAccountMenuItem(item: string) {
+    await this.userMenu.click();
+    await this.page.getByRole('menuitem', { name: this.render(item) }).click();
+  }
+
+  @Then('the account menu should show {string}')
+  async assertAccountMenu(text: string) {
+    await expect(this.page.getByTestId('user-menu')).toContainText(this.render(text));
+  }
+
   @When('I sign out')
   async signOut() {
-    await this.page.getByRole('button', { name: 'Sign out' }).click();
+    // Sign out lives in the account menu; the trigger is the avatar block in the sidebar footer.
+    await this.userMenu.click();
+    await this.page.getByRole('menuitem', { name: 'Sign out' }).click();
     await this.page.waitForURL('**/login**');
   }
 }

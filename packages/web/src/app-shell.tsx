@@ -1,8 +1,8 @@
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router';
-import { SPONSOR_ENABLED, SPONSOR_URL } from '@sdods/contracts/sponsor';
 import { SdodsLockup } from './components/sdods-mark';
 import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from './auth/AuthContext';
+import { UserMenu } from './components/UserMenu';
 import { WorkspaceProvider, useWorkspace } from './context/WorkspaceContext';
 import { useProjects } from './api/queries';
 import { RoleBadge, Select, Skeleton, Spinner } from './components/ui';
@@ -27,8 +27,6 @@ export function AppShell() {
 }
 
 function Shell() {
-  const { me, logout, isAdmin } = useAuth();
-  const [signingOut, setSigningOut] = useState(false);
   const ws = useWorkspace();
   const projectsQ = useProjects(ws.workspace?.slug);
   const loc = useLocation();
@@ -174,51 +172,9 @@ function Shell() {
               </div>
             </div>
           )}
-          <div className="space-y-0.5">
-            <div className="px-2 text-[10px] uppercase tracking-wide muted">Account</div>
-            {item('/settings/tokens', 'API tokens')}
-            {item('/settings/mcp', 'MCP clients')}
-            {item('/users', 'Users', { hidden: !isAdmin })}
-            <a
-              href={feedbackUrl()}
-              target="_blank"
-              rel="noreferrer"
-              data-testid="send-feedback"
-              className="block rounded px-2 py-1 text-sm muted hover:underline"
-            >
-              Send feedback ↗
-            </a>
-            {SPONSOR_ENABLED && (
-              <a
-                href={SPONSOR_URL}
-                target="_blank"
-                rel="noreferrer"
-                data-testid="sponsor-link"
-                className="block rounded px-2 py-1 text-sm muted hover:underline"
-              >
-                Sponsor SDODS ♥ ↗
-              </a>
-            )}
-          </div>
         </nav>
-        <div className="flex items-center justify-between border-t border-line px-3 py-2 text-xs">
-          <span className="truncate">
-            {me?.user.username} <RoleBadge role={me?.user.role} />
-          </span>
-          <button
-            type="button"
-            onClick={() => {
-              // Guard against a second click while the request is in flight: the first one has
-              // already invalidated the session, and the second would race the redirect.
-              if (signingOut) return;
-              setSigningOut(true);
-              void logout().finally(() => setSigningOut(false));
-            }}
-            disabled={signingOut}
-            className="muted hover:underline disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {signingOut ? 'Signing out…' : 'Sign out'}
-          </button>
+        <div className="border-t border-line p-2">
+          <UserMenu feedbackUrl={feedbackUrl()} />
         </div>
       </aside>
       <main className="min-w-0 flex-1 overflow-auto p-5 scrollbar-thin">

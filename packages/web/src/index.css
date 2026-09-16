@@ -1,5 +1,20 @@
 @import 'tailwindcss';
 
+/*
+ * `dark:` follows the theme the user picked (data-theme on <html>, set by src/lib/theme.ts and a
+ * pre-paint script in index.html). Without that attribute it falls back to the OS preference.
+ */
+@custom-variant dark {
+  &:where([data-theme='dark'], [data-theme='dark'] *) {
+    @slot;
+  }
+  @media (prefers-color-scheme: dark) {
+    &:where(:root:not([data-theme]), :root:not([data-theme]) *) {
+      @slot;
+    }
+  }
+}
+
 @theme {
   --color-brand-50: #eef2ff;
   --color-brand-100: #e0e7ff;
@@ -21,8 +36,20 @@
   --text: #0f172a;
   --muted: #64748b;
 }
+:root[data-theme='light'] {
+  color-scheme: light;
+}
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #0b1220;
+  --panel: #111a2e;
+  --panel-2: #172238;
+  --border: #243049;
+  --text: #e2e8f0;
+  --muted: #94a3b8;
+}
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme]) {
     --bg: #0b1220;
     --panel: #111a2e;
     --panel-2: #172238;

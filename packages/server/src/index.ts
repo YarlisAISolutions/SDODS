@@ -15,6 +15,7 @@ import { AgentManager } from './services/agent-manager.js';
 import { HierarchyService } from './services/hierarchy.js';
 import { miscRoutes } from './routes/misc.js';
 import { authRoutes } from './routes/auth.js';
+import { meRoutes } from './routes/me.js';
 import { hierarchyRoutes } from './routes/hierarchy.js';
 import { projectRoutes } from './routes/projects.js';
 import { runRoutes } from './routes/runs.js';
@@ -72,6 +73,7 @@ export async function buildServer(opts: BuildServerOptions = {}): Promise<Fastif
 
   await app.register(miscRoutes);
   await app.register(authRoutes);
+  await app.register(meRoutes);
   await app.register(hierarchyRoutes);
   await app.register(projectRoutes);
   await app.register(runRoutes);

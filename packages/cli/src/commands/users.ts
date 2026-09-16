@@ -1,6 +1,7 @@
 import type { Command } from 'commander';
 import { SdodsError } from '@sdods/core';
 import { MIN_PASSWORD_LENGTH } from '@sdods/contracts/names';
+import { ROLES, type Role } from '@sdods/contracts/scopes';
 import { createContext } from '../context.js';
 import { info, json, ok, table, warn } from '../ui.js';
 
@@ -101,6 +102,14 @@ export function register(program: Command) {
     .description('Change a platform role (viewer | editor | admin)')
     .action(async (username: string, role: string, _opts, cmd) => {
       const ctx = createContext(cmd);
+      // Checked before opening the database: an unknown role used to be accepted and silently
+      // left the user's role unchanged while reporting success.
+      if (!(ROLES as readonly string[]).includes(role))
+        throw new SdodsError(
+          'CONFIG_INVALID',
+          `Unknown role "${role}". Use one of: ${ROLES.join(', ')}.`,
+          { exitCode: 2 },
+        );
       const adb = await openDb();
       try {
         const db = await import('@sdods/db');
@@ -110,7 +119,7 @@ export function register(program: Command) {
             exitCode: 2,
           });
         await db.updateUser(adb.db, adb.driver, u.id, {
-          role: role as 'viewer' | 'editor' | 'admin',
+          role: role as Role,
         });
         if (ctx.opts.json) return json({ id: u.id, username, role });
         ok(`${username} is now ${role}`);

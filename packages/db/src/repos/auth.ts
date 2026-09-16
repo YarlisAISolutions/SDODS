@@ -56,6 +56,7 @@ export async function createUser(
       id,
       username: input.username,
       email: input.email ?? null,
+      display_name: null,
       password_hash: input.passwordHash,
       role_id: roles[input.role],
       active: enc.bool(driver, true) as number,
@@ -111,6 +112,7 @@ export async function updateUser(
     role?: Role;
     active?: boolean;
     email?: string | null;
+    displayName?: string | null;
     lastLoginAt?: string;
   },
 ) {
@@ -122,6 +124,7 @@ export async function updateUser(
       ...(roles && patch.role ? { role_id: roles[patch.role] } : {}),
       ...(patch.active !== undefined ? { active: enc.bool(driver, patch.active) as number } : {}),
       ...(patch.email !== undefined ? { email: patch.email } : {}),
+      ...(patch.displayName !== undefined ? { display_name: patch.displayName } : {}),
       ...(patch.lastLoginAt ? { last_login_at: patch.lastLoginAt } : {}),
       updated_at: nowIso(),
     })
@@ -160,6 +163,7 @@ function mapUser(row: any) {
     id: row.id as string,
     username: row.username as string,
     email: row.email as string | null,
+    displayName: (row.display_name ?? null) as string | null,
     passwordHash: row.password_hash as string,
     role: row.role as Role,
     active: readBool(row.active),
@@ -226,9 +230,56 @@ export async function deleteSession(db: Kysely<Database>, token: string) {
   await db.deleteFrom('sessions').where('id', '=', hashToken(token)).execute();
 }
 
-/** Sign a user out everywhere, e.g. after their password changes. */
-export async function deleteSessionsForUser(db: Kysely<Database>, userId: string) {
-  await db.deleteFrom('sessions').where('user_id', '=', userId).execute();
+/**
+ * Sign a user out everywhere, e.g. after their password changes. `exceptToken` keeps the session
+ * that made the change, so saving a new password does not also sign out the person saving it.
+ * Returns how many sessions were removed.
+ */
+export async function deleteSessionsForUser(
+  db: Kysely<Database>,
+  userId: string,
+  opts: { exceptToken?: string } = {},
+): Promise<number> {
+  let q = db.deleteFrom('sessions').where('user_id', '=', userId);
+  if (opts.exceptToken) q = q.where('id', '!=', hashToken(opts.exceptToken));
+  const res = await q.executeTakeFirst();
+  return Number(res?.numDeletedRows ?? 0);
+}
+
+/**
+ * A user's live sessions, newest activity first. `id` is the stored hash of the cookie token,
+ * never the token itself, so listing sessions cannot be used to take one over.
+ */
+export async function listSessionsForUser(db: Kysely<Database>, userId: string) {
+  const rows = await db
+    .selectFrom('sessions')
+    .selectAll()
+    .where('user_id', '=', userId)
+    .where('expires_at', '>', nowIso())
+    .orderBy('last_seen_at', 'desc')
+    .execute();
+  return rows.map((r) => ({
+    id: r.id,
+    ip: r.ip,
+    userAgent: r.user_agent,
+    createdAt: readTs(r.created_at)!,
+    lastSeenAt: readTs(r.last_seen_at)!,
+    expiresAt: readTs(r.expires_at)!,
+  }));
+}
+
+/** Revoke one of a user's sessions by its listed id. False when it is not theirs or already gone. */
+export async function deleteSessionById(
+  db: Kysely<Database>,
+  userId: string,
+  id: string,
+): Promise<boolean> {
+  const res = await db
+    .deleteFrom('sessions')
+    .where('id', '=', id)
+    .where('user_id', '=', userId)
+    .executeTakeFirst();
+  return Number(res?.numDeletedRows ?? 0) > 0;
 }
 
 export async function purgeExpiredSessions(db: Kysely<Database>) {

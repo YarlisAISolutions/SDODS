@@ -35,7 +35,31 @@ export const PatchUserBody = z.object({
   role: z.enum(ROLES).optional(),
   active: z.boolean().optional(),
   email: z.string().email().nullable().optional(),
+  displayName: z.string().trim().max(80).nullable().optional(),
 });
+
+/** Self-service profile. Username and role are not editable here; an admin changes those. */
+export const PatchMeBody = z
+  .object({
+    displayName: z.string().trim().max(80).nullable().optional(),
+    // An empty string clears the address, same as null; forms send what the field holds.
+    email: z
+      .union([z.literal(''), z.string().trim().email()])
+      .nullable()
+      .optional(),
+  })
+  .refine((b) => b.displayName !== undefined || b.email !== undefined, {
+    message: 'Nothing to update.',
+  });
+export const ChangePasswordBody = z
+  .object({
+    currentPassword: z.string().min(1),
+    newPassword: z.string().min(MIN_PASSWORD_LENGTH),
+  })
+  .refine((b) => b.currentPassword !== b.newPassword, {
+    message: 'The new password must differ from the current one.',
+    path: ['newPassword'],
+  });
 
 export const CreateTokenBody = z.object({
   name: z.string().min(1).max(80),
@@ -97,10 +121,16 @@ export const ImportProjectBody = z.strictObject({
   dryRun: z.boolean().optional(),
 });
 
+/** An environment name is also a file name (envs/<name>.yaml) and a CLI `-e` value. */
+export const EnvNameSchema = z
+  .string()
+  .regex(/^[a-z0-9][a-z0-9_-]{0,39}$/i, 'Use letters, digits, - and _ (up to 40 characters).');
 export const EnvBody = z.object({
   uiUrl: z.string().url(),
   apiUrl: z.string().url(),
   poolSize: z.number().int().positive().optional(),
+  /** Plain values or ${VAR} references; replaces the vars map when present. */
+  vars: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])).optional(),
   makeDefault: z.boolean().optional(),
 });
 
@@ -172,7 +202,8 @@ export const ScheduleBody = z.object({
 export const IntegrationsBody = z.object({
   github: z.record(z.string(), z.unknown()).optional(),
   jira: z.record(z.string(), z.unknown()).optional(),
-  mcp: z.record(z.string(), z.unknown()).optional(),
+  /** Per server name; `null` removes that server. */
+  mcp: z.record(z.string(), z.unknown().nullable()).optional(),
 });
 
 export const CompareQuery = z.object({

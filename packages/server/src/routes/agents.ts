@@ -56,7 +56,14 @@ export async function agentRoutes(app: FastifyInstance) {
         (async function* (): AsyncGenerator<SseEvent> {
           for await (const line of job.log.stream(since))
             yield { event: 'log', id: line.seq, data: line };
-          yield { event: 'done', data: { status: job.status, proposalId: job.proposalId ?? null } };
+          yield {
+            event: 'done',
+            data: {
+              status: job.status,
+              proposalId: job.proposalId ?? null,
+              result: job.result ?? null,
+            },
+          };
         })(),
       );
     },

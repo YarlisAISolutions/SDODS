@@ -50,7 +50,7 @@ export const router = createBrowserRouter([
       { path: 'agents', element: <AgentsPage /> },
       { path: 'schedules', element: <SchedulesPage /> },
       { path: 'users', element: <UsersPage /> },
-      { path: 'settings', element: <Navigate to="tokens" replace /> },
+      { path: 'settings', element: <Navigate to="profile" replace /> },
       { path: 'settings/:tab', element: <SettingsPage /> },
       { path: '*', element: <Navigate to="/" replace /> },
     ],

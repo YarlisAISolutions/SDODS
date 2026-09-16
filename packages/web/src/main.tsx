@@ -5,9 +5,11 @@ import { RouterProvider } from 'react-router';
 import { router } from './router';
 import { AuthProvider } from './auth/AuthContext';
 import { ToastProvider } from './components/ui/Toast';
+import { initTheme } from './lib/theme';
 import './index.css';
 
 async function boot() {
+  initTheme();
   if (import.meta.env.VITE_USE_MOCKS === '1') {
     const { worker } = await import('./mocks/browser');
     await worker.start({ onUnhandledRequest: 'bypass', quiet: true });

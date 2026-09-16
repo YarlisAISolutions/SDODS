@@ -66,11 +66,10 @@ export function SchedulesPage() {
   const { toast } = useToast();
   const [editing, setEditing] = useState<Partial<Schedule> | null>(null);
   const [historyFor, setHistoryFor] = useState<Schedule | null>(null);
+  // The server has no PUT: POST /api/schedules upserts by project + name, which is also how an
+  // edit is saved (the name is locked while editing for that reason).
   const save = useMutation({
-    mutationFn: (s: Partial<Schedule>) =>
-      s.id
-        ? api(`/api/schedules/${s.id}`, { method: 'PUT', json: s })
-        : api('/api/schedules', { json: s }),
+    mutationFn: (s: Partial<Schedule>) => api('/api/schedules', { json: toScheduleBody(s) }),
     onSuccess: () => {
       inv(['schedules']);
       setEditing(null);
@@ -80,8 +79,9 @@ export function SchedulesPage() {
   });
   const toggle = useMutation({
     mutationFn: (s: Schedule) =>
-      api(`/api/schedules/${s.id}`, { method: 'PUT', json: { enabled: !s.enabled } }),
+      api(`/api/schedules/${s.id}/${s.enabled ? 'pause' : 'resume'}`, { method: 'POST' }),
     onSuccess: () => inv(['schedules']),
+    onError: (e) => toast((e as Error).message, 'error'),
   });
   const remove = useMutation({
     mutationFn: (id: string) => api(`/api/schedules/${id}`, { method: 'DELETE' }),
@@ -243,9 +243,13 @@ function ScheduleDialog({
       }
     >
       <div className="grid gap-3 sm:grid-cols-3">
-        <Field label="Name">
+        <Field
+          label="Name"
+          hint={value.id ? 'Schedules are saved by name; it cannot change.' : undefined}
+        >
           <Input
             value={value.name ?? ''}
+            disabled={Boolean(value.id)}
             onChange={(e) => onChange({ ...value, name: e.target.value })}
           />
         </Field>
@@ -415,4 +419,26 @@ function HistoryDialog({ schedule, onClose }: { schedule: Schedule; onClose: () 
       )}
     </Dialog>
   );
+}
+
+/** The Schedule view as the flat body POST /api/schedules accepts; unset optionals are omitted. */
+export function toScheduleBody(s: Partial<Schedule>) {
+  const body: Record<string, unknown> = {
+    project: s.projectSlug,
+    name: s.name?.trim(),
+    cron: s.cron?.trim(),
+    timezone: s.timezone || 'UTC',
+    env: s.env || undefined,
+    tags: s.tags || undefined,
+    layers: s.layers?.length ? s.layers : undefined,
+    browsers: s.browsers?.length ? s.browsers : undefined,
+    workers: s.workers || undefined,
+    harMode: s.harMode,
+    overlap: s.overlap,
+    jitterSeconds: s.jitterSeconds,
+    catchUp: s.catchUp,
+    enabled: s.enabled,
+    notify: s.notify,
+  };
+  return Object.fromEntries(Object.entries(body).filter(([, v]) => v !== undefined));
 }

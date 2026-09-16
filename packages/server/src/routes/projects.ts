@@ -2,6 +2,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'no
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { FastifyInstance } from 'fastify';
+import type { ZodType } from 'zod';
 import type { Principal } from '../types.js';
 import multipart from '@fastify/multipart';
 import { parse as parseCsv } from 'csv-parse/sync';
@@ -21,10 +22,16 @@ import {
   upsertSchedule,
 } from '@sdods/db';
 import { PROJECT_FILE, WORKSPACE_FILE } from '@sdods/core/config';
-import { ProjectConfigSchema } from '@sdods/contracts';
+import {
+  GitHubIntegrationSchema,
+  JiraIntegrationSchema,
+  McpServerSchema,
+  ProjectConfigSchema,
+} from '@sdods/contracts';
 import {
   CreateProjectBody,
   EnvBody,
+  EnvNameSchema,
   FeatureWriteBody,
   ImportProjectBody,
   IntegrationsBody,
@@ -379,16 +386,39 @@ export async function projectRoutes(app: FastifyInstance) {
     { preHandler: [app.requireScope('envs:write'), app.requireWorkspaceRole('editor')] },
     async (req) => {
       const { slug, name } = req.params as { slug: string; name: string };
+      parse(EnvNameSchema, name, 'environment name');
       const fs = fsOf(slug);
+      const rel = `envs/${name}.yaml`;
       const body = req.body as { yaml?: string } & Partial<ReturnType<typeof EnvBody.parse>>;
       if (typeof body.yaml === 'string') {
-        fs.write(`envs/${name}.yaml`, body.yaml);
+        fs.write(rel, body.yaml);
       } else {
         const b = parse(EnvBody, body);
-        fs.write(
-          `envs/${name}.yaml`,
-          `name: ${name}\nui:\n  baseUrl: ${b.uiUrl}\napi:\n  baseUrl: ${b.apiUrl}\n  headers: { Accept: application/json }\n  auth: { type: none }\nusers:\n  poolSize: ${b.poolSize ?? 2}\nvars: {}\n`,
-        );
+        if (fs.exists(rel)) {
+          // Edit in place: headers, auth, aliases and comments in the file are not the form's to
+          // drop. Writing the template here used to erase them on every save.
+          fs.updateYaml(rel, (doc) => {
+            doc.setIn(['ui', 'baseUrl'], b.uiUrl);
+            doc.setIn(['api', 'baseUrl'], b.apiUrl);
+            if (b.poolSize !== undefined) doc.setIn(['users', 'poolSize'], b.poolSize);
+            if (b.vars) doc.setIn(['vars'], doc.createNode(b.vars));
+          });
+        } else {
+          fs.write(
+            rel,
+            toYaml({
+              name,
+              ui: { baseUrl: b.uiUrl },
+              api: {
+                baseUrl: b.apiUrl,
+                headers: { Accept: 'application/json' },
+                auth: { type: 'none' },
+              },
+              users: { poolSize: b.poolSize ?? 2 },
+              vars: b.vars ?? {},
+            }),
+          );
+        }
         if (b.makeDefault)
           fs.updateYaml(PROJECT_FILE, (doc) => doc.setIn(['envs', 'default'], name));
       }
@@ -695,11 +725,32 @@ export async function projectRoutes(app: FastifyInstance) {
     async (req) => {
       const { slug } = req.params as { slug: string };
       const body = parse(IntegrationsBody, req.body);
+      // Validate before writing: an invalid block would make the project yaml fail to load, and
+      // with it every project in the workspace.
+      const check = (schema: ZodType, v: unknown, what: string) => {
+        const r = schema.safeParse(v);
+        if (!r.success)
+          throw unprocessable(
+            `Invalid ${what} configuration.`,
+            r.error.issues.map((i) => ({ path: i.path.join('.'), message: i.message })),
+          );
+      };
+      if (body.github) check(GitHubIntegrationSchema, body.github, 'GitHub');
+      if (body.jira) check(JiraIntegrationSchema, body.jira, 'Jira');
+      for (const [name, cfg] of Object.entries(body.mcp ?? {})) {
+        if (!/^[a-z0-9][a-z0-9_-]*$/i.test(name))
+          throw badRequest(`MCP server name "${name}" must be letters, digits, - and _.`);
+        if (cfg !== null) check(McpServerSchema, cfg, `MCP server ${name}`);
+      }
       const fs = fsOf(slug);
       fs.updateYaml(PROJECT_FILE, (doc) => {
         if (body.github) doc.setIn(['integrations', 'github'], body.github);
         if (body.jira) doc.setIn(['integrations', 'jira'], body.jira);
-        if (body.mcp) doc.setIn(['mcp', 'servers'], body.mcp);
+        // Servers merge by name (null removes one), so saving one server keeps the others.
+        for (const [name, cfg] of Object.entries(body.mcp ?? {})) {
+          if (cfg === null) doc.deleteIn(['mcp', 'servers', name]);
+          else doc.setIn(['mcp', 'servers', name], cfg);
+        }
       });
       const registry = app.reloadRegistry();
       const cfg = registry.get(slug);
@@ -756,6 +807,19 @@ export async function projectRoutes(app: FastifyInstance) {
   );
 
   // ── record (local machine only) ────────────────────────────────────────
+  /** A recorded spec, by file name under recorded/ (what the record job's result names). */
+  app.get(
+    '/api/projects/:slug/recorded/:file',
+    { preHandler: [app.requireScope('features:read'), app.requireWorkspaceRole('viewer')] },
+    async (req) => {
+      const { slug, file } = req.params as { slug: string; file: string };
+      if (!/^[\w.-]+\.spec\.ts$/.test(file) || file.startsWith('.'))
+        throw badRequest('Expected a recorded spec file name such as checkout.spec.ts.');
+      const rel = `recorded/${file}`;
+      return { path: rel, content: fsOf(slug).read(rel) };
+    },
+  );
+
   app.post(
     '/api/projects/:slug/record',
     { preHandler: [app.requireScope('features:write'), app.requireWorkspaceRole('editor')] },
@@ -772,6 +836,7 @@ export async function projectRoutes(app: FastifyInstance) {
       };
       const job = app.agentManager.startRaw(
         [
+          '--json',
           'record',
           '-p',
           slug,

@@ -85,9 +85,9 @@ function ProviderCard({
   const [testResult, setTestResult] = useState<string | null>(null);
   const save = useMutation({
     mutationFn: () =>
-      api(`/api/projects/${slug}/integrations/${item.provider}`, {
+      api(`/api/projects/${slug}/integrations`, {
         method: 'PUT',
-        json: { enabled, config: cfg, secretEnv: item.secretEnv },
+        json: providerBody(item, cfg, enabled),
       }),
     onSuccess: () => {
       inv(['integrations', slug]);
@@ -299,9 +299,16 @@ function McpServers({
                 .map((s) => s.trim())
                 .filter(Boolean),
             };
-      return api(`/api/projects/${slug}/integrations/mcp:${d.name}`, {
+      return api(`/api/projects/${slug}/integrations`, {
         method: 'PUT',
-        json: { enabled: true, config, secretEnv: envFrom },
+        json: {
+          mcp: {
+            [d.name]:
+              d.transport === 'stdio'
+                ? { ...config, envFrom, enabled: true }
+                : { ...config, headersFrom: envFrom, enabled: true },
+          },
+        },
       });
     },
     onSuccess: () => {
@@ -441,4 +448,25 @@ function McpServers({
       )}
     </div>
   );
+}
+
+/** Keys the GET view adds for display; the yaml schema rejects or ignores them. */
+const VIEW_ONLY = ['tokenPresent', 'emailPresent', 'lastSyncAt', 'secretsPresent'];
+
+/**
+ * PUT /api/projects/:slug/integrations takes the yaml blocks themselves, keyed by provider.
+ * Secret env var names travel inside the block (`tokenEnv`, `emailEnv`).
+ */
+export function providerBody(
+  item: IntegrationView,
+  cfg: Record<string, unknown>,
+  enabled: boolean,
+): Record<string, unknown> {
+  const block: Record<string, unknown> = Object.fromEntries(
+    Object.entries(cfg).filter(([k, v]) => !VIEW_ONLY.includes(k) && v !== '' && v !== undefined),
+  );
+  block.enabled = enabled;
+  if (item.secretEnv.token) block.tokenEnv = item.secretEnv.token;
+  if (item.provider === 'jira' && item.secretEnv.email) block.emailEnv = item.secretEnv.email;
+  return { [item.provider]: block };
 }

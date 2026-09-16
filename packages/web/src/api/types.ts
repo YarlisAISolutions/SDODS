@@ -39,7 +39,18 @@ export type {
 };
 
 export interface Me {
-  user: { id: string; username: string; email?: string; role: Role; active: boolean };
+  user: {
+    id: string;
+    username: string;
+    email?: string;
+    displayName?: string;
+    role: Role;
+    active: boolean;
+    lastLoginAt?: string;
+    createdAt?: string;
+  };
+  /** Hash of the current session cookie; matches `MySession.id` for "this device". */
+  sessionId?: string;
   csrfToken: string;
   scopes: Scope[];
   orgRoles: Record<string, OrgRole>;
@@ -411,6 +422,7 @@ export interface UserRow {
   id: string;
   username: string;
   email?: string;
+  displayName?: string | null;
   role: Role;
   active: boolean;
   lastLoginAt?: string | null;
@@ -490,4 +502,14 @@ export interface StartRunInput {
   feature?: string;
   scenario?: string;
   harMode?: 'off' | 'update' | 'replay';
+}
+
+export interface MySession {
+  id: string;
+  ip: string | null;
+  userAgent: string | null;
+  createdAt: string;
+  lastSeenAt: string;
+  expiresAt: string;
+  current: boolean;
 }

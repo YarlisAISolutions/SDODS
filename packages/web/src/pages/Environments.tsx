@@ -19,11 +19,22 @@ export function EnvironmentsPage() {
   const { toast } = useToast();
   const [editing, setEditing] = useState<Environment | null>(null);
   const [isNew, setIsNew] = useState(false);
+  // One upsert route for both: PUT /envs/:name creates the file when it is missing and edits the
+  // listed fields in place when it exists. Its body is the flat EnvBody, not the Environment view.
   const save = useMutation({
-    mutationFn: (e: Environment) =>
-      isNew
-        ? api(`/api/projects/${slug}/envs`, { json: e })
-        : api(`/api/projects/${slug}/envs/${e.name}`, { method: 'PUT', json: e }),
+    mutationFn: (e: Environment) => {
+      if (isNew && (q.data ?? []).some((x) => x.name === e.name))
+        throw new Error(`Environment ${e.name} already exists.`);
+      return api(`/api/projects/${slug}/envs/${encodeURIComponent(e.name)}`, {
+        method: 'PUT',
+        json: {
+          uiUrl: e.ui.baseUrl,
+          apiUrl: e.api.baseUrl,
+          poolSize: e.users?.poolSize,
+          vars: e.vars ?? {},
+        },
+      });
+    },
     onSuccess: () => {
       inv(['envs', slug]);
       setEditing(null);
