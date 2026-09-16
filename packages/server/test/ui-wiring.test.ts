@@ -176,6 +176,112 @@ describe('UI wiring routes', () => {
     }
   });
 
+  it('declares a workspace created in the UI in sdods.workspace.yaml', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/workspaces',
+      headers: auth(),
+      payload: { slug: 'mobile', name: 'Mobile', description: 'apps' },
+    });
+    expect(res.statusCode).toBe(201);
+    const yaml = readFileSync(join(root, 'sdods.workspace.yaml'), 'utf8');
+    expect(yaml).toMatch(/slug: mobile/);
+    expect(yaml).toContain('defaultWorkspace: web');
+    // The registry now accepts it, which is what project create and import check.
+    expect(app.registry.workspaceFile.workspaces.map((w) => w.slug)).toContain('mobile');
+    const list = await app.inject({ method: 'GET', url: '/api/workspaces', headers: { cookie } });
+    expect(
+      list
+        .json()
+        .map((w: { slug: string }) => w.slug)
+        .sort(),
+    ).toEqual(['mobile', 'web']);
+
+    const again = await app.inject({
+      method: 'POST',
+      url: '/api/workspaces',
+      headers: auth(),
+      payload: { slug: 'mobile', name: 'Mobile again' },
+    });
+    expect(again.statusCode).toBe(409);
+  });
+
+  it('creates a user whose email field was left empty', async () => {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/users',
+      headers: auth(),
+      payload: { username: 'tess', password: 'Tess#123456', role: 'editor', email: '' },
+    });
+    expect(res.statusCode).toBe(201);
+    const users = await app.inject({ method: 'GET', url: '/api/users', headers: { cookie } });
+    expect(users.json().find((u: { username: string }) => u.username === 'tess')).toMatchObject({
+      email: null,
+    });
+  });
+
+  it('saves project settings as a patch without losing comments or unlisted keys', async () => {
+    const file = join(shop(), 'sdods.project.yaml');
+    writeFileSync(file, `# owned by the shop team\n${readFileSync(file, 'utf8')}`);
+    const res = await app.inject({
+      method: 'PUT',
+      url: '/api/projects/shop',
+      headers: auth(),
+      payload: { patch: { description: 'Checkout flows', browsers: ['chromium', 'firefox'] } },
+    });
+    expect(res.statusCode).toBe(200);
+    const yaml = readFileSync(file, 'utf8');
+    expect(yaml).toContain('# owned by the shop team');
+    expect(yaml).toContain('description: Checkout flows');
+    expect(yaml).toContain('keep:'); // the MCP block the form never shows
+    const bad = await app.inject({
+      method: 'PUT',
+      url: '/api/projects/shop',
+      headers: auth(),
+      payload: { patch: { layers: ['nope'] } },
+    });
+    expect(bad.statusCode).toBe(422);
+    expect(readFileSync(file, 'utf8')).toBe(yaml);
+  });
+
+  it('previews and uploads a dataset with the fields sent before the file', async () => {
+    const multipart = (fields: Record<string, string>) => {
+      const boundary = '----sdodsTest';
+      const parts = Object.entries(fields).map(
+        ([k, v]) => `--${boundary}\r\nContent-Disposition: form-data; name="${k}"\r\n\r\n${v}\r\n`,
+      );
+      parts.push(
+        `--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="users.csv"\r\nContent-Type: text/csv\r\n\r\nemail,role\na@x.io,admin\r\n--${boundary}--\r\n`,
+      );
+      return { payload: parts.join(''), type: `multipart/form-data; boundary=${boundary}` };
+    };
+    const preview = multipart({ preview: '1' });
+    const p = await app.inject({
+      method: 'POST',
+      url: '/api/projects/shop/datasets',
+      headers: { ...auth(), 'content-type': preview.type },
+      payload: preview.payload,
+    });
+    expect(p.statusCode).toBe(200);
+    expect(p.json()).toMatchObject({ columns: ['email', 'role'], rowCount: 1 });
+
+    const up = multipart({ name: 'people', env: 'local', storage: 'file' });
+    const res = await app.inject({
+      method: 'POST',
+      url: '/api/projects/shop/datasets',
+      headers: { ...auth(), 'content-type': up.type },
+      payload: up.payload,
+    });
+    expect(res.statusCode).toBe(201);
+    expect(res.json()).toMatchObject({ name: 'people', path: 'data/local/people.csv' });
+    const list = await app.inject({
+      method: 'GET',
+      url: '/api/projects/shop/datasets',
+      headers: { cookie },
+    });
+    expect(list.json().file.map((f: { name: string }) => f.name)).toContain('people');
+  });
+
   it('returns schedule history with the schedule', async () => {
     const created = await app.inject({
       method: 'POST',

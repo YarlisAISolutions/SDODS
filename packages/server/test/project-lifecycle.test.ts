@@ -164,17 +164,31 @@ describe('project lifecycle', () => {
   it('refuses a workspace the workspace file does not declare', async () => {
     // The DB is not the authority. ProjectRegistry.discover throws for *every* project when one
     // names an undeclared workspace, so accepting this would break the whole registry on reload.
-    const ws = await app.inject({
-      method: 'POST',
-      url: '/api/workspaces',
-      headers: auth(),
-      payload: { slug: 'db-only', name: 'DB only' },
+    // POST /api/workspaces declares in the file now, so a DB-only row is made directly: that is
+    // what a workspace removed from the yaml leaves behind.
+    const orgs = await app.hierarchy.organizations();
+    await app.hierarchy.createWorkspace({
+      organizationId: orgs[0]!.id,
+      slug: 'db-only',
+      name: 'DB only',
     });
-    expect(ws.statusCode).toBeLessThan(300);
     const res = await create({ slug: 'poison', workspace: 'db-only' });
     expect(res.statusCode).toBe(400);
     expect(res.json().error.message).toMatch(/sdods\.workspace\.yaml/);
     expect(existsSync(join(root, 'projects', 'poison'))).toBe(false);
+  });
+
+  it('accepts a project in a workspace created through the API', async () => {
+    const ws = await app.inject({
+      method: 'POST',
+      url: '/api/workspaces',
+      headers: auth(),
+      payload: { slug: 'fresh', name: 'Fresh' },
+    });
+    expect(ws.statusCode).toBe(201);
+    const res = await create({ slug: 'fresh-app', workspace: 'fresh' });
+    expect(res.statusCode).toBe(201);
+    expect(existsSync(join(root, 'projects', 'fresh-app', 'sdods.project.yaml'))).toBe(true);
   });
 
   it('refuses to save a project into an undeclared workspace', async () => {

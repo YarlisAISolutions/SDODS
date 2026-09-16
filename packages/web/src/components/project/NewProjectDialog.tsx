@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router';
-import { BrowserSchema, type Layer } from '@sdods/contracts';
+import { BrowserSchema, type Layer } from '@sdods/contracts/schemas';
 import { useCreateProject } from '../../api/queries';
 import type { BrowserName, CreateProjectInput } from '../../api/types';
 import { useWorkspace } from '../../context/WorkspaceContext';

@@ -109,7 +109,7 @@ export function WorkspacesPage() {
         open={creating}
         onOpenChange={setCreating}
         title="New workspace"
-        description="Projects opt into a workspace with `workspace: <slug>` in sdods.project.yaml."
+        description="Added to sdods.workspace.yaml. Projects join it with `workspace: <slug>` in sdods.project.yaml, or pick it when you create or import one."
         footer={
           <>
             <Button onClick={() => setCreating(false)}>Cancel</Button>

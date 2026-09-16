@@ -38,6 +38,9 @@ const UI_PAGES = [
   'scenario-steps',
   'feature-editor',
   'settings-mcp',
+  'account-menu',
+  'settings-profile',
+  'settings-security',
   'processes',
   'schedules',
 ];
