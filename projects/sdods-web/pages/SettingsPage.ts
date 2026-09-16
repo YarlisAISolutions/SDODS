@@ -26,6 +26,14 @@ export class SettingsPage extends BasePage {
     await expect(this.revealed).toContainText(prefix);
   }
 
+  @When('I set my display name to {string}')
+  async setDisplayName(name: string) {
+    const form = this.page.getByRole('form', { name: 'Profile' });
+    await form.getByLabel('Display name').fill(this.render(name));
+    await form.getByRole('button', { name: 'Save profile' }).click();
+    await expect(this.page.getByText('Profile saved')).toBeVisible();
+  }
+
   @Then('the MCP clients page should list the tool {string}')
   async assertTool(name: string) {
     await expect(this.page.getByText(name, { exact: false }).first()).toBeVisible();

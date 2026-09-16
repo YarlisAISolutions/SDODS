@@ -18,6 +18,8 @@ routes:
   projects: /projects
   runs: /runs
   editor: /projects/demo-shop/editor/features/auth/login.feature
+  profile: /settings/profile
+  security: /settings/security
   tokens: /settings/tokens
   mcp: /settings/mcp
   users: /users
@@ -53,10 +55,10 @@ modules:
     tags: ['@editor']
     routes: [editor]
   - name: settings
-    title: Tokens and MCP clients
+    title: Account menu, profile, tokens and MCP clients
     testingTypes: [functional, regression]
     tags: ['@settings']
-    routes: [tokens, mcp]
+    routes: [profile, security, tokens, mcp]
   - name: api
     title: REST API
     layers: [api]

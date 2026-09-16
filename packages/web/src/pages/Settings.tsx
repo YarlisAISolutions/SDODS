@@ -22,6 +22,7 @@ import { Dialog } from '../components/ui/Dialog';
 import { Tabs } from '../components/ui/Tabs';
 import { useToast } from '../components/ui/Toast';
 import { copyToClipboard, fmtDate, fmtRelative } from '../lib/utils';
+import { PreferencesTab, ProfileTab, SecurityTab } from './settings/AccountTabs';
 
 const PRESETS: Record<string, Scope[]> = {
   'CI ingest': ['runs:ingest', 'runs:read'],
@@ -30,18 +31,23 @@ const PRESETS: Record<string, Scope[]> = {
 };
 
 export function SettingsPage() {
-  const { tab = 'tokens' } = useParams();
+  const { tab: raw = 'profile' } = useParams();
+  // `sessions` was its own tab in the plan; it lives with the password now, so old links still land.
+  const tab = raw === 'sessions' ? 'security' : raw;
   const nav = useNavigate();
   return (
     <div className="space-y-4">
       <PageHeader
         title="Settings"
-        subtitle="API tokens are free: no quota, no license gate. Scopes are capped by your role."
+        subtitle="Your profile, sign-in security, preferences and developer access."
       />
       <Tabs
         value={tab}
         onChange={(t) => nav(`/settings/${t}`)}
         tabs={[
+          { value: 'profile', label: 'Profile', content: <ProfileTab /> },
+          { value: 'security', label: 'Password & sessions', content: <SecurityTab /> },
+          { value: 'preferences', label: 'Preferences', content: <PreferencesTab /> },
           { value: 'tokens', label: 'API tokens', content: <TokensTab /> },
           { value: 'mcp', label: 'MCP clients', content: <McpTab /> },
         ]}

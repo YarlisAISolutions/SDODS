@@ -5,7 +5,9 @@ import {
   createSession,
   createUser,
   deleteSession,
+  getUserById,
   getUserByUsername,
+  hashToken,
   updateUser,
 } from '@sdods/db';
 import { LoginBody, SetupBody } from '../schemas/index.js';
@@ -109,13 +111,21 @@ export async function authRoutes(app: FastifyInstance) {
 
   app.get('/api/auth/me', async (req) => {
     const p = req.principal!;
+    // Auth-disabled mode has no user row; everything else reads the profile fresh so a saved
+    // display name or email shows up without signing in again.
+    const row = p.via === 'disabled' ? null : await getUserById(app.adb.db, p.userId);
     const orgs = Object.entries(p.orgRoles).map(([organizationId, role]) => ({
       organizationId,
       role,
     }));
     const workspaces = await app.hierarchy.workspacesForUser(p.userId, p.role).catch(() => []);
     return {
-      user: { id: p.userId, username: p.username, role: p.role, via: p.via },
+      user: {
+        ...publicUser(row ?? { id: p.userId, username: p.username, role: p.role }),
+        role: p.role,
+        via: p.via,
+      },
+      sessionId: p.sessionToken ? hashToken(p.sessionToken) : null,
       scopes: p.scopes,
       csrfToken: p.csrfToken ?? null,
       orgs,
@@ -182,6 +192,7 @@ export function publicUser(u: {
   username: string;
   role: string;
   email?: string | null;
+  displayName?: string | null;
   active?: boolean;
   lastLoginAt?: string | null;
   createdAt?: string | null;
@@ -191,6 +202,7 @@ export function publicUser(u: {
     username: u.username,
     role: u.role,
     email: u.email ?? null,
+    displayName: u.displayName ?? null,
     active: u.active ?? true,
     lastLoginAt: u.lastLoginAt ?? null,
     createdAt: u.createdAt ?? null,

@@ -72,6 +72,7 @@ export function AgentsPage() {
     adapter: 'claude',
   });
   const [activeJob, setActiveJob] = useState<string | null>(null);
+  const [jobDone, setJobDone] = useState(false);
   const [stream, setStream] = useState<Array<{ kind: string; text: string }>>([]);
   const [selectedProposal, setSelectedProposal] = useState<Proposal | null>(null);
   const start = useMutation({
@@ -81,22 +82,21 @@ export function AgentsPage() {
       }),
     onSuccess: (j) => {
       setActiveJob(j.id);
+      setJobDone(false);
       setStream([]);
       inv(['agentJobs']);
     },
     onError: (e) => toast((e as Error).message, 'error'),
   });
-  useSse<any>(activeJob ? `/api/agents/jobs/${activeJob}/events` : null, {
+  // The server streams the CLI's output as `log` lines and ends with one `done`. Closing the stream
+  // on `done` matters: EventSource reconnects on its own and would replay `done` again.
+  useSse<any>(activeJob && !jobDone ? `/api/agents/jobs/${activeJob}/events` : null, {
     onMessage: (m) => {
-      if (m.event === 'text') setStream((s) => [...s, { kind: 'text', text: m.data.text }]);
-      else if (m.event === 'tool')
-        setStream((s) => [
-          ...s,
-          { kind: 'tool', text: `${m.data.name}(${JSON.stringify(m.data.input)})` },
-        ]);
-      else if (m.event === 'diff')
-        setStream((s) => [...s, { kind: 'diff', text: m.data.diffText }]);
-      else if (m.event === 'done') {
+      if (m.event === 'log') {
+        const entry = streamEntry(m.data);
+        if (entry) setStream((s) => [...s, entry]);
+      } else if (m.event === 'done') {
+        setJobDone(true);
         setStream((s) => [
           ...s,
           {
@@ -238,7 +238,9 @@ export function AgentsPage() {
                         ? 'text-brand-600'
                         : s.kind === 'done'
                           ? 'status-passed'
-                          : ''
+                          : s.kind === 'err'
+                            ? 'text-red-600 dark:text-red-400'
+                            : ''
                     }
                   >
                     {s.kind === 'tool' ? '⚙ ' : ''}
@@ -348,4 +350,30 @@ export function AgentsPage() {
       </Card>
     </div>
   );
+}
+
+/**
+ * One job log line as a stream entry. `--json` agent output may carry structured events
+ * (`{"type":"tool",...}`); anything else is shown as plain text, with the final result object
+ * left out because `done` reports it.
+ */
+export function streamEntry(line: {
+  stream?: string;
+  line?: string;
+}): { kind: string; text: string } | null {
+  const text = line.line ?? '';
+  if (!text.trim()) return null;
+  if (text.startsWith('{')) {
+    try {
+      const ev = JSON.parse(text) as Record<string, any>;
+      if (ev.type === 'tool')
+        return { kind: 'tool', text: `${ev.name}(${JSON.stringify(ev.input ?? {})})` };
+      if (ev.type === 'diff' && ev.diffText) return { kind: 'diff', text: String(ev.diffText) };
+      if (ev.type === 'text' && ev.text) return { kind: 'text', text: String(ev.text) };
+      if ('proposalId' in ev || 'proposal' in ev || 'ok' in ev) return null;
+    } catch {
+      /* not JSON: show it as it is */
+    }
+  }
+  return { kind: line.stream === 'err' ? 'err' : 'text', text };
 }
