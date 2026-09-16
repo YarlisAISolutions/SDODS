@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { useMutation } from '@tanstack/react-query';
-import { BrowserSchema } from '@sdods/contracts';
+import { BrowserSchema } from '@sdods/contracts/schemas';
 import { api } from '../api/client';
 import { useDeleteProject, useInvalidate, useProject } from '../api/queries';
 import type { Project } from '../api/types';
@@ -63,8 +63,9 @@ export function ProjectFormPage() {
     if (q.data) setForm(q.data);
   }, [q.data]);
   const save = useMutation({
-    mutationFn: (p: Project) => api<Project>(`/api/projects/${p.slug}`, { method: 'PUT', json: p }),
-    onSuccess: (p) => {
+    mutationFn: (p: Project) =>
+      api(`/api/projects/${p.slug}`, { method: 'PUT', json: { patch: projectPatch(q.data!, p) } }),
+    onSuccess: (_r, p) => {
       inv(['projects'], ['project', p.slug]);
       toast('Project saved', 'success');
     },
@@ -693,3 +694,34 @@ const splitList = (s: string) =>
     .map((x) => x.trim())
     .filter(Boolean);
 const replaceAt = <T,>(arr: T[], i: number, v: T) => arr.map((x, j) => (j === i ? v : x));
+
+/** Keys of the Project view that are written back to sdods.project.yaml under the same name. */
+const EDITABLE_KEYS = [
+  'name',
+  'description',
+  'workspace',
+  'layers',
+  'browsers',
+  'testIdAttribute',
+  'envs',
+  'tags',
+  'routes',
+  'modules',
+  'screenshots',
+  'processes',
+] as const;
+
+/**
+ * Only what the form changed. The view carries resolved values the yaml does not have: defaults
+ * filled in, and processes inherited from the workspace. Sending the whole view wrote those into
+ * the project file (and the server rejected the shape anyway).
+ */
+export function projectPatch(initial: Project, edited: Project): Record<string, unknown> {
+  const patch: Record<string, unknown> = {};
+  for (const key of EDITABLE_KEYS) {
+    if (JSON.stringify(initial[key]) === JSON.stringify(edited[key])) continue;
+    const value = edited[key];
+    patch[key] = key === 'description' && value === '' ? null : value;
+  }
+  return patch;
+}

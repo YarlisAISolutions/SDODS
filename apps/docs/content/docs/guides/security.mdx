@@ -49,6 +49,12 @@ The effective role inside a workspace is the higher of the explicit workspace me
 
 HttpOnly, SameSite=Lax cookies with sliding seven-day expiry; every non-GET request carries a CSRF header; login is rate-limited.
 
+Each user can see and end their own sessions under Settings → Password & sessions: the browser, IP
+address, last activity and expiry of every signed-in session, with the current one marked. Changing
+a password there requires the current password, is rate-limited, and signs out every other session.
+All of these routes refuse API tokens, so a leaked token cannot lock its owner out. Every change is
+recorded in the audit log (`user.profile.update`, `user.password.change`, `user.session.revoke`).
+
 ## Agents
 
 Agents can read the project, run scenarios and drive a browser. Their only write path is a proposal directory. Nothing reaches `main` without a person accepting it.

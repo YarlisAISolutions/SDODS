@@ -6,7 +6,7 @@ import type { ZodType } from 'zod';
 import type { Principal } from '../types.js';
 import multipart from '@fastify/multipart';
 import { parse as parseCsv } from 'csv-parse/sync';
-import { parse as parseYaml, stringify as toYaml } from 'yaml';
+import { parse as parseYaml, parseDocument, stringify as toYaml } from 'yaml';
 import {
   audit,
   deleteSchedule,
@@ -177,10 +177,24 @@ export async function projectRoutes(app: FastifyInstance) {
     { preHandler: [app.requireScope('projects:write'), app.requireWorkspaceRole('editor')] },
     async (req) => {
       const { slug } = req.params as { slug: string };
-      const body = req.body as { yaml?: string; config?: unknown };
+      const body = req.body as { yaml?: string; config?: unknown; patch?: Record<string, unknown> };
       const fs = fsOf(slug);
       let text: string;
-      if (typeof body?.yaml === 'string') {
+      if (body?.patch && typeof body.patch === 'object') {
+        // Top-level keys the settings form changed, applied to the yaml document so comments and
+        // keys the form does not show survive. The merged result is validated before writing.
+        const patch = body.patch;
+        if ('slug' in patch && patch.slug !== slug) throw unprocessable('slug cannot change.');
+        const doc = parseDocument(readFileSync(entryOf(slug).file, 'utf8'));
+        for (const [key, value] of Object.entries(patch)) {
+          if (value === null || value === undefined) doc.delete(key);
+          else doc.set(key, doc.createNode(value));
+        }
+        const parsed = ProjectConfigSchema.safeParse(doc.toJS());
+        if (!parsed.success) throw unprocessable('Invalid project config.', parsed.error.issues);
+        if (parsed.data.workspace) assertWorkspaceDeclared(parsed.data.workspace, unprocessable);
+        text = doc.toString({ lineWidth: 100 });
+      } else if (typeof body?.yaml === 'string') {
         const parsed = ProjectConfigSchema.safeParse(parseYaml(body.yaml));
         if (!parsed.success) throw unprocessable('Invalid project yaml.', parsed.error.issues);
         if (parsed.data.slug !== slug) throw unprocessable('slug cannot change.');
@@ -191,7 +205,7 @@ export async function projectRoutes(app: FastifyInstance) {
         if (!parsed.success) throw unprocessable('Invalid project config.', parsed.error.issues);
         if (parsed.data.workspace) assertWorkspaceDeclared(parsed.data.workspace, unprocessable);
         text = toYaml(body.config, { lineWidth: 100 });
-      } else throw badRequest('Provide yaml or config.');
+      } else throw badRequest('Provide patch, yaml or config.');
       // Checked before the write, not after: `reloadRegistry` throws CONFIG_INVALID for a project
       // naming an undeclared workspace, and it throws for *every* project -- so saving one bad
       // value here would empty the whole dashboard until someone fixed the yaml by hand.
@@ -535,7 +549,16 @@ export async function projectRoutes(app: FastifyInstance) {
         };
       if (storage === 'file') {
         const rel = `data/${envKey === '*' ? 'common' : envKey}/${name}.${kind}`;
-        new ProjectFs(e.root).write(rel, text);
+        const pfs = new ProjectFs(e.root);
+        pfs.write(rel, text);
+        // Register the file as a source so it is listed and usable as @data:<name>; an existing
+        // source of that name is the user's own configuration and is left alone.
+        if (!e.config.data.sources[name]) {
+          pfs.updateYaml(PROJECT_FILE, (doc) =>
+            doc.setIn(['data', 'sources', name], doc.createNode({ type: kind, path: rel })),
+          );
+          app.reloadRegistry();
+        }
         reply.code(201);
         return { name, storage, path: rel, rowCount: rows.length };
       }
