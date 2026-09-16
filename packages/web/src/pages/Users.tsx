@@ -69,6 +69,11 @@ export function UsersPage() {
         data={q.data ?? []}
         columns={[
           { header: 'Username', accessorKey: 'username' },
+          {
+            header: 'Display name',
+            accessorKey: 'displayName',
+            cell: (c) => c.getValue<string>() || '—',
+          },
           { header: 'Email', accessorKey: 'email', cell: (c) => c.getValue<string>() ?? '—' },
           {
             header: 'Role',

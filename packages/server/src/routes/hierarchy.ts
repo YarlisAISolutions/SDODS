@@ -292,6 +292,7 @@ export async function hierarchyRoutes(app: FastifyInstance) {
       role: body.role,
       active: body.active,
       email: body.email,
+      displayName: body.displayName === '' ? null : body.displayName,
     });
     await audit(app.adb.db, {
       actorUserId: req.principal!.userId,

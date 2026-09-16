@@ -360,6 +360,7 @@ export interface UsersTable {
   id: string;
   username: string;
   email: string | null;
+  display_name: string | null;
   password_hash: string;
   role_id: string;
   active: Bool;

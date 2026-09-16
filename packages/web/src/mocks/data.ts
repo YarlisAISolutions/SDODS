@@ -39,7 +39,17 @@ export function shot(
 }
 
 export const me: Me = {
-  user: { id: 'u1', username: 'admin', email: 'admin@example.com', role: 'admin', active: true },
+  user: {
+    id: 'u1',
+    username: 'admin',
+    displayName: 'Ada Admin',
+    email: 'admin@example.com',
+    role: 'admin',
+    active: true,
+    lastLoginAt: '2026-09-16T08:12:00Z',
+    createdAt: '2026-01-04T10:00:00Z',
+  },
+  sessionId: 'sess-current',
   csrfToken: 'csrf-mock',
   scopes: [],
   orgRoles: { sdods: 'owner' },

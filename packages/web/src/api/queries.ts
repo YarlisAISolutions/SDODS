@@ -14,6 +14,7 @@ import type {
   IntegrationView,
   McpInfo,
   Member,
+  MySession,
   Organization,
   PoolUser,
   ProcessView,
@@ -240,8 +241,17 @@ export const useSchedules = (slug?: string) =>
 export const useScheduleHistory = (id: string) =>
   useQuery({
     queryKey: ['scheduleHistory', id],
+    // History comes with the schedule itself; there is no separate history route.
     queryFn: async () =>
-      list(await api<unknown>(`/api/schedules/${id}/history`)) as unknown as ScheduleRun[],
+      list((await api<{ history?: unknown }>(`/api/schedules/${id}`)).history).map(
+        (r): ScheduleRun => ({
+          id: String(r.id),
+          runId: (r.runId ?? r.run_id ?? undefined) as string | undefined,
+          firedAt: String(r.firedAt ?? r.fired_at ?? ''),
+          status: String(r.status ?? 'unknown'),
+          note: (r.note ?? undefined) as string | undefined,
+        }),
+      ),
     enabled: Boolean(id),
   });
 export const useUsers = () =>
@@ -257,6 +267,40 @@ export const useTokens = (all = false) =>
         normalizeToken,
       ) as ApiToken[],
   });
+export const useMySessions = () =>
+  useQuery({
+    queryKey: ['me', 'sessions'],
+    queryFn: async () => list(await api<unknown>('/api/me/sessions')) as unknown as MySession[],
+  });
+export const useUpdateProfile = () =>
+  useMutation({
+    mutationFn: (body: { displayName?: string | null; email?: string | null }) =>
+      api('/api/me', { method: 'PATCH', json: body }),
+  });
+export const useChangePassword = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (body: { currentPassword: string; newPassword: string }) =>
+      api<{ ok: true; otherSessionsSignedOut: number }>('/api/me/password', { json: body }),
+    // The change signs out every other session; the list next to the form has to show that.
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['me', 'sessions'] }),
+  });
+};
+export const useRevokeSession = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api(`/api/me/sessions/${id}`, { method: 'DELETE' }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['me', 'sessions'] }),
+  });
+};
+export const useRevokeOtherSessions = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () =>
+      api<{ ok: true; revoked: number }>('/api/me/sessions/revoke-others', { method: 'POST' }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['me', 'sessions'] }),
+  });
+};
 export const useMcpInfo = () =>
   useQuery({
     queryKey: keys.mcpInfo,

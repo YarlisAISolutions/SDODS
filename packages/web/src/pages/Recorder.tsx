@@ -29,6 +29,7 @@ export function RecorderPage() {
   const [jobId, setJobId] = useState<string | null>(null);
   const [spec, setSpec] = useState<{ path: string; content: string } | null>(null);
   const [log, setLog] = useState<string[]>([]);
+  const [finished, setFinished] = useState<string | null>(null);
   const start = useMutation({
     mutationFn: () =>
       api<{ jobId: string }>(`/api/projects/${slug}/record`, {
@@ -38,26 +39,35 @@ export function RecorderPage() {
       setJobId(r.jobId);
       setLog([]);
       setSpec(null);
+      setFinished(null);
     },
     onError: (e) => toast((e as Error).message, 'error'),
   });
-  useSse<any>(jobId ? `/api/jobs/${jobId}/events` : null, {
+  // Record jobs are tracked by the agent job manager, so they stream from its events route.
+  // `done` carries the CLI's --json result; `spec` is relative to the workspace root and the
+  // recording is already on disk, so only its file name is needed to show it.
+  useSse<any>(jobId && !finished ? `/api/agents/jobs/${jobId}/events` : null, {
     onMessage: (m) => {
       if (m.event === 'log') setLog((l) => [...l, m.data.line]);
-      if (m.event === 'done') setSpec({ path: m.data.path, content: m.data.spec });
+      if (m.event === 'done') {
+        setFinished(m.data.status);
+        const file = String(m.data.result?.spec ?? '')
+          .split(/[\\/]/)
+          .pop();
+        if (m.data.status !== 'done' || !file) return;
+        api<{ path: string; content: string }>(`/api/projects/${slug}/recorded/${file}`)
+          .then(setSpec)
+          .catch((e) => toast((e as Error).message, 'error'));
+      }
     },
-  });
-  const save = useMutation({
-    mutationFn: () => api(`/api/projects/${slug}/recorded`, { json: spec }),
-    onSuccess: () => toast(`Saved ${spec?.path}`, 'success'),
-    onError: (e) => toast((e as Error).message, 'error'),
   });
   const convert = useMutation({
     mutationFn: () =>
       api<{ id: string }>('/api/agents/jobs', {
-        json: { project: slug, kind: 'convert-recording', goal: spec?.path },
+        json: { project: slug, kind: 'convert', spec: spec?.path },
       }),
     onSuccess: () => nav('/agents'),
+    onError: (e) => toast((e as Error).message, 'error'),
   });
   const roles = [...new Set((pool.data ?? []).map((u) => u.role))];
   return (
@@ -158,6 +168,11 @@ export function RecorderPage() {
             <pre className="mono max-h-40 overflow-auto text-[12px]">
               {log.join('\n') || (jobId ? 'Waiting for codegen…' : 'No recording started.')}
             </pre>
+            {finished && finished !== 'done' && (
+              <div className="mt-2 text-xs text-red-600">
+                Recording {finished}. See the log above.
+              </div>
+            )}
           </Card>
           <Card
             title={
@@ -168,9 +183,7 @@ export function RecorderPage() {
             actions={
               spec && (
                 <>
-                  <Button size="sm" onClick={() => save.mutate()} disabled={save.isPending}>
-                    Save to recorded/
-                  </Button>
+                  <Badge tone="green">saved</Badge>
                   <Button
                     size="sm"
                     variant="primary"

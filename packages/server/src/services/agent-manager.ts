@@ -107,7 +107,8 @@ export class AgentManager {
       } catch {
         job.result = null;
       }
-      job.status = code === 0 ? (job.proposalId ? 'awaiting_review' : 'done') : 'failed';
+      if (job.status === 'running')
+        job.status = code === 0 ? (job.proposalId ? 'awaiting_review' : 'done') : 'failed';
       job.log.push('sys', `finished: ${job.status}`);
       job.log.close();
     });
@@ -119,7 +120,11 @@ export class AgentManager {
     return job;
   }
 
-  /** Spawn an arbitrary CLI command as a tracked job (used for `record`). */
+  /**
+   * Spawn an arbitrary CLI command as a tracked job (used for `record`). Pass `--json` in `args`
+   * to get a result: the last JSON object line on stdout becomes `job.result`, which the events
+   * stream sends with `done`.
+   */
   startRaw(args: string[], startedBy: string | null, meta: AgentJobInput): AgentJob {
     const id = newId();
     const job: AgentJob = {
@@ -134,12 +139,13 @@ export class AgentManager {
     job.log.push('sys', `sdods ${args.join(' ')}`);
     const child = spawnCli(this.config, args);
     job.child = child;
-    child.stdout?.on('data', (c: Buffer) =>
-      c
-        .toString()
+    let stdout = '';
+    child.stdout?.on('data', (c: Buffer) => {
+      stdout += c.toString();
+      c.toString()
         .split('\n')
-        .forEach((l) => l.trim() && job.log.push('out', l)),
-    );
+        .forEach((l) => l.trim() && job.log.push('out', l));
+    });
     child.stderr?.on('data', (c: Buffer) =>
       c
         .toString()
@@ -149,7 +155,10 @@ export class AgentManager {
     child.on('exit', (code) => {
       job.exitCode = code ?? 1;
       job.finishedAt = Date.now();
-      job.status = code === 0 ? 'done' : 'failed';
+      job.result = lastJsonLine(stdout);
+      // A cancelled job keeps its status; the kill makes the exit code non-zero.
+      if (job.status === 'running') job.status = code === 0 ? 'done' : 'failed';
+      job.log.push('sys', `finished: ${job.status}`);
       job.log.close();
     });
     child.on('error', (e) => {
@@ -166,5 +175,21 @@ export class AgentManager {
     job.child?.kill('SIGTERM');
     job.status = 'cancelled';
     return true;
+  }
+}
+
+/** The last `{…}` line of a `--json` CLI run, or null when there is none or it does not parse. */
+export function lastJsonLine(stdout: string): unknown {
+  const line = stdout
+    .trim()
+    .split('\n')
+    .map((l) => l.trim())
+    .filter((l) => l.startsWith('{'))
+    .pop();
+  if (!line) return null;
+  try {
+    return JSON.parse(line);
+  } catch {
+    return null;
   }
 }

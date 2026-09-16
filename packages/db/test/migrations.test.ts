@@ -170,7 +170,8 @@ describe('0008_runner_naming carries existing rows through the rename', () => {
   });
 
   it('reverts cleanly on rollback', async () => {
-    await migrateDown(adb);
+    // Roll back to the migration before this one, not one step: later migrations sit on top.
+    await migrateTo(adb, '0007_hierarchy');
     const scenarios = await sql<{
       id: string;
       source: string;
