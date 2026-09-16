@@ -14,20 +14,44 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // Google sign-in reports the account's primary address. sdods.com is a user alias domain for
+    // yarlis.com, so the same mailbox signs in as admin@yarlis.com; admin@sdods.com stays for an
+    // account that reports the alias.
     function isModerator() {
       return request.auth != null
         && request.auth.token.email_verified == true
-        && request.auth.token.email == 'admin@sdods.com';
+        && request.auth.token.email in ['admin@sdods.com', 'admin@yarlis.com'];
     }
 
-    // Fields every submission shares. `createdAt` must be the server's clock,
-    // not a timestamp the client chose.
-    function validCommon(d) {
+    // Fields every public post shares. `createdAt` must be the server's clock, not a timestamp the
+    // client chose. There is no email here: a published post is readable by anyone with the SDK,
+    // so the address lives in a private `private/contact` document beside it (see validContact).
+    function validPost(d) {
       return d.status == 'pending'
         && d.createdAt == request.time
         && d.name is string && d.name.size() > 0 && d.name.size() <= 100
-        && d.email is string && d.email.size() <= 254 && d.email.matches('.+@.+[.].+')
         && d.body is string && d.body.size() > 0 && d.body.size() <= 5000;
+    }
+
+    // An answer or a reply. `parentId` is optional on live answers and required on thread answers;
+    // empty means an answer to the question, anything else names the answer being replied to.
+    function validParent(d) {
+      return !('parentId' in d)
+        || (d.parentId is string && d.parentId.size() <= 64);
+    }
+
+    // The contact document for a post, written in the same batch as the post itself: the post must
+    // exist once the batch lands and carry this write's timestamp, so an address can never be
+    // attached to somebody else's post after the fact. Only the moderator reads it back.
+    function validContact(postPath) {
+      return request.resource.data.keys().hasOnly(['email', 'createdAt'])
+        && request.resource.data.keys().hasAll(['email', 'createdAt'])
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.email is string
+        && request.resource.data.email.size() <= 254
+        && request.resource.data.email.matches('.+@.+[.].+')
+        && existsAfter(postPath)
+        && getAfter(postPath).data.createdAt == request.time;
     }
 
     match /questions/{questionId} {
@@ -36,18 +60,24 @@ service cloud.firestore {
       allow read: if resource.data.status == 'published' || isModerator();
 
       allow create: if request.resource.data.keys().hasOnly(
-            ['name', 'email', 'title', 'body', 'category', 'status', 'createdAt']
+            ['name', 'title', 'body', 'category', 'status', 'createdAt']
           )
         && request.resource.data.keys().hasAll(
-            ['name', 'email', 'title', 'body', 'category', 'status', 'createdAt']
+            ['name', 'title', 'body', 'category', 'status', 'createdAt']
           )
-        && validCommon(request.resource.data)
+        && validPost(request.resource.data)
         && request.resource.data.title is string
         && request.resource.data.title.size() > 0
         && request.resource.data.title.size() <= 200
         && request.resource.data.category in ['ui', 'api', 'hybrid', 'other'];
 
       allow update, delete: if isModerator();
+
+      match /private/{contactId} {
+        allow read, update, delete: if isModerator();
+        allow create: if contactId == 'contact'
+          && validContact(/databases/$(database)/documents/questions/$(questionId));
+      }
 
       // Answers hang off a question. A stranger may answer, but the answer is
       // pending too, so an unmoderated reply is invisible even on a published
@@ -56,17 +86,59 @@ service cloud.firestore {
         allow read: if resource.data.status == 'published' || isModerator();
 
         allow create: if request.resource.data.keys().hasOnly(
-              ['name', 'email', 'body', 'status', 'createdAt']
+              ['name', 'body', 'parentId', 'status', 'createdAt']
             )
           && request.resource.data.keys().hasAll(
-              ['name', 'email', 'body', 'status', 'createdAt']
+              ['name', 'body', 'status', 'createdAt']
             )
-          && validCommon(request.resource.data)
+          && validPost(request.resource.data)
+          && validParent(request.resource.data)
           // Only answer a question that exists and is already public.
           && get(/databases/$(database)/documents/questions/$(questionId))
                .data.status == 'published';
 
         allow update, delete: if isModerator();
+
+        match /private/{contactId} {
+          allow read, update, delete: if isModerator();
+          allow create: if contactId == 'contact'
+            && validContact(
+                 /databases/$(database)/documents/questions/$(questionId)/answers/$(answerId)
+               );
+        }
+      }
+    }
+
+    // The moderation page lists pending answers across every live question at once, which is a
+    // collection-group query and needs its own rule.
+    match /{path=**}/answers/{answerId} {
+      allow read: if isModerator();
+    }
+
+    // Answers and replies on the static archive threads (`/questions/<slug>/`). Those threads are
+    // not documents, so there is no parent to check: the slug is only held to the shape a slug has,
+    // and a post naming a thread that does not exist is simply never shown. Pending until published,
+    // like everything else here.
+    match /threadAnswers/{answerId} {
+      allow read: if resource.data.status == 'published' || isModerator();
+
+      allow create: if request.resource.data.keys().hasOnly(
+            ['slug', 'parentId', 'name', 'body', 'status', 'createdAt']
+          )
+        && request.resource.data.keys().hasAll(
+            ['slug', 'parentId', 'name', 'body', 'status', 'createdAt']
+          )
+        && request.resource.data.slug is string
+        && request.resource.data.slug.matches('^[a-z0-9-]{1,120}$')
+        && validPost(request.resource.data)
+        && validParent(request.resource.data);
+
+      allow update, delete: if isModerator();
+
+      match /private/{contactId} {
+        allow read, update, delete: if isModerator();
+        allow create: if contactId == 'contact'
+          && validContact(/databases/$(database)/documents/threadAnswers/$(answerId));
       }
     }
 
