@@ -252,19 +252,20 @@ sdods users set-password admin --password '<at least 8 chars>' --activate
 
 ## Pages
 
-| Page            | What it does                                                                                           |
-| --------------- | ------------------------------------------------------------------------------------------------------ |
-| Dashboard       | pass-rate, duration and flaky trends; most-failing locators; latest runs; proposals inbox              |
-| Projects        | the project YAML as a form: layers, browsers, tag policy, screenshot policy, integrations, MCP servers |
-| Environments    | base URLs and non-secret settings; secret names shown with a presence indicator                        |
-| Datasets        | upload CSV, JSON or YAML, preview the first rows, choose file or database storage                      |
-| Runs            | filterable list, live log, scenario tree, step timeline with before/after comparison and API panels    |
-| Feature editor  | Gherkin editing with step completion from your project, lint diagnostics, run this scenario            |
-| Recorder        | record a session as a pool user, save the spec, convert it with an agent                               |
-| Agents          | start a role, watch it work, review the diff, accept or reject                                         |
-| Integrations    | GitHub and Jira settings, connection tests, MCP servers the project consumes                           |
-| Schedules       | cron builder with the next fire times, history, pause and resume                                       |
-| Users, Settings | roles, free scoped API tokens, MCP client install snippets                                             |
+| Page           | What it does                                                                                           |
+| -------------- | ------------------------------------------------------------------------------------------------------ |
+| Dashboard      | pass-rate, duration and flaky trends; most-failing locators; latest runs; proposals inbox              |
+| Projects       | the project YAML as a form: layers, browsers, tag policy, screenshot policy, integrations, MCP servers |
+| Environments   | base URLs and non-secret settings; secret names shown with a presence indicator                        |
+| Datasets       | upload CSV, JSON or YAML, preview the first rows, choose file or database storage                      |
+| Runs           | filterable list, live log, scenario tree, step timeline with before/after comparison and API panels    |
+| Feature editor | Gherkin editing with step completion from your project, lint diagnostics, run this scenario            |
+| Recorder       | record a session as a pool user, save the spec, convert it with an agent                               |
+| Agents         | start a role, watch it work, review the diff, accept or reject                                         |
+| Integrations   | GitHub and Jira settings, connection tests, MCP servers the project consumes                           |
+| Schedules      | cron builder with the next fire times, history, pause and resume                                       |
+| Users          | create accounts, set platform roles and display names, deactivate                                      |
+| Settings       | your profile, password and sessions, preferences, free scoped API tokens, MCP client install snippets  |
 
 <Screenshot
   src="/screenshots/ui/run-detail.png"
@@ -281,6 +282,48 @@ sdods users set-password admin --password '<at least 8 chars>' --activate
   alt="Schedules page with cron builder and next fire times"
   caption="Schedules"
 />
+
+## Your account
+
+The avatar at the foot of the sidebar opens the account menu: your profile, password and sessions,
+preferences, API tokens and MCP clients, the admin pages when you are an admin, the theme (system,
+light or dark) and Sign out.
+
+<Screenshot
+  src="/screenshots/ui/account-menu.png"
+  alt="Account menu open above the avatar: profile, password and sessions, preferences, API tokens, MCP clients, admin pages, theme submenu and sign out"
+  caption="The account menu"
+/>
+
+| Settings tab        | What you can change                                                                                          |
+| ------------------- | ------------------------------------------------------------------------------------------------------------ |
+| Profile             | display name and email; shows your username, platform role, memberships, last sign-in and when you joined    |
+| Password & sessions | change your password (needs the current one); list signed-in browsers and sign out one of them or all others |
+| Preferences         | theme, and the organization, workspace and project the app opens on (saved in this browser)                  |
+| API tokens          | create, copy once and revoke scoped tokens                                                                   |
+| MCP clients         | the endpoint, its tools and install snippets for each client                                                 |
+
+<Screenshot
+  src="/screenshots/ui/settings-profile.png"
+  alt="Settings, Profile tab: display name, email and username, with platform role, last sign-in and memberships"
+  caption="Settings → Profile"
+/>
+<Screenshot
+  src="/screenshots/ui/settings-security.png"
+  alt="Settings, Password and sessions tab: change password form and the list of active sessions with this browser marked"
+  caption="Settings → Password & sessions"
+/>
+
+Changing your password signs you out of every other browser; the one you are using stays signed in.
+These settings need a browser session: an API token cannot change a password or end sessions. With
+authentication turned off there is no account to edit, so the Profile and Password & sessions tabs
+are unavailable.
+
+A platform role is changed by an admin on the Users page or with the CLI:
+
+```bash
+sdods users set-role <username> editor
+```
 
 ## Roles
 

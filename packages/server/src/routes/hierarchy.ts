@@ -24,6 +24,7 @@ import {
 } from '../schemas/index.js';
 import { badRequest, forbidden, notFound, parse } from '../errors.js';
 import { hashPassword, publicUser } from './auth.js';
+import { declareWorkspace } from '../services/workspace-file.js';
 
 const ROLE_RANK: Record<WorkspaceRole, number> = { viewer: 0, editor: 1, admin: 2 };
 
@@ -117,6 +118,19 @@ export async function hierarchyRoutes(app: FastifyInstance) {
     },
   );
 
+  /** Write the workspace to sdods.workspace.yaml first, then mirror it into the database. */
+  const createDeclaredWorkspace = async (
+    org: { id: string; slug: string; name: string },
+    ws: { slug: string; name: string; description?: string },
+  ) => {
+    const registry = declareWorkspace(app.registry, () => app.reloadRegistry(), org, ws);
+    await app.hierarchy.sync(registry);
+    const row = (await app.hierarchy.workspaces()).find(
+      (w) => w.slug === ws.slug && w.organizationId === org.id,
+    );
+    return row?.id ?? (await app.hierarchy.createWorkspace({ organizationId: org.id, ...ws }));
+  };
+
   // ── workspaces (many per org) with the caller's effective role ─────────
   app.get('/api/workspaces', { preHandler: [app.requireScope('workspaces:read')] }, async (req) => {
     const p = req.principal!;
@@ -147,7 +161,7 @@ export async function hierarchyRoutes(app: FastifyInstance) {
       if (!org) throw badRequest('organization (id or slug) is required.');
       requireOrgAdmin(req.principal!, org.id);
       const { organization: _org, ...rest } = body;
-      const id = await app.hierarchy.createWorkspace({ organizationId: org.id, ...rest });
+      const id = await createDeclaredWorkspace(org, rest);
       await app.hierarchy
         .setWorkspaceRole(id, req.principal!.userId, 'admin')
         .catch(() => undefined);
@@ -171,7 +185,10 @@ export async function hierarchyRoutes(app: FastifyInstance) {
       const { orgId } = req.params as { orgId: string };
       requireOrgAdmin(req.principal!, orgId);
       const body = parse(CreateWorkspaceBody, req.body);
-      const id = await app.hierarchy.createWorkspace({ organizationId: orgId, ...body });
+      const org = (await app.hierarchy.organizations()).find((o) => o.id === orgId);
+      if (!org) throw notFound('Organization');
+      const { organization: _org, ...rest } = body;
+      const id = await createDeclaredWorkspace(org, rest);
       await app.hierarchy
         .setWorkspaceRole(id, req.principal!.userId, 'admin')
         .catch(() => undefined);
@@ -268,7 +285,7 @@ export async function hierarchyRoutes(app: FastifyInstance) {
       username: body.username,
       passwordHash: await hashPassword(body.password),
       role: body.role,
-      email: body.email ?? null,
+      email: body.email || null,
     });
     const ownerOf = body.orgOwner ? await app.hierarchy.bootstrapOwner(id) : [];
     await audit(app.adb.db, {
@@ -291,7 +308,7 @@ export async function hierarchyRoutes(app: FastifyInstance) {
       ...(body.password ? { passwordHash: await hashPassword(body.password) } : {}),
       role: body.role,
       active: body.active,
-      email: body.email,
+      email: body.email === '' ? null : body.email,
       displayName: body.displayName === '' ? null : body.displayName,
     });
     await audit(app.adb.db, {

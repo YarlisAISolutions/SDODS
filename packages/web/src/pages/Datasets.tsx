@@ -47,12 +47,15 @@ export function DatasetsPage() {
     enabled: Boolean(selected),
   });
 
+  // One route for both: `preview=1` parses without saving. Fields go before the file because the
+  // server reads the multipart stream only up to the file part.
   const doPreview = useMutation({
     mutationFn: async (f: File) => {
       const form = new FormData();
+      form.append('preview', '1');
       form.append('file', f);
       return api<{ columns: string[]; rows: Record<string, unknown>[] }>(
-        `/api/projects/${slug}/datasets/preview`,
+        `/api/projects/${slug}/datasets`,
         { form },
       );
     },
@@ -61,10 +64,10 @@ export function DatasetsPage() {
   const upload = useMutation({
     mutationFn: async () => {
       const form = new FormData();
-      form.append('file', file!);
       form.append('name', name);
-      form.append('envKey', envKey);
+      form.append('env', envKey);
       form.append('storage', storage);
+      form.append('file', file!);
       return api(`/api/projects/${slug}/datasets`, { form });
     },
     onSuccess: () => {

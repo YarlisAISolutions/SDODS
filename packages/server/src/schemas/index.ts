@@ -27,14 +27,18 @@ export const CreateUserBody = z.object({
     .regex(/^[a-zA-Z0-9._-]+$/),
   password: z.string().min(MIN_PASSWORD_LENGTH),
   role: z.enum(ROLES).default('viewer'),
-  email: z.string().email().optional(),
+  // The New user form sends an empty field as ''; that means no email, not an invalid one.
+  email: z.union([z.literal(''), z.string().trim().email()]).optional(),
   orgOwner: z.boolean().optional(),
 });
 export const PatchUserBody = z.object({
   password: z.string().min(MIN_PASSWORD_LENGTH).optional(),
   role: z.enum(ROLES).optional(),
   active: z.boolean().optional(),
-  email: z.string().email().nullable().optional(),
+  email: z
+    .union([z.literal(''), z.string().trim().email()])
+    .nullable()
+    .optional(),
   displayName: z.string().trim().max(80).nullable().optional(),
 });
 

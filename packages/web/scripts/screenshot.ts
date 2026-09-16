@@ -33,6 +33,9 @@ const pages: Array<[string, string]> = [
   ['integrations', '/projects/demo-shop/integrations'],
   ['schedules', '/schedules'],
   ['users', '/users'],
+  ['settings-profile', '/settings/profile'],
+  ['settings-security', '/settings/security'],
+  ['settings-preferences', '/settings/preferences'],
   ['settings-tokens', '/settings/tokens'],
   ['settings-mcp', '/settings/mcp'],
 ];
@@ -60,7 +63,7 @@ async function main() {
     reachable = false;
   }
   if (!reachable) {
-    server = spawn('npx', ['vite', '--port', String(port), '--strictPort'], {
+    server = spawn('npx', ['vite', '--host', '127.0.0.1', '--port', String(port), '--strictPort'], {
       cwd: join(here, '..'),
       env: { ...process.env, VITE_USE_MOCKS: '1' },
       stdio: 'ignore',
@@ -81,6 +84,15 @@ async function main() {
     await page.screenshot({ path: file, fullPage: true });
     written.push(file);
   }
+  // The account menu only exists while open, so it gets its own capture: the viewport, not the
+  // full page, because the menu is positioned against the window.
+  await page.goto(`${base}/`, { waitUntil: 'networkidle' });
+  await page.getByTestId('user-menu').click();
+  await page.getByRole('menuitem', { name: /Theme/ }).hover();
+  await page.waitForTimeout(500);
+  const menuFile = join(outDir, 'account-menu.png');
+  await page.screenshot({ path: menuFile, clip: { x: 0, y: 260, width: 720, height: 640 } });
+  written.push(menuFile);
   await browser.close();
   server?.kill();
   console.log(written.join('\n'));

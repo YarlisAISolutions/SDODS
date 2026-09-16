@@ -60,7 +60,7 @@ defaults:
       }
 ```
 
-Projects inherit `defaults` and may override any of them. A project joins a workspace with `workspace: <slug>` (one of `workspaces[]`); when omitted it joins `defaultWorkspace`. `organization:` must match the file's organization. `sdods workspace tree` prints the result, and `sdods db sync` mirrors it into the database so the web UI can show workspaces with each user's effective role.
+Projects inherit `defaults` and may override any of them. A project joins a workspace with `workspace: <slug>` (one of `workspaces[]`); when omitted it joins `defaultWorkspace`. `organization:` must match the file's organization. `sdods workspace tree` prints the result, and `sdods db sync` mirrors it into the database so the web UI can show workspaces with each user's effective role. Creating a workspace on the web UI's Workspaces page (organization owners and admins) appends it to `workspaces[]` in this file and then syncs, so projects can join it straight away; commit the file change to keep it.
 
 ## Modules
 
