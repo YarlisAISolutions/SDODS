@@ -41,7 +41,7 @@ bun run sdods doctor
 Two things keep dependencies current, and they do not overlap:
 
 - `.github/workflows/dependencies.yml` moves `@sdods/*` and Playwright on the 1st of the month (they travel with the Docker base image and the visual baselines) and posts a freshness report on the 15th.
-- Dependabot (`.github/dependabot.yml`) opens grouped minor and patch updates for everything else, npm and GitHub Actions, on the 8th. It ignores what the workflow owns and the versions it holds back.
+- Dependabot (`.github/dependabot.yml`) opens grouped minor and patch updates for everything else, npm and GitHub Actions, monthly. It ignores what the workflow owns and the versions it holds back.
 
 ## Security
 
