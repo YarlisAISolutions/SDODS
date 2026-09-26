@@ -4,7 +4,11 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { QaBody } from '@/components/qa/qa-body';
-import { AnswerForm } from '@/components/qa/answer-form';
+import {
+  CommunityAnswerCount,
+  CommunityAnswers,
+  ThreadCommunityProvider,
+} from '@/components/qa/thread-community';
 import { formatDate } from '@/lib/qa-list';
 import type { Question } from '@/lib/questions';
 
@@ -95,24 +99,12 @@ export function LiveQuestion() {
         <QaBody body={q.body} />
       </div>
 
-      <h2 className="mt-10 text-lg font-bold">
-        {q.answers.length === 0
-          ? 'No answers yet'
-          : `${q.answers.length} ${q.answers.length === 1 ? 'answer' : 'answers'}`}
-      </h2>
-      <ul className="mt-4 space-y-6">
-        {q.answers.map((a) => (
-          <li key={a.id} className="rounded-lg border border-[var(--line)] p-4">
-            <QaBody body={a.body} />
-            <p className="muted mt-2 text-xs">
-              {a.name}
-              {a.createdAt && ` · ${formatDate(a.createdAt.toISOString().slice(0, 10))}`}
-            </p>
-          </li>
-        ))}
-      </ul>
-
-      <AnswerForm questionId={q.id} />
+      <ThreadCommunityProvider questionId={q.id} answers={q.answers}>
+        <h2 className="mt-10 text-lg font-bold">
+          <CommunityAnswerCount base={0} />
+        </h2>
+        <CommunityAnswers />
+      </ThreadCommunityProvider>
     </article>
   );
 }
