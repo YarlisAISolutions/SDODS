@@ -162,7 +162,7 @@
       "redirects": [
         {
           "source": "/apt/pool/:tag/:file",
-          "destination": "https://github.com/siri1410/sdods-releases/releases/download/:tag/:file",
+          "destination": "https://github.com/YarlisAISolutions/sdods-releases/releases/download/:tag/:file",
           "type": 302
         }
       ]

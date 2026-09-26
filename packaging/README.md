@@ -12,8 +12,8 @@ Manifests for the package managers SDODS ships through. Two rules hold for every
 
 | Directory   | Manages                    | Installs                    | Depends on                          |
 | ----------- | -------------------------- | --------------------------- | ----------------------------------- |
-| `homebrew/` | `siri1410/homebrew-sdods`  | the CLI, against system Node| the npm tarball                      |
-| `scoop/`    | `siri1410/scoop-sdods`     | the desktop app             | a published `desktop-v*` release     |
+| `homebrew/` | `YarlisAISolutions/homebrew-sdods`  | the CLI, against system Node| the npm tarball                      |
+| `scoop/`    | `YarlisAISolutions/scoop-sdods`     | the desktop app             | a published `desktop-v*` release     |
 | `winget/`   | `microsoft/winget-pkgs` PR | the desktop app             | a published `desktop-v*` release     |
 | `apt/`      | Pages on `sdods-releases`  | the desktop app             | a published `desktop-v*` release, the signing key |
 

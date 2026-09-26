@@ -45,7 +45,7 @@ function online(): boolean {
   try {
     execFileSync(
       'git',
-      ['ls-remote', '--exit-code', 'https://github.com/siri1410/SDODS.git', 'HEAD'],
+      ['ls-remote', '--exit-code', 'https://github.com/YarlisAISolutions/SDODS.git', 'HEAD'],
       {
         cwd: tmpdir(),
         stdio: 'ignore',

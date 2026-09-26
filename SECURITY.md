@@ -2,7 +2,16 @@
 
 ## Reporting a vulnerability
 
-Please do not open a public issue for security problems. Email the maintainer (see the LinkedIn profile in the README) or use GitHub's private vulnerability reporting on the repository. You will get an acknowledgement within 72 hours.
+Please do not open a public issue for security problems. Report them privately through either route:
+
+- **GitHub private vulnerability reporting:** <https://github.com/YarlisAISolutions/SDODS/security/advisories/new>
+- **Email:** security@sdods.com
+
+You will get an acknowledgement within 72 hours.
+
+## Supported versions
+
+Security fixes go into the latest minor release of the `@sdods/*` packages (and the matching server image and desktop app). Upgrade to it to receive them; older minors are not patched.
 
 ## Design notes that matter for security
 

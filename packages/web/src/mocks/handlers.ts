@@ -521,7 +521,7 @@ export const handlers = [
           }
         : {
             ok: p === 'github',
-            detail: p === 'github' ? 'authenticated as siri1410' : 'JIRA_API_TOKEN missing',
+            detail: p === 'github' ? 'authenticated as octocat' : 'JIRA_API_TOKEN missing',
           },
     );
   }),

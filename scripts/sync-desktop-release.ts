@@ -21,11 +21,11 @@ const MANIFEST = join(import.meta.dirname, '..', 'apps', 'www', 'lib', 'desktop-
 /**
  * The PUBLIC releases-only repository, not the source repository.
  *
- * siri1410/SDODS is private, and release assets on a private repo are private too — a download
+ * YarlisAISolutions/SDODS is private, and release assets on a private repo are private too — a download
  * link would 404 for every visitor. Only the built installers are public, which is what lets the
  * source stay closed while sdods.com still offers a working download.
  */
-const REPO = process.env.SDODS_RELEASE_REPO ?? 'siri1410/sdods-releases';
+const REPO = process.env.SDODS_RELEASE_REPO ?? 'YarlisAISolutions/sdods-releases';
 
 interface GhAsset {
   name: string;

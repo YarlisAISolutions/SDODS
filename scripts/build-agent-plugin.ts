@@ -33,7 +33,7 @@ const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 
 export const MARKETPLACE = 'sdods';
 export const PLUGIN = 'sdods';
-export const SKILLS_REPO = 'siri1410/sdods-skills';
+export const SKILLS_REPO = 'YarlisAISolutions/sdods-skills';
 
 /** Bundled skill → the shorter name it gets inside the plugin, where Claude Code adds `sdods:`. */
 export const PLUGIN_SKILL_NAMES: Record<string, string> = {

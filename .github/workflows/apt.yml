@@ -52,7 +52,7 @@ jobs:
       - name: Download the .deb files from the release
         env:
           GH_TOKEN: ${{ secrets.DESKTOP_RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
-          RELEASE_REPO: ${{ vars.DESKTOP_RELEASE_REPO || 'siri1410/sdods-releases' }}
+          RELEASE_REPO: ${{ vars.DESKTOP_RELEASE_REPO || 'YarlisAISolutions/sdods-releases' }}
           TAG: ${{ inputs.tag }}
         run: |
           set -euo pipefail

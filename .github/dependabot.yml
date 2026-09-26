@@ -1,0 +1,51 @@
+# Dependabot and .github/workflows/dependencies.yml split the work between them.
+#
+#   dependencies.yml  the 1st: @sdods/* and Playwright, which move together with the Docker base
+#                     image and the visual baselines, so a plain version bump would break them.
+#                     The 15th: a freshness report listing what is behind.
+#   dependabot        monthly (the 1st): everything else, minor and patch grouped into one PR per
+#                     ecosystem. Same day as the upgrade, but they never touch the same packages.
+#
+# The ignores below are those two packages, plus the majors dependencies.yml holds back on purpose
+# (see the comment at the top of that file). Lift one here when it is lifted there.
+
+version: 2
+updates:
+  - package-ecosystem: bun
+    directory: /
+    schedule:
+      interval: monthly
+      time: '12:37'
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: chore(deps)
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+    ignore:
+      - dependency-name: '@sdods/*'
+      - dependency-name: '@playwright/test'
+      - dependency-name: playwright
+      - dependency-name: playwright-core
+      - dependency-name: playwright-bdd
+      - dependency-name: typescript
+        update-types: [version-update:semver-major, version-update:semver-minor]
+      - dependency-name: '@types/node'
+        update-types: [version-update:semver-major]
+      - dependency-name: '@cucumber/cucumber-expressions'
+      - dependency-name: vite
+        update-types: [version-update:semver-major]
+      - dependency-name: '@vitejs/plugin-react'
+        update-types: [version-update:semver-major]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+      time: '12:37'
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: chore(ci)
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]

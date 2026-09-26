@@ -71,7 +71,7 @@ body:
     attributes:
       label: Repo name
       description: Every repo the work touches, the first one being where the fix lands.
-      value: 'siri1410/SDODS'
+      value: 'YarlisAISolutions/SDODS'
     validations:
       required: true
 

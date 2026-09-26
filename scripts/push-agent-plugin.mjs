@@ -2,7 +2,7 @@
 // its default branch, through the Git Data API via `gh api`, so no local checkout is needed. The
 // commit replaces the whole tree, so files dropped from the build disappear from the repository.
 // Run it after each release, so the plugin and skills match the published @sdods/cli:
-//   node scripts/push-agent-plugin.mjs dist/sdods-skills siri1410/sdods-skills "sdods 0.6.0"
+//   node scripts/push-agent-plugin.mjs dist/sdods-skills YarlisAISolutions/sdods-skills "sdods 0.6.0"
 /* global process, console */
 import { execFileSync } from 'node:child_process';
 import { readFileSync, readdirSync, statSync } from 'node:fs';

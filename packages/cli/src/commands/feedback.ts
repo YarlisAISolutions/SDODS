@@ -4,7 +4,7 @@ import pc from 'picocolors';
 import { VERSION } from '@sdods/core';
 import { json, out } from '../ui.js';
 
-const REPO = 'https://github.com/siri1410/SDODS';
+const REPO = 'https://github.com/YarlisAISolutions/SDODS';
 const DISCUSSIONS = `${REPO}/discussions/categories/ideas`;
 
 /**

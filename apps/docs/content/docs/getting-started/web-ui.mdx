@@ -40,7 +40,7 @@ because both report the same version the mismatch is confusing when it surfaces.
 </Tab>
 <Tab value="Docker">
 ```bash
-docker run --rm -p 8080:8080 -v sdods-data:/data ghcr.io/siri1410/sdods-server
+docker run --rm -p 8080:8080 -v sdods-data:/data ghcr.io/yarlisaisolutions/sdods-server
 ```
 
 Note the port: the image binds `0.0.0.0:8080`, not 4444. On Apple silicon add
@@ -202,14 +202,14 @@ docker volume rm sdods-data
 ```
 
 ```bash
-docker run --rm -p 8080:8080 -v sdods-data:/data ghcr.io/siri1410/sdods-server
+docker run --rm -p 8080:8080 -v sdods-data:/data ghcr.io/yarlisaisolutions/sdods-server
 ```
 
 To reset only the users, stop the container and run the CLI against the same volume — the image
 passes any arguments other than `serve` straight to `sdods`:
 
 ```bash
-docker run --rm -v sdods-data:/data ghcr.io/siri1410/sdods-server users reset --yes
+docker run --rm -v sdods-data:/data ghcr.io/yarlisaisolutions/sdods-server users reset --yes
 ```
 
 </Tab>

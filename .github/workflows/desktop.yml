@@ -241,7 +241,7 @@ jobs:
           sha256sum *.dmg *.zip *.exe *.AppImage *.deb 2>/dev/null | sort -k2 > SHA256SUMS.txt
           cat SHA256SUMS.txt
 
-      # Published to a PUBLIC releases-only repository, because siri1410/SDODS is private and
+      # Published to a PUBLIC releases-only repository, because YarlisAISolutions/SDODS is private and
       # release assets on a private repo are private too -- a download link would 404 for every
       # visitor. Source stays private; only the built installers are public.
       #
@@ -250,7 +250,7 @@ jobs:
       - name: Attach the installers to the public release
         uses: softprops/action-gh-release@v3
         with:
-          repository: ${{ vars.DESKTOP_RELEASE_REPO || 'siri1410/sdods-releases' }}
+          repository: ${{ vars.DESKTOP_RELEASE_REPO || 'YarlisAISolutions/sdods-releases' }}
           token: ${{ secrets.DESKTOP_RELEASE_TOKEN }}
           tag_name: ${{ github.ref_name }}
           draft: true
