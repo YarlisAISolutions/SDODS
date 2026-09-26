@@ -13,7 +13,7 @@ name: channels
 # Not a check in ci.yml: drift between a release and the sync PR merging is expected, and it says
 # nothing about the change under review.
 #
-# The probes read siri1410/homebrew-sdods, scoop-sdods and sdods-releases through the contents and
+# The probes read YarlisAISolutions/homebrew-sdods, scoop-sdods and sdods-releases through the contents and
 # releases APIs. All three are public, so the workflow's own token can read them; it is passed only
 # because anonymous API calls from shared runner addresses hit the rate limit.
 #

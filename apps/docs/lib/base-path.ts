@@ -2,7 +2,7 @@
  * Base path and site URL, fixed at build time.
  *
  * - Custom domain (default): DOCS_BASE_PATH unset → basePath '' and https://docs.sdods.com
- * - Project GitHub Pages:    DOCS_BASE_PATH=/SDODS → basePath '/SDODS' and https://siri1410.github.io
+ * - Project GitHub Pages:    DOCS_BASE_PATH=/SDODS → basePath '/SDODS' and https://yarlisaisolutions.github.io
  *
  * next.config.mjs copies DOCS_BASE_PATH into NEXT_PUBLIC_BASE_PATH so client and server code agree.
  */

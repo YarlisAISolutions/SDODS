@@ -1,4 +1,4 @@
-export const REPO_URL = 'https://github.com/siri1410/SDODS';
+export const REPO_URL = 'https://github.com/YarlisAISolutions/SDODS';
 export const FEEDBACK_URL = 'https://sdods.com/feedback/';
 
 /**

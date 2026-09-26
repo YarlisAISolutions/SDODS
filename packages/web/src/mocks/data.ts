@@ -62,7 +62,7 @@ export const orgs: Organization[] = [
     slug: 'sdods',
     name: 'SDODS',
     description: 'Default organization',
-    url: 'https://github.com/siri1410/SDODS',
+    url: 'https://github.com/YarlisAISolutions/SDODS',
     myRole: 'owner',
   },
 ];
@@ -223,7 +223,7 @@ export const projects: Project[] = [
       onlyOnFailure: false,
     },
     integrations: {
-      github: { enabled: false, owner: 'siri1410', repo: 'SDODS' },
+      github: { enabled: false, owner: 'YarlisAISolutions', repo: 'SDODS' },
       jira: { enabled: false, projectKey: 'DEMO' },
     },
     mcp: {
@@ -1077,7 +1077,7 @@ export const integrations: Record<string, IntegrationView[]> = {
       provider: 'github',
       enabled: true,
       config: {
-        owner: 'siri1410',
+        owner: 'YarlisAISolutions',
         repo: 'SDODS',
         checkRun: true,
         prComment: true,

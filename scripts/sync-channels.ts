@@ -24,11 +24,11 @@ const CHANNELS_TS = join(ROOT, 'apps', 'www', 'lib', 'install-channels.ts');
 const PACKAGING = join(ROOT, 'packaging');
 
 /** The public releases-only repository. See scripts/sync-desktop-release.ts for why it exists. */
-const RELEASE_REPO = process.env.SDODS_RELEASE_REPO ?? 'siri1410/sdods-releases';
+const RELEASE_REPO = process.env.SDODS_RELEASE_REPO ?? 'YarlisAISolutions/sdods-releases';
 /** Public tap and bucket repositories. Both hold manifests only, never source. */
-const TAP_REPO = process.env.SDODS_TAP_REPO ?? 'siri1410/homebrew-sdods';
-const BUCKET_REPO = process.env.SDODS_BUCKET_REPO ?? 'siri1410/scoop-sdods';
-const IMAGE = process.env.SDODS_IMAGE ?? 'siri1410/sdods-server';
+const TAP_REPO = process.env.SDODS_TAP_REPO ?? 'YarlisAISolutions/homebrew-sdods';
+const BUCKET_REPO = process.env.SDODS_BUCKET_REPO ?? 'YarlisAISolutions/scoop-sdods';
+const IMAGE = process.env.SDODS_IMAGE ?? 'yarlisaisolutions/sdods-server';
 /**
  * The apt repository is served from sdods.com/apt. Only its signed metadata lives in the site
  * (apps/www/public/apt, committed by .github/workflows/apt.yml); `pool/<tag>/<file>` is a 302 in

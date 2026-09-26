@@ -5,7 +5,7 @@ organization:
   slug: sdods
   name: SDODS
   description: Default organization created by `sdods init`.
-  url: https://github.com/siri1410/SDODS
+  url: https://github.com/YarlisAISolutions/SDODS
 
 workspaces:
   - slug: default

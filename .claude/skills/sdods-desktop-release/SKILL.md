@@ -82,12 +82,12 @@ people's operating systems.
 
 ## Where the binaries live, and why not in this repo
 
-`siri1410/SDODS` is **private**, and **release assets on a private repo are private too** — a
+`YarlisAISolutions/SDODS` is **private**, and **release assets on a private repo are private too** — a
 GitHub download link would 404 for every visitor. So installers are published to a separate
 **public** repository that holds nothing but releases:
 
 ```bash
-gh repo create siri1410/sdods-releases --public -d 'SDODS desktop installers'
+gh repo create YarlisAISolutions/sdods-releases --public -d 'SDODS desktop installers'
 ```
 
 Then, on the source repo: a `DESKTOP_RELEASE_TOKEN` secret (a fine-grained PAT with
@@ -97,7 +97,7 @@ repositories), and optionally a `DESKTOP_RELEASE_REPO` variable to point somewhe
 Source stays closed; only the built installers are public. This also keeps `electron-updater`
 straightforward later, since it reads GitHub releases natively.
 
-**Beware:** `git ls-remote https://github.com/siri1410/SDODS.git` **succeeds** on a machine with
+**Beware:** `git ls-remote https://github.com/YarlisAISolutions/SDODS.git` **succeeds** on a machine with
 `gh auth` configured, because its credential helper is global. That is not an anonymous probe and
 it has produced the wrong conclusion here twice. Check visibility with
 `gh api repos/<slug> --jq .private`.

@@ -15,10 +15,10 @@ UpgradeBehavior: install
 ReleaseDate: "2026-09-15"
 Installers:
   - Architecture: x64
-    InstallerUrl: https://github.com/siri1410/sdods-releases/releases/download/desktop-v0.1.2/SDODS-Setup-0.1.2-win-x64.exe
+    InstallerUrl: https://github.com/YarlisAISolutions/sdods-releases/releases/download/desktop-v0.1.2/SDODS-Setup-0.1.2-win-x64.exe
     InstallerSha256: eebad5cf3e99d841260b364559010af225e4a207c943a57011a31d24681b62c7
   - Architecture: arm64
-    InstallerUrl: https://github.com/siri1410/sdods-releases/releases/download/desktop-v0.1.2/SDODS-Setup-0.1.2-win-arm64.exe
+    InstallerUrl: https://github.com/YarlisAISolutions/sdods-releases/releases/download/desktop-v0.1.2/SDODS-Setup-0.1.2-win-arm64.exe
     InstallerSha256: 010c2594382a6c7d25d3a0d38f7b27feb63063e7a0f49528304dc5f9523ca645
 ManifestType: installer
 ManifestVersion: 1.6.0

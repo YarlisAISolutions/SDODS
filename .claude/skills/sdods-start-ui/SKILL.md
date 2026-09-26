@@ -101,7 +101,7 @@ Read the rows in order and take the first that matches:
 |---|---|---|
 | `package.json` says `sdods-monorepo` — **even if `sdods` is on PATH** | a **source checkout** | `bun run web:build`, then `bun run sdods serve --open` |
 | `sdods` on PATH, anywhere else | a **global install** (installer, npm, Homebrew) | `sdods serve --open` |
-| neither, Docker is running | the **container** | `docker run --rm -p 8080:8080 -v sdods-data:/data ghcr.io/siri1410/sdods-server` |
+| neither, Docker is running | the **container** | `docker run --rm -p 8080:8080 -v sdods-data:/data ghcr.io/yarlisaisolutions/sdods-server` |
 | you want no terminal at all | the **desktop app** | install from <https://sdods.com/download>, launch it |
 
 > **Inside a checkout, always use `bun run sdods`, never the global `sdods`.** The two drift, and
@@ -155,7 +155,7 @@ The CLI is identical on every OS; only the shell and the paths differ.
 | Windows (PowerShell) | `sdods serve --open` |
 | Windows (cmd) | `sdods serve --open` — the installer writes both `sdods.cmd` and `sdods.ps1` |
 | WSL | use the Linux command inside WSL, not the PowerShell one |
-| Docker (any host) | `docker run --rm -p 8080:8080 -v sdods-data:/data ghcr.io/siri1410/sdods-server` |
+| Docker (any host) | `docker run --rm -p 8080:8080 -v sdods-data:/data ghcr.io/yarlisaisolutions/sdods-server` |
 
 Defaults: **`http://127.0.0.1:4444`** for the CLI, **`http://localhost:8080`** for Docker (the
 image binds `0.0.0.0:8080`). `--open` launches the browser (`open` / `start` / `xdg-open` by
@@ -166,7 +166,7 @@ Apple silicon and arm64 servers. Tags up to `0.9.0` carry amd64 only, and Docker
 on arm64 rather than emulating; for those, add the platform flag:
 
 ```bash
-docker run --rm --platform linux/amd64 -p 8080:8080 -v sdods-data:/data ghcr.io/siri1410/sdods-server:0.9.0
+docker run --rm --platform linux/amd64 -p 8080:8080 -v sdods-data:/data ghcr.io/yarlisaisolutions/sdods-server:0.9.0
 ```
 
 If the run must come from a source checkout, `bun run web:build` is not optional — see

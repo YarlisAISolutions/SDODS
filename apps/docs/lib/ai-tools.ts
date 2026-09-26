@@ -8,7 +8,7 @@ export const SDODS_AGENT_PROJECT: AgentProject = {
   name: 'SDODS',
   serverName: 'sdods',
   npmPackage: '@sdods/cli',
-  skillsRepo: 'siri1410/sdods-skills',
+  skillsRepo: 'YarlisAISolutions/sdods-skills',
   marketplace: 'sdods',
   plugin: 'sdods',
 };

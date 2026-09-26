@@ -25,7 +25,7 @@ of them: Apache-2.0 on npm, unlimited API tokens, no paid tier.
 ## Claude Code plugin
 
 ```text
-/plugin marketplace add siri1410/sdods-skills
+/plugin marketplace add YarlisAISolutions/sdods-skills
 ```
 
 ```text
@@ -46,7 +46,7 @@ Claude Code asks each person to trust the marketplace the first time.
 ```json title=".claude/settings.json"
 {
   "extraKnownMarketplaces": {
-    "sdods": { "source": { "source": "github", "repo": "siri1410/sdods-skills" } }
+    "sdods": { "source": { "source": "github", "repo": "YarlisAISolutions/sdods-skills" } }
   },
   "enabledPlugins": { "sdods@sdods": true }
 }
@@ -60,7 +60,7 @@ The skills follow the open [Agent Skills](https://agentskills.io) format, so one
 agents. Install them with the `skills` CLI, which asks which agents you use:
 
 ```bash
-npx skills add siri1410/sdods-skills
+npx skills add YarlisAISolutions/sdods-skills
 ```
 
 Add `-a claude-code`, `-a codex`, `-a cursor` or `-a github-copilot` to pick agents up front, and

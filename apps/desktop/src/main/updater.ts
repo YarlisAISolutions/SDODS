@@ -1,6 +1,6 @@
 /**
  * Desktop self-update, from the `latest*.yml` feeds every `desktop-v*` release publishes to the
- * public siri1410/sdods-releases repository (`publish:` in electron-builder.yml names it, and
+ * public YarlisAISolutions/sdods-releases repository (`publish:` in electron-builder.yml names it, and
  * electron-builder copies that into the packaged `Resources/app-update.yml`).
  *
  * What it does:

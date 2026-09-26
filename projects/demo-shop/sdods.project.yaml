@@ -146,7 +146,7 @@ perf:
 integrations:
   github:
     enabled: false
-    owner: siri1410
+    owner: YarlisAISolutions
     repo: SDODS
     createIssueOnFailure: never
     tokenEnv: GITHUB_TOKEN

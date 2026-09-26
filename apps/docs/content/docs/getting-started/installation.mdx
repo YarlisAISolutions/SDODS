@@ -62,14 +62,14 @@ sh install.sh
 The script is the front door because it works on a machine that has nothing. If you already run a
 package manager, these install the same software and let it handle upgrades.
 
-| Command                                    | Installs              | Needs                                       |
-| ------------------------------------------ | --------------------- | ------------------------------------------- |
-| `npm install -g @sdods/cli`                | the CLI               | Node 22+                                    |
-| `brew install siri1410/sdods/sdods`        | the CLI               | Homebrew, which pulls in `node`             |
-| `docker run ghcr.io/siri1410/sdods-server` | the server and web UI | Docker                                      |
-| `winget install SDODS.SDODS`               | the desktop app       | Windows 10+                                 |
-| `scoop install sdods`                      | the desktop app       | Scoop                                       |
-| `apt install sdods`                        | the desktop app       | Debian or Ubuntu, plus the repository below |
+| Command                                             | Installs              | Needs                                       |
+| --------------------------------------------------- | --------------------- | ------------------------------------------- |
+| `npm install -g @sdods/cli`                         | the CLI               | Node 22+                                    |
+| `brew install yarlisaisolutions/sdods/sdods`        | the CLI               | Homebrew, which pulls in `node`             |
+| `docker run ghcr.io/yarlisaisolutions/sdods-server` | the server and web UI | Docker                                      |
+| `winget install SDODS.SDODS`                        | the desktop app       | Windows 10+                                 |
+| `scoop install sdods`                               | the desktop app       | Scoop                                       |
+| `apt install sdods`                                 | the desktop app       | Debian or Ubuntu, plus the repository below |
 
 <Callout type="info">
   A channel is listed on [the install page](https://sdods.com/install) only once its manifest is
@@ -100,7 +100,7 @@ The tap holds the formula only; the software comes from npm. It depends on Homeb
 rather than vendoring one, so SDODS runs on the same Node as the rest of your toolchain:
 
 ```bash
-brew install siri1410/sdods/sdods
+brew install yarlisaisolutions/sdods/sdods
 ```
 
 Homebrew asks you to trust a tap that is not one of its own the first time you install from it, and
@@ -117,7 +117,7 @@ architecture, so it runs natively on Intel, Apple silicon and arm64 servers such
 flag is needed:
 
 ```bash
-docker run --rm -p 8080:8080 -v sdods-data:/data ghcr.io/siri1410/sdods-server
+docker run --rm -p 8080:8080 -v sdods-data:/data ghcr.io/yarlisaisolutions/sdods-server
 ```
 
 Tags up to `0.9.0` carry `linux/amd64` only. **Docker does not fall back to emulation for a missing
@@ -126,19 +126,22 @@ architecture — it refuses the pull**, so on arm64 those tags fail with
 explicitly:
 
 ```bash
-docker run --rm --platform linux/amd64 -p 8080:8080 -v sdods-data:/data ghcr.io/siri1410/sdods-server:0.9.0
+docker run --rm --platform linux/amd64 -p 8080:8080 -v sdods-data:/data ghcr.io/yarlisaisolutions/sdods-server:0.9.0
 ```
+
+Images published before the repository moved to YarlisAISolutions live at
+`ghcr.io/siri1410/sdods-server`; pull from the new path.
 
 Check which platforms a tag carries before you pull it:
 
 ```bash
-docker buildx imagetools inspect ghcr.io/siri1410/sdods-server
+docker buildx imagetools inspect ghcr.io/yarlisaisolutions/sdods-server
 ```
 
 Any CLI command works as the argument, so the same image runs a suite in CI:
 
 ```bash
-docker run --rm ghcr.io/siri1410/sdods-server run -p demo-shop -e staging -l api
+docker run --rm ghcr.io/yarlisaisolutions/sdods-server run -p demo-shop -e staging -l api
 ```
 
 ### Windows: winget and Scoop
@@ -154,7 +157,7 @@ winget install SDODS.SDODS
 Scoop needs the bucket added once:
 
 ```powershell
-scoop bucket add sdods https://github.com/siri1410/scoop-sdods
+scoop bucket add sdods https://github.com/YarlisAISolutions/scoop-sdods
 ```
 
 ```powershell
@@ -217,7 +220,7 @@ written to `desktop.log` (**SDODS ▸ Open Logs Folder**).
 The installer is a convenience wrapper; a clone works just as well:
 
 ```bash
-git clone https://github.com/siri1410/SDODS.git
+git clone https://github.com/YarlisAISolutions/SDODS.git
 cd SDODS
 bun install                # or: pnpm install
 bun run sdods browsers install --with-deps
@@ -451,7 +454,7 @@ already inside it.
 Tagged releases publish it to the project's GitHub Container Registry package:
 
 ```text
-ghcr.io/siri1410/sdods-server
+ghcr.io/yarlisaisolutions/sdods-server
 ```
 
 </RepoOnly>

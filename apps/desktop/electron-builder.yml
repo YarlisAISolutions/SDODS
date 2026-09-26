@@ -167,7 +167,7 @@ deb:
 
 # This block is what electron-builder writes into the packaged `Resources/app-update.yml`, which is
 # the feed electron-updater (src/main/updater.ts) reads. It must name the PUBLIC releases repository:
-# siri1410/SDODS is private, its release assets are private too, and every update check against it
+# YarlisAISolutions/SDODS is private, its release assets are private too, and every update check against it
 # would 404. Uploading is not done from here -- desktop.yml packs with `--publish never` and attaches
 # the artifacts itself -- so this only decides where installed apps look.
 #
@@ -175,6 +175,6 @@ deb:
 # unsigned update), and on .deb installs, which apt keeps current.
 publish:
   provider: github
-  owner: siri1410
+  owner: YarlisAISolutions
   repo: sdods-releases
   releaseType: release
