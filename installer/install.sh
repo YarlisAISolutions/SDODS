@@ -15,11 +15,11 @@
 # Exit codes: 0 ok · 1 failed · 2 usage · 3 unsupported platform · 4 missing prerequisite
 #             5 Node missing/too old · 6 download failed · 7 install failed · 8 permission denied
 #
-# Apache-2.0 · https://github.com/siri1410/SDODS
+# Apache-2.0 · https://github.com/YarlisAISolutions/SDODS
 
 set -eu
 
-SDODS_REPO_SLUG='siri1410/SDODS'
+SDODS_REPO_SLUG='YarlisAISolutions/SDODS'
 SDODS_REPO_URL="${SDODS_REPO_URL:-https://github.com/${SDODS_REPO_SLUG}.git}"
 SDODS_API_URL="${SDODS_API_URL:-https://api.github.com/repos/${SDODS_REPO_SLUG}}"
 SITE_URL='https://sdods.com'

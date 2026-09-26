@@ -10,7 +10,7 @@ const withMDX = createMDX();
 const basePath = (process.env.DOCS_BASE_PATH ?? '').replace(/\/$/, '');
 const siteUrl =
   process.env.DOCS_SITE_URL ??
-  (basePath === '/SDODS' ? 'https://siri1410.github.io' : 'https://docs.sdods.com');
+  (basePath === '/SDODS' ? 'https://yarlisaisolutions.github.io' : 'https://docs.sdods.com');
 
 /** @type {import('next').NextConfig} */
 const config = {

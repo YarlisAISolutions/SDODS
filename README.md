@@ -122,7 +122,7 @@ Prerequisites: Node 22+, and either Bun 1.4+ (fastest) or pnpm 9+.
 
 ```bash
 # 1. Get the code
-git clone https://github.com/siri1410/SDODS.git && cd SDODS
+git clone https://github.com/YarlisAISolutions/SDODS.git && cd SDODS
 bun install                      # or: pnpm install
 sdods browsers install --with-deps
 
@@ -293,6 +293,7 @@ flowchart TB
     maxi["<b>Maxi</b><br/>[Container: Node 22, Fastify on Cloud Run]<br/>docs assistant grounded in the docs"]:::container
   end
 
+  tollgate["<b>Tollgate</b><br/>[External: Yarlis deploy control plane]<br/>YarlisAISolutions/sdods-deploy, private"]:::external
   aut["<b>Application under test</b><br/>[External] in Playwright browsers"]:::external
   gh["<b>GitHub · Jira</b><br/>[External]"]:::external
   llm["<b>LLM providers</b><br/>[External]"]:::external
@@ -319,6 +320,8 @@ flowchart TB
   integ -->|"check runs, issues"| gh
   www -->|"chat widget"| maxi
   maxi -->|"prompts"| llm
+  tollgate -.->|"deploys"| www
+  tollgate -.->|"deploys"| maxi
 
   classDef person fill:#FFB020,stroke:#B87800,color:#0B1020
   classDef system fill:#1E3FB8,stroke:#FFB020,stroke-width:3px,color:#FFFFFF
@@ -784,6 +787,8 @@ bun run roadmap:sync     # rewrite the roadmap block in this README from package
 - CI runs lint, typecheck, unit tests, the demo suite on chromium (PRs) and the full browser matrix nightly.
 - Versioning uses changesets. `@sdods/cli` 0.8.0 and the other `@sdods/*` packages are on npm, releases are tagged on GitHub, and the server image is on GHCR.
 - Security issues: see [SECURITY.md](SECURITY.md).
+- Contributing: see [CONTRIBUTING.md](CONTRIBUTING.md); issues and discussions live at [YarlisAISolutions/SDODS](https://github.com/YarlisAISolutions/SDODS).
+- Deployment: sdods.com, docs.sdods.com and api.sdods.com are deployed by Tollgate, the Yarlis deploy control plane, from a private companion repository (YarlisAISolutions/sdods-deploy). This public repository builds, tests and publishes packages; it holds no production credentials.
 
 ## Roadmap and status
 

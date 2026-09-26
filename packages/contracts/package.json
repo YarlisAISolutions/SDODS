@@ -37,11 +37,11 @@
   "author": "SDODS <admin@sdods.com>",
   "homepage": "https://sdods.com",
   "bugs": {
-    "url": "https://github.com/siri1410/SDODS/issues"
+    "url": "https://github.com/YarlisAISolutions/SDODS/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/siri1410/SDODS.git",
+    "url": "git+https://github.com/YarlisAISolutions/SDODS.git",
     "directory": "packages/contracts"
   },
   "keywords": [

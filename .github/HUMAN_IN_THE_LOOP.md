@@ -20,7 +20,7 @@ with the verification output and close · comment `blocked: <why>` if you cannot
 | **Blocks / blocked by** | Blocks #… · blocked by #… |
 | **Why a human** | Decision / Access / Approval / Manual action |
 | **App name** | … |
-| **Repo name** | siri1410/SDODS |
+| **Repo name** | YarlisAISolutions/SDODS |
 | **Last release** | @sdods/cli@x.y.z (date) · api revision … |
 
 ### Context

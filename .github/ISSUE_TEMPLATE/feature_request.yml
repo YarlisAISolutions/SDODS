@@ -7,7 +7,7 @@ body:
     attributes:
       value: |
         Thanks for helping shape SDODS. Tell us about the problem first; the solution can come later.
-        Not sure yet? Start in [Discussions → Ideas](https://github.com/siri1410/SDODS/discussions/categories/ideas).
+        Not sure yet? Start in [Discussions → Ideas](https://github.com/YarlisAISolutions/SDODS/discussions/categories/ideas).
   - type: textarea
     id: problem
     attributes:

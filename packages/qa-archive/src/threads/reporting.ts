@@ -752,7 +752,7 @@ One expectation to set: a scenario needs at least \`--min-runs\` runs before it 
     tags: ['reporting', 'ci', 'docker'],
     votes: 24,
     views: 5680,
-    body: `We run the suite inside \`ghcr.io/siri1410/sdods-server\` on a self-hosted agent. The run works and the exit code is right, then the container goes away and takes the report with it.
+    body: `We run the suite inside \`ghcr.io/yarlisaisolutions/sdods-server\` on a self-hosted agent. The run works and the exit code is right, then the container goes away and takes the report with it.
 
 Right now somebody runs \`docker cp\` afterwards, which fails silently when the container has already exited, so half our builds have no report and nobody notices until they need one.
 
@@ -770,7 +770,7 @@ mkdir -p out
 docker run --rm --platform linux/amd64 \\
   -e SDODS_ARTIFACTS_DIR=/out/runs \\
   -v "$PWD/out:/out" \\
-  ghcr.io/siri1410/sdods-server run -p demo-shop -e staging -l ui -b chromium -t @smoke
+  ghcr.io/yarlisaisolutions/sdods-server run -p demo-shop -e staging -l ui -b chromium -t @smoke
 \`\`\`
 
 Everything lands straight on the agent — \`run.json\`, \`summary.json\`, \`messages.ndjson\`, \`html-report/\`, \`dashboard/\`, \`runner-output/\` — and there is nothing to copy when the container exits, so a failed run and a cancelled run both still leave you a report. \`sdods run --artifacts-dir /out/runs\` does the same per run if you would rather not use the environment variable.

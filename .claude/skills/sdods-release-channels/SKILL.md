@@ -13,8 +13,8 @@ someone who is not you.
 | --------- | ----------------- | ----------------------------- | ------------------------- |
 | npm       | the CLI           | — (`release.yml`)             | changesets, on `main`     |
 | Docker    | the server image  | — (`release.yml`)             | `release.yml`, after npm  |
-| Homebrew  | the CLI           | `siri1410/homebrew-sdods`     | you, `git push`           |
-| Scoop     | the desktop app   | `siri1410/scoop-sdods`        | you, `git push`           |
+| Homebrew  | the CLI           | `YarlisAISolutions/homebrew-sdods`     | you, `git push`           |
+| Scoop     | the desktop app   | `YarlisAISolutions/scoop-sdods`        | you, `git push`           |
 | winget    | the desktop app   | `microsoft/winget-pkgs`       | **Microsoft's reviewers** |
 | apt       | the desktop app   | `sdods.com/apt` (site PR)     | `apt.yml`, run by hand    |
 
@@ -125,7 +125,7 @@ Profile → Packages → `sdods-server` → Package settings → Change visibili
 ### Homebrew — you push the tap
 
 ```bash
-gh repo create siri1410/homebrew-sdods --public -d 'Homebrew tap for SDODS'
+gh repo create YarlisAISolutions/homebrew-sdods --public -d 'Homebrew tap for SDODS'
 ```
 
 Copy the rendered formula into the tap as `Formula/sdods.rb`, then verify it locally before anyone
@@ -134,15 +134,15 @@ installs from it. `--new` implies `--strict` and `--online` and is the check tha
 which current Homebrew rejects):
 
 ```bash
-brew audit --strict --new siri1410/sdods/sdods
+brew audit --strict --new yarlisaisolutions/sdods/sdods
 ```
 
 ```bash
-brew install --build-from-source siri1410/sdods/sdods && brew test sdods
+brew install --build-from-source yarlisaisolutions/sdods/sdods && brew test sdods
 ```
 
-You can do all of that without publishing anything: `brew tap-new siri1410/sdods --no-git` makes a
-local tap, and `brew untap siri1410/sdods` removes it.
+You can do all of that without publishing anything: `brew tap-new yarlisaisolutions/sdods --no-git` makes a
+local tap, and `brew untap yarlisaisolutions/sdods` removes it.
 
 The formula builds from the **npm tarball**, not from a clone, which is why the private source
 repository is not a problem here.
@@ -165,7 +165,7 @@ Three things about it are load-bearing, and each was found by running it rather 
 ### Scoop — you push the bucket
 
 ```bash
-gh repo create siri1410/scoop-sdods --public -d 'Scoop bucket for SDODS'
+gh repo create YarlisAISolutions/scoop-sdods --public -d 'Scoop bucket for SDODS'
 ```
 
 The manifest goes in as `bucket/sdods.json`. It installs the NSIS desktop installer silently with

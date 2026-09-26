@@ -1,6 +1,6 @@
 export const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://sdods.com';
 export const DOCS_URL = 'https://docs.sdods.com';
-export const REPO_URL = 'https://github.com/siri1410/SDODS';
+export const REPO_URL = 'https://github.com/YarlisAISolutions/SDODS';
 export const DISCUSSIONS_URL = `${REPO_URL}/discussions`;
 export const IDEAS_URL = `${REPO_URL}/discussions/categories/ideas`;
 export const GENERAL_URL = `${REPO_URL}/discussions/categories/general`;

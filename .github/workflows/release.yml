@@ -157,9 +157,14 @@ jobs:
     env:
       # A push event has no inputs, so `inputs.push` is empty there; only a dispatch can opt out.
       PUSH: ${{ github.event_name != 'workflow_dispatch' || inputs.push }}
-      IMAGE: ghcr.io/${{ github.repository_owner }}/sdods-server
       LOCAL: sdods-server:smoke
     steps:
+      - name: Image name
+        # ghcr.io/<owner>/sdods-server. GHCR names must be lowercase and the owner is
+        # YarlisAISolutions; `env:` expressions cannot lowercase, so it is set here instead.
+        env:
+          OWNER: ${{ github.repository_owner }}
+        run: echo "IMAGE=ghcr.io/${OWNER,,}/sdods-server" >> "$GITHUB_ENV"
       - uses: actions/checkout@v7
       - name: Free disk space
         # Loading the image to run it holds it twice, in BuildKit's store and in Docker's, and the
@@ -280,9 +285,12 @@ jobs:
       (github.event_name != 'workflow_dispatch' || inputs.push)
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    env:
-      IMAGE: ghcr.io/${{ github.repository_owner }}/sdods-server
     steps:
+      - name: Image name
+        # Lowercase for GHCR, as in `docker` above.
+        env:
+          OWNER: ${{ github.repository_owner }}
+        run: echo "IMAGE=ghcr.io/${OWNER,,}/sdods-server" >> "$GITHUB_ENV"
       - uses: actions/download-artifact@v8
         with:
           pattern: digests-*

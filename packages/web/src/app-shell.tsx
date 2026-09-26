@@ -193,7 +193,7 @@ function feedbackUrl(): string {
     'sdods-version':
       `web ui ${typeof __SDODS_VERSION__ !== 'undefined' ? __SDODS_VERSION__ : ''}`.trim(),
   });
-  return `https://github.com/siri1410/SDODS/issues/new?${params.toString()}`;
+  return `https://github.com/YarlisAISolutions/SDODS/issues/new?${params.toString()}`;
 }
 
 declare const __SDODS_VERSION__: string | undefined;

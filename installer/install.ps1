@@ -21,7 +21,7 @@
 .NOTES
   Exit codes: 0 ok · 1 failed · 2 usage · 3 unsupported platform · 4 missing prerequisite
               5 Node missing/too old · 6 download failed · 7 install failed · 8 permission denied
-  Apache-2.0 · https://github.com/siri1410/SDODS
+  Apache-2.0 · https://github.com/YarlisAISolutions/SDODS
 #>
 [CmdletBinding()]
 param(
@@ -45,7 +45,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 try { [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 } catch { }
 
-$RepoSlug = 'siri1410/SDODS'
+$RepoSlug = 'YarlisAISolutions/SDODS'
 $RepoUrl = if ($env:SDODS_REPO_URL) { $env:SDODS_REPO_URL } else { "https://github.com/$RepoSlug.git" }
 $ApiUrl = "https://api.github.com/repos/$RepoSlug"
 $DocsUrl = 'https://docs.sdods.com'
