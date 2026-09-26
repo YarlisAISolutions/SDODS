@@ -1,5 +1,11 @@
 # @sdods/contracts
 
+## 0.11.1
+
+### Patch Changes
+
+- 835d64c: Repository metadata moved to the YarlisAISolutions organisation: `repository.url` and `bugs.url` now point at https://github.com/YarlisAISolutions/SDODS, `sdods feedback` opens issues there, and the documented server image is `ghcr.io/yarlisaisolutions/sdods-server`.
+
 ## 0.11.0
 
 No changes in this release.
