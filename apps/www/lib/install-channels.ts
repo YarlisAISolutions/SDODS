@@ -100,7 +100,7 @@ export const INSTALL_CHANNELS: Channel[] = [
     command:
       'docker run --rm -p 8080:8080 -v sdods-data:/data ghcr.io/yarlisaisolutions/sdods-server',
     note: 'The server and web UI, browser engines included. Runs natively on Intel and Apple silicon.',
-    live: true,
+    live: false,
   },
   {
     id: 'linux-packages',
