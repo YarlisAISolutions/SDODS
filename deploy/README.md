@@ -95,7 +95,7 @@ Maxi is not trained or fine-tuned. Every request carries the published docs (`ll
 redeploy is needed for a docs change. The service is separate from `automax-api` so chat traffic
 never competes with test runs, and its Anthropic key is isolated.
 
-### One-time setup
+### One-time setupimage.png
 
 | Step | Command |
 | --- | --- |
@@ -117,7 +117,7 @@ use the `run.app` URL or a Cloud Run domain mapping. Behind Hosting, deploy with
 | --- | --- |
 | Logs | `gcloud run services logs read sdods-maxi --region us-central1 --limit 100` (one `chat` line per answer with tokens and estimated cost) |
 | Switch model | `MAXI_MODEL=claude-opus-5 bun run maxi:deploy` (stronger scripts, about 2.5x the cost) |
-| Daily budget | $3/day by default (deploy script), under the `maxiagent-sdods` workspace limit of $50/month with an email alert at $40. Past it Maxi says it's resting until tomorrow (UTC). Change both together: `MAXI_DAILY_BUDGET_USD=5 bun run maxi:deploy` and the limit in the Console |
+| Daily budget | `MAXI_DAILY_BUDGET_USD=40 bun run maxi:deploy`; past it Maxi says it's resting until tomorrow (UTC) |
 | Step catalog | `bun run maxi:steps` after changing demo-shop steps, then commit `packages/maxi/data/steps.json` |
 | Quality check | `ANTHROPIC_API_KEY=… bun run maxi:eval` (about $1; `MAXI_CORPUS_FILE=$PWD/apps/docs/out/llms-full.txt` checks a local docs build) |
 | Key without a workspace | the API rejects it unless requests name a workspace: deploy with `ANTHROPIC_WORKSPACE_ID=wrkspc_… bun run maxi:deploy` (and set it for `maxi:eval`), or use a key created inside a workspace |
