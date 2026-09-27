@@ -21,9 +21,8 @@ const MANIFEST = join(import.meta.dirname, '..', 'apps', 'www', 'lib', 'desktop-
 /**
  * The PUBLIC releases-only repository, not the source repository.
  *
- * YarlisAISolutions/SDODS is private, and release assets on a private repo are private too — a download
- * link would 404 for every visitor. Only the built installers are public, which is what lets the
- * source stay closed while sdods.com still offers a working download.
+ * Installers live in the public releases-only repository. That was required while
+ * YarlisAISolutions/SDODS was private (until 2026-09-26); it stays because installed apps, the apt repository, Homebrew and Scoop already point there, and one releases-only repository keeps the download page's asset list clean.
  */
 const REPO = process.env.SDODS_RELEASE_REPO ?? 'YarlisAISolutions/sdods-releases';
 
