@@ -1,5 +1,24 @@
 # @sdods/server
 
+## 0.11.1
+
+### Patch Changes
+
+- 835d64c: Repository metadata moved to the YarlisAISolutions organisation: `repository.url` and `bugs.url` now point at https://github.com/YarlisAISolutions/SDODS, `sdods feedback` opens issues there, and the documented server image is `ghcr.io/yarlisaisolutions/sdods-server`.
+- b9c1037: Fixes found by using every web UI feature against a real server.
+  
+  - Workspaces created in the web UI (or with `POST /api/workspaces`) are written to `sdods.workspace.yaml` before the database, so projects can be created in and imported into them. Creating a workspace that is already declared returns 409.
+  - Project Settings saves again: `PUT /api/projects/:slug` accepts `{ patch }`, the top-level keys that changed, applied to the yaml in place so comments and keys the form does not show are kept. The form now sends only what changed.
+  - Dataset upload: the preview uses `POST .../datasets` with `preview=1` (the page called a route that does not exist), and the name, environment and storage fields are sent before the file so the server reads them. A file dataset is registered under `data.sources`, so it is listed and usable as `@data:<name>`.
+  - Creating a user with the email field left empty no longer fails with "Invalid email address".
+  - The web app's mock dev server (`bun run web:dev`) starts again: browser code imports `@sdods/contracts/schemas` instead of the root export, which pulled in `node:crypto`.
+  - Docs: account menu, Settings → Profile and Password & sessions, the account REST routes, and refreshed web UI screenshots.
+- Updated dependencies [835d64c]
+  - @sdods/core@0.11.1
+  - @sdods/contracts@0.11.1
+  - @sdods/db@0.11.1
+  - @sdods/mcp@0.11.1
+
 ## 0.11.0
 
 ### Minor Changes
