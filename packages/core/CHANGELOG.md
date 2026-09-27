@@ -1,5 +1,12 @@
 # @sdods/core
 
+## 0.11.2
+
+### Patch Changes
+
+- @sdods/contracts@0.11.2
+  - @sdods/db@0.11.2
+
 ## 0.11.1
 
 ### Patch Changes
