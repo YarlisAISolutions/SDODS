@@ -150,8 +150,8 @@ jobs:
               echo "     first-run cannot install @sdods/cli without it"
               exit 1
             fi
-            # electron-updater reads this feed. It once named the private source repository,
-            # where every release asset 404s, so an installed app could never have updated.
+            # electron-updater reads this feed. It once named the source repository, private at
+            # the time, where every release asset 404'd, so an installed app could never update.
             case "$dir" in
               *mac*) feed="$dir"SDODS.app/Contents/Resources/app-update.yml ;;
               *)     feed="$dir"resources/app-update.yml ;;
@@ -241,9 +241,9 @@ jobs:
           sha256sum *.dmg *.zip *.exe *.AppImage *.deb 2>/dev/null | sort -k2 > SHA256SUMS.txt
           cat SHA256SUMS.txt
 
-      # Published to a PUBLIC releases-only repository, because YarlisAISolutions/SDODS is private and
-      # release assets on a private repo are private too -- a download link would 404 for every
-      # visitor. Source stays private; only the built installers are public.
+      # Published to a PUBLIC releases-only repository. That began because YarlisAISolutions/SDODS was
+      # private until 2026-09-26 (private repos' release assets 404 for visitors). SDODS is public
+      # now; the split stays because installed apps, the apt repository, Homebrew and Scoop already point there, and one releases-only repository keeps the download page's asset list clean.
       #
       # Requires a DESKTOP_RELEASE_TOKEN secret: a fine-grained PAT with Contents: read+write on
       # the releases repo only. GITHUB_TOKEN cannot write to another repository.

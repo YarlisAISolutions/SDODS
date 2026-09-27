@@ -166,9 +166,9 @@ deb:
     - libasound2t64 | libasound2
 
 # This block is what electron-builder writes into the packaged `Resources/app-update.yml`, which is
-# the feed electron-updater (src/main/updater.ts) reads. It must name the PUBLIC releases repository:
-# YarlisAISolutions/SDODS is private, its release assets are private too, and every update check against it
-# would 404. Uploading is not done from here -- desktop.yml packs with `--publish never` and attaches
+# the feed electron-updater (src/main/updater.ts) reads. It names the PUBLIC releases repository, where
+# every installed app already looks. (It had to while YarlisAISolutions/SDODS was private, before
+# 2026-09-26; moving the feed now would strand every installed copy on its current version.) Uploading is not done from here -- desktop.yml packs with `--publish never` and attaches
 # the artifacts itself -- so this only decides where installed apps look.
 #
 # The updater is dormant on macOS until the build is Developer ID signed (Squirrel.Mac refuses an
