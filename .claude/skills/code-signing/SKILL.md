@@ -130,20 +130,26 @@ Setup:
 4. Create a service principal for CI and grant it **Code Signing Certificate Profile Signer** on
    the account.
 
-Then add to `apps/desktop/electron-builder.yml` under `win:`:
+Then set, on the repository (Settings → Secrets and variables → Actions):
 
-```yaml
-win:
-  azureSignOptions:
-    publisherName: '<exact name on the certificate>'
-    endpoint: 'https://<region>.codesigning.azure.net/'
-    codeSigningAccountName: '<account>'
-    certificateProfileName: '<profile>'
-```
+| Kind | Name | Value |
+|---|---|---|
+| secret | `AZURE_TENANT_ID` | the service principal's tenant |
+| secret | `AZURE_CLIENT_ID` | the service principal's app (client) ID |
+| secret | `AZURE_CLIENT_SECRET` | the service principal's client secret |
+| variable | `AZURE_SIGN_ENDPOINT` | `https://<region>.codesigning.azure.net/` |
+| variable | `AZURE_SIGN_ACCOUNT` | the Artifact Signing account name |
+| variable | `AZURE_SIGN_PROFILE` | the certificate profile name |
+| variable | `AZURE_SIGN_PUBLISHER` | the subject CN on the certificate, exactly |
 
-and set `AZURE_TENANT_ID`, `AZURE_CLIENT_ID`, `AZURE_CLIENT_SECRET` as CI secrets.
+**Do not put `azureSignOptions` in `electron-builder.yml`.** Once that block exists,
+electron-builder always signs through Azure and fails without credentials, which breaks every local
+and fork build. `desktop.yml` passes it as `-c.win.azureSignOptions.*` only when `AZURE_CLIENT_ID`
+is set, fails if any of the other six is missing, and then fails the build if any Windows `.exe`
+is not validly Authenticode-signed. All of this runs on GitHub's Windows runner, so it can be set
+up entirely from a Mac.
 
-**Version note:** the block above is electron-builder v26 syntax, which is what this repo pins
+**Version note:** `azureSignOptions` is electron-builder v26 syntax, which is what this repo pins
 (26.15.3, the current release). v27 collapses Windows signing into a single `win.sign`
 discriminated union (`type: 'signtool' | 'hsm' | 'pkcs11' | 'azure'`) and removes
 `win.azureSignOptions` / `win.signtoolOptions`; `electron-builder migrate-schema` rewrites it.

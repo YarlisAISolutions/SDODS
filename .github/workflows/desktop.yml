@@ -80,10 +80,15 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           # Windows, route A: Azure Artifact Signing (formerly Trusted Signing). No hardware
           # token, so it is the only option that works on a hosted runner without a self-hosted
-          # box. Needs azureSignOptions in electron-builder.yml as well as these.
+          # box. The three secrets authenticate; the four repository *variables* below name the
+          # account and profile, which are not secret and are needed to build azureSignOptions.
           AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
           AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
           AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          AZURE_SIGN_ENDPOINT: ${{ vars.AZURE_SIGN_ENDPOINT }}
+          AZURE_SIGN_ACCOUNT: ${{ vars.AZURE_SIGN_ACCOUNT }}
+          AZURE_SIGN_PROFILE: ${{ vars.AZURE_SIGN_PROFILE }}
+          AZURE_SIGN_PUBLISHER: ${{ vars.AZURE_SIGN_PUBLISHER }}
           # Windows, route B: a traditional OV certificate.
           WIN_CSC_LINK: ${{ secrets.WIN_CSC_LINK }}
           WIN_CSC_KEY_PASSWORD: ${{ secrets.WIN_CSC_KEY_PASSWORD }}
@@ -99,6 +104,28 @@ jobs:
             [ -z "${!var:-}" ] && unset "$var" || true
           done
 
+          # azureSignOptions is passed on the command line, not written into electron-builder.yml:
+          # once that block exists electron-builder always signs through Azure and fails without
+          # credentials, which would break every local and fork build. Here it appears only when
+          # the service principal does, so an unsigned build still succeeds.
+          sign_args=()
+          if [ "${{ runner.os }}" = Windows ] && [ -n "${AZURE_CLIENT_ID:-}" ]; then
+            for var in AZURE_TENANT_ID AZURE_CLIENT_SECRET AZURE_SIGN_ENDPOINT AZURE_SIGN_ACCOUNT \
+                       AZURE_SIGN_PROFILE AZURE_SIGN_PUBLISHER; do
+              if [ -z "${!var:-}" ]; then
+                echo "::error::AZURE_CLIENT_ID is set but $var is not; see .claude/skills/code-signing/SKILL.md"
+                exit 1
+              fi
+            done
+            sign_args=(
+              "-c.win.azureSignOptions.endpoint=$AZURE_SIGN_ENDPOINT"
+              "-c.win.azureSignOptions.codeSigningAccountName=$AZURE_SIGN_ACCOUNT"
+              "-c.win.azureSignOptions.certificateProfileName=$AZURE_SIGN_PROFILE"
+              "-c.win.azureSignOptions.publisherName=$AZURE_SIGN_PUBLISHER"
+            )
+            echo "Windows signing: Azure Artifact Signing ($AZURE_SIGN_ACCOUNT/$AZURE_SIGN_PROFILE)"
+          fi
+
           bun run build
 
           # electron-builder downloads the Electron binary and the app-builder helpers at pack
@@ -107,7 +134,7 @@ jobs:
           # times before giving up; packing is idempotent, so a second attempt is safe.
           for attempt in 1 2 3; do
             # --publish never: releasing is a separate, explicit step below.
-            if npx electron-builder ${{ matrix.flags }} --publish never; then
+            if npx electron-builder ${{ matrix.flags }} "${sign_args[@]}" --publish never; then
               exit 0
             fi
             echo "::warning::electron-builder attempt $attempt failed"
@@ -165,6 +192,27 @@ jobs:
             found=$((found + 1))
           done
           [ "$found" -gt 0 ] || { echo 'no packaged app directories found'; exit 1; }
+
+      # When signing credentials exist, an unsigned installer is a failed build, not a quiet
+      # fallback: winget's validation and SmartScreen both key on this signature (#169).
+      - name: Verify the Windows installers are signed
+        if: runner.os == 'Windows'
+        env:
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+        working-directory: apps/desktop
+        shell: pwsh
+        run: |
+          # Checked here, not in `if:`: a step's own env is not visible to its condition.
+          if (-not $env:AZURE_CLIENT_ID) { 'No signing credentials; this build is unsigned.'; exit 0 }
+          $files = @(Get-ChildItem release/*.exe) + @(Get-ChildItem release/win-*/SDODS.exe)
+          if ($files.Count -eq 0) { throw 'no Windows executables found' }
+          $bad = 0
+          foreach ($f in $files) {
+            $sig = Get-AuthenticodeSignature $f.FullName
+            "{0,-8} {1}  {2}" -f $sig.Status, $f.Name, $sig.SignerCertificate.Subject
+            if ($sig.Status -ne 'Valid') { $bad++ }
+          }
+          if ($bad) { throw "$bad executable(s) are not validly signed" }
 
       - uses: actions/upload-artifact@v7
         with:
