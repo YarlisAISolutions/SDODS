@@ -254,8 +254,10 @@ signature dies when the short-lived Azure cert expires (every ~3 days).
 
 Follow `sdods-desktop-release` → *The loop*.
 
-> 🧑 **HUMAN STEP 7** — edit the draft's "These builds are unsigned" text, read the
-> `virustotal` summary, and publish the draft.
+> 🧑 **HUMAN STEP 7** — check that the release body's Windows line says "Authenticode-signed".
+> The workflow writes it from `Get-AuthenticodeSignature` on the built exes, so "More info → Run
+> anyway (SmartScreen)" means the build was not signed. Read the `virustotal` summary, then
+> publish the draft.
 > **Agent confirms with:** `gh release view desktop-v<ver> -R YarlisAISolutions/sdods-releases --json isDraft -q .isDraft` → `false`.
 
 ---
@@ -269,8 +271,7 @@ Follow `sdods-desktop-release` → *The loop*.
 2. Add `windows` to `NEXT_PUBLIC_DESKTOP_PLATFORMS`.
 3. `bun run channels:sync`, then submit to winget (`sdods-release-channels`). winget validation
    was the channel waiting for this signature.
-4. Make the release body in `desktop.yml` conditional.
-5. Tick the Windows items in #169.
+4. Tick the Windows items in #169.
 
 ---
 

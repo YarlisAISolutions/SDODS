@@ -220,8 +220,10 @@ Follow `sdods-desktop-release` → *The loop* (tag `desktop-v*`, the workflow dr
 > 🧑 **HUMAN STEP 7** — publish the draft release
 > - **Why a human:** the draft is the deliberate gate before anyone can download. Read the
 >   `virustotal` job summary first.
-> - **Do:** fix the release body. It still says "These builds are unsigned" (see *After signing
->   works*). Then publish the draft in `YarlisAISolutions/sdods-releases`.
+> - **Do:** check that the release body's macOS line says "signed with a Developer ID and
+>   notarized". The workflow writes that line from `spctl` run on the built app, so the old
+>   right-click advice means notarization did not happen. Then publish the draft in
+>   `YarlisAISolutions/sdods-releases`.
 > - **Agent confirms with:**
 >   `gh release view desktop-v<ver> -R YarlisAISolutions/sdods-releases --json isDraft -q .isDraft`
 >   → `false`.
@@ -240,8 +242,7 @@ Follow `sdods-desktop-release` → *The loop* (tag `desktop-v*`, the workflow dr
    `CSC_LINK`, and CI maps it from `MAC_CSC_LINK`, so signed builds ship with the updater on.
    Squirrel.Mac only installs updates into a signed app. Users on earlier unsigned builds must
    download once by hand.
-4. Make the `release` job's body text conditional, or drop the "unsigned" paragraph.
-5. Tick the macOS items in #169 and update `sdods-desktop-release` → *Updates* (the macOS row).
+4. Tick the macOS items in #169 and update `sdods-desktop-release` → *Updates* (the macOS row).
 
 ---
 
