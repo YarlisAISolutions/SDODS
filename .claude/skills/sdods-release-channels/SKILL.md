@@ -92,8 +92,10 @@ How it is built, and why that way:
   `ubuntu-24.04-arm` builds arm64, from the unchanged Dockerfile (the Playwright base and the bun
   installer are both multi-arch). Emulating arm64 on an amd64 runner was tried first and did not
   finish in 90 minutes, because `bun install`, the native module builds and the web bundle all ran
-  emulated. The `ubuntu-24.04-arm` runner is free for public repositories (SDODS is public since
-  2026-09-26); a one-job probe got a runner in seconds.
+  emulated. The `ubuntu-24.04-arm` runner is free for **public** repositories. A one-job probe got
+  a runner in seconds while SDODS was public (2026-09-26 to 2026-09-28). **The repo is private
+  again**, so check that this runner is still available and what it costs before the next Docker
+  release. If the arm64 leg queues and never starts, this is why.
 - **Every image runs before it is pushed.** Each leg loads the image and, natively: checks the
   architecture, `pwuser`, the entrypoint and the healthcheck; runs `--version`; loads
   `better-sqlite3` and `argon2` (from `packages/db` and `packages/server` — the isolated linker
@@ -144,9 +146,9 @@ brew install --build-from-source yarlisaisolutions/sdods/sdods && brew test sdod
 You can do all of that without publishing anything: `brew tap-new yarlisaisolutions/sdods --no-git` makes a
 local tap, and `brew untap yarlisaisolutions/sdods` removes it.
 
-The formula builds from the **npm tarball**, not from a clone. That was required while the source
-repository was private (until 2026-09-26) and stays the choice: the tarball is the published,
-versioned artefact, a clone is not.
+The formula builds from the **npm tarball**, not from a clone. That is required while the source
+repository is private, as it is now, and would stay the choice if it went public: the tarball is
+the published, versioned artefact, a clone is not.
 
 Three things about it are load-bearing, and each was found by running it rather than reading it:
 
