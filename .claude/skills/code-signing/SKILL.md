@@ -18,6 +18,12 @@ person's legal identity and a payment.
 Facts below were verified against Microsoft and Apple documentation in September 2026. Two pieces
 of widely repeated advice are now **wrong** — see the corrections at the end.
 
+**This file is the background.** To actually do the work, follow the step-by-step runbooks. Each
+marks every human-in-the-loop gate and says how an agent confirms the gate is done:
+
+- **macOS** → `sdods-sign-macos` (Developer ID, notarization, the updater, rotation)
+- **Windows** → `sdods-sign-windows` (Azure Artifact Signing, SignPath, OV, winget, rotation)
+
 ---
 
 ## macOS — Gatekeeper
@@ -128,7 +134,8 @@ Setup:
    cannot be completed without it, which is the usual place people get stuck.
 3. Create a **certificate profile** (type: Public Trust).
 4. Create a service principal for CI and grant it **Code Signing Certificate Profile Signer** on
-   the account.
+   the account. Role names changed with the rename, so list the current ones first, as
+   `sdods-sign-windows` step A1 shows.
 
 Then set, on the repository (Settings → Secrets and variables → Actions):
 
@@ -150,7 +157,7 @@ is not validly Authenticode-signed. All of this runs on GitHub's Windows runner,
 up entirely from a Mac.
 
 **Version note:** `azureSignOptions` is electron-builder v26 syntax, which is what this repo pins
-(26.15.3, the current release). v27 collapses Windows signing into a single `win.sign`
+(`^26.16.1` in `apps/desktop/package.json`). v27 collapses Windows signing into a single `win.sign`
 discriminated union (`type: 'signtool' | 'hsm' | 'pkcs11' | 'azure'`) and removes
 `win.azureSignOptions` / `win.signtoolOptions`; `electron-builder migrate-schema` rewrites it.
 Check which major version is installed before copying config from a blog post.
@@ -217,10 +224,9 @@ gives qualifying projects free OV-level signing through a managed pipeline. Thei
 - actively maintained, already released in the form to be signed, and functionality described on
   the download page.
 
-SDODS is Apache-2.0, so the licence is fine — but the repository is **private**, and the programme
-is for open-source projects. Today it does not qualify. Making the source public would unlock it,
-and would also remove the need for the separate public releases repo and let the
-`NEXT_PUBLIC_REPO_PUBLIC` flags across both sites switch on. Applications take days to weeks.
+SDODS is Apache-2.0 and has been **public since 2026-09-26**, so it now plausibly qualifies (this
+was blocked while the repository was private). Applications take days to weeks, and CI wiring for
+it is not built yet. See `sdods-sign-windows` → Route B.
 
 **macOS: no.** There is no free path to a Developer ID certificate or to notarization. A free Apple
 ID signs for local development only; the result still fails Gatekeeper on anyone else's Mac. The
@@ -228,9 +234,8 @@ $99/year membership is unavoidable for direct distribution.
 
 **Linux: already free** — nothing to sign.
 
-So the realistic floors are **$99/year** (Apple, plus SignPath for Windows if the source goes
-public) or **~$219/year** (Apple plus Azure Artifact Signing at $9.99/month) with the source
-staying private.
+So the realistic floors are **$99/year** (Apple, plus SignPath for Windows if accepted) or
+**~$219/year** (Apple plus Azure Artifact Signing at $9.99/month).
 
 ---
 
