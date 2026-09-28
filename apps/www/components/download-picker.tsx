@@ -11,6 +11,7 @@ import {
   downloadUrl,
   releaseNotesUrl,
   checksumsUrl,
+  isSigned,
   type DesktopAsset,
   type Platform,
 } from '@/lib/desktop-release';
@@ -43,6 +44,13 @@ const GATEKEEPER: Record<Platform, { title: string; body: string; command?: stri
   linux: null,
 };
 
+// Linux has no signing authority, so its steps never change.
+const LINUX_INSTALL = [
+  'Debian or Ubuntu: sudo apt install ./SDODS-*.deb — this is the recommended route.',
+  'AppImage: chmod +x SDODS-*.AppImage, then run it.',
+  'The AppImage runtime needs FUSE 2, which Ubuntu 22.04 and later no longer install by default. If it reports “Cannot mount AppImage”, install libfuse2t64 (Ubuntu 24.04) or libfuse2 (Ubuntu 22.04, Debian) — or just use the .deb, which has no such requirement.',
+];
+
 /**
  * How to actually install what was downloaded, per platform.
  *
@@ -50,18 +58,34 @@ const GATEKEEPER: Record<Platform, { title: string; body: string; command?: stri
  * another all the time, and the AppImage in particular does nothing on a double-click until it is
  * marked executable — which is not obvious, and is the most common "the download is broken" report.
  */
-const INSTALL: Record<Platform, string[]> = {
-  macos: [
-    'Open the .dmg and drag SDODS to Applications.',
-    'Once, in Terminal: xattr -dr com.apple.quarantine /Applications/SDODS.app',
-    'Then open it normally. “Damaged” means unsigned-and-quarantined, not corrupt.',
-  ],
-  windows: ['Run the .exe installer.', 'At the SmartScreen prompt choose More info → Run anyway.'],
-  linux: [
-    'Debian or Ubuntu: sudo apt install ./SDODS-*.deb — this is the recommended route.',
-    'AppImage: chmod +x SDODS-*.AppImage, then run it.',
-    'The AppImage runtime needs FUSE 2, which Ubuntu 22.04 and later no longer install by default. If it reports “Cannot mount AppImage”, install libfuse2t64 (Ubuntu 24.04) or libfuse2 (Ubuntu 22.04, Debian) — or just use the .deb, which has no such requirement.',
-  ],
+const INSTALL: Record<Platform, { unsigned: string[]; signed: string[] }> = {
+  macos: {
+    unsigned: [
+      'Open the .dmg and drag SDODS to Applications.',
+      'Once, in Terminal: xattr -dr com.apple.quarantine /Applications/SDODS.app',
+      'Then open it normally. “Damaged” means unsigned-and-quarantined, not corrupt.',
+    ],
+    signed: [
+      'Open the .dmg and drag SDODS to Applications.',
+      'Open it from Applications and confirm the “downloaded from the Internet” prompt.',
+    ],
+  },
+  windows: {
+    unsigned: [
+      'Run the .exe installer.',
+      'At the SmartScreen prompt choose More info → Run anyway.',
+    ],
+    // Signing names the publisher but does not silence SmartScreen on day one: reputation builds
+    // per release as downloads accumulate. Say so rather than promise a clean prompt.
+    signed: [
+      'Run the .exe installer.',
+      'A new release may still show SmartScreen. Check it names SDODS as the publisher, then More info → Run anyway.',
+    ],
+  },
+  linux: {
+    unsigned: LINUX_INSTALL,
+    signed: LINUX_INSTALL,
+  },
 };
 
 export function DownloadPicker() {
@@ -142,7 +166,7 @@ export function DownloadPicker() {
           <p className="muted mt-3 text-sm">
             {detected.file} · {detected.size} · version {release.version}
           </p>
-          {!release.signed && GATEKEEPER[detected.platform] && (
+          {!isSigned(release, detected.platform) && GATEKEEPER[detected.platform] && (
             <div className="mt-5 rounded-lg border border-amber-300/60 bg-amber-50/60 p-4 text-sm dark:border-amber-500/30 dark:bg-amber-500/10">
               <p className="font-semibold">{GATEKEEPER[detected.platform]!.title}</p>
               <p className="muted mt-1">{GATEKEEPER[detected.platform]!.body}</p>
@@ -174,9 +198,11 @@ export function DownloadPicker() {
               ))}
             </ul>
             <ol className="muted mt-4 list-decimal space-y-1 pl-4 text-xs">
-              {INSTALL[platform].map((step) => (
-                <li key={step}>{step}</li>
-              ))}
+              {INSTALL[platform][isSigned(release, platform) ? 'signed' : 'unsigned'].map(
+                (step) => (
+                  <li key={step}>{step}</li>
+                ),
+              )}
             </ol>
           </div>
         ))}

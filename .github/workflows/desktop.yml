@@ -104,6 +104,15 @@ jobs:
             [ -z "${!var:-}" ] && unset "$var" || true
           done
 
+          # The Apple credentials belong to the macOS runner only. electron-builder's Windows
+          # signer resolves its certificate as WIN_CSC_LINK ?? CSC_LINK when azureSignOptions is
+          # absent (app-builder-lib platformPackager.getCscLink), so a Windows build without Azure
+          # would try to sign with the Developer ID .p12. electron.vite.config.ts also derives
+          # __DESKTOP_SIGNED__ from CSC_LINK, which would compile Windows and Linux as "signed".
+          if [ "${{ runner.os }}" != macOS ]; then
+            unset CSC_LINK CSC_KEY_PASSWORD APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID
+          fi
+
           # azureSignOptions is passed on the command line, not written into electron-builder.yml:
           # once that block exists electron-builder always signs through Azure and fails without
           # credentials, which would break every local and fork build. Here it appears only when
@@ -214,6 +223,46 @@ jobs:
           }
           if ($bad) { throw "$bad executable(s) are not validly signed" }
 
+      # What actually came out signed, per platform, for the release body. Read from the artifacts,
+      # not from which secrets exist: credentials that are present but produced no signature (a
+      # skipped notarization, a half-configured Azure) must not be advertised as signed. It is
+      # uploaded as its own artifact, named outside the sdods-desktop-* pattern, so it is never
+      # attached to the release.
+      - name: Record what was signed
+        if: runner.os != 'Linux'
+        working-directory: apps/desktop
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p ../../signing
+          status=signed
+          if [ "${{ runner.os }}" = macOS ]; then
+            platform=macos
+            for app in release/mac*/SDODS.app; do
+              # A Developer ID signature alone is not enough: Gatekeeper wants the notarization.
+              out=$(spctl --assess --type execute -vv "$app" 2>&1 || true)
+              echo "$app: $out"
+              grep -q 'source=Notarized Developer ID' <<<"$out" || status=unsigned
+            done
+          else
+            platform=windows
+            for exe in release/*.exe release/win-*/SDODS.exe; do
+              sig=$(pwsh -NoProfile -Command "(Get-AuthenticodeSignature '$exe').Status")
+              echo "$exe: $sig"
+              [ "$sig" = Valid ] || status=unsigned
+            done
+          fi
+          echo "$status" > "../../signing/$platform"
+          echo "$platform: $status"
+
+      - uses: actions/upload-artifact@v7
+        if: runner.os != 'Linux'
+        with:
+          name: sdods-signing-${{ runner.os }}
+          path: signing/
+          if-no-files-found: error
+          retention-days: 14
+
       - uses: actions/upload-artifact@v7
         with:
           name: sdods-desktop-${{ runner.os }}
@@ -278,6 +327,50 @@ jobs:
           path: artifacts
           merge-multiple: true
 
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: sdods-signing-*
+          path: signing
+          merge-multiple: true
+
+      # Says what is true of *these* installers. A fixed "these builds are unsigned" paragraph went
+      # wrong the moment one platform was signed and the other was not.
+      - name: Write the release notes
+        run: |
+          set -euo pipefail
+          mac=$(cat signing/macos)
+          win=$(cat signing/windows)
+          {
+            echo 'SDODS desktop — installs, launches and upgrades SDODS in one click.'
+            echo
+            echo 'Verify your download against `SHA256SUMS.txt`:'
+            echo
+            echo '```'
+            echo 'sha256sum -c SHA256SUMS.txt --ignore-missing'
+            echo '```'
+            echo
+            if [ "$mac" = unsigned ] && [ "$win" = unsigned ]; then
+              echo '**These builds are unsigned.** Until certificates are in place:'
+            elif [ "$mac" = unsigned ] || [ "$win" = unsigned ]; then
+              echo '**Not every build is signed yet.** Per platform:'
+            else
+              echo '**The macOS and Windows builds are signed.**'
+            fi
+            if [ "$mac" = signed ]; then
+              echo '- macOS: signed with a Developer ID and notarized by Apple — open it normally'
+            else
+              echo '- macOS: right-click the app → Open (Gatekeeper blocks a plain double-click)'
+            fi
+            if [ "$win" = signed ]; then
+              # Signing names the publisher; SmartScreen reputation still builds per release.
+              echo '- Windows: Authenticode-signed. If SmartScreen still warns on a new release, check it names SDODS as the publisher, then More info → Run anyway'
+            else
+              echo '- Windows: More info → Run anyway (SmartScreen)'
+            fi
+            echo '- Linux: AppImage and .deb install normally'
+          } > release-notes.md
+          cat release-notes.md
+
       # Unsigned builds make this more than a formality: a checksum is the only way a user can
       # confirm the installer they downloaded is the one that was built.
       - name: Generate SHA256SUMS.txt
@@ -305,16 +398,4 @@ jobs:
           # A draft first: the download page on sdods.com points at these filenames, so a person
           # checks the release before anyone can download a broken installer.
           files: artifacts/*
-          body: |
-            SDODS desktop — installs, launches and upgrades SDODS in one click.
-
-            Verify your download against `SHA256SUMS.txt`:
-
-            ```
-            sha256sum -c SHA256SUMS.txt --ignore-missing
-            ```
-
-            **These builds are unsigned.** Until certificates are in place:
-            - macOS: right-click the app → Open (Gatekeeper blocks a plain double-click)
-            - Windows: More info → Run anyway (SmartScreen)
-            - Linux: AppImage and .deb install normally
+          body_path: release-notes.md

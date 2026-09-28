@@ -228,15 +228,17 @@ build is listed underneath, and the full list is server-rendered so no-JS visito
 ## Signing
 
 Builds are unsigned today, so macOS shows "damaged / unidentified developer" and Windows shows
-SmartScreen. The download page prints the per-OS workaround automatically while
-`DESKTOP_RELEASE.signed` is false.
+SmartScreen. The download page prints each OS's workaround automatically until that OS is in
+`DESKTOP_RELEASE.signed` (a list, for example `['macos']`).
 
-Everything is wired behind CI secrets already — supply them and signing turns on with no code
-change: `CSC_LINK`, `CSC_KEY_PASSWORD`, `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID`
-for macOS; `WIN_CSC_LINK`, `WIN_CSC_KEY_PASSWORD` for Windows. Obtaining the certificates requires
-a person: Apple Developer Program ($99/yr), and for Windows **Azure Trusted Signing** (~$10/month)
-rather than a traditional OV certificate, which has required an FIPS hardware token since June 2023
-and does not fit CI. After signing lands, pass `--signed` to `desktop:sync-release`.
+Everything is wired behind CI secrets already. Supply them and signing turns on with no code
+change: `MAC_CSC_LINK`, `MAC_CSC_KEY_PASSWORD` (the workflow maps them to `CSC_*`), `APPLE_ID`,
+`APPLE_APP_SPECIFIC_PASSWORD` and `APPLE_TEAM_ID` for macOS. For Windows, the `AZURE_*` secrets and
+variables (Azure Artifact Signing), or `WIN_CSC_LINK` / `WIN_CSC_KEY_PASSWORD`. Obtaining the
+certificates requires a person. Follow the step-by-step runbooks, which mark each human gate:
+**`sdods-sign-macos`** and **`sdods-sign-windows`**. After a signed release, name the signed
+platforms: `desktop:sync-release <tag> --signed=macos` (or `windows`, `macos,windows`, `all`).
+A bare `--signed` is refused.
 
 **`CSC_LINK` also arms the macOS updater.** Squirrel.Mac will not install an update into an
 unsigned app, so `src/main/updater.ts` stays dormant on macOS unless the build says it is signed.
