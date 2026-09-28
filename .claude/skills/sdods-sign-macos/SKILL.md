@@ -154,9 +154,9 @@ Use **Option A** now.
 The names must match exactly. `desktop.yml` maps `MAC_CSC_LINK` → `CSC_LINK` and
 `MAC_CSC_KEY_PASSWORD` → `CSC_KEY_PASSWORD`, and it unsets any that are empty.
 
-> ⚠️ **Before setting `MAC_CSC_LINK`, read the Windows trap in *Troubleshooting*.** The workflow
-> exports `CSC_LINK` on every runner. electron-builder's Windows signer falls back to `CSC_LINK`
-> when `WIN_CSC_LINK` is unset and Azure is not configured.
+The workflow unsets `CSC_*` and `APPLE_*` on the Windows and Linux runners. electron-builder's
+Windows signer would otherwise fall back to `CSC_LINK` (the Apple `.p12`) when Azure is not
+configured. Do not remove that `unset`. See *Troubleshooting*.
 
 ---
 
@@ -256,7 +256,7 @@ Follow `sdods-desktop-release` → *The loop* (tag `desktop-v*`, the workflow dr
 | Notarized, then dies at first DB open with a dyld error | `disable-library-validation` was removed | Restore it in `build/entitlements.mac.plist` |
 | `spctl` says `rejected`, `source=Unnotarized Developer ID` | Notarization skipped. One of the three `APPLE_*` vars is missing. | `gh secret list`, then re-run |
 | Updater still dormant on a signed build | Signed from the keychain (`CSC_NAME`) with no `CSC_LINK` | Build with `DESKTOP_SIGNED=1` |
-| **Windows job fails to sign, or signs with an Apple cert** | `desktop.yml` exports `CSC_LINK` to **all** runners. electron-builder's Windows signer uses `WIN_CSC_LINK ?? CSC_LINK` (`platformPackager.getCscLink`) when `azureSignOptions` is absent | Scope `CSC_LINK`/`CSC_KEY_PASSWORD` to macOS in the workflow, or `unset` them when `runner.os != macOS`. **Fix this before Step 4 if Azure is not yet live.** |
+| **Windows job fails to sign, or signs with an Apple cert** | Someone removed the non-macOS `unset` in `desktop.yml`. electron-builder's Windows signer uses `WIN_CSC_LINK ?? CSC_LINK` (`platformPackager.getCscLink`) when `azureSignOptions` is absent | Restore the `runner.os != macOS` unset of `CSC_*`/`APPLE_*` in *Build installers* |
 
 ---
 
@@ -275,20 +275,17 @@ Follow `sdods-desktop-release` → *The loop* (tag `desktop-v*`, the workflow dr
 
 ## Future enhancements (in priority order)
 
-1. **Scope the Apple env to the macOS runner** in `desktop.yml` (the Windows trap above). This is
-   small and prevents a confusing failure. It also stops Windows and Linux builds compiling with
-   `__DESKTOP_SIGNED__ = true`, which `electron.vite.config.ts` derives from `CSC_LINK`.
-2. **Switch notarization to an App Store Connect API key (Option B).** Create a Team key with
+1. **Switch notarization to an App Store Connect API key (Option B).** Create a Team key with
    the *Developer* role, store the `.p8` as a secret, and write it to `$RUNNER_TEMP/key.p8` in the
    macOS job. Export `APPLE_API_KEY`, `APPLE_API_KEY_ID` and `APPLE_API_ISSUER` in place of the
    `APPLE_ID` trio. This removes the dependency on one person's Apple ID.
-3. **Add a CI gate like the Windows one:** when `MAC_CSC_LINK` is set, fail the build unless
+2. **Add a CI gate like the Windows one:** when `MAC_CSC_LINK` is set, fail the build unless
    `spctl -a -t install` reports `Notarized Developer ID` for each `.app`. Right now a silent
    notarization skip would still publish.
-4. **Staple and verify the `.dmg` itself**, not just the app. electron-builder notarizes the app.
+3. **Staple and verify the `.dmg` itself**, not just the app. electron-builder notarizes the app.
    Notarizing the dmg too lets offline first launches pass.
-5. **electron-builder v27:** check `mac.notarize` and signing option names when upgrading
+4. **electron-builder v27:** check `mac.notarize` and signing option names when upgrading
    (`electron-builder migrate-schema`).
-6. **Mac App Store (`mas`) target:** a separate "Apple Distribution" cert, a provisioning profile
+5. **Mac App Store (`mas`) target:** a separate "Apple Distribution" cert, a provisioning profile
    and sandbox entitlements. The sandbox conflicts with spawning a bundled Node, so treat this as a
    research spike first.
