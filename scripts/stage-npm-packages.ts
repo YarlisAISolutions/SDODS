@@ -80,6 +80,10 @@ for (const p of PKGS) {
   // devDependencies are irrelevant to consumers and can carry workspace: ranges npm rejects.
   delete manifest.devDependencies;
 
+  // npm always packs LICENSE but packs NOTICE only when `files` names it, and every package's
+  // `files` is just its build output. Apache-2.0 §4(d) wants NOTICE to travel with the package.
+  if (manifest.files && !manifest.files.includes('NOTICE')) manifest.files.push('NOTICE');
+
   writeFileSync(join(dest, 'package.json'), JSON.stringify(manifest, null, 2) + '\n');
 
   // 3. copy exactly what `files` promises, plus the conventional extras npm always includes.
@@ -93,6 +97,10 @@ for (const p of PKGS) {
   // carries it.
   if (!existsSync(join(dest, 'LICENSE')))
     copyFileSync(join(repoRoot, 'LICENSE'), join(dest, 'LICENSE'));
+  // NOTICE carries the SDODS copyright and the third-party attributions (Playwright, which
+  // @sdods/mcp includes material from). Same reasoning, same single source at the root.
+  if (!existsSync(join(dest, 'NOTICE')))
+    copyFileSync(join(repoRoot, 'NOTICE'), join(dest, 'NOTICE'));
 
   staged.push(dest);
   console.error(`  staged ${manifest.name}@${manifest.version}`);

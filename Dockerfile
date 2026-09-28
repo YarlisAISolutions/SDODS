@@ -35,6 +35,9 @@ RUN bun install --frozen-lockfile
 # Web UI bundle served by the Fastify server
 RUN bun run --filter @sdods/web build
 
+# The image redistributes Playwright (from the base) alongside SDODS, so both licences' notices
+# ship with it. Copied after the install so editing NOTICE does not invalidate that layer.
+COPY LICENSE NOTICE ./
 COPY deploy/entrypoint.sh /app/deploy/entrypoint.sh
 RUN chmod +x /app/deploy/entrypoint.sh \
     && mkdir -p /data /tmp/sdods \

@@ -2,6 +2,10 @@
 // packages/mcp/test/fixtures/playwright-mcp-tools.json (Playwright 1.63.0).
 // Do not edit by hand: `bun run mcp:browser-shapes` rewrites it, and
 // packages/mcp/test/browser-schemas.test.ts fails if it drifts from the dump.
+//
+// The tool names, argument names and descriptions below are taken from the Playwright MCP server
+// (https://github.com/microsoft/playwright), Copyright (c) Microsoft Corporation, licensed under
+// the Apache License, Version 2.0. See NOTICE at the repository root.
 import { z } from 'zod';
 
 /** Upstream argument shapes, one per Playwright MCP tool. `sessionId` is added by the wrapper. */
