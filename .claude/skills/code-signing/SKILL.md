@@ -98,8 +98,8 @@ xcrun stapler validate /Applications/SDODS.app
 ### Until certificates exist
 
 Users can bypass Gatekeeper themselves — right-click SDODS in Applications → **Open** → confirm.
-macOS remembers the choice. The download page prints this automatically while
-`DESKTOP_RELEASE.signed` is false. `xattr -dr com.apple.quarantine /Applications/SDODS.app` also
+macOS remembers the choice. The download page prints this automatically until `macos` is in
+`DESKTOP_RELEASE.signed`. `xattr -dr com.apple.quarantine /Applications/SDODS.app` also
 works but is worse advice to give strangers.
 
 ---
@@ -242,9 +242,9 @@ So the realistic floors are **$99/year** (Apple, plus SignPath for Windows if ac
 ## After signing works
 
 1. Verify a real download on a machine that has never seen the app, not the build machine.
-2. Sync the download page with `--signed`, which removes the Gatekeeper/SmartScreen instructions:
+2. Sync the download page naming the signed platforms. Only their workaround text is removed:
    ```bash
-   bun run desktop:sync-release desktop-v0.1.0 --signed
+   bun run desktop:sync-release desktop-v0.1.0 --signed=macos          # or windows, macos,windows, all
    ```
 3. Enable `electron-updater` for the app shell. It was left off deliberately: Squirrel.Mac
    **refuses to install an unsigned update**, so auto-update only becomes real once macOS signing

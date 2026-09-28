@@ -3,6 +3,7 @@
  *
  *   bun run desktop:sync-release desktop-v0.1.0
  *   bun run desktop:sync-release            # newest desktop-v* release
+ *   bun run desktop:sync-release desktop-v0.2.0 --signed=macos   # platforms whose builds are signed
  *
  * sdods.com is a static export: it cannot query GitHub at request time, and querying at build
  * time would make every site deploy depend on GitHub being up. So the release is committed, and
@@ -15,6 +16,7 @@
  */
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { parseSignedPlatforms, type SignablePlatform } from '../apps/www/lib/desktop-release.js';
 
 const MANIFEST = join(import.meta.dirname, '..', 'apps', 'www', 'lib', 'desktop-release.ts');
 
@@ -170,7 +172,7 @@ async function resolveRelease(tag?: string): Promise<GhRelease> {
  */
 const str = (v: string): string => `'${v.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`;
 
-function render(release: GhRelease, entries: Entry[], signed: boolean): string {
+function render(release: GhRelease, entries: Entry[], signed: SignablePlatform[]): string {
   const version = release.tag_name.replace(/^desktop-v/, '');
   const assetBaseUrl = `https://github.com/${REPO}/releases/download/${release.tag_name}`;
   const published = release.published_at ? release.published_at.slice(0, 10) : null;
@@ -195,7 +197,7 @@ function render(release: GhRelease, entries: Entry[], signed: boolean): string {
     `  assetBaseUrl: ${str(assetBaseUrl)},\n` +
     `  version: ${str(version)},\n` +
     `  published: ${published ? str(published) : 'null'},\n` +
-    `  signed: ${signed},\n` +
+    `  signed: [${signed.map(str).join(', ')}],\n` +
     `  assets: [\n${assets}\n  ],\n` +
     `};`;
 
@@ -206,9 +208,24 @@ function render(release: GhRelease, entries: Entry[], signed: boolean): string {
   return source.replace(pattern, replacement);
 }
 
+/**
+ * `--signed=<list>` names the platforms whose installers are signed. A bare `--signed` is refused:
+ * it used to mean every platform, which dropped the SmartScreen advice the day only macOS was signed.
+ */
+function signedFrom(args: string[]): SignablePlatform[] {
+  const flag = args.find((a) => a === '--signed' || a.startsWith('--signed='));
+  if (!flag) return [];
+  try {
+    return parseSignedPlatforms(flag.slice('--signed='.length));
+  } catch (e) {
+    console.error(`✖ ${(e as Error).message}`);
+    process.exit(1);
+  }
+}
+
 async function main() {
   const args = process.argv.slice(2);
-  const signed = args.includes('--signed');
+  const signed = signedFrom(args);
   const tag = args.find((a) => a.startsWith('desktop-v'));
 
   const release = await resolveRelease(tag);
