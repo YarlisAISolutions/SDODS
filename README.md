@@ -40,7 +40,7 @@
 
 ---
 
-SDODS is an automation and orchestration platform. You describe behaviour in Gherkin, keep one YAML file per project and one per environment, and drive everything from a single command line. It is open source (Apache-2.0) and free to use, including its API tokens.
+SDODS is an automation and orchestration platform. You describe behaviour in Gherkin, keep one YAML file per project and one per environment, and drive everything from a single command line. It is licensed under Apache-2.0 and free to use, including its API tokens.
 
 ## Table of contents
 
@@ -788,7 +788,7 @@ bun run roadmap:sync     # rewrite the roadmap block in this README from package
 - Versioning uses changesets. `@sdods/cli` 0.8.0 and the other `@sdods/*` packages are on npm, releases are tagged on GitHub, and the server image is on GHCR.
 - Security issues: see [SECURITY.md](SECURITY.md).
 - Contributing: see [CONTRIBUTING.md](CONTRIBUTING.md); issues and discussions live at [YarlisAISolutions/SDODS](https://github.com/YarlisAISolutions/SDODS).
-- Deployment: sdods.com, docs.sdods.com and api.sdods.com are deployed by Tollgate, the Yarlis deploy control plane, from a private companion repository (YarlisAISolutions/sdods-deploy). This public repository builds, tests and publishes packages; it holds no production credentials.
+- Deployment: sdods.com, docs.sdods.com and api.sdods.com are deployed by Tollgate, the Yarlis deploy control plane, from a private companion repository (YarlisAISolutions/sdods-deploy). This repository builds, tests and publishes packages; it holds no production credentials.
 
 ## Roadmap and status
 

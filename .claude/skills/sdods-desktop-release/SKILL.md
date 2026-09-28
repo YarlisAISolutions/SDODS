@@ -83,8 +83,10 @@ people's operating systems.
 ## Where the binaries live, and why not in this repo
 
 Installers are published to a separate **public** repository that holds nothing but releases.
-It began as a necessity: until 2026-09-26 `YarlisAISolutions/SDODS` was private, and release assets
-on a private repo are private too. SDODS is public now, and the split stays because installed apps, the apt repository, Homebrew and Scoop already point there, and one releases-only repository keeps the download page's asset list clean:
+It is a necessity: `YarlisAISolutions/SDODS` is private (it was public only from 2026-09-26 to
+2026-09-28), and release assets on a private repo are private too. The split would stay even if the
+source went public again, because installed apps, the apt repository, Homebrew and Scoop already
+point there, and one releases-only repository keeps the download page's asset list clean:
 
 ```bash
 gh repo create YarlisAISolutions/sdods-releases --public -d 'SDODS desktop installers'

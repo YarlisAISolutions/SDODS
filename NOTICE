@@ -2,3 +2,28 @@ SDODS
 Copyright 2026 Yarlis AI Solutions and SDODS contributors
 
 This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+--------------------------------------------------------------------------------
+Third-party notices
+--------------------------------------------------------------------------------
+
+SDODS is built on Playwright. "Playwright" is a trademark of Microsoft Corporation; its use here
+describes what SDODS runs on and does not imply endorsement.
+
+Playwright (https://github.com/microsoft/playwright)
+  Licensed under the Apache License, Version 2.0.
+  - The @sdods/mcp package includes the Playwright MCP server's tool names, argument names and
+    descriptions (packages/mcp/src/browser/shapes.ts).
+  - The SDODS container image is built on mcr.microsoft.com/playwright, which contains Playwright
+    and the browsers it installs, each under its own licence as shipped in that image.
+  Playwright's NOTICE reads:
+
+    Playwright
+    Copyright (c) Microsoft Corporation
+
+    This software contains code derived from the Puppeteer project (https://github.com/puppeteer/puppeteer),
+    available under the Apache 2.0 license (https://github.com/puppeteer/puppeteer/blob/master/LICENSE).
+
+playwright-bdd (https://github.com/vitalets/playwright-bdd)
+  Copyright (c) 2023 Vitaliy Potapov. Licensed under the MIT License.
+  A runtime dependency, installed from npm with its own licence file.
