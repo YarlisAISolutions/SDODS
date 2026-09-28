@@ -15,7 +15,11 @@ import {
 } from '@/lib/qa-list';
 
 /**
- * The questions list: search, tag filter, sort and a date range, all in the browser.
+ * The questions list: search, tag filter and sort, all in the browser.
+ *
+ * Example threads show no votes, views or dates: those numbers were invented along with the
+ * people, so they are not shown or offered as sort orders or filters (see ExampleNotice). Questions
+ * asked on the site are real and keep their date.
  *
  * Two things this component deliberately does not do. It never imports `@sdods/qa-archive`, because
  * the archive belongs in the statically rendered pages, not in a bundle. And it never imports
@@ -26,8 +30,6 @@ import {
 
 const SORTS: { value: Sort; label: string }[] = [
   { value: 'newest', label: 'Newest' },
-  { value: 'votes', label: 'Most voted' },
-  { value: 'views', label: 'Most viewed' },
   { value: 'unanswered', label: 'Unanswered' },
 ];
 
@@ -60,10 +62,6 @@ function Row({ item, people }: { item: ListItem; people: Record<string, PersonCh
   return (
     <li className="flex gap-4 py-4">
       <div className="muted hidden shrink-0 flex-row gap-3 pt-1 text-xs sm:flex">
-        <span className="flex min-w-[3.25rem] flex-col items-center">
-          <span className="tabular-nums">{item.votes === null ? '—' : item.votes}</span>
-          <span className="text-[0.7rem]">{item.votes === null ? 'new' : 'votes'}</span>
-        </span>
         <span className="flex min-w-[3.25rem] flex-col items-center">
           <span className={`tabular-nums ${item.accepted ? 'font-semibold text-emerald-600' : ''}`}>
             {item.answers}
@@ -100,11 +98,15 @@ function Row({ item, people }: { item: ListItem; people: Record<string, PersonCh
             {who ? who.display : item.author}
             {who?.maintainer && (
               <span className="rounded bg-[var(--brand)]/12 px-1 text-[0.6rem] font-semibold uppercase text-[var(--brand)]">
-                maintainer
+                SDODS team
               </span>
             )}
-            {' · '}
-            <time dateTime={item.date}>{formatDate(item.date)}</time>
+            {item.source === 'live' && (
+              <>
+                {' · '}
+                <time dateTime={item.date}>{formatDate(item.date)}</time>
+              </>
+            )}
           </span>
         </div>
       </div>
@@ -117,14 +119,11 @@ export function QaBrowser({
   total,
   tags,
   people,
-  earliest,
 }: {
   initial: ListItem[];
   total: number;
   tags: string[];
   people: Record<string, PersonChip>;
-  /** Oldest question in the archive; the range picker should not offer emptier dates than this. */
-  earliest: string;
 }) {
   const [all, setAll] = useState<ListItem[] | null>(null);
   const [live, setLive] = useState<ListItem[]>([]);
@@ -134,11 +133,9 @@ export function QaBrowser({
   const [query, setQuery] = useState('');
   const [tag, setTag] = useState<string | null>(null);
   const [sort, setSort] = useState<Sort>('newest');
-  const [from, setFrom] = useState('');
-  const [to, setTo] = useState('');
   const [shown, setShown] = useState(PAGE);
 
-  const active = Boolean(query.trim() || tag || from || to) || sort !== 'newest';
+  const active = Boolean(query.trim() || tag) || sort !== 'newest';
 
   // The full index is only needed once somebody actually filters, so it is fetched at idle rather
   // than as part of the page load.
@@ -196,8 +193,8 @@ export function QaBrowser({
   }, [all, initial, live, merged]);
 
   const results = useMemo(
-    () => sortItems(filterItems(pool, { query, tag, from, to }), sort),
-    [pool, query, tag, from, to, sort],
+    () => sortItems(filterItems(pool, { query, tag, from: '', to: '' }), sort),
+    [pool, query, tag, sort],
   );
 
   const visible = active ? results.slice(0, shown) : results.slice(0, shown);
@@ -232,39 +229,6 @@ export function QaBrowser({
             </option>
           ))}
         </select>
-      </div>
-
-      <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
-        <span className="muted">Asked between</span>
-        <input
-          type="date"
-          value={from}
-          min={earliest}
-          onChange={(e) => setFrom(e.target.value)}
-          aria-label="Asked on or after"
-          className="!w-auto shrink-0 rounded border border-[var(--line)] bg-transparent px-2 py-1"
-        />
-        <span className="muted">and</span>
-        <input
-          type="date"
-          value={to}
-          min={earliest}
-          onChange={(e) => setTo(e.target.value)}
-          aria-label="Asked on or before"
-          className="!w-auto shrink-0 rounded border border-[var(--line)] bg-transparent px-2 py-1"
-        />
-        {(from || to) && (
-          <button
-            type="button"
-            className="underline"
-            onClick={() => {
-              setFrom('');
-              setTo('');
-            }}
-          >
-            clear dates
-          </button>
-        )}
       </div>
 
       <div className="mt-3 flex flex-wrap gap-1.5">

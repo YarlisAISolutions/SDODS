@@ -25,16 +25,30 @@ export function Avatar({ handle, size = 28 }: { handle: string; size?: number })
   );
 }
 
-/** Name, badge and reputation — the byline under a post. */
-export function Byline({
-  handle,
-  date,
-  action = 'asked',
-}: {
-  handle: string;
-  date: string;
-  action?: string;
-}) {
+/**
+ * Says what the archive is, wherever it is shown.
+ *
+ * The threads were written by the SDODS team to document real problems and their fixes, and the
+ * people in them are illustrative. Presented as a live community -- with reputation, join dates,
+ * votes and view counts -- they read as social proof that does not exist, so none of those are
+ * shown, and this says so plainly.
+ */
+export function ExampleNotice({ compact = false }: { compact?: boolean }) {
+  return (
+    <p
+      className={`rounded-lg border border-[var(--line)] bg-[var(--brand)]/5 text-sm ${
+        compact ? 'px-3 py-2' : 'p-4'
+      }`}
+    >
+      <span className="font-semibold">Example threads.</span> These questions and answers were
+      written by the SDODS team to document real problems and how to fix them. The people named are
+      illustrative, not real users. Questions asked on this site are marked <em>new</em>.
+    </p>
+  );
+}
+
+/** Name and badge -- the byline under an example post. No reputation and no date: see ExampleNotice. */
+export function Byline({ handle, action = 'asked' }: { handle: string; action?: string }) {
   const p = person(handle);
   return (
     <span className="muted inline-flex items-center gap-2 text-xs">
@@ -46,12 +60,9 @@ export function Byline({
         </Link>
         {p?.role === 'maintainer' && (
           <span className="ml-1.5 rounded bg-[var(--brand)]/12 px-1.5 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-[var(--brand)]">
-            maintainer
+            SDODS team
           </span>
         )}
-        {p && <span className="ml-1.5 tabular-nums">{p.rep.toLocaleString()}</span>}
-        {' · '}
-        <time dateTime={date}>{formatDate(date)}</time>
       </span>
     </span>
   );
@@ -96,5 +107,5 @@ export function formatDate(iso: string): string {
 }
 
 export function personLabel(p: Person): string {
-  return p.role === 'maintainer' ? 'Maintainer' : p.role === 'regular' ? 'Regular' : 'Member';
+  return p.role === 'maintainer' ? 'SDODS team (illustrative)' : 'Illustrative user';
 }

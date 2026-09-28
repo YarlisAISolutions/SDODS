@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { excerpt, person, THREADS, thread } from '@sdods/qa-archive';
 import { QaBody } from '@/components/qa/qa-body';
-import { Byline, Stat, TagChip, formatDate } from '@/components/qa/bits';
+import { Byline, ExampleNotice, TagChip } from '@/components/qa/bits';
 import {
   CommunityAnswerCount,
   CommunityAnswers,
@@ -64,21 +64,12 @@ export default async function ThreadPage(props: { params: Promise<{ slug: string
         </p>
 
         <h1 className="text-2xl font-extrabold tracking-tight md:text-3xl">{t.title}</h1>
-        <div className="muted mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
-          <span>
-            Asked <time dateTime={t.askedOn}>{formatDate(t.askedOn)}</time>
-          </span>
-          <span>{t.views.toLocaleString()} views</span>
-          <span>
-            {t.answers.length} {t.answers.length === 1 ? 'answer' : 'answers'}
-          </span>
+        <div className="mt-4">
+          <ExampleNotice compact />
         </div>
 
-        <article className="mt-6 flex gap-4 border-t border-[var(--line)] pt-6">
-          <div className="muted hidden shrink-0 flex-col items-center gap-3 pt-1 text-xs sm:flex">
-            <Stat n={t.votes} label="votes" />
-          </div>
-          <div className="min-w-0 flex-1">
+        <article className="mt-6 border-t border-[var(--line)] pt-6">
+          <div className="min-w-0">
             <QaBody body={t.body} />
             <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
               <div className="flex flex-wrap gap-1.5">
@@ -86,7 +77,7 @@ export default async function ThreadPage(props: { params: Promise<{ slug: string
                   <TagChip key={tag} name={tag} />
                 ))}
               </div>
-              <Byline handle={t.askedBy} date={t.askedOn} action="asked by" />
+              <Byline handle={t.askedBy} action="asked by" />
             </div>
           </div>
         </article>
@@ -102,24 +93,12 @@ export default async function ThreadPage(props: { params: Promise<{ slug: string
               <li
                 key={a.id}
                 id={a.id}
-                className={`flex gap-4 rounded-lg border p-4 ${
+                className={`rounded-lg border p-4 ${
                   accepted
                     ? 'border-emerald-500/40 bg-emerald-500/5'
                     : 'border-[var(--line)] bg-transparent'
                 }`}
               >
-                <div className="muted hidden shrink-0 flex-col items-center gap-2 pt-1 text-xs sm:flex">
-                  <Stat n={a.votes} label="votes" strong={accepted} />
-                  {accepted && (
-                    <span
-                      className="text-emerald-600"
-                      title="Accepted answer"
-                      aria-label="Accepted"
-                    >
-                      ✓
-                    </span>
-                  )}
-                </div>
                 <div className="min-w-0 flex-1">
                   {accepted && (
                     <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-emerald-600">
@@ -128,7 +107,7 @@ export default async function ThreadPage(props: { params: Promise<{ slug: string
                   )}
                   <QaBody body={a.body} />
                   <div className="mt-3 flex justify-end">
-                    <Byline handle={a.by} date={a.on} action="answered by" />
+                    <Byline handle={a.by} action="answered by" />
                   </div>
                   <ReplyThread parentId={a.id} parentName={person(a.by)?.display ?? a.by} />
                 </div>
