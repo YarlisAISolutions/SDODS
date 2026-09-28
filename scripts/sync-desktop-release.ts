@@ -23,11 +23,10 @@ const MANIFEST = join(import.meta.dirname, '..', 'apps', 'www', 'lib', 'desktop-
 /**
  * The PUBLIC releases-only repository, not the source repository.
  *
- * Installers live in the public releases-only repository because YarlisAISolutions/SDODS is private
- * (public only from 2026-09-26 to 2026-09-28), and a private repo's release assets 404 for
- * visitors. It would stay even with a public source repo: installed apps, the apt repository,
- * Homebrew and Scoop already point there, and one releases-only repository keeps the download
- * page's asset list clean.
+ * Installers live in the public releases-only repository. That began because a private repo's
+ * release assets 404 for visitors, and YarlisAISolutions/SDODS was private. It is public now; the
+ * split stays because installed apps, the apt repository, Homebrew and Scoop already point there,
+ * and one releases-only repository keeps the download page's asset list clean.
  */
 const REPO = process.env.SDODS_RELEASE_REPO ?? 'YarlisAISolutions/sdods-releases';
 

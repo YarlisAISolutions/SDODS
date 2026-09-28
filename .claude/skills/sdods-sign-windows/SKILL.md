@@ -58,7 +58,7 @@ This decision determines everything that follows. Ask these questions in order:
 Is the signer an individual in the USA/Canada, or an org in USA/Canada/EU/UK?
  ├─ yes → Route A: Azure Artifact Signing   (~$9.99/month, CI-native, wired today)  ← preferred
  └─ no  → Is it acceptable that SignPath signs via their pipeline and names "SignPath Foundation"?
-          ├─ yes → Route B: SignPath Foundation (free for OSS; needs the repo public — it is private now)
+          ├─ yes → Route B: SignPath Foundation (free for OSS; SDODS is public + Apache-2.0)
           └─ no  → Route C: OV certificate on a CA cloud HSM ($150–300/year)
 ```
 
@@ -166,11 +166,16 @@ Then go to **Step 5**.
 
 ## Route B — SignPath Foundation (free, open source)
 
-**Not available while the repository is private.** SDODS was public from 2026-09-26 and was made
-private again on 2026-09-28. The programme is for open-source projects, so this route opens only
-if the source goes public again. It is Apache-2.0, which does qualify. Other conditions: an OSI
-licence with no commercial dual-licensing, no proprietary components, active maintenance, and the
-release already published in the form to be signed.
+SDODS is public and Apache-2.0, so it plausibly qualifies. (It was briefly private on 2026-09-28;
+the route is closed whenever the repository is private.) Conditions: an OSI licence with no
+commercial dual-licensing, no proprietary components, active maintenance, and the release already
+published in the form to be signed.
+
+**Check this against the open-core plan before applying.** Paid products (hosted cloud, enterprise
+features) kept in separate private repositories leave this repository fully open, which should
+satisfy "no proprietary components". Offering *this* code under a second, commercial licence would
+not. Ask SignPath if the line is unclear. A rejection costs only time; a later disqualification
+means switching signing identity, which resets SmartScreen reputation.
 
 > 🧑 **HUMAN STEP B1** — apply at <https://signpath.org/apply>
 > - **Why a human:** a legal agreement on behalf of the project. It takes days to weeks.

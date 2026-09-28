@@ -224,11 +224,10 @@ gives qualifying projects free OV-level signing through a managed pipeline. Thei
 - actively maintained, already released in the form to be signed, and functionality described on
   the download page.
 
-SDODS is Apache-2.0, so the licence qualifies, but the repository is **private** (it was public
-from 2026-09-26 and made private again on 2026-09-28). The programme is for open-source projects,
-so today it does not qualify. It becomes an option only if the source goes public again, and then
-applications take days to weeks and the CI wiring still has to be built. See `sdods-sign-windows`
-→ Route B.
+SDODS is Apache-2.0 and public, so it plausibly qualifies. The route closes whenever the repository
+is private (it was, briefly, on 2026-09-28), and paid products must stay in separate repositories
+rather than dual-licensing this code. Applications take days to weeks, and the CI wiring still has
+to be built. See `sdods-sign-windows` → Route B.
 
 **macOS: no.** There is no free path to a Developer ID certificate or to notarization. A free Apple
 ID signs for local development only; the result still fails Gatekeeper on anyone else's Mac. The
