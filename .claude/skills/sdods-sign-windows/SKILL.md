@@ -281,7 +281,7 @@ Follow `sdods-desktop-release` → *The loop*.
 | `403` / `Forbidden` from codesigning endpoint | Role missing or scoped wrong, or wrong region endpoint | Recheck A3's role assignment, and match `AZURE_SIGN_ENDPOINT` to the account's region |
 | `publisherName` mismatch / signature invalid | `AZURE_SIGN_PUBLISHER` ≠ Subject CN | Copy the CN exactly from the profile |
 | `401` after months of working | Client secret expired | Rotate (A3 + A4) |
-| Signed with an **Apple** identity, or `Env WIN_CSC_LINK is not correct` | `CSC_LINK` (from `MAC_CSC_LINK`) reaches the Windows runner. electron-builder falls back `WIN_CSC_LINK ?? CSC_LINK` when Azure is off | Scope the Apple env to the macOS runner in `desktop.yml` |
+| Signed with an **Apple** identity, or `Env WIN_CSC_LINK is not correct` | `CSC_LINK` (from `MAC_CSC_LINK`) reached the Windows runner. electron-builder falls back `WIN_CSC_LINK ?? CSC_LINK` when Azure is off | `desktop.yml` unsets the Apple env on non-macOS runners. Restore it if removed. |
 | Verify step lists `NotSigned` on `win-*/SDODS.exe` only | Only the installer was signed | Check the electron-builder log. Both must be signed, and the gate is correct to fail. |
 | Updater rejects a SignPath-signed build | `latest.yml` sha512 computed before signing | Regenerate after signing (Route B note) |
 
@@ -301,22 +301,20 @@ Follow `sdods-desktop-release` → *The loop*.
 
 ## Future enhancements (in priority order)
 
-1. **Scope `CSC_LINK`/`CSC_KEY_PASSWORD` to the macOS runner** in `desktop.yml`. This removes the
-   cross-platform fallback trap before Apple credentials arrive.
-2. **Split `--signed` per platform** in `scripts/sync-desktop-release.ts`, for example
+1. **Split `--signed` per platform** in `scripts/sync-desktop-release.ts`, for example
    `--signed=macos,windows`, so each OS's workaround text disappears only when that OS is signed.
-3. **Use OIDC federated credentials in place of `AZURE_CLIENT_SECRET`.** `azure/login@v2` with
+2. **Use OIDC federated credentials in place of `AZURE_CLIENT_SECRET`.** `azure/login@v2` with
    `id-token: write` and a federated credential on the service principal for
    `repo:YarlisAISolutions/SDODS:ref:refs/tags/desktop-v*`. This removes the only expiring secret.
    Check that electron-builder's Azure signer picks up the `az` CLI credential
    (`DefaultAzureCredential`) before removing the secret.
-4. **Protect signing behind a GitHub Environment** (`signing`) with required reviewers, so a tag
+3. **Protect signing behind a GitHub Environment** (`signing`) with required reviewers, so a tag
    push waits for a 🧑 approval before any credential is exposed. This is a HITL gate that
    GitHub enforces.
-5. **Sign the uninstaller and the NSIS plugins.** Confirm with `osslsigncode` against an
+4. **Sign the uninstaller and the NSIS plugins.** Confirm with `osslsigncode` against an
    unpacked install that nothing unsigned lands in `%LOCALAPPDATA%\Programs\SDODS`.
-6. **electron-builder v27:** `win.azureSignOptions` becomes the `win.sign` union
+5. **electron-builder v27:** `win.azureSignOptions` becomes the `win.sign` union
    (`type: 'azure'`). Update the `-c.` flags in `desktop.yml` when upgrading
    (`electron-builder migrate-schema`).
-7. **MSIX / Microsoft Store:** Store-signed, so there is no SmartScreen at all. This needs a
+6. **MSIX / Microsoft Store:** Store-signed, so there is no SmartScreen at all. This needs a
    Partner Center account (🧑) and a separate target. Evaluate once winget is live.

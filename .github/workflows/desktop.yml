@@ -104,6 +104,15 @@ jobs:
             [ -z "${!var:-}" ] && unset "$var" || true
           done
 
+          # The Apple credentials belong to the macOS runner only. electron-builder's Windows
+          # signer resolves its certificate as WIN_CSC_LINK ?? CSC_LINK when azureSignOptions is
+          # absent (app-builder-lib platformPackager.getCscLink), so a Windows build without Azure
+          # would try to sign with the Developer ID .p12. electron.vite.config.ts also derives
+          # __DESKTOP_SIGNED__ from CSC_LINK, which would compile Windows and Linux as "signed".
+          if [ "${{ runner.os }}" != macOS ]; then
+            unset CSC_LINK CSC_KEY_PASSWORD APPLE_ID APPLE_APP_SPECIFIC_PASSWORD APPLE_TEAM_ID
+          fi
+
           # azureSignOptions is passed on the command line, not written into electron-builder.yml:
           # once that block exists electron-builder always signs through Azure and fails without
           # credentials, which would break every local and fork build. Here it appears only when
