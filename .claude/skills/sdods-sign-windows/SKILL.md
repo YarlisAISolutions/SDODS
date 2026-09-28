@@ -262,9 +262,10 @@ Follow `sdods-desktop-release` → *The loop*.
 
 ## After signing works (agent proposes, human merges)
 
-1. `bun run desktop:sync-release desktop-v<ver> --signed`. Note that this flag covers all
-   platforms. If macOS is still unsigned, **do not pass it yet**, or the Gatekeeper workaround
-   disappears from the page. See *Future enhancements*.
+1. `bun run desktop:sync-release desktop-v<ver> --signed=windows`, or `--signed=macos,windows`
+   (same as `--signed=all`) if macOS is signed too. Only the platforms you name lose their
+   workaround text. A bare `--signed` is refused. Signed Windows keeps a softer SmartScreen note,
+   because reputation takes several releases to build.
 2. Add `windows` to `NEXT_PUBLIC_DESKTOP_PLATFORMS`.
 3. `bun run channels:sync`, then submit to winget (`sdods-release-channels`). winget validation
    was the channel waiting for this signature.
@@ -301,20 +302,18 @@ Follow `sdods-desktop-release` → *The loop*.
 
 ## Future enhancements (in priority order)
 
-1. **Split `--signed` per platform** in `scripts/sync-desktop-release.ts`, for example
-   `--signed=macos,windows`, so each OS's workaround text disappears only when that OS is signed.
-2. **Use OIDC federated credentials in place of `AZURE_CLIENT_SECRET`.** `azure/login@v2` with
+1. **Use OIDC federated credentials in place of `AZURE_CLIENT_SECRET`.** `azure/login@v2` with
    `id-token: write` and a federated credential on the service principal for
    `repo:YarlisAISolutions/SDODS:ref:refs/tags/desktop-v*`. This removes the only expiring secret.
    Check that electron-builder's Azure signer picks up the `az` CLI credential
    (`DefaultAzureCredential`) before removing the secret.
-3. **Protect signing behind a GitHub Environment** (`signing`) with required reviewers, so a tag
+2. **Protect signing behind a GitHub Environment** (`signing`) with required reviewers, so a tag
    push waits for a 🧑 approval before any credential is exposed. This is a HITL gate that
    GitHub enforces.
-4. **Sign the uninstaller and the NSIS plugins.** Confirm with `osslsigncode` against an
+3. **Sign the uninstaller and the NSIS plugins.** Confirm with `osslsigncode` against an
    unpacked install that nothing unsigned lands in `%LOCALAPPDATA%\Programs\SDODS`.
-5. **electron-builder v27:** `win.azureSignOptions` becomes the `win.sign` union
+4. **electron-builder v27:** `win.azureSignOptions` becomes the `win.sign` union
    (`type: 'azure'`). Update the `-c.` flags in `desktop.yml` when upgrading
    (`electron-builder migrate-schema`).
-6. **MSIX / Microsoft Store:** Store-signed, so there is no SmartScreen at all. This needs a
+5. **MSIX / Microsoft Store:** Store-signed, so there is no SmartScreen at all. This needs a
    Partner Center account (🧑) and a separate target. Evaluate once winget is live.

@@ -59,6 +59,43 @@ export const DESKTOP_PUBLIC = DESKTOP_PLATFORMS.length > 0;
 
 export const isOffered = (platform: Platform): boolean => DESKTOP_PLATFORMS.includes(platform);
 
+/** The platforms that have a signing authority to satisfy. Linux has no Gatekeeper or SmartScreen. */
+export type SignablePlatform = Exclude<Platform, 'linux'>;
+
+const SIGNABLE: readonly SignablePlatform[] = ['macos', 'windows'];
+
+/**
+ * Parse `--signed=<list>` for `scripts/sync-desktop-release.ts`.
+ *
+ * Per-platform for the same reason as DESKTOP_PLATFORMS: the Apple certificate and the Windows one
+ * arrive separately. A single boolean meant signing macOS also deleted the SmartScreen advice for
+ * a Windows installer that still triggers it. So there is no "just signed" form -- an empty list,
+ * `linux` and typos all throw, and the caller has to name what it actually signed.
+ */
+export function parseSignedPlatforms(raw: string): SignablePlatform[] {
+  const tokens = raw
+    .split(',')
+    .map((t) => t.trim().toLowerCase())
+    .filter(Boolean);
+  const forms = `Expected --signed=macos, --signed=windows, --signed=macos,windows or --signed=all.`;
+  if (!tokens.length) throw new Error(`--signed needs the platforms that were signed. ${forms}`);
+  if (tokens.includes('all')) return [...SIGNABLE];
+  if (tokens.includes('linux')) {
+    throw new Error(`--signed: Linux has nothing to sign and never shows a warning. ${forms}`);
+  }
+  const unknown = tokens.filter((t) => !SIGNABLE.includes(t as SignablePlatform));
+  if (unknown.length)
+    throw new Error(`--signed: unknown platform(s) ${unknown.join(', ')}. ${forms}`);
+  return SIGNABLE.filter((p) => tokens.includes(p));
+}
+
+/**
+ * Does this platform's installer install without a Gatekeeper or SmartScreen workaround?
+ * Always true for Linux, so callers never special-case it.
+ */
+export const isSigned = (release: DesktopRelease, platform: Platform): boolean =>
+  platform === 'linux' || release.signed.includes(platform);
+
 /**
  * The assets the site may actually link to.
  *
@@ -98,8 +135,11 @@ export interface DesktopRelease {
   version: string | null;
   /** ISO date, for "released on". */
   published: string | null;
-  /** Signed builds skip the Gatekeeper/SmartScreen instructions. */
-  signed: boolean;
+  /**
+   * Platforms whose installers in this release are signed, so the page drops that platform's
+   * Gatekeeper/SmartScreen workaround. Set by `desktop:sync-release --signed=<list>`.
+   */
+  signed: readonly SignablePlatform[];
   assets: DesktopAsset[];
 }
 
@@ -120,7 +160,7 @@ export const DESKTOP_RELEASE: DesktopRelease = {
     'https://github.com/YarlisAISolutions/sdods-releases/releases/download/desktop-v0.1.2',
   version: '0.1.2',
   published: '2026-09-15',
-  signed: false,
+  signed: [],
   assets: [
     {
       platform: 'linux',

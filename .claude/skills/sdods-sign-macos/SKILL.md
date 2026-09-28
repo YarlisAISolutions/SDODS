@@ -230,11 +230,10 @@ Follow `sdods-desktop-release` → *The loop* (tag `desktop-v*`, the workflow dr
 
 ## After signing works (agent proposes, human merges)
 
-1. `bun run desktop:sync-release desktop-v<ver> --signed`. This removes the Gatekeeper workaround
-   from the download page. The flag is a single boolean for **all** platforms. If Windows is still
-   unsigned but listed in `NEXT_PUBLIC_DESKTOP_PLATFORMS`, **do not pass it yet**, or the
-   SmartScreen workaround disappears too. The fix is to split the flag per platform (see
-   `sdods-sign-windows` → *Future enhancements*).
+1. `bun run desktop:sync-release desktop-v<ver> --signed=macos`, or `--signed=macos,windows` if
+   Windows is signed too. This removes the Gatekeeper warning and the `xattr` install step for
+   macOS only. The Windows SmartScreen advice stays until Windows is named. A bare `--signed` is
+   refused.
 2. Add `macos` to `NEXT_PUBLIC_DESKTOP_PLATFORMS` (for example `macos,linux`). macOS can go live
    without waiting on Windows.
 3. **The macOS updater arms itself.** `electron.vite.config.ts` sets `__DESKTOP_SIGNED__` from
