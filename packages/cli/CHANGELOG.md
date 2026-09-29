@@ -1,5 +1,20 @@
 # @sdods/cli
 
+## 0.11.3
+
+### Patch Changes
+
+- c1f175b: Fix `sdods` failing to start on Windows with `ERR_UNSUPPORTED_ESM_URL_SCHEME`: the bin shim now imports its entry point as a `file://` URL. This also unblocks the desktop app's first-run install on Windows.
+  
+  `sdods init` now adds `@axe-core/playwright` to the workspace, so the demo project's `@a11y` scenario passes on a fresh install instead of failing with "Accessibility audits need @axe-core/playwright".
+- @sdods/agents@0.11.3
+  - @sdods/contracts@0.11.3
+  - @sdods/core@0.11.3
+  - @sdods/db@0.11.3
+  - @sdods/integrations@0.11.3
+  - @sdods/mcp@0.11.3
+  - @sdods/server@0.11.3
+
 ## 0.11.2
 
 ### Patch Changes
