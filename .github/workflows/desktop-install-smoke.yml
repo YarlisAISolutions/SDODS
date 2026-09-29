@@ -138,12 +138,24 @@ jobs:
           Start-Sleep 5
           if (Test-Path (Join-Path '${{ steps.install.outputs.dir }}' 'SDODS.exe')) { throw 'SDODS.exe still present after uninstall' }
 
+      # The app logs to %LOCALAPPDATA% on C:, the checkout is on D:, and upload-artifact refuses a
+      # path outside the workspace. Print the log (the fastest thing to read) and copy it in.
+      - name: Collect logs
+        if: always()
+        run: |
+          New-Item -ItemType Directory -Force smoke-logs | Out-Null
+          $logs = Join-Path $env:LOCALAPPDATA 'SDODS\logs'
+          if (Test-Path $logs) {
+            Copy-Item "$logs\*" smoke-logs -Recurse
+            Get-Content (Join-Path $logs 'desktop.log') -ErrorAction SilentlyContinue
+          } else { 'no desktop.log was written' }
+          $smoke = '${{ steps.launch.outputs.ws }}\smoke.txt'
+          if ('${{ steps.launch.outputs.ws }}' -and (Test-Path $smoke)) { Copy-Item $smoke smoke-logs }
+
       - name: Upload logs
         if: always()
         uses: actions/upload-artifact@v7
         with:
           name: desktop-install-smoke-${{ steps.dl.outputs.tag || 'unknown' }}
-          path: |
-            ~/AppData/Local/SDODS/logs
-            ${{ steps.launch.outputs.ws }}\smoke.txt
+          path: smoke-logs
           if-no-files-found: warn
