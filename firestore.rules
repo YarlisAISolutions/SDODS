@@ -166,6 +166,12 @@ service cloud.firestore {
     match /votes/{voteId} {
       allow read, write: if false;
     }
+    // Revision history: every applied edit of a post is public, like Stack Overflow's. Suggested
+    // edits (pending) and rejected ones are for moderators. Only the service writes.
+    match /revisions/{revisionId} {
+      allow read: if resource.data.status == 'applied' || isModerator();
+      allow write: if false;
+    }
     match /repEvents/{eventId} {
       allow read: if isModerator();
       allow write: if false;

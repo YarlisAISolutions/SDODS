@@ -71,8 +71,13 @@ async function call<T>(method: 'GET' | 'POST', route: string, body?: unknown): P
     },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
-  const data = (await res.json().catch(() => ({}))) as { error?: string };
-  if (!res.ok) throw new CommunityError(data.error ?? `Request failed (${res.status})`, res.status);
+  const data = (await res.json().catch(() => ({}))) as { error?: string; reason?: string };
+  // A rejected edit explains itself in `reason` (422), like a rejected post does in its result.
+  if (!res.ok)
+    throw new CommunityError(
+      data.error ?? data.reason ?? `Request failed (${res.status})`,
+      res.status,
+    );
   return data as T;
 }
 
@@ -134,6 +139,34 @@ export const acceptAnswer = (questionId: string, answerId: string | null) =>
 /** The Firestore path of a post, as the service names it. */
 export const postPath = (target: AnswerTarget, id: string) =>
   target.kind === 'live' ? `questions/${target.questionId}/answers/${id}` : `threadAnswers/${id}`;
+
+export type EditResult =
+  { status: 'applied'; revision: number } | { status: 'pending'; id: string; reason: string };
+
+export const editPost = (e: {
+  path: string;
+  title?: string;
+  body: string;
+  comment: string;
+  baseRevision: number;
+}) => call<EditResult>('POST', '/edits', e);
+
+export interface PendingEdit {
+  id: string;
+  post: string;
+  baseRevision: number;
+  title: string | null;
+  body: string;
+  by: string;
+  byName: string;
+  comment: string;
+  createdAt: string | null;
+}
+
+export const pendingEdits = () => call<{ items: PendingEdit[] }>('GET', '/review/edits');
+
+export const resolveEdit = (id: string, action: 'approve' | 'reject', reason: string) =>
+  call<{ ok: true; applied: boolean }>('POST', '/review/edits/resolve', { id, action, reason });
 
 export const reviewQueue = () => call<{ items: QueueItem[] }>('GET', '/review/queue');
 

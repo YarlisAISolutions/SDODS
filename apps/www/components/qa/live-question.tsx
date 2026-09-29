@@ -5,9 +5,11 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { QaBody } from '@/components/qa/qa-body';
 import { VoteControl } from '@/components/qa/votes';
+import { EditPost, RevisionHistory } from '@/components/qa/phase3';
 import {
   CommunityAnswerCount,
   CommunityAnswers,
+  PostMeta,
   ThreadCommunityProvider,
 } from '@/components/qa/thread-community';
 import { formatDate } from '@/lib/qa-list';
@@ -108,6 +110,17 @@ export function LiveQuestion() {
           </div>
           <div className="min-w-0 flex-1">
             <QaBody body={q.body} />
+            <RevisionHistory path={`questions/${q.id}`} revision={q.revision} />
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+              <EditPost
+                path={`questions/${q.id}`}
+                kind="question"
+                title={q.title}
+                body={q.body}
+                revision={q.revision}
+              />
+              <PostMeta post={{ uid: q.uid, name: q.name, createdAt: q.createdAt }} />
+            </div>
           </div>
         </div>
 

@@ -8,7 +8,8 @@ import { formatDate } from '@/lib/qa-list';
 import type { Answer, AnswerTarget } from '@/lib/questions';
 import { acceptAnswer, COMMUNITY_ENABLED, postPath } from '@/lib/community';
 import { useUser } from '@/components/qa/community';
-import { useRep, VoteControl, VotesProvider } from '@/components/qa/votes';
+import { useProfile, VoteControl, VotesProvider } from '@/components/qa/votes';
+import { BadgeCountsInline, EditPost, RevisionHistory } from '@/components/qa/phase3';
 
 /**
  * Community answers and replies layered over a question page.
@@ -105,15 +106,24 @@ export function ThreadCommunityProvider(
   );
 }
 
-function PostMeta({ post }: { post: Answer }) {
-  const rep = useRep(post.uid);
+export function PostMeta({ post }: { post: Pick<Answer, 'uid' | 'name' | 'createdAt'> }) {
+  const profile = useProfile(post.uid);
   return (
     <p className="muted text-xs">
-      <span className="font-medium">{post.name}</span>
-      {rep !== null && (
-        <span className="ml-1.5 tabular-nums" title="Reputation">
-          {rep.toLocaleString('en')}
-        </span>
+      {post.uid ? (
+        <Link href={`/questions/member/?uid=${post.uid}`} className="font-medium hover:underline">
+          {post.name}
+        </Link>
+      ) : (
+        <span className="font-medium">{post.name}</span>
+      )}
+      {profile && (
+        <>
+          <span className="ml-1.5 tabular-nums" title="Reputation">
+            {profile.rep.toLocaleString('en')}
+          </span>
+          <BadgeCountsInline counts={profile.counts} />
+        </>
       )}
       {post.createdAt && (
         <>
@@ -226,8 +236,17 @@ export function CommunityAnswers({ showAskLink = false }: { showAskLink?: boolea
                     </p>
                   )}
                   <QaBody body={a.body} />
+                  <RevisionHistory path={postPath(target, a.id)} revision={a.revision} />
                   <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
-                    <AcceptButton answerId={a.id} accepted={accepted} />
+                    <span className="flex flex-wrap items-center gap-3">
+                      <AcceptButton answerId={a.id} accepted={accepted} />
+                      <EditPost
+                        path={postPath(target, a.id)}
+                        kind="answer"
+                        body={a.body}
+                        revision={a.revision}
+                      />
+                    </span>
                     <PostMeta post={a} />
                   </div>
                   <ReplyThread parentId={a.id} parentName={a.name} />

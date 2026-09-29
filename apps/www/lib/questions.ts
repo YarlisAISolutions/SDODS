@@ -32,6 +32,8 @@ export type Question = {
   score: number;
   /** The answer the asker accepted, or null. */
   acceptedAnswerId: string | null;
+  /** 0 until the first edit. */
+  revision: number;
   title: string;
   body: string;
   name: string;
@@ -44,6 +46,7 @@ export type Answer = {
   id: string;
   uid: string | null;
   score: number;
+  revision: number;
   body: string;
   name: string;
   /** Empty for an answer to the question; otherwise the id of the answer this replies to. */
@@ -51,28 +54,88 @@ export type Answer = {
   createdAt: Date | null;
 };
 
-function engagement(data: Record<string, unknown>): { uid: string | null; score: number } {
+function engagement(data: Record<string, unknown>): {
+  uid: string | null;
+  score: number;
+  revision: number;
+} {
   return {
     uid: typeof data.uid === 'string' ? data.uid : null,
     score: typeof data.score === 'number' ? data.score : 0,
+    revision: typeof data.revision === 'number' ? data.revision : 0,
   };
 }
 
+export type BadgeCounts = { gold: number; silver: number; bronze: number };
+
+export type Profile = {
+  rep: number;
+  role: string;
+  display: string;
+  badges: Array<{ id: string; tier: 'gold' | 'silver' | 'bronze'; post?: string; at: string }>;
+  counts: BadgeCounts;
+};
+
+function toProfile(d: Record<string, unknown>): Profile {
+  const badges = (Array.isArray(d.badges) ? d.badges : []).flatMap((b) =>
+    b && typeof b === 'object' && typeof (b as { id?: unknown }).id === 'string'
+      ? [b as Profile['badges'][number]]
+      : [],
+  );
+  const counts: BadgeCounts = { gold: 0, silver: 0, bronze: 0 };
+  for (const b of badges) if (b.tier in counts) counts[b.tier] += 1;
+  return {
+    rep: typeof d.rep === 'number' ? d.rep : 1,
+    role: typeof d.role === 'string' ? d.role : 'member',
+    display: typeof d.display === 'string' ? d.display : 'SDODS user',
+    badges,
+    counts,
+  };
+}
+
+export async function profile(uid: string): Promise<Profile | null> {
+  const snap = await getDoc(doc(db(), 'users', uid));
+  return snap.exists() ? toProfile(snap.data()) : null;
+}
+
+export type Revision = {
+  revision: number;
+  title: string | null;
+  body: string;
+  byName: string;
+  comment: string;
+  createdAt: Date | null;
+};
+
+/** A post's applied revisions, oldest first. Public, as on Stack Overflow. */
+export async function revisions(path: string): Promise<Revision[]> {
+  const snap = await getDocs(
+    query(
+      collection(db(), 'revisions'),
+      where('post', '==', path),
+      where('status', '==', 'applied'),
+      orderBy('revision', 'asc'),
+    ),
+  );
+  return snap.docs.map((d) => {
+    const r = d.data();
+    return {
+      revision: typeof r.revision === 'number' ? r.revision : 0,
+      title: typeof r.title === 'string' ? r.title : null,
+      body: String(r.body ?? ''),
+      byName: String(r.byName ?? ''),
+      comment: String(r.comment ?? ''),
+      createdAt: toDate(r.createdAt),
+    };
+  });
+}
+
 /** Public profile basics for signed-in authors: reputation and role. Missing profiles are skipped. */
-export async function profiles(
-  uids: string[],
-): Promise<Record<string, { rep: number; role: string }>> {
+export async function profiles(uids: string[]): Promise<Record<string, Profile>> {
   const unique = [...new Set(uids)].slice(0, 50);
   const snaps = await Promise.all(unique.map((uid) => getDoc(doc(db(), 'users', uid))));
-  const out: Record<string, { rep: number; role: string }> = {};
-  for (const s of snaps) {
-    if (!s.exists()) continue;
-    const d = s.data();
-    out[s.id] = {
-      rep: typeof d.rep === 'number' ? d.rep : 1,
-      role: typeof d.role === 'string' ? d.role : 'member',
-    };
-  }
+  const out: Record<string, Profile> = {};
+  for (const s of snaps) if (s.exists()) out[s.id] = toProfile(s.data());
   return out;
 }
 
@@ -110,6 +173,7 @@ export async function listQuestions(): Promise<Question[]> {
         id: doc.id,
         uid: typeof data.uid === 'string' ? data.uid : null,
         score: typeof data.score === 'number' ? data.score : 0,
+        revision: typeof data.revision === 'number' ? data.revision : 0,
         acceptedAnswerId:
           typeof data.acceptedAnswerId === 'string' && data.acceptedAnswerId
             ? data.acceptedAnswerId
