@@ -1,16 +1,12 @@
 rules_version = '2';
 
-// Q&A for sdods.com. The sites are static exports, so the browser talks to
-// Firestore directly and these rules are the only thing standing between a
-// stranger and the database. Two invariants carry the whole model:
+// Firestore for sdods.com. The sites are static exports, so browsers talk to Firestore directly and
+// these rules are what stands between a stranger and the database.
 //
-//   1. Anyone may submit a question or answer, but only ever as 'pending'.
-//      Nothing a stranger writes is readable by anyone else until a moderator
-//      publishes it, so spam never reaches the page.
-//   2. Only the moderator may publish, edit or delete anything.
-//
-// Every incoming field is size-capped: an unbounded public create is a free
-// storage-fill endpoint.
+// Questions and answers are written only by the community service (packages/community): browsers
+// read what is published and nothing else. Feedback and page votes are still created from the
+// browser, size-capped, and readable only by a moderator. Everything else is closed.
+
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -29,122 +25,57 @@ service cloud.firestore {
         );
     }
 
-    // Fields every public post shares. `createdAt` must be the server's clock, not a timestamp the
-    // client chose. There is no email here: a published post is readable by anyone with the SDK,
-    // so the address lives in a private `private/contact` document beside it (see validContact).
-    function validPost(d) {
-      return d.status == 'pending'
-        && d.createdAt == request.time
-        && d.name is string && d.name.size() > 0 && d.name.size() <= 100
-        && d.body is string && d.body.size() > 0 && d.body.size() <= 5000;
-    }
-
-    // An answer or a reply. `parentId` is optional on live answers and required on thread answers;
-    // empty means an answer to the question, anything else names the answer being replied to.
-    function validParent(d) {
-      return !('parentId' in d)
-        || (d.parentId is string && d.parentId.size() <= 64);
-    }
-
-    // The contact document for a post, written in the same batch as the post itself: the post must
-    // exist once the batch lands and carry this write's timestamp, so an address can never be
-    // attached to somebody else's post after the fact. Only the moderator reads it back.
-    function validContact(postPath) {
-      return request.resource.data.keys().hasOnly(['email', 'createdAt'])
-        && request.resource.data.keys().hasAll(['email', 'createdAt'])
-        && request.resource.data.createdAt == request.time
-        && request.resource.data.email is string
-        && request.resource.data.email.size() <= 254
-        && request.resource.data.email.matches('.+@.+[.].+')
-        && existsAfter(postPath)
-        && getAfter(postPath).data.createdAt == request.time;
-    }
+    // Questions, answers and replies. Every write goes through the community service
+    // (packages/community), which signs posters in, reviews each post with the AI review agent and
+    // keeps score and reputation consistent inside transactions. It writes with its service account,
+    // which these rules do not apply to. Browsers only read what is published.
+    //
+    // Before the service existed, browsers created these as `pending` documents with a private
+    // contact address beside them; those documents stay readable to moderators, and the editor queue
+    // still lists any that are pending.
+    //
+    // `update` is closed even to moderators: a direct edit would bypass the score and reputation
+    // bookkeeping. `delete` stays open to them, to remove something already published.
 
     match /questions/{questionId} {
       // `read` covers both get and list, so a pending question is invisible
-      // to everyone but the moderator — it cannot even be enumerated.
+      // to everyone but a moderator — it cannot even be enumerated.
       allow read: if resource.data.status == 'published' || isModerator();
-
-      allow create: if request.resource.data.keys().hasOnly(
-            ['name', 'title', 'body', 'category', 'status', 'createdAt']
-          )
-        && request.resource.data.keys().hasAll(
-            ['name', 'title', 'body', 'category', 'status', 'createdAt']
-          )
-        && validPost(request.resource.data)
-        && request.resource.data.title is string
-        && request.resource.data.title.size() > 0
-        && request.resource.data.title.size() <= 200
-        && request.resource.data.category in ['ui', 'api', 'hybrid', 'other'];
-
-      allow update, delete: if isModerator();
+      allow create, update: if false;
+      allow delete: if isModerator();
 
       match /private/{contactId} {
-        allow read, update, delete: if isModerator();
-        allow create: if contactId == 'contact'
-          && validContact(/databases/$(database)/documents/questions/$(questionId));
+        allow read, delete: if isModerator();
+        allow create, update: if false;
       }
 
-      // Answers hang off a question. A stranger may answer, but the answer is
-      // pending too, so an unmoderated reply is invisible even on a published
-      // question.
       match /answers/{answerId} {
         allow read: if resource.data.status == 'published' || isModerator();
-
-        allow create: if request.resource.data.keys().hasOnly(
-              ['name', 'body', 'parentId', 'status', 'createdAt']
-            )
-          && request.resource.data.keys().hasAll(
-              ['name', 'body', 'status', 'createdAt']
-            )
-          && validPost(request.resource.data)
-          && validParent(request.resource.data)
-          // Only answer a question that exists and is already public.
-          && get(/databases/$(database)/documents/questions/$(questionId))
-               .data.status == 'published';
-
-        allow update, delete: if isModerator();
+        allow create, update: if false;
+        allow delete: if isModerator();
 
         match /private/{contactId} {
-          allow read, update, delete: if isModerator();
-          allow create: if contactId == 'contact'
-            && validContact(
-                 /databases/$(database)/documents/questions/$(questionId)/answers/$(answerId)
-               );
+          allow read, delete: if isModerator();
+          allow create, update: if false;
         }
       }
     }
 
-    // The moderation page lists pending answers across every live question at once, which is a
+    // The editor queue lists pending answers across every live question at once, which is a
     // collection-group query and needs its own rule.
     match /{path=**}/answers/{answerId} {
       allow read: if isModerator();
     }
 
-    // Answers and replies on the static archive threads (`/questions/<slug>/`). Those threads are
-    // not documents, so there is no parent to check: the slug is only held to the shape a slug has,
-    // and a post naming a thread that does not exist is simply never shown. Pending until published,
-    // like everything else here.
+    // Answers and replies on the static archive threads (`/questions/<slug>/`).
     match /threadAnswers/{answerId} {
       allow read: if resource.data.status == 'published' || isModerator();
-
-      allow create: if request.resource.data.keys().hasOnly(
-            ['slug', 'parentId', 'name', 'body', 'status', 'createdAt']
-          )
-        && request.resource.data.keys().hasAll(
-            ['slug', 'parentId', 'name', 'body', 'status', 'createdAt']
-          )
-        && request.resource.data.slug is string
-        && request.resource.data.slug.matches('^[a-z0-9-]{1,120}$')
-        && validPost(request.resource.data)
-        && validParent(request.resource.data);
-
-      allow update, delete: if isModerator();
+      allow create, update: if false;
+      allow delete: if isModerator();
 
       match /private/{contactId} {
-        allow read, update, delete: if isModerator();
-        allow create: if contactId == 'contact'
-          && validContact(/databases/$(database)/documents/threadAnswers/$(answerId));
+        allow read, delete: if isModerator();
+        allow create, update: if false;
       }
     }
 

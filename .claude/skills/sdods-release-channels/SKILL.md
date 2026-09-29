@@ -222,6 +222,31 @@ desktop release, run the workflow and **merge its PR**, or `sdods.com/apt` keeps
 previous version. GitHub Pages on `sdods-releases` was the original plan and was never switched on;
 a probe still pointing there reported this live repository as missing.
 
+## Who the automated PRs belong to
+
+The `release` (version packages), `channels`, `dependencies`, `visual-baselines` and `apt`
+workflows open pull requests with **`RELEASE_PR_TOKEN`**, a fine-grained token of the maintainer,
+falling back to `GITHUB_TOKEN` when it is unset.
+
+- **Why:** GitHub credits a squash-merged commit to whoever *opened* the PR. With `GITHUB_TOKEN`
+  every merged chore commit was authored by `github-actions[bot]`, which made the bot a repository
+  contributor. Main's history was rewritten on 2026-09-29 to remove it, and the backup of the
+  previous history is `~/Continnum/sdods-history-backup/sdods-before-rewrite-2026-09-29.bundle`.
+  With the token, the maintainer is the author, and CI runs on those PRs (it never runs on a PR
+  opened with `GITHUB_TOKEN`).
+- **Commit identity:** commits made inside those workflows use `SDODS Release <release@sdods.com>`,
+  which is not a GitHub account, so the squash merge adds no bot co-author.
+  `changesets/action` commits through the API, so the token alone decides its author.
+- **Token:** fine-grained, resource owner YarlisAISolutions, repository `sdods` only, with Contents,
+  Pull requests and Workflows all read and write. It was set on 2026-09-29 and expires on the date
+  chosen then. When it expires, the workflows quietly fall back to the bot, and the bot comes back
+  as a contributor with the next release. Renew it with
+  `gh secret set RELEASE_PR_TOKEN -R YarlisAISolutions/sdods`.
+- **Check after a release:** `gh api repos/YarlisAISolutions/sdods/contributors --jq '.[].login'`
+  should list only the maintainer. The web sidebar can lag the API by an hour or more.
+- **Never add `Co-Authored-By: Claude` lines** to commits in this repository. The maintainer removed
+  that contributor too.
+
 ## Adding a seventh channel
 
 1. Add it to `INSTALL_CHANNELS` in `apps/www/lib/install-channels.ts` with `live: false`. Give it

@@ -2,7 +2,7 @@
 # Deploy (or update) the community Q&A backend on Cloud Run.
 # Usage: bash deploy/deploy-community.sh [image-tag]
 # Env overrides: GCP_PROJECT, GCP_REGION, SERVICE, COMMUNITY_DAILY_BUDGET_USD, MAX_INSTANCES,
-# COMMUNITY_REVIEW_MODEL, COMMUNITY_ESCALATION_MODEL,
+# COMMUNITY_REVIEW_MODEL, COMMUNITY_ESCALATION_MODEL, COMMUNITY_UPVOTE_REP,
 # ANTHROPIC_WORKSPACE_ID (only for a key that is not scoped to a workspace; an id, not a secret)
 #
 # One-time setup is a person's job: see .claude/skills/sdods-community/SKILL.md. The runtime
@@ -13,6 +13,9 @@
 # own domain, so an allUsers invoker binding is refused and the service stays private (every request
 # 403s). Turning off the invoker check makes it public without that binding. The service authenticates
 # every write itself (Firebase ID tokens).
+# COMMUNITY_UPVOTE_REP=1: anyone signed in can upvote while the community is new. With Stack
+# Overflow's 15, nobody can upvote until an answer of theirs is accepted. Raise it once there are
+# regulars (COMMUNITY_UPVOTE_REP=15 bash deploy/deploy-community.sh). Downvoting stays at 125.
 # COMMUNITY_TRUST_PROXY=1: Cloud Run's front end appends exactly one X-Forwarded-For hop, so the
 # client address is the last one and a visitor cannot pick their own rate-limit bucket.
 # No comments inside the command below: a comment line ends the backslash continuation, and the
@@ -38,7 +41,7 @@ gcloud run deploy "$SERVICE" \
   --concurrency 80 --timeout 120 \
   --cpu-boost \
   --set-secrets "ANTHROPIC_API_KEY=community-anthropic-key:latest" \
-  --set-env-vars "COMMUNITY_FIREBASE_PROJECT=${PROJECT},COMMUNITY_FIRESTORE_PROJECT=${PROJECT},COMMUNITY_REVIEW_MODEL=${COMMUNITY_REVIEW_MODEL:-claude-haiku-4-5},COMMUNITY_ESCALATION_MODEL=${COMMUNITY_ESCALATION_MODEL:-claude-sonnet-5},COMMUNITY_DAILY_BUDGET_USD=${COMMUNITY_DAILY_BUDGET_USD:-5},COMMUNITY_TRUST_PROXY=1,ANTHROPIC_WORKSPACE_ID=${ANTHROPIC_WORKSPACE_ID:-}" \
+  --set-env-vars "COMMUNITY_FIREBASE_PROJECT=${PROJECT},COMMUNITY_FIRESTORE_PROJECT=${PROJECT},COMMUNITY_REVIEW_MODEL=${COMMUNITY_REVIEW_MODEL:-claude-haiku-4-5},COMMUNITY_ESCALATION_MODEL=${COMMUNITY_ESCALATION_MODEL:-claude-sonnet-5},COMMUNITY_DAILY_BUDGET_USD=${COMMUNITY_DAILY_BUDGET_USD:-5},COMMUNITY_UPVOTE_REP=${COMMUNITY_UPVOTE_REP:-1},COMMUNITY_TRUST_PROXY=1,ANTHROPIC_WORKSPACE_ID=${ANTHROPIC_WORKSPACE_ID:-}" \
   --quiet
 
 URL=$(gcloud run services describe "$SERVICE" --project "$PROJECT" --region "$REGION" --format 'value(status.url)')
