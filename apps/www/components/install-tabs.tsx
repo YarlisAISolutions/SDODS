@@ -36,12 +36,18 @@ export function InstallTabs({ compact = false }: { compact?: boolean }) {
   const tabs = useRef<Record<string, HTMLButtonElement | null>>({});
 
   useEffect(() => {
+    // `?os=` wins over the user agent: the SDODS dashboard links here with the OS it detected, and
+    // someone sending a teammate the Windows command should not have it swapped for their own.
+    const param = new URLSearchParams(window.location.search).get('os');
     const ua = navigator.userAgent || '';
-    const os: ChannelOs = /Windows/i.test(ua)
-      ? 'windows'
-      : /Mac OS X/i.test(ua)
-        ? 'macos'
-        : 'linux';
+    const os: ChannelOs =
+      param === 'windows' || param === 'macos' || param === 'linux'
+        ? param
+        : /Windows/i.test(ua)
+          ? 'windows'
+          : /Mac OS X/i.test(ua)
+            ? 'macos'
+            : 'linux';
     const wanted = defaultTabFor(os);
     // Only if that tab is actually rendered: the default must never select a tab that is not there.
     if (keys.includes(wanted)) setActive(wanted);
