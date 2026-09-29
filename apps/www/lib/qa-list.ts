@@ -7,7 +7,7 @@
  * handed over as props or fetched from the generated index.
  */
 
-export type Sort = 'newest' | 'votes' | 'unanswered' | 'views';
+export type Sort = 'newest' | 'unanswered';
 
 export interface PersonChip {
   handle: string;
@@ -80,11 +80,6 @@ export function haystack(item: ListItem): string {
 export function sortItems(items: ListItem[], sort: Sort): ListItem[] {
   const out = [...items];
   switch (sort) {
-    case 'votes':
-      // Live questions have no score, so they sort after everything scored rather than as zero.
-      return out.sort((a, b) => (b.votes ?? -1) - (a.votes ?? -1) || b.date.localeCompare(a.date));
-    case 'views':
-      return out.sort((a, b) => (b.views ?? -1) - (a.views ?? -1) || b.date.localeCompare(a.date));
     case 'unanswered':
       return out.filter((i) => i.answers === 0).sort((a, b) => b.date.localeCompare(a.date));
     case 'newest':

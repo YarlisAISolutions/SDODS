@@ -1,13 +1,14 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { PEOPLE, SUMMARIES, TAG_COUNTS, TAG_NAMES, avatarHue, initials } from '@sdods/qa-archive';
+import { ExampleNotice } from '@/components/qa/bits';
 import { QaBrowser } from '@/components/qa/qa-browser';
 import type { ListItem, PersonChip } from '@/lib/qa-list';
 
 export const metadata: Metadata = {
   title: 'Questions',
   description:
-    'Ask a question about SDODS and read what other people have asked: scenarios, running suites, test data, locators and wiring it into CI.',
+    'Ask a question about SDODS, and search worked examples of common problems: scenarios, running suites, test data, locators and wiring it into CI.',
 };
 
 /**
@@ -47,7 +48,6 @@ export default function QuestionsPage() {
   );
 
   const tags = [...TAG_NAMES].sort((a, b) => (TAG_COUNTS[b] ?? 0) - (TAG_COUNTS[a] ?? 0));
-  const earliest = SUMMARIES.reduce((min, s) => (s.askedOn < min ? s.askedOn : min), '9999-12-31');
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-12">
@@ -76,13 +76,11 @@ export default function QuestionsPage() {
         </Link>
       </nav>
 
-      <QaBrowser
-        initial={initial}
-        total={SUMMARIES.length}
-        tags={tags}
-        people={people}
-        earliest={earliest}
-      />
+      <div className="mt-6">
+        <ExampleNotice />
+      </div>
+
+      <QaBrowser initial={initial} total={SUMMARIES.length} tags={tags} people={people} />
 
       <p className="muted mt-10 text-sm">
         New questions are reviewed before they appear. Found a bug or want a feature instead?{' '}
