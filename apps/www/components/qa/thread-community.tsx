@@ -6,6 +6,9 @@ import { QaBody } from '@/components/qa/qa-body';
 import { AnswerForm } from '@/components/qa/answer-form';
 import { formatDate } from '@/lib/qa-list';
 import type { Answer, AnswerTarget } from '@/lib/questions';
+import { acceptAnswer, COMMUNITY_ENABLED, postPath } from '@/lib/community';
+import { useUser } from '@/components/qa/community';
+import { useRep, VoteControl, VotesProvider } from '@/components/qa/votes';
 
 /**
  * Community answers and replies layered over a question page.
@@ -18,7 +21,13 @@ import type { Answer, AnswerTarget } from '@/lib/questions';
  * with `@name`, which keeps the thread readable without an unbounded tree.
  */
 
-type State = { target: AnswerTarget; posts: Answer[] | null };
+type State = {
+  target: AnswerTarget;
+  posts: Answer[] | null;
+  /** Live questions only: who asked (for accepting) and which answer is accepted. */
+  question: { uid: string | null; acceptedAnswerId: string | null } | null;
+  setAccepted: (id: string | null) => void;
+};
 
 const Ctx = createContext<State | null>(null);
 
@@ -35,10 +44,19 @@ function usePosts(): State {
 export function ThreadCommunityProvider(
   props:
     | { slug: string; children: ReactNode }
-    | { questionId: string; answers: Answer[]; children: ReactNode },
+    | {
+        questionId: string;
+        answers: Answer[];
+        askerUid?: string | null;
+        acceptedAnswerId?: string | null;
+        children: ReactNode;
+      },
 ) {
   const slug = 'slug' in props ? props.slug : null;
   const [loaded, setLoaded] = useState<Answer[] | null>(null);
+  const [accepted, setAccepted] = useState<string | null>(
+    'slug' in props ? null : (props.acceptedAnswerId ?? null),
+  );
 
   useEffect(() => {
     if (!slug) return;
@@ -55,16 +73,48 @@ export function ThreadCommunityProvider(
 
   const value: State =
     'slug' in props
-      ? { target: { kind: 'thread', slug: props.slug }, posts: loaded }
-      : { target: { kind: 'live', questionId: props.questionId }, posts: props.answers };
+      ? {
+          target: { kind: 'thread', slug: props.slug },
+          posts: loaded,
+          question: null,
+          setAccepted,
+        }
+      : {
+          target: { kind: 'live', questionId: props.questionId },
+          posts: props.answers,
+          question: { uid: props.askerUid ?? null, acceptedAnswerId: accepted },
+          setAccepted,
+        };
 
-  return <Ctx.Provider value={value}>{props.children}</Ctx.Provider>;
+  // Only answers are scored; replies are conversation, as comments are on Stack Overflow.
+  const answers = (value.posts ?? []).filter((p) => !p.parentId);
+  const paths = answers.map((a) => postPath(value.target, a.id));
+  const authors = (value.posts ?? []).flatMap((p) => (p.uid ? [p.uid] : []));
+  if (value.target.kind === 'live') {
+    // The question itself is votable too, and its asker has a byline.
+    paths.unshift(`questions/${value.target.questionId}`);
+    if (value.question?.uid) authors.push(value.question.uid);
+  }
+
+  return (
+    <Ctx.Provider value={value}>
+      <VotesProvider paths={paths} authors={authors}>
+        {props.children}
+      </VotesProvider>
+    </Ctx.Provider>
+  );
 }
 
 function PostMeta({ post }: { post: Answer }) {
+  const rep = useRep(post.uid);
   return (
     <p className="muted text-xs">
       <span className="font-medium">{post.name}</span>
+      {rep !== null && (
+        <span className="ml-1.5 tabular-nums" title="Reputation">
+          {rep.toLocaleString('en')}
+        </span>
+      )}
       {post.createdAt && (
         <>
           {' · '}
@@ -131,22 +181,60 @@ export function ReplyThread({ parentId, parentName }: { parentId: string; parent
 
 /** Answers posted on the site, each with its replies, followed by the form to post a new answer. */
 export function CommunityAnswers({ showAskLink = false }: { showAskLink?: boolean }) {
-  const { target, posts } = usePosts();
-  const answers = (posts ?? []).filter((p) => !p.parentId);
+  const { target, posts, question } = usePosts();
+  const acceptedId = question?.acceptedAnswerId ?? null;
+  // Accepted first, then by score, then oldest first: the order a reader wants.
+  const answers = (posts ?? [])
+    .filter((p) => !p.parentId)
+    .sort(
+      (a, b) =>
+        Number(b.id === acceptedId) - Number(a.id === acceptedId) ||
+        b.score - a.score ||
+        (a.createdAt?.getTime() ?? 0) - (b.createdAt?.getTime() ?? 0),
+    );
 
   return (
     <>
       {answers.length > 0 && (
         <ul className="mt-6 space-y-6">
-          {answers.map((a) => (
-            <li key={a.id} id={a.id} className="rounded-lg border border-[var(--line)] p-4">
-              <QaBody body={a.body} />
-              <div className="mt-3 flex justify-end">
-                <PostMeta post={a} />
-              </div>
-              <ReplyThread parentId={a.id} parentName={a.name} />
-            </li>
-          ))}
+          {answers.map((a) => {
+            const accepted = a.id === acceptedId;
+            return (
+              <li
+                key={a.id}
+                id={a.id}
+                className={`flex gap-4 rounded-lg border p-4 ${
+                  accepted ? 'border-emerald-500/40 bg-emerald-500/5' : 'border-[var(--line)]'
+                }`}
+              >
+                <div className="flex shrink-0 flex-col items-center gap-2 pt-1">
+                  <VoteControl path={postPath(target, a.id)} score={a.score} />
+                  {accepted && (
+                    <span
+                      className="text-emerald-600"
+                      title="Accepted answer"
+                      aria-label="Accepted"
+                    >
+                      ✓
+                    </span>
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  {accepted && (
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-emerald-600">
+                      Accepted answer
+                    </p>
+                  )}
+                  <QaBody body={a.body} />
+                  <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+                    <AcceptButton answerId={a.id} accepted={accepted} />
+                    <PostMeta post={a} />
+                  </div>
+                  <ReplyThread parentId={a.id} parentName={a.name} />
+                </div>
+              </li>
+            );
+          })}
         </ul>
       )}
 
@@ -170,4 +258,44 @@ export function CommunityAnswerCount({ base }: { base: number }) {
   const { posts } = usePosts();
   const n = base + (posts ?? []).filter((p) => !p.parentId).length;
   return <>{n === 0 ? 'No answers yet' : `${n} ${n === 1 ? 'answer' : 'answers'}`}</>;
+}
+
+/** The asker's accept / un-accept control on a live question. Absent without the service. */
+const AcceptButton = COMMUNITY_ENABLED ? LiveAcceptButton : () => null;
+
+function LiveAcceptButton({ answerId, accepted }: { answerId: string; accepted: boolean }) {
+  const { target, question, setAccepted } = usePosts();
+  const user = useUser();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  if (target.kind !== 'live' || !user || !question?.uid || user.uid !== question.uid)
+    return <span />;
+  return (
+    <span className="text-xs">
+      <button
+        type="button"
+        disabled={busy}
+        className="underline underline-offset-2"
+        onClick={async () => {
+          setBusy(true);
+          setError(null);
+          try {
+            const r = await acceptAnswer(target.questionId, accepted ? null : answerId);
+            setAccepted(r.acceptedAnswerId);
+          } catch (e) {
+            setError((e as Error).message);
+          } finally {
+            setBusy(false);
+          }
+        }}
+      >
+        {accepted ? 'Un-accept' : 'Accept this answer'}
+      </button>
+      {error && (
+        <span role="status" className="muted ml-2">
+          {error}
+        </span>
+      )}
+    </span>
+  );
 }

@@ -26,6 +26,11 @@ export interface CommunityConfig {
    * sign-in plus review is the default defence, and a first post that waits a day loses the poster.
    */
   newAccountQueueHours: number;
+  /** Reputation needed to vote up / down (Stack Overflow: 15 / 125). Editors and admins are exempt. */
+  upvoteRep: number;
+  downvoteRep: number;
+  /** Votes per user per UTC day (Stack Overflow: 40). */
+  votesPerDay: number;
   /** The published question index, used to suggest duplicates and to title archive threads. */
   searchIndexUrl: string;
   searchIndexRefreshMs: number;
@@ -73,6 +78,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): CommunityConfi
     ipRateLimit: num(env.COMMUNITY_IP_RATE_LIMIT, 60),
     rateLimitWindowMs: num(env.COMMUNITY_RATE_LIMIT_WINDOW_MS, 60 * 60 * 1000),
     newAccountQueueHours: num(env.COMMUNITY_NEW_ACCOUNT_QUEUE_HOURS, 0),
+    upvoteRep: num(env.COMMUNITY_UPVOTE_REP, 15),
+    downvoteRep: num(env.COMMUNITY_DOWNVOTE_REP, 125),
+    votesPerDay: num(env.COMMUNITY_VOTES_PER_DAY, 40),
     searchIndexUrl:
       env.COMMUNITY_SEARCH_INDEX_URL || 'https://sdods.com/questions/search-index.json',
     searchIndexRefreshMs: num(env.COMMUNITY_SEARCH_INDEX_REFRESH_MS, 60 * 60 * 1000),

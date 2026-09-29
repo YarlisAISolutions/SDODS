@@ -229,6 +229,16 @@ service cloud.firestore {
     match /communityUsage/{day} {
       allow read, write: if false;
     }
+    // Votes and the reputation history: written only by the service, inside transactions that also
+    // move the post's score and the users' reputation. A user's own votes come back through the
+    // service (GET /votes/mine), so browsers never read these directly.
+    match /votes/{voteId} {
+      allow read, write: if false;
+    }
+    match /repEvents/{eventId} {
+      allow read: if isModerator();
+      allow write: if false;
+    }
 
     // Nothing else in the database is reachable from a browser.
     match /{document=**} {

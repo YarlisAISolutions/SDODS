@@ -117,6 +117,24 @@ export interface QueueItem {
   parent: string | null;
 }
 
+export type VoteValue = -1 | 0 | 1;
+
+export const vote = (path: string, value: VoteValue) =>
+  call<{ ok: true; score: number; value: VoteValue }>('POST', '/votes', { path, value });
+
+export const myVotes = (paths: string[]) =>
+  call<{ votes: Record<string, VoteValue>; rep: number }>(
+    'GET',
+    `/votes/mine?paths=${paths.map(encodeURIComponent).join(',')}`,
+  );
+
+export const acceptAnswer = (questionId: string, answerId: string | null) =>
+  call<{ ok: true; acceptedAnswerId: string | null }>('POST', '/accept', { questionId, answerId });
+
+/** The Firestore path of a post, as the service names it. */
+export const postPath = (target: AnswerTarget, id: string) =>
+  target.kind === 'live' ? `questions/${target.questionId}/answers/${id}` : `threadAnswers/${id}`;
+
 export const reviewQueue = () => call<{ items: QueueItem[] }>('GET', '/review/queue');
 
 export const resolvePost = (path: string, action: 'approve' | 'reject', reason: string) =>
