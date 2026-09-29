@@ -365,7 +365,9 @@ jobs:
             if [ "$mac" = signed ]; then
               echo '- macOS: signed with a Developer ID and notarized by Apple — open it normally'
             else
-              echo '- macOS: right-click the app → Open (Gatekeeper blocks a plain double-click)'
+              # An unsigned, quarantined app is reported as "damaged", which right-click → Open
+              # does not clear; the xattr command does (same guidance as the download page).
+              echo '- macOS: not signed yet, so macOS says SDODS "is damaged and can'"'"'t be opened". It is not. Drag it to Applications, then run once in Terminal: `xattr -dr com.apple.quarantine /Applications/SDODS.app`'
             fi
             if [ "$win" = signed ]; then
               # Signing names the publisher; SmartScreen reputation still builds per release.
