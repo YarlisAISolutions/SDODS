@@ -52,6 +52,10 @@ jobs:
           NEXT_PUBLIC_SITE_URL: https://docs.sdods.com
           # Maxi, the docs assistant; empty until the MAXI_URL repository variable is set.
           NEXT_PUBLIC_MAXI_URL: ${{ vars.MAXI_URL }}
+          # Whether the source repository is public: shows the GitHub buttons, Discussions and
+          # prefilled issue forms (apps/*/lib/links.ts). A repository variable, so making the repo
+          # private again is `gh variable set REPO_PUBLIC --body false` and a rebuild, not a code change.
+          NEXT_PUBLIC_REPO_PUBLIC: ${{ vars.REPO_PUBLIC }}
       - uses: actions/upload-artifact@v7
         with:
           name: docs-site
