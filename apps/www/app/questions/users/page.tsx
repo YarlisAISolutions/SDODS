@@ -1,12 +1,19 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { PEOPLE_BY_REP, THREADS } from '@sdods/qa-archive';
-import { Avatar, personLabel } from '@/components/qa/bits';
+import { PEOPLE, THREADS } from '@sdods/qa-archive';
+import { Avatar, ExampleNotice, personLabel } from '@/components/qa/bits';
 
 export const metadata: Metadata = {
   title: 'People',
-  description: 'Everyone who asks and answers questions here.',
+  description: 'The illustrative people in the SDODS example threads.',
 };
+
+// The SDODS team voices first, then everyone else by name. Never by reputation: it is invented.
+const ORDERED = [...PEOPLE].sort(
+  (a, b) =>
+    Number(b.role === 'maintainer') - Number(a.role === 'maintainer') ||
+    a.display.localeCompare(b.display),
+);
 
 export default function UsersPage() {
   const counts = new Map<string, { asked: number; answered: number }>();
@@ -30,11 +37,14 @@ export default function UsersPage() {
       </p>
       <h1 className="text-3xl font-extrabold tracking-tight md:text-4xl">People</h1>
       <p className="muted mt-3 max-w-2xl">
-        The people who ask and answer here, ordered by reputation.
+        The illustrative people in the example threads, and what each one asks and answers about.
       </p>
+      <div className="mt-4">
+        <ExampleNotice compact />
+      </div>
 
       <ul className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {PEOPLE_BY_REP.map((p) => {
+        {ORDERED.map((p) => {
           const c = counts.get(p.handle) ?? { asked: 0, answered: 0 };
           return (
             <li key={p.handle} className="card flex gap-3 p-4">
@@ -48,8 +58,7 @@ export default function UsersPage() {
                 </Link>
                 <p className="muted truncate text-xs">{p.tagline}</p>
                 <p className="muted mt-1 text-xs tabular-nums">
-                  {personLabel(p)} · {p.rep.toLocaleString()} · {c.asked} asked, {c.answered}{' '}
-                  answered
+                  {personLabel(p)} · {c.asked} asked, {c.answered} answered
                 </p>
               </div>
             </li>

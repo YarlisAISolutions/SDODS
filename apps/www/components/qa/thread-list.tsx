@@ -1,11 +1,12 @@
 import Link from 'next/link';
 import type { Thread } from '@sdods/qa-archive';
+import { ExampleNotice } from '@/components/qa/bits';
 import { ThreadRow } from '@/components/qa/thread-row';
 
 /** Above this, a page switches to compact lines. A full row is ~5 kB of markup; a line is ~150 B. */
 const FULL_ROWS = 25;
 
-/** Splitting to save eight rows is not worth an "Earlier (1)" heading, so the split has a floor. */
+/** Splitting to save eight rows is not worth a "More (1)" heading, so the split has a floor. */
 const WORTH_SPLITTING = FULL_ROWS + 8;
 
 /**
@@ -24,6 +25,9 @@ export function ThreadList({ threads, activeTag }: { threads: Thread[]; activeTa
 
   return (
     <>
+      <div className="mb-4">
+        <ExampleNotice compact />
+      </div>
       <ul className="divide-y divide-[var(--line)] border-y border-[var(--line)]">
         {full.map((t) => (
           <ThreadRow key={t.slug} thread={t} activeTag={activeTag} />
@@ -32,7 +36,7 @@ export function ThreadList({ threads, activeTag }: { threads: Thread[]; activeTa
 
       {rest.length > 0 && (
         <section className="mt-8">
-          <h2 className="text-sm font-bold uppercase tracking-wide">Earlier ({rest.length})</h2>
+          <h2 className="text-sm font-bold uppercase tracking-wide">More ({rest.length})</h2>
           <ul className="mt-3 space-y-1.5">
             {rest.map((t) => (
               <li key={t.slug} className="flex flex-wrap items-baseline gap-x-2 text-sm">
@@ -42,8 +46,6 @@ export function ThreadList({ threads, activeTag }: { threads: Thread[]; activeTa
                 <span className="muted text-xs tabular-nums">
                   {t.answers.length} {t.answers.length === 1 ? 'answer' : 'answers'}
                   {t.acceptedAnswerId && <span className="ml-1 text-emerald-600">✓</span>}
-                  {' · '}
-                  {t.askedOn.slice(0, 4)}
                 </span>
               </li>
             ))}

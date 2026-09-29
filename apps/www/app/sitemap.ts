@@ -49,9 +49,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
   // `/questions/live/` is deliberately absent: it renders empty at build time.
   const threads: MetadataRoute.Sitemap = THREADS.map((t) => ({
     url: `${SITE_URL}/questions/${t.slug}/`,
-    lastModified: new Date(
-      t.answers.reduce((latest, a) => (a.on > latest ? a.on : latest), t.askedOn),
-    ),
+    // Not the thread's own dates: those are invented with the example threads (see ExampleNotice),
+    // and handing them to search engines would claim a history the site does not have.
+    lastModified: now,
     changeFrequency: 'yearly',
     priority: 0.5,
   }));

@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { HANDLES, person, threadsByPerson } from '@sdods/qa-archive';
-import { Avatar, formatDate, personLabel } from '@/components/qa/bits';
+import { Avatar, ExampleNotice, personLabel } from '@/components/qa/bits';
 import { ThreadList } from '@/components/qa/thread-list';
 
 export const dynamicParams = false;
@@ -17,7 +17,10 @@ export async function generateMetadata(props: {
   const { handle } = await props.params;
   const p = person(handle);
   if (!p) return {};
-  return { title: p.display, description: `${p.display} — ${p.tagline}` };
+  return {
+    title: p.display,
+    description: `${p.display} (illustrative) — ${p.tagline}`,
+  };
 }
 
 export default async function UserPage(props: { params: Promise<{ handle: string }> }) {
@@ -39,12 +42,12 @@ export default async function UserPage(props: { params: Promise<{ handle: string
         <div>
           <h1 className="text-2xl font-extrabold tracking-tight md:text-3xl">{p.display}</h1>
           <p className="muted mt-1 text-sm">{p.tagline}</p>
-          <p className="muted mt-1 text-xs tabular-nums">
-            {personLabel(p)} · {p.rep.toLocaleString()} reputation · here since{' '}
-            {formatDate(p.joined)}
-          </p>
+          <p className="muted mt-1 text-xs tabular-nums">{personLabel(p)}</p>
         </div>
       </header>
+      <div className="mt-6">
+        <ExampleNotice compact />
+      </div>
 
       <section className="mt-10">
         <h2 className="text-sm font-bold uppercase tracking-wide">Asked ({asked.length})</h2>
