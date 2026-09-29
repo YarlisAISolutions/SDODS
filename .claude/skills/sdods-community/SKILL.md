@@ -18,6 +18,20 @@ browser (signed in with GitHub/Google) ──ID token──► sdods-community
    6. write the post to Firestore (REST, service account) + the verdict to communityReviews
 ```
 
+## Current state (2026-09-29)
+
+| What | Where / value |
+|---|---|
+| Service | `https://sdods-community-7rxessch3q-uc.a.run.app` (`/health` → `{"ok":true,…}`), Cloud Run `sdods-community`, us-central1 |
+| Site switch | repository variable `COMMUNITY_URL` = the service URL; the site posts through the service |
+| Sign-in | GitHub + Google on Firebase `automax-docs`, `authDomain: 'sdods.com'` |
+| Firestore rules | Q&A writes locked to the service (browsers read published posts only) |
+| Upvote threshold | 1 (`COMMUNITY_UPVOTE_REP` in `deploy/deploy-community.sh`) |
+| First real review | 2026-09-29, question published by claude-haiku-4-5, $0.0024 |
+
+**`COMMUNITY_URL` must stay set.** With the rules locked, the old browser-to-Firestore forms (still
+in the code as the fallback) can no longer write, so unsetting it breaks posting.
+
 **Only SDODS posts get in.** The reviewer reports signals (`relevance: sdods | adjacent | off_topic`,
 confidence, spam, abuse, quality notes). `decide()` is plain code:
 
@@ -119,11 +133,18 @@ prints a notice.
 > - **Do:**
 >   1. Firebase console → `automax-docs` → Authentication → Sign-in method → enable **Google**.
 >   2. github.com → YarlisAISolutions → Settings → Developer settings → OAuth Apps → New:
->      homepage `https://sdods.com`, callback **`https://automax-docs.firebaseapp.com/__/auth/handler`**.
+>      homepage `https://sdods.com`, callback **`https://sdods.com/__/auth/handler`** (the site's
+>      `authDomain` is `sdods.com`; GitHub allows exactly one callback, and it must match).
 >      Copy the client ID and generate a client secret.
 >   3. Firebase → Sign-in method → **GitHub** → paste both.
 >   4. Authentication → Settings → Authorized domains: add `sdods.com`, `www.sdods.com` and
 >      `sdods-automax--*.web.app` preview hosts as needed (each preview host is added individually).
+>   5. **Google web client** ("Web client (auto created by Google Service)",
+>      `71482759203-575e…apps.googleusercontent.com`) at
+>      https://console.cloud.google.com/apis/credentials?project=automax-docs: add
+>      `https://sdods.com/__/auth/handler` to Authorized redirect URIs and `https://sdods.com` to
+>      JavaScript origins, keeping the firebaseapp.com entries. Without it Google sign-in fails with
+>      **`Error 400: redirect_uri_mismatch`**, as it did on 2026-09-29.
 > - **Agent confirms with:** the person signs in on a preview of the site change with each provider
 >   and `GET /me` with the resulting token returns their uid.
 
@@ -136,10 +157,10 @@ prints a notice.
 > - **Agent confirms with:** Firebase console → Firestore → Rules shows the `users/{uid}` and
 >   `communityReviews` blocks.
 
-**Order matters.** The site still writes posts straight to Firestore until the site change that
-posts through this service ships. Deploy the rules in this PR first (they only *add* editor reads
-and the new collections), ship the site change, and only then tighten the rules to deny browser
-writes. Denying first breaks posting between the two deploys.
+**Order matters when setting up from scratch.** The site writes posts straight to Firestore until
+`COMMUNITY_URL` is set. Deploy rules that still allow those writes, switch the site on, and only
+then deploy the locked rules; locking first breaks posting in between. (Done in that order on
+2026-09-29; the locked rules are what the repository holds now.)
 
 ### 5. First editors
 
@@ -157,7 +178,8 @@ writes. Denying first breaks posting between the two deploys.
 
 | Task | How |
 |---|---|
-| Why was a post rejected or queued? | `communityReviews` in Firestore: every call's model, signals, decision and cost, keyed by post path |
+| Why was a post rejected or queued? | `communityReviews` in Firestore: every call's model, signals, decision and cost, keyed by post path. Query it with a `runQuery` on `communityReviews` ordered by `createdAt` desc, using `gcloud auth print-access-token` |
+| Remove a published post | an editor or admin deletes it in the Firebase console (the rules allow moderator deletes); the service has no delete endpoint yet |
 | Change strictness | `DEFAULT_THRESHOLDS` in `src/review.ts` (tests in `test/review.test.ts`) |
 | Change what counts as on-topic | `SYSTEM_PROMPT` in `src/review.ts`; keep it frozen per deploy (it is the cache prefix) |
 | Budget | `COMMUNITY_DAILY_BUDGET_USD=10 bash deploy/deploy-community.sh <tag>`; past it posts queue for editors |
@@ -187,16 +209,18 @@ All of it is written by the service only, inside one Firestore transaction per a
 
 | Privilege | Default | Setting |
 |---|---|---|
-| Vote up | 15 rep | `COMMUNITY_UPVOTE_REP` |
+| Vote up | 15 rep in code; **1** as deployed | `COMMUNITY_UPVOTE_REP` |
 | Vote down | 125 rep | `COMMUNITY_DOWNVOTE_REP` |
 | Votes per day | 40 | `COMMUNITY_VOTES_PER_DAY` |
 
 Editors and admins are exempt from the reputation thresholds. Replies are not scored. The
 illustrative archive threads are never votable; answers people post on them are.
 
-**Bootstrapping a new community:** with Stack Overflow's thresholds, the first members cannot upvote
-until an answer of theirs is accepted (+15). If that stalls early activity, lower
-`COMMUNITY_UPVOTE_REP` (e.g. to 1) at deploy time and raise it later; nothing is migrated.
+**Bootstrapping:** with Stack Overflow's 15, the first members could not upvote until an answer of
+theirs was accepted, so `deploy/deploy-community.sh` deploys with `COMMUNITY_UPVOTE_REP=1`. Raise it
+once there are regulars: `COMMUNITY_UPVOTE_REP=15 bash deploy/deploy-community.sh <tag>`, or on the
+live service `gcloud run services update sdods-community --region us-central1 --project automax-docs --update-env-vars COMMUNITY_UPVOTE_REP=15`.
+Nothing is migrated; it only gates new votes.
 
 Routes: `POST /votes {path, value: 1|-1|0}`, `GET /votes/mine?paths=…`,
 `POST /accept {questionId, answerId|null}` (asker only).
