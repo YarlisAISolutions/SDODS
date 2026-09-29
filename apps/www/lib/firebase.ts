@@ -11,7 +11,12 @@ const config = {
   projectId: 'automax-docs',
   appId: '1:71482759203:web:69a0c0309f84eac63b7996',
   apiKey: 'AIzaSyCCXO7PN4K17FElJ5pZxBsLr1EAWNzNktg',
-  authDomain: 'automax-docs.firebaseapp.com',
+  // sdods.com, not automax-docs.firebaseapp.com: the sign-in popup and the GitHub/Google consent
+  // screens then show our own domain, and sign-in state is first-party, which browsers that
+  // partition third-party storage require. Firebase Hosting serves /__/auth/handler on sdods.com
+  // because the site belongs to this project. The GitHub OAuth app's callback and the Google web
+  // client's redirect URIs must include https://sdods.com/__/auth/handler before this ships.
+  authDomain: 'sdods.com',
   storageBucket: 'automax-docs.firebasestorage.app',
   messagingSenderId: '71482759203',
 };
