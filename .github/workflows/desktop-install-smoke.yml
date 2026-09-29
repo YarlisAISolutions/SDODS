@@ -128,16 +128,6 @@ jobs:
           "- **@smoke:** exit $code" >> $env:GITHUB_STEP_SUMMARY
           if ($code) { throw "sdods run exited $code" }
 
-      - name: Quit and uninstall
-        if: always() && steps.install.outputs.uninstaller
-        run: |
-          if ('${{ steps.launch.outputs.pid }}') { Stop-Process -Id ${{ steps.launch.outputs.pid || 0 }} -Force -ErrorAction SilentlyContinue }
-          Get-Process SDODS, node -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
-          $p = Start-Process '${{ steps.install.outputs.uninstaller }}' -ArgumentList '/S' -Wait -PassThru
-          "uninstaller exited $($p.ExitCode)"
-          Start-Sleep 5
-          if (Test-Path (Join-Path '${{ steps.install.outputs.dir }}' 'SDODS.exe')) { throw 'SDODS.exe still present after uninstall' }
-
       # When first run fails, desktop.log has only the summary line. Re-run the bootstrap's scaffold
       # command (bootstrap.ts) the way the app does, so the real error is in the job log.
       - name: Diagnose a failed first run
@@ -153,6 +143,16 @@ jobs:
             & $node node_modules/@sdods/cli/bin/sdods.js init . --force --no-install --no-browsers 2>&1
             "exit $LASTEXITCODE"
           } else { 'the CLI was never installed into the workspace' }
+
+      - name: Quit and uninstall
+        if: always() && steps.install.outputs.uninstaller
+        run: |
+          if ('${{ steps.launch.outputs.pid }}') { Stop-Process -Id ${{ steps.launch.outputs.pid || 0 }} -Force -ErrorAction SilentlyContinue }
+          Get-Process SDODS, node -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+          $p = Start-Process '${{ steps.install.outputs.uninstaller }}' -ArgumentList '/S' -Wait -PassThru
+          "uninstaller exited $($p.ExitCode)"
+          Start-Sleep 5
+          if (Test-Path (Join-Path '${{ steps.install.outputs.dir }}' 'SDODS.exe')) { throw 'SDODS.exe still present after uninstall' }
 
       # The app logs to %LOCALAPPDATA% on C:, the checkout is on D:, and upload-artifact refuses a
       # path outside the workspace. Print the log (the fastest thing to read) and copy it in.
