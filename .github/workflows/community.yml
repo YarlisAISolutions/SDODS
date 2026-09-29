@@ -90,5 +90,8 @@ jobs:
       - name: Deploy to Cloud Run
         if: steps.creds.outputs.present == 'true' && steps.setup.outputs.ready == 'true'
         env:
-          ANTHROPIC_WORKSPACE_ID: ${{ vars.ANTHROPIC_WORKSPACE_ID }}
+          # Its own variable, not Maxi's ANTHROPIC_WORKSPACE_ID: the community key lives in its own
+          # workspace, and a key sent with another workspace's id is refused. A key created inside a
+          # workspace needs no id at all, so this is normally unset.
+          ANTHROPIC_WORKSPACE_ID: ${{ vars.COMMUNITY_ANTHROPIC_WORKSPACE_ID }}
         run: bash deploy/deploy-community.sh ${{ github.sha }}
