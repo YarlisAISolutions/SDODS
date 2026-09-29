@@ -44,16 +44,15 @@ The sync script refuses to run against a draft for exactly this reason.
 
 ## The download page is switched on per platform
 
-`sdods.com/download` currently offers **Windows and Linux** (`NEXT_PUBLIC_DESKTOP_PLATFORMS:
-windows,linux` in `.github/workflows/www.yml`). macOS stays hidden: an unsigned app there is
-reported as "damaged" with no way through, so a visitor is worse off than with no download at all,
-and the CLI install is a complete SDODS that nothing blocks.
+`sdods.com/download` offers **all three platforms** (`NEXT_PUBLIC_DESKTOP_PLATFORMS:
+macos,windows,linux` in `.github/workflows/www.yml`). Unsigned platforms carry their workaround on
+the page; `desktop:sync-release <tag> --signed=<platforms>` removes it once a release is signed.
 
 The switch is a **list of platforms**, not a boolean, because the reason for hiding is per-platform:
 
 | Platform | State |
 |---|---|
-| macOS | hidden until a Developer ID certificate exists ($99/year) |
+| macOS | **offered, unsigned.** macOS calls it "damaged" (no Run-anyway button), so the page gives the one `xattr -dr com.apple.quarantine` command; in-app updates stay dormant until signed. Apple Developer Program enrollment as YARLIS LLC is in progress (`sdods-sign-macos`) |
 | Windows | **offered.** Unsigned for now: SmartScreen shows "More info → Run anyway", and the picker says so. Azure Artifact Signing (~$10/month) is the chosen route (`sdods-sign-windows`); once a release is signed, `desktop:sync-release <tag> --signed=windows` swaps the advice for the softer publisher note |
 | Linux | **offered.** No Gatekeeper, no SmartScreen; the `.deb` and AppImage install unsigned |
 
@@ -63,8 +62,7 @@ launches it with nothing on PATH and runs demo-shop `@smoke`. 0.1.0's Windows in
 every packaging check and still could not do their first-run install.
 
 ```bash
-NEXT_PUBLIC_DESKTOP_PLATFORMS=windows,linux   # today
-NEXT_PUBLIC_DESKTOP_PLATFORMS=all             # after the Apple certificate
+NEXT_PUBLIC_DESKTOP_PLATFORMS=macos,windows,linux   # today (same as `all`)
 ```
 
 Unset means none. An unrecognised value **fails the build** rather than

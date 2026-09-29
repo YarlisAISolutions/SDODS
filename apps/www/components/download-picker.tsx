@@ -80,7 +80,7 @@ const INSTALL: Record<Platform, { unsigned: string[]; signed: string[] }> = {
     // per release as downloads accumulate. Say so rather than promise a clean prompt.
     signed: [
       'Run the .exe installer.',
-      'A new release may still show SmartScreen. Check it names SDODS as the publisher, then More info → Run anyway.',
+      'A new release may still show SmartScreen. Check it names YARLIS LLC as the publisher, then More info → Run anyway.',
     ],
   },
   linux: {

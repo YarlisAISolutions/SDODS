@@ -59,9 +59,12 @@ jobs:
           #            `signed` in lib/desktop-release.ts and drops the advice once the release is
           #            Authenticode-signed through Azure Artifact Signing). Only a release that
           #            passed desktop-install-smoke.yml should be linked here.
-          #   macos:   hidden until the Developer ID certificate exists. An unsigned app is
-          #            reported as "damaged", with no Run-anyway button.
-          NEXT_PUBLIC_DESKTOP_PLATFORMS: windows,linux
+          #   macos:   offered while unsigned. macOS reports an unsigned, quarantined app as
+          #            "damaged" with no Run-anyway button, so the picker shows the one Terminal
+          #            command that clears it (xattr). The Apple Developer ID (YARLIS LLC) is in
+          #            progress; `desktop:sync-release <tag> --signed=macos` switches the copy once a
+          #            signed, notarized release exists.
+          NEXT_PUBLIC_DESKTOP_PLATFORMS: macos,windows,linux
           # Maxi, the docs assistant (deploy/deploy-maxi.sh). A repository variable, so the chat stays
           # hidden until the service is live: an empty value renders no widget.
           NEXT_PUBLIC_MAXI_URL: ${{ vars.MAXI_URL }}
