@@ -4,6 +4,7 @@ import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest }
 import { canModerate, type Verifier, type Viewer } from './auth.js';
 import type { CommunityConfig } from './config.js';
 import type { ThreadIndex } from './duplicates.js';
+import { editPost, resolveEdit } from './edits.js';
 import { acceptAnswer, castVote } from './engagement.js';
 import { canVote, type VoteValue } from './reputation.js';
 import { redact } from './redact.js';
@@ -153,6 +154,62 @@ export async function buildCommunityServer(deps: CommunityServerDeps): Promise<F
     return { uid: v.uid, name: v.name, role: v.role, provider: v.provider };
   });
 
+  /** The AI review with the daily budget in front of it: past the budget, a human decides. */
+  async function reviewWithBudget(
+    req: FastifyRequest,
+    post: { kind: 'question' | 'answer'; title: string; body: string; question?: string },
+  ): Promise<{ result: ReviewResult; day: string }> {
+    const day = utcDay(now());
+    let spent = Infinity;
+    try {
+      spent = await store.spentToday(day);
+    } catch (e) {
+      // A store outage must not lift the budget: fail closed, to a human.
+      req.log.error({ err: e }, 'budget check failed');
+    }
+    if (spent >= config.dailyBudgetUsd)
+      return { result: { decision: 'queue', signals: null, calls: [] }, day };
+    const result = await review(
+      { client, reviewModel: config.reviewModel, escalationModel: config.escalationModel },
+      post,
+    );
+    return { result, day };
+  }
+
+  /** The audit row and the spend counter for one review, off the request's critical path. */
+  function logReview(
+    req: FastifyRequest,
+    r: {
+      path: string;
+      uid: string;
+      kind: 'question' | 'answer';
+      decision: Decision;
+      result: ReviewResult;
+      redacted: string[];
+      day: string;
+    },
+  ) {
+    const calls = r.result.calls.map(({ usage, ...c }) => ({ ...c, usage: totals(usage) }));
+    const cost = calls.reduce((sum, c) => sum + (c.usage ? costUsd(c.model, c.usage) : 0), 0);
+    req.log.info(
+      { path: r.path, decision: r.decision, calls: calls.map((c) => [c.model, c.decision]), cost },
+      'review',
+    );
+    void store
+      .saveReview({
+        path: r.path,
+        uid: r.uid,
+        kind: r.kind,
+        decision: r.decision,
+        calls,
+        costUsd: cost,
+        redacted: r.redacted,
+      })
+      .catch((e) => req.log.error({ err: e }, 'saveReview failed'));
+    if (cost > 0)
+      void store.addSpend(r.day, cost).catch((e) => req.log.error({ err: e }, 'addSpend failed'));
+  }
+
   /** The shared path for questions and answers: redact, review, store, log, respond. */
   async function submit(
     req: FastifyRequest,
@@ -171,23 +228,12 @@ export async function buildCommunityServer(deps: CommunityServerDeps): Promise<F
     const redacted = [...title.found, ...body.found];
     const kind = target.kind === 'question' ? 'question' : 'answer';
 
-    const day = utcDay(now());
-    let result: ReviewResult;
-    let spent = Infinity;
-    try {
-      spent = await store.spentToday(day);
-    } catch (e) {
-      // A store outage must not lift the budget: fail closed, to a human.
-      req.log.error({ err: e }, 'budget check failed');
-    }
-    if (spent >= config.dailyBudgetUsd) {
-      result = { decision: 'queue', signals: null, calls: [] };
-    } else {
-      result = await review(
-        { client, reviewModel: config.reviewModel, escalationModel: config.escalationModel },
-        { kind, title: title.text, body: body.text, question: post.question },
-      );
-    }
+    const { result, day } = await reviewWithBudget(req, {
+      kind,
+      title: title.text,
+      body: body.text,
+      question: post.question,
+    });
 
     let decision = result.decision;
     const ageHours = (now().getTime() - user.firstSeen.getTime()) / 3_600_000;
@@ -213,17 +259,7 @@ export async function buildCommunityServer(deps: CommunityServerDeps): Promise<F
       redacted,
     });
 
-    const calls = result.calls.map(({ usage, ...c }) => ({ ...c, usage: totals(usage) }));
-    const cost = calls.reduce((sum, c) => sum + (c.usage ? costUsd(c.model, c.usage) : 0), 0);
-    req.log.info(
-      { path, decision, calls: calls.map((c) => [c.model, c.decision]), cost },
-      'review',
-    );
-    void store
-      .saveReview({ path, uid: viewer.uid, kind, decision, calls, costUsd: cost, redacted })
-      .catch((e) => req.log.error({ err: e }, 'saveReview failed'));
-    if (cost > 0)
-      void store.addSpend(day, cost).catch((e) => req.log.error({ err: e }, 'addSpend failed'));
+    logReview(req, { path, uid: viewer.uid, kind, decision, result, redacted, day });
 
     return {
       status: STATUS[decision],
@@ -369,6 +405,140 @@ export async function buildCommunityServer(deps: CommunityServerDeps): Promise<F
       }[out.error] as [number, string];
       return reply.code(code).send({ error });
     }
+    return out;
+  });
+
+  /**
+   * Edit a post, or suggest an edit. The new text is redacted and reviewed like a new post: a
+   * rejection is refused with the reason, an unsure verdict turns even the author's edit into a
+   * suggestion for an editor.
+   */
+  app.post('/edits', async (req, reply) => {
+    const viewer = await viewerOf(req, reply);
+    if (!viewer) return reply;
+    const b = (req.body ?? {}) as Record<string, unknown>;
+    const path = b.path;
+    const baseRevision = b.baseRevision;
+    const comment = typeof b.comment === 'string' ? b.comment.trim() : '';
+    const bodyText = typeof b.body === 'string' ? b.body.replace(/\r\n/g, '\n').trim() : '';
+    const titleText = typeof b.title === 'string' ? b.title.trim() : undefined;
+    if (typeof path !== 'string' || !POST_PATH.test(path))
+      return reply.code(400).send({ error: 'Bad post path' });
+    if (!Number.isInteger(baseRevision) || (baseRevision as number) < 0)
+      return reply.code(400).send({ error: 'baseRevision must be the revision you edited' });
+    if (bodyText.length < 10 || bodyText.length > 10_000)
+      return reply.code(400).send({ error: 'The text must be 10–10,000 characters.' });
+    if (titleText !== undefined && (titleText.length < 10 || titleText.length > 200))
+      return reply.code(400).send({ error: 'The title must be 10–200 characters.' });
+    if (!comment || comment.length > 300)
+      return reply
+        .code(400)
+        .send({ error: 'Say briefly what you changed (up to 300 characters).' });
+    if (overPostLimit(viewer.uid))
+      return reply
+        .code(429)
+        .send({ error: 'You are editing quickly. Try again in a little while.' });
+
+    const current = await store.transact(async (get) => ({ writes: [], result: await get(path) }));
+    if (!current || current.status !== 'published')
+      return reply.code(404).send({ error: 'That post is not available.' });
+    const isQuestion = /^questions\/[^/]+$/.test(path);
+    const title = redact(
+      isQuestion ? (titleText ?? String(current.title ?? '')) : String(current.title ?? ''),
+    );
+    const body = redact(bodyText);
+    const kind = isQuestion ? 'question' : 'answer';
+    const { result, day } = await reviewWithBudget(req, {
+      kind,
+      title: title.text,
+      body: body.text,
+    });
+    logReview(req, {
+      path,
+      uid: viewer.uid,
+      kind,
+      decision: result.decision,
+      result,
+      redacted: [...title.found, ...body.found],
+      day,
+    });
+    if (result.decision === 'reject')
+      return reply.code(422).send({
+        status: 'rejected',
+        reason: result.signals?.reason_for_author || 'This edit does not look like SDODS content.',
+        notes: result.signals?.quality_notes ?? [],
+      });
+
+    await store.ensureUser({
+      uid: viewer.uid,
+      name: viewer.name,
+      picture: viewer.picture,
+      provider: viewer.provider,
+    });
+    const rep = await store.userRep(viewer.uid);
+    const out = await editPost(store.transact, newId, {
+      by: { uid: viewer.uid, name: viewer.name },
+      direct: viewer.role !== 'member' || rep >= config.editRep,
+      needsReview: result.decision === 'queue',
+      path,
+      baseRevision: baseRevision as number,
+      change: { ...(isQuestion ? { title: title.text } : {}), body: body.text, comment },
+    });
+    if (!out.ok) {
+      const [code, error] = {
+        not_found: [404, 'That post is not available.'],
+        conflict: [
+          409,
+          'Someone edited this while you were working. Reload to see their change, then edit again.',
+        ],
+        not_editable: [403, 'Replies can only be edited by the person who wrote them.'],
+      }[out.error] as [number, string];
+      return reply.code(code).send({ error });
+    }
+    return out.applied
+      ? { status: 'applied', revision: out.revision }
+      : {
+          status: 'pending',
+          id: out.suggestionId,
+          reason:
+            result.decision === 'queue'
+              ? 'An editor will look at this edit before it appears.'
+              : `Your edit is a suggestion until an editor approves it (direct editing needs ${config.editRep} reputation). Approved suggestions earn +2.`,
+        };
+  });
+
+  app.get('/review/edits', async (req, reply) => {
+    const viewer = await viewerOf(req, reply);
+    if (!viewer) return reply;
+    if (!canModerate(viewer)) return reply.code(403).send({ error: 'Editors only.' });
+    return { items: await store.pendingEdits() };
+  });
+
+  app.post('/review/edits/resolve', async (req, reply) => {
+    const viewer = await viewerOf(req, reply);
+    if (!viewer) return reply;
+    if (!canModerate(viewer)) return reply.code(403).send({ error: 'Editors only.' });
+    const { id, action, reason } = (req.body ?? {}) as Record<string, unknown>;
+    const why = typeof reason === 'string' ? reason.trim() : '';
+    if (typeof id !== 'string' || !/^[A-Za-z0-9]{1,40}$/.test(id))
+      return reply.code(400).send({ error: 'Bad suggestion id' });
+    if (action !== 'approve' && action !== 'reject')
+      return reply.code(400).send({ error: 'action must be approve or reject' });
+    if (action === 'reject' && !why)
+      return reply.code(400).send({ error: 'Say why, so the suggester knows what to change' });
+    const out = await resolveEdit(store.transact, newId, {
+      id,
+      editor: viewer.uid,
+      action,
+      reason: why.slice(0, 500),
+    });
+    if (!out.ok)
+      return reply.code(409).send({
+        error:
+          out.error === 'conflict'
+            ? 'The post was edited after this suggestion was made; reject it and ask for a fresh one.'
+            : 'That suggestion is no longer waiting for review.',
+      });
     return out;
   });
 

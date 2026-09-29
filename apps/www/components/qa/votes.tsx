@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react';
 import { COMMUNITY_ENABLED, myVotes, vote as sendVote, type VoteValue } from '@/lib/community';
 import { useUser } from '@/components/qa/community';
+import type { Profile } from '@/lib/questions';
 
 /**
  * Votes on the real posts: live questions and answers people posted on the site. The illustrative
@@ -17,9 +18,16 @@ type VotesContext = {
   mine: Record<string, VoteValue>;
   setMine: (path: string, v: VoteValue) => void;
   rep: Record<string, number>;
+  profiles: Record<string, Profile>;
 };
 
-const Ctx = createContext<VotesContext>({ signedIn: false, mine: {}, setMine: () => {}, rep: {} });
+const Ctx = createContext<VotesContext>({
+  signedIn: false,
+  mine: {},
+  setMine: () => {},
+  rep: {},
+  profiles: {},
+});
 
 type ProviderProps = {
   /** Every votable post on the page, as service paths. */
@@ -44,7 +52,7 @@ function StaticVotesProvider(props: ProviderProps) {
 
 function VotesState({ paths, authors, children, signedIn }: ProviderProps & { signedIn: boolean }) {
   const [mine, setMineState] = useState<Record<string, VoteValue>>({});
-  const [rep, setRep] = useState<Record<string, number>>({});
+  const [profiles, setProfiles] = useState<Record<string, Profile>>({});
   const pathsKey = paths.join(',');
   const authorsKey = [...new Set(authors)].sort().join(',');
 
@@ -64,9 +72,7 @@ function VotesState({ paths, authors, children, signedIn }: ProviderProps & { si
     let live = true;
     import('@/lib/questions')
       .then(({ profiles }) => profiles(authorsKey.split(',')))
-      .then(
-        (p) => live && setRep(Object.fromEntries(Object.entries(p).map(([k, v]) => [k, v.rep]))),
-      )
+      .then((p) => live && setProfiles(p))
       .catch(() => {});
     return () => {
       live = false;
@@ -79,12 +85,19 @@ function VotesState({ paths, authors, children, signedIn }: ProviderProps & { si
         signedIn,
         mine,
         setMine: (path, v) => setMineState((m) => ({ ...m, [path]: v })),
-        rep,
+        rep: Object.fromEntries(Object.entries(profiles).map(([k, v]) => [k, v.rep])),
+        profiles,
       }}
     >
       {children}
     </Ctx.Provider>
   );
+}
+
+/** An author's public profile (reputation and badges), once loaded. */
+export function useProfile(uid: string | null): Profile | null {
+  const { profiles } = useContext(Ctx);
+  return uid ? (profiles[uid] ?? null) : null;
 }
 
 /** An author's public reputation, once loaded. */

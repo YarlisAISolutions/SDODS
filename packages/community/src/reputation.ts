@@ -16,6 +16,7 @@ export const REP = {
   downvoterOnAnswer: -1,
   accepted: 15,
   acceptor: 2,
+  suggestedEdit: 2,
   floor: 1,
 } as const;
 
@@ -35,7 +36,8 @@ export type RepReason =
   | 'accepted'
   | 'accepted-an-answer'
   | 'vote-undone'
-  | 'accept-undone';
+  | 'accept-undone'
+  | 'edit-approved';
 
 /** The effect of one vote value, before it is compared with the previous one. */
 function effect(

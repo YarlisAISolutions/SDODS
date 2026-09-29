@@ -29,6 +29,8 @@ export interface CommunityConfig {
   /** Reputation needed to vote up / down (Stack Overflow: 15 / 125). Editors and admins are exempt. */
   upvoteRep: number;
   downvoteRep: number;
+  /** Reputation to edit other people's posts directly (Stack Overflow: 2000); below it, suggest. */
+  editRep: number;
   /** Votes per user per UTC day (Stack Overflow: 40). */
   votesPerDay: number;
   /** The published question index, used to suggest duplicates and to title archive threads. */
@@ -81,6 +83,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): CommunityConfi
     upvoteRep: num(env.COMMUNITY_UPVOTE_REP, 15),
     downvoteRep: num(env.COMMUNITY_DOWNVOTE_REP, 125),
     votesPerDay: num(env.COMMUNITY_VOTES_PER_DAY, 40),
+    editRep: num(env.COMMUNITY_EDIT_REP, 2000),
     searchIndexUrl:
       env.COMMUNITY_SEARCH_INDEX_URL || 'https://sdods.com/questions/search-index.json',
     searchIndexRefreshMs: num(env.COMMUNITY_SEARCH_INDEX_REFRESH_MS, 60 * 60 * 1000),

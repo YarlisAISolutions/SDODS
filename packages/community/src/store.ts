@@ -77,6 +77,36 @@ export interface QueueItem {
   parent: string | null;
 }
 
+export interface PendingEdit {
+  id: string;
+  post: string;
+  baseRevision: number;
+  title: string | null;
+  body: string;
+  by: string;
+  byName: string;
+  comment: string;
+  createdAt: string | null;
+}
+
+function toPendingEdit(
+  id: string,
+  f: Record<string, unknown>,
+  createdAt: string | null,
+): PendingEdit {
+  return {
+    id,
+    post: String(f.post ?? ''),
+    baseRevision: typeof f.baseRevision === 'number' ? f.baseRevision : 0,
+    title: typeof f.title === 'string' ? f.title : null,
+    body: String(f.body ?? ''),
+    by: String(f.by ?? ''),
+    byName: String(f.byName ?? ''),
+    comment: String(f.comment ?? ''),
+    createdAt,
+  };
+}
+
 export interface UserRecord {
   uid: string;
   display: string;
@@ -105,6 +135,8 @@ export interface CommunityStore {
   transact: Transact;
   /** A user's reputation; 1 for someone with no profile yet. */
   userRep(uid: string): Promise<number>;
+  /** Suggested edits waiting for an editor, oldest first. */
+  pendingEdits(): Promise<PendingEdit[]>;
   /** The user's current votes on these posts; posts they have not voted on are absent. */
   myVotes(uid: string, paths: string[]): Promise<Record<string, VoteValue>>;
 }
@@ -158,7 +190,10 @@ interface MemDoc {
 
 export class MemoryStore implements CommunityStore {
   readonly docs = new Map<string, MemDoc>();
-  readonly users = new Map<string, UserRecord & { role?: Role; rep?: number }>();
+  readonly users = new Map<
+    string,
+    UserRecord & { role?: Role; rep?: number; badges?: unknown[] }
+  >();
   readonly reviews: ReviewLog[] = [];
   readonly spend = new Map<string, number>();
   private seq = 0;
@@ -209,7 +244,9 @@ export class MemoryStore implements CommunityStore {
   private read(path: string): Doc | null {
     if (path.startsWith('users/')) {
       const u = this.users.get(path.slice(6));
-      return u ? { rep: u.rep ?? 1, role: u.role ?? 'member', display: u.display } : null;
+      return u
+        ? { rep: u.rep ?? 1, role: u.role ?? 'member', display: u.display, badges: u.badges ?? [] }
+        : null;
     }
     const d = this.docs.get(path);
     return d ? { ...d.fields } : null;
@@ -235,6 +272,14 @@ export class MemoryStore implements CommunityStore {
 
   async userRep(uid: string) {
     return this.users.get(uid)?.rep ?? 1;
+  }
+
+  async pendingEdits(): Promise<PendingEdit[]> {
+    return [...this.docs.entries()]
+      .filter(([p, d]) => p.startsWith('revisions/') && d.fields.status === 'pending')
+      .map(([p, d]) =>
+        toPendingEdit(p.slice('revisions/'.length), d.fields, d.createdAt.toISOString()),
+      );
   }
 
   async myVotes(uid: string, paths: string[]) {
@@ -573,6 +618,33 @@ export class FirestoreStore implements CommunityStore {
       await this.ok(res, 'commit');
     }
   };
+
+  async pendingEdits(): Promise<PendingEdit[]> {
+    const res = await this.ok(
+      await this.call('POST', `${this.base}:runQuery`, {
+        structuredQuery: {
+          from: [{ collectionId: 'revisions' }],
+          where: {
+            fieldFilter: {
+              field: { fieldPath: 'status' },
+              op: 'EQUAL',
+              value: { stringValue: 'pending' },
+            },
+          },
+          orderBy: [{ field: { fieldPath: 'createdAt' }, direction: 'ASCENDING' }],
+          limit: 100,
+        },
+      }),
+      'pendingEdits',
+    );
+    const rows = (await res.json()) as Array<{ document?: FsDocument }>;
+    return rows.flatMap((r) => {
+      if (!r.document) return [];
+      const f = fromFields(r.document.fields ?? {});
+      const id = r.document.name.split('/').at(-1)!;
+      return [toPendingEdit(id, f, typeof f.createdAt === 'string' ? f.createdAt : null)];
+    });
+  }
 
   async userRep(uid: string) {
     const res = await this.call('GET', `${this.base}/users/${encodeURIComponent(uid)}`);

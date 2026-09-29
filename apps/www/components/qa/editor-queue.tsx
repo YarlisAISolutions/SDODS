@@ -1,7 +1,17 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { me, resolvePost, reviewQueue, setRole, type Me, type QueueItem } from '@/lib/community';
+import {
+  me,
+  pendingEdits,
+  resolveEdit,
+  resolvePost,
+  reviewQueue,
+  setRole,
+  type Me,
+  type PendingEdit,
+  type QueueItem,
+} from '@/lib/community';
 import { SignInGate, useUser } from '@/components/qa/community';
 
 /**
@@ -77,6 +87,7 @@ function Queue() {
           onDone={() => setItems((xs) => xs?.filter((x) => x.path !== item.path) ?? null)}
         />
       ))}
+      <SuggestedEdits />
       {viewer.role === 'admin' && <Roles />}
     </div>
   );
@@ -198,5 +209,108 @@ function Roles() {
       </form>
       {message && <p className="text-sm">{message}</p>}
     </section>
+  );
+}
+
+/** Suggested edits from members who cannot edit directly yet. */
+function SuggestedEdits() {
+  const [items, setItems] = useState<PendingEdit[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    pendingEdits()
+      .then((r) => setItems(r.items))
+      .catch((e) => setError((e as Error).message));
+  }, []);
+  if (error)
+    return (
+      <p role="alert" className="text-sm">
+        {error}
+      </p>
+    );
+  return (
+    <section className="grid gap-4">
+      <h2 className="font-semibold">Suggested edits</h2>
+      {items === null ? (
+        <p className="muted text-sm">Loading…</p>
+      ) : items.length === 0 ? (
+        <p className="muted text-sm">No suggested edits waiting.</p>
+      ) : (
+        items.map((e) => (
+          <SuggestedEdit
+            key={e.id}
+            edit={e}
+            onDone={() => setItems((xs) => xs?.filter((x) => x.id !== e.id) ?? null)}
+          />
+        ))
+      )}
+    </section>
+  );
+}
+
+function postHref(path: string): string {
+  const q = /^questions\/([^/]+)/.exec(path);
+  return q ? `/questions/live/?id=${q[1]}` : '/questions/';
+}
+
+function SuggestedEdit({ edit, onDone }: { edit: PendingEdit; onDone: () => void }) {
+  const [reason, setReason] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const act = async (action: 'approve' | 'reject') => {
+    setBusy(true);
+    setError(null);
+    try {
+      await resolveEdit(edit.id, action, action === 'reject' ? reason : '');
+      onDone();
+    } catch (e) {
+      setError((e as Error).message);
+      setBusy(false);
+    }
+  };
+  return (
+    <article className="card grid gap-3 p-5">
+      <p className="muted text-xs">
+        By {edit.byName || edit.by} · on{' '}
+        <a href={postHref(edit.post)} className="underline">
+          {edit.post}
+        </a>{' '}
+        (from revision {edit.baseRevision})
+        {edit.createdAt && ` · ${new Date(edit.createdAt).toLocaleString()}`}
+      </p>
+      {edit.comment && <p className="text-sm">“{edit.comment}”</p>}
+      {edit.title && <p className="font-semibold">{edit.title}</p>}
+      <pre className="max-h-72 overflow-auto whitespace-pre-wrap rounded bg-[var(--brand)]/5 p-3 text-sm">
+        {edit.body}
+      </pre>
+      <label className="text-sm">
+        <span className="mb-1 block font-medium">
+          Reason (shown to the suggester if you reject)
+        </span>
+        <input value={reason} onChange={(e) => setReason(e.target.value)} maxLength={500} />
+      </label>
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          className="btn btn-primary"
+          disabled={busy}
+          onClick={() => void act('approve')}
+        >
+          Approve
+        </button>
+        <button
+          type="button"
+          className="btn btn-secondary"
+          disabled={busy || !reason.trim()}
+          onClick={() => void act('reject')}
+        >
+          Reject
+        </button>
+      </div>
+      {error && (
+        <p role="alert" className="text-sm">
+          {error}
+        </p>
+      )}
+    </article>
   );
 }

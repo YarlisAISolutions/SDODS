@@ -225,9 +225,47 @@ Nothing is migrated; it only gates new votes.
 Routes: `POST /votes {path, value: 1|-1|0}`, `GET /votes/mine?paths=…`,
 `POST /accept {questionId, answerId|null}` (asker only).
 
-## Roadmap (phase 3)
+## Badges (phase 3)
 
-- **Phase 3:** badges (bronze/silver/gold), edits with revision history and suggested edits, close
-  as duplicate/off-topic, flags, comments.
+Awarded by the service inside the transaction of the action that earns them (`src/badges.ts`, pure
+and tested), stored on `users/{uid}.badges`, and shown as gold/silver/bronze counts in bylines and
+on `/questions/member/?uid=…`.
+
+| Badge | Tier | Earned for |
+|---|---|---|
+| Student / Teacher | bronze | a first upvoted question / answer |
+| Scholar | bronze | accepting someone's answer |
+| Supporter / Critic | bronze | a first upvote / downvote |
+| Editor | bronze | a first applied edit |
+| Nice / Good / Great Question | bronze / silver / gold | question score 10 / 25 / 100 (per post) |
+| Nice / Good / Great Answer | bronze / silver / gold | answer score 10 / 25 / 100 (per post) |
+| Guru | silver | an accepted answer with score 40 (per post) |
+
+Badges are never taken back (as on Stack Overflow), even if a score later drops.
+
+## Edits and revision history (phase 3)
+
+`POST /edits {path, title?, body, comment, baseRevision}` (`src/edits.ts`):
+
+- **Who edits directly:** the author, editors and admins, and anyone with `COMMUNITY_EDIT_REP`
+  reputation (2000, as on Stack Overflow). Everyone else's edit becomes a **suggested edit** for an
+  editor. An approved suggestion earns the suggester +2 and the Editor badge.
+- **Every edit is reviewed** like a new post. A rejection is refused with the reason (HTTP 422), and
+  an unsure verdict turns even the author's edit into a suggestion.
+- **History:** every applied edit is a row in `revisions` (public; the rules allow reading applied
+  revisions). The first edit also records the original as revision 0. Pending and rejected
+  suggestions are for moderators only.
+- **Conflicts:** an edit names the revision it started from. If the post has moved on, the edit is
+  refused (409), and so is approving a suggestion that a newer edit has overtaken.
+- **Replies** can only be edited by whoever wrote them.
+- **Editors** review suggestions in the Suggested edits section of `/questions/moderate/`
+  (`GET /review/edits`, `POST /review/edits/resolve`).
+
+Indexes: `revisions (post, status, revision)` for the history and `revisions (status, createdAt)`
+for the queue, in `firestore.indexes.json`. Deploy them with the rules.
+
+## Roadmap
+
+- Close as duplicate or off-topic, flags, comments, and a delete endpoint in the service.
 - The illustrative archive threads stay separate and labelled; real reputation is never mixed with
   them.

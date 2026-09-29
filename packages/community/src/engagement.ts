@@ -4,9 +4,10 @@
  * Each operation reads the documents it depends on, asks reputation.ts what changes, and returns the
  * writes; the store commits them atomically (a Firestore transaction retries the whole function if
  * any document it read changed underneath it). The vote document, the post's score, every affected
- * user's reputation and the reputation history all move together or not at all.
+ * user's reputation and badges, and the reputation history all move together or not at all.
  */
 
+import { forAccepting, forScore, forVoting, readBadges, type Awarded } from './badges.js';
 import {
   applyFloor,
   netRep,
@@ -49,18 +50,35 @@ const str = (v: unknown) => (typeof v === 'string' && v ? v : null);
 const kindOf = (path: string): PostKind =>
   /^questions\/[^/]+$/.test(path) ? 'question' : 'answer';
 
-/** Reputation writes (floored at 1) and their history, for a set of changes. */
-async function repWrites(
+/** Computes the badges a user newly earns, given the ones they already hold. */
+export type Awarder = { uid: string; award: (have: Awarded[]) => Awarded[] };
+
+/**
+ * Writes to users for a set of reputation changes and badge awards: reputation floored at 1, new
+ * badges appended, each user read once. Reputation history rows go to repEvents.
+ */
+export async function userWrites(
   get: (path: string) => Promise<Doc | null>,
   changes: RepChange[],
+  awarders: Awarder[],
   context: { path: string; by: string; at: Date },
   newId: () => string,
 ): Promise<Write[]> {
   const writes: Write[] = [];
-  for (const [uid, delta] of netRep(changes)) {
+  const deltas = netRep(changes);
+  const uids = new Set([...deltas.keys(), ...awarders.map((a) => a.uid)]);
+  for (const uid of uids) {
     const user = await get(`users/${uid}`);
-    const rep = applyFloor(num(user?.rep, REP.floor), delta);
-    writes.push({ path: `users/${uid}`, fields: { rep }, mask: ['rep'] });
+    const fields: Doc = {};
+    const delta = deltas.get(uid);
+    if (delta) fields.rep = applyFloor(num(user?.rep, REP.floor), delta);
+    const have = readBadges(user?.badges);
+    const earned: Awarded[] = [];
+    for (const a of awarders.filter((x) => x.uid === uid))
+      earned.push(...a.award([...have, ...earned]));
+    if (earned.length) fields.badges = [...have, ...earned];
+    const mask = Object.keys(fields);
+    if (mask.length) writes.push({ path: `users/${uid}`, fields, mask });
   }
   for (const c of changes)
     writes.push({
@@ -106,10 +124,26 @@ export async function castVote(
       to: v.value,
     });
     const newScore = score + plan.scoreDelta;
+    const kind = kindOf(v.path);
+    // An answer's accepted state feeds the Guru badge; archive-thread answers are never accepted.
+    const qMatch = /^(questions\/[^/]+)\/answers\/([^/]+)$/.exec(v.path);
+    const accepted = qMatch ? str((await get(qMatch[1]!))?.acceptedAnswerId) === qMatch[2] : false;
+    const awarders: Awarder[] = [
+      { uid: v.uid, award: (have) => forVoting(v.value, have, now) },
+      ...(author
+        ? [
+            {
+              uid: author,
+              award: (have: Awarded[]) =>
+                forScore({ kind, score: newScore, accepted, post: v.path, have, at: now }),
+            },
+          ]
+        : []),
+    ];
     const writes: Write[] = [
       { path: v.path, fields: { score: newScore }, mask: ['score'] },
       { path: vp, fields: { uid: v.uid, post: v.path, value: v.value, at: now } },
-      ...(await repWrites(get, plan.rep, { path: v.path, by: v.uid, at: now }, newId)),
+      ...(await userWrites(get, plan.rep, awarders, { path: v.path, by: v.uid, at: now }, newId)),
     ];
     return { writes, result: { ok: true, score: newScore, value: v.value } };
   });
@@ -142,9 +176,20 @@ export async function acceptAnswer(
     const from = fromId ? { answerId: fromId, authorUid: str(fromDoc?.uid) } : null;
 
     const changes = planAccept({ askerUid: a.uid, from, to });
+    const awarders: Awarder[] = [];
+    if (to && to.authorUid && to.authorUid !== a.uid) {
+      awarders.push({ uid: a.uid, award: (have) => forAccepting(have, now) });
+      const answerPath = `${qPath}/answers/${to.answerId}`;
+      const score = num((await get(answerPath))?.score, 0);
+      awarders.push({
+        uid: to.authorUid,
+        award: (have) =>
+          forScore({ kind: 'answer', score, accepted: true, post: answerPath, have, at: now }),
+      });
+    }
     const writes: Write[] = [
       { path: qPath, fields: { acceptedAnswerId: a.answerId ?? '' }, mask: ['acceptedAnswerId'] },
-      ...(await repWrites(get, changes, { path: qPath, by: a.uid, at: now }, newId)),
+      ...(await userWrites(get, changes, awarders, { path: qPath, by: a.uid, at: now }, newId)),
     ];
     return { writes, result: { ok: true, acceptedAnswerId: a.answerId } };
   });
