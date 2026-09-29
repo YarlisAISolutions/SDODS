@@ -1,0 +1,7 @@
+# Cloud Build for the community service. Submitted from the repository root by
+# .github/workflows/community.yml:
+#   gcloud builds submit --config packages/community/cloudbuild.yaml --substitutions _IMAGE=<image:tag> .
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args: ['build', '-f', 'packages/community/Dockerfile', '-t', '${_IMAGE}', '.']
+images: ['${_IMAGE}']
