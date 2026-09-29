@@ -369,7 +369,7 @@ jobs:
             fi
             if [ "$win" = signed ]; then
               # Signing names the publisher; SmartScreen reputation still builds per release.
-              echo '- Windows: Authenticode-signed. If SmartScreen still warns on a new release, check it names SDODS as the publisher, then More info → Run anyway'
+              echo '- Windows: Authenticode-signed. If SmartScreen still warns on a new release, check it names YARLIS LLC as the publisher, then More info → Run anyway'
             else
               echo '- Windows: More info → Run anyway (SmartScreen)'
             fi
