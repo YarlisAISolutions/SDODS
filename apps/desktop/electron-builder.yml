@@ -167,9 +167,9 @@ deb:
 
 # This block is what electron-builder writes into the packaged `Resources/app-update.yml`, which is
 # the feed electron-updater (src/main/updater.ts) reads. It names the PUBLIC releases repository, where
-# every installed app already looks. It has to: YarlisAISolutions/SDODS is private, and a private
-# repo's release assets 404. Even if the source went public, moving the feed would strand every
-# installed copy on its current version. Uploading is not done from here -- desktop.yml packs with
+# every installed app already looks. It began there because YarlisAISolutions/SDODS was private and
+# a private repo's release assets 404; the source is public now, but moving the feed would strand
+# every installed copy on its current version. Uploading is not done from here -- desktop.yml packs with
 # `--publish never` and attaches the artifacts itself -- so this only decides where installed apps
 # look.
 #

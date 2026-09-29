@@ -65,6 +65,10 @@ jobs:
           # the old path (straight to Firestore as pending); set COMMUNITY_URL once the service is
           # deployed and the sign-in providers are enabled (the sdods-community skill).
           NEXT_PUBLIC_COMMUNITY_URL: ${{ vars.COMMUNITY_URL }}
+          # Whether the source repository is public: shows the GitHub buttons, Discussions and
+          # prefilled issue forms (apps/*/lib/links.ts). A repository variable, so making the repo
+          # private again is `gh variable set REPO_PUBLIC --body false` and a rebuild, not a code change.
+          NEXT_PUBLIC_REPO_PUBLIC: ${{ vars.REPO_PUBLIC }}
       - uses: actions/upload-artifact@v7
         with:
           name: www-site

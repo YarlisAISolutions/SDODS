@@ -382,11 +382,10 @@ jobs:
           sha256sum *.dmg *.zip *.exe *.AppImage *.deb 2>/dev/null | sort -k2 > SHA256SUMS.txt
           cat SHA256SUMS.txt
 
-      # Published to a PUBLIC releases-only repository, because YarlisAISolutions/SDODS is private
-      # (public only from 2026-09-26 to 2026-09-28) and a private repo's release assets 404 for
-      # visitors. The split would stay even with a public source repo: installed apps, the apt
-      # repository, Homebrew and Scoop already point there, and one releases-only repository keeps
-      # the download page's asset list clean.
+      # Published to a PUBLIC releases-only repository. That began because a private repo's release
+      # assets 404 for visitors, and YarlisAISolutions/SDODS was private. It is public now; the split
+      # stays because installed apps, the apt repository, Homebrew and Scoop already point there, and
+      # one releases-only repository keeps the download page's asset list clean.
       #
       # Requires a DESKTOP_RELEASE_TOKEN secret: a fine-grained PAT with Contents: read+write on
       # the releases repo only. GITHUB_TOKEN cannot write to another repository.
