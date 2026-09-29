@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { QaBody } from '@/components/qa/qa-body';
+import { VoteControl } from '@/components/qa/votes';
 import {
   CommunityAnswerCount,
   CommunityAnswers,
@@ -95,11 +96,21 @@ export function LiveQuestion() {
         </span>
       </p>
 
-      <div className="mt-6 border-t border-[var(--line)] pt-6">
-        <QaBody body={q.body} />
-      </div>
+      <ThreadCommunityProvider
+        questionId={q.id}
+        answers={q.answers}
+        askerUid={q.uid}
+        acceptedAnswerId={q.acceptedAnswerId}
+      >
+        <div className="mt-6 flex gap-4 border-t border-[var(--line)] pt-6">
+          <div className="shrink-0 pt-1">
+            <VoteControl path={`questions/${q.id}`} score={q.score} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <QaBody body={q.body} />
+          </div>
+        </div>
 
-      <ThreadCommunityProvider questionId={q.id} answers={q.answers}>
         <h2 className="mt-10 text-lg font-bold">
           <CommunityAnswerCount base={0} />
         </h2>
