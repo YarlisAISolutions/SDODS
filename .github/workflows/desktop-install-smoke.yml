@@ -142,7 +142,13 @@ jobs:
           if (Test-Path node_modules/@sdods/cli/bin/sdods.js) {
             & $node node_modules/@sdods/cli/bin/sdods.js init . --force --no-install --no-browsers 2>&1
             "exit $LASTEXITCODE"
-          } else { 'the CLI was never installed into the workspace' }
+          } else {
+            # Replay the bootstrap's download step (bootstrap.ts) with the bundled npm.
+            'the CLI was never installed into the workspace; replaying the download step:'
+            $npm = Join-Path '${{ steps.install.outputs.dir }}' 'resources\node\node_modules\npm\bin\npm-cli.js'
+            & $node $npm install '@sdods/cli@latest' 2>&1 | Select-Object -Last 60
+            "npm exit $LASTEXITCODE"
+          }
 
       - name: Quit and uninstall
         if: always() && steps.install.outputs.uninstaller
@@ -165,6 +171,8 @@ jobs:
             Copy-Item "$logs\*" smoke-logs -Recurse
             Get-Content (Join-Path $logs 'desktop.log') -ErrorAction SilentlyContinue
           } else { 'no desktop.log was written' }
+          $npmLogs = Join-Path $env:LOCALAPPDATA 'npm-cache\_logs'
+          if (Test-Path $npmLogs) { Copy-Item $npmLogs smoke-logs\npm-logs -Recurse }
           $smoke = '${{ steps.launch.outputs.ws }}\smoke.txt'
           if ('${{ steps.launch.outputs.ws }}' -and (Test-Path $smoke)) { Copy-Item $smoke smoke-logs }
 
