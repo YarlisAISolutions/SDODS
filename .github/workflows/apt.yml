@@ -119,8 +119,8 @@ jobs:
           du -sh apps/www/public/apt
 
           branch="chore/apt-$TAG"
-          git config user.name 'SDODS Release'
-          git config user.email 'release@sdods.com'
+          git config user.name 'SDODS'
+          git config user.email 'support@sdods.com'
           git checkout -b "$branch"
           git add apps/www/public/apt
           git diff --quiet --cached && { echo 'apt metadata unchanged'; exit 0; }

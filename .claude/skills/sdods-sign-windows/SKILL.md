@@ -11,8 +11,10 @@ see `code-signing`. For the release loop see `sdods-desktop-release`. For winget
 `sdods-release-channels`.
 
 **Current state:** the Azure route is fully wired in `.github/workflows/desktop.yml` (#169). It
-turns on when `AZURE_CLIENT_ID` is set, fails if any of the other six values is missing, and fails
-the build if any `.exe` is not validly signed. The only missing pieces are credentials, and only a
+turns on when `AZURE_CLIENT_ID` and all six other values are set, and then fails the build if any
+`.exe` is not validly signed. If `AZURE_CLIENT_ID` is set but any of the others is missing (for
+example while identity validation is still pending), the build **warns and ships unsigned**, and
+the release notes say so. The only missing pieces are credentials, and only a
 person can obtain them. It all runs on GitHub's Windows runner, so the whole setup can be done
 from a Mac.
 
@@ -286,7 +288,7 @@ Follow `sdods-desktop-release` → *The loop*.
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| `AZURE_CLIENT_ID is set but X is not` | One of the other six missing | `gh secret list` / `gh variable list`, then set it |
+| Warning `Azure signing is incomplete (missing: …); building Windows UNSIGNED` | One or more of the other six values is not set yet | `gh secret list` / `gh variable list`, then set what is missing. Until then Windows builds succeed unsigned |
 | `403` / `Forbidden` from codesigning endpoint | Role missing or scoped wrong, or wrong region endpoint | Recheck A3's role assignment, and match `AZURE_SIGN_ENDPOINT` to the account's region |
 | `publisherName` mismatch / signature invalid | `AZURE_SIGN_PUBLISHER` ≠ Subject CN | Copy the CN exactly from the profile |
 | `401` after months of working | Client secret expired | Rotate (A3 + A4) |

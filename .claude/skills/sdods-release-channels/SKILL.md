@@ -234,8 +234,10 @@ falling back to `GITHUB_TOKEN` when it is unset.
   previous history is `~/Continnum/sdods-history-backup/sdods-before-rewrite-2026-09-29.bundle`.
   With the token, the maintainer is the author, and CI runs on those PRs (it never runs on a PR
   opened with `GITHUB_TOKEN`).
-- **Commit identity:** commits made inside those workflows use `SDODS Release <release@sdods.com>`,
-  which is not a GitHub account, so the squash merge adds no bot co-author.
+- **Commit identity:** commits made inside those workflows use `SDODS <support@sdods.com>`, a real
+  mailbox (an alias in Google Workspace) that is **not** on any GitHub account, so the squash merge
+  adds no bot co-author and the commits link to nobody's profile. Never add `support@sdods.com` to
+  a GitHub account's emails: GitHub would credit every one of those commits to that account.
   `changesets/action` commits through the API, so the token alone decides its author.
 - **Token:** fine-grained, resource owner YarlisAISolutions, repository `sdods` only, with Contents,
   Pull requests and Workflows all read and write. It was set on 2026-09-29 and expires on the date

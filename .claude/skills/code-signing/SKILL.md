@@ -152,8 +152,8 @@ Then set, on the repository (Settings → Secrets and variables → Actions):
 **Do not put `azureSignOptions` in `electron-builder.yml`.** Once that block exists,
 electron-builder always signs through Azure and fails without credentials, which breaks every local
 and fork build. `desktop.yml` passes it as `-c.win.azureSignOptions.*` only when `AZURE_CLIENT_ID`
-is set, fails if any of the other six is missing, and then fails the build if any Windows `.exe`
-is not validly Authenticode-signed. All of this runs on GitHub's Windows runner, so it can be set
+and the other six are set, then fails the build if any Windows `.exe` is not validly
+Authenticode-signed. With only some of the values set, it warns and builds unsigned. All of this runs on GitHub's Windows runner, so it can be set
 up entirely from a Mac.
 
 **Version note:** `azureSignOptions` is electron-builder v26 syntax, which is what this repo pins

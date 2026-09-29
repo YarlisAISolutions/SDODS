@@ -77,8 +77,8 @@ jobs:
           token: ${{ secrets.RELEASE_PR_TOKEN || secrets.GITHUB_TOKEN }}
           # A neutral identity that is not a GitHub account: the default (github-actions[bot] as
           # committer) would come back as a co-author on the squash merge.
-          author: SDODS Release <release@sdods.com>
-          committer: SDODS Release <release@sdods.com>
+          author: SDODS <support@sdods.com>
+          committer: SDODS <support@sdods.com>
           branch: chore/channels-sync
           base: main
           title: 'chore(www): sync install channels with the registries'

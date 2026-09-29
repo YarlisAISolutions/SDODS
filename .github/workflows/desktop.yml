@@ -69,6 +69,7 @@ jobs:
       # See .claude/skills/code-signing/SKILL.md for how to obtain them, and for the
       # geographic restriction that decides which Windows route is even available to you.
       - name: Build installers
+        id: build
         working-directory: apps/desktop
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -117,15 +118,24 @@ jobs:
           # once that block exists electron-builder always signs through Azure and fails without
           # credentials, which would break every local and fork build. Here it appears only when
           # the service principal does, so an unsigned build still succeeds.
+          #
+          # A half-finished Azure setup (the service principal exists, the certificate profile does
+          # not yet) builds unsigned with a warning instead of failing: identity validation takes days,
+          # and an unsigned Windows build is what shipped before signing existed. The verify step below
+          # enforces a signature only when this step actually signed (the `windows_signing` output).
           sign_args=()
           if [ "${{ runner.os }}" = Windows ] && [ -n "${AZURE_CLIENT_ID:-}" ]; then
+            missing=()
             for var in AZURE_TENANT_ID AZURE_CLIENT_SECRET AZURE_SIGN_ENDPOINT AZURE_SIGN_ACCOUNT \
                        AZURE_SIGN_PROFILE AZURE_SIGN_PUBLISHER; do
-              if [ -z "${!var:-}" ]; then
-                echo "::error::AZURE_CLIENT_ID is set but $var is not; see .claude/skills/code-signing/SKILL.md"
-                exit 1
-              fi
+              [ -n "${!var:-}" ] || missing+=("$var")
             done
+          fi
+          if [ "${{ runner.os }}" = Windows ] && [ -n "${AZURE_CLIENT_ID:-}" ] && [ "${#missing[@]}" -gt 0 ]; then
+            echo "::warning::Azure signing is incomplete (missing: ${missing[*]}); building Windows UNSIGNED. See .claude/skills/sdods-sign-windows/SKILL.md"
+            echo "windows_signing=none" >> "$GITHUB_OUTPUT"
+          elif [ "${{ runner.os }}" = Windows ] && [ -n "${AZURE_CLIENT_ID:-}" ]; then
+            echo "windows_signing=azure" >> "$GITHUB_OUTPUT"
             sign_args=(
               "-c.win.azureSignOptions.endpoint=$AZURE_SIGN_ENDPOINT"
               "-c.win.azureSignOptions.codeSigningAccountName=$AZURE_SIGN_ACCOUNT"
@@ -205,14 +215,10 @@ jobs:
       # When signing credentials exist, an unsigned installer is a failed build, not a quiet
       # fallback: winget's validation and SmartScreen both key on this signature (#169).
       - name: Verify the Windows installers are signed
-        if: runner.os == 'Windows'
-        env:
-          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+        if: runner.os == 'Windows' && steps.build.outputs.windows_signing == 'azure'
         working-directory: apps/desktop
         shell: pwsh
         run: |
-          # Checked here, not in `if:`: a step's own env is not visible to its condition.
-          if (-not $env:AZURE_CLIENT_ID) { 'No signing credentials; this build is unsigned.'; exit 0 }
           $files = @(Get-ChildItem release/*.exe) + @(Get-ChildItem release/win-*/SDODS.exe)
           if ($files.Count -eq 0) { throw 'no Windows executables found' }
           $bad = 0
