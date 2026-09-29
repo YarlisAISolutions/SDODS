@@ -154,11 +154,39 @@ unsure posts pay for Sonnet. The $5/day default covers thousands of posts.
 
 ---
 
-## Roadmap (phases 2 and 3)
+## Votes, accepted answers and reputation (phase 2)
 
-- **Phase 2:** votes on questions and answers, accepted answers by the asker, reputation (+10 for an
-  upvoted post, +15 for an accepted answer, −2 for a downvoted one) and reputation-gated privileges.
-  Reputation is written only by the service; `users/{uid}.rep` exists from day one at 1.
+All of it is written by the service only, inside one Firestore transaction per action: the vote
+(`votes/{uid}__{post}`), the post's `score`, every affected `users/{uid}.rep`, and a
+`repEvents` history row. The rules are in one pure module, `src/reputation.ts`:
+
+| Event | Reputation |
+|---|---|
+| Your question or answer is upvoted | +10 |
+| Your question or answer is downvoted | −2 (and −1 to whoever downvoted an *answer*) |
+| Your answer is accepted | +15 (nothing for accepting your own) |
+| You accept someone's answer | +2 |
+| Vote changed or withdrawn, answer un-accepted | fully reversed |
+| Floor | never below 1 |
+
+| Privilege | Default | Setting |
+|---|---|---|
+| Vote up | 15 rep | `COMMUNITY_UPVOTE_REP` |
+| Vote down | 125 rep | `COMMUNITY_DOWNVOTE_REP` |
+| Votes per day | 40 | `COMMUNITY_VOTES_PER_DAY` |
+
+Editors and admins are exempt from the reputation thresholds. Replies are not scored. The
+illustrative archive threads are never votable; answers people post on them are.
+
+**Bootstrapping a new community:** with Stack Overflow's thresholds, the first members cannot upvote
+until an answer of theirs is accepted (+15). If that stalls early activity, lower
+`COMMUNITY_UPVOTE_REP` (e.g. to 1) at deploy time and raise it later; nothing is migrated.
+
+Routes: `POST /votes {path, value: 1|-1|0}`, `GET /votes/mine?paths=…`,
+`POST /accept {questionId, answerId|null}` (asker only).
+
+## Roadmap (phase 3)
+
 - **Phase 3:** badges (bronze/silver/gold), edits with revision history and suggested edits, close
   as duplicate/off-topic, flags, comments.
 - The illustrative archive threads stay separate and labelled; real reputation is never mixed with

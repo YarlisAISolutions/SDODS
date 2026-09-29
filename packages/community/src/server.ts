@@ -4,10 +4,13 @@ import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest }
 import { canModerate, type Verifier, type Viewer } from './auth.js';
 import type { CommunityConfig } from './config.js';
 import type { ThreadIndex } from './duplicates.js';
+import { acceptAnswer, castVote } from './engagement.js';
+import { canVote, type VoteValue } from './reputation.js';
 import { redact } from './redact.js';
 import { parseAnswer, parseQuestion, parseResolve, parseRole } from './requests.js';
 import { review, type Decision, type ReviewResult } from './review.js';
 import {
+  newId,
   POST_PATH,
   type CommunityStore,
   type PostStatus,
@@ -274,6 +277,99 @@ export async function buildCommunityServer(deps: CommunityServerDeps): Promise<F
       body,
       question: `${question.title}\n\n${question.body}`.trim(),
     });
+  });
+
+  // Votes per user per day, in memory per instance, like the post limit.
+  const votesToday = new Map<string, number>();
+  const overVoteLimit = (uid: string): boolean => {
+    const key = `${utcDay(now())}:${uid}`;
+    const n = votesToday.get(key) ?? 0;
+    if (n >= config.votesPerDay) return true;
+    votesToday.set(key, n + 1);
+    if (votesToday.size > 10_000) votesToday.clear();
+    return false;
+  };
+
+  const VOTE_ERRORS = {
+    not_found: [404, 'That post is not available.'],
+    own_post: [403, 'You cannot vote on your own post.'],
+    not_votable: [400, 'Replies are not voted on; vote on the answer instead.'],
+  } as const;
+
+  app.post('/votes', async (req, reply) => {
+    const viewer = await viewerOf(req, reply);
+    if (!viewer) return reply;
+    const { path, value } = (req.body ?? {}) as { path?: unknown; value?: unknown };
+    if (
+      typeof path !== 'string' ||
+      !POST_PATH.test(path) ||
+      (value !== 1 && value !== -1 && value !== 0)
+    )
+      return reply.code(400).send({ error: 'Expected { path, value: 1 | -1 | 0 }' });
+    const rep = await store.userRep(viewer.uid);
+    const allowed = canVote(value as VoteValue, rep, viewer.role, {
+      upvote: config.upvoteRep,
+      downvote: config.downvoteRep,
+    });
+    if (!allowed.ok)
+      return reply.code(403).send({
+        error: `You need ${allowed.need} reputation to vote ${value === 1 ? 'up' : 'down'}; you have ${rep}. Answers that get accepted earn 15.`,
+        need: allowed.need,
+        rep,
+      });
+    if (value !== 0 && overVoteLimit(viewer.uid))
+      return reply
+        .code(429)
+        .send({ error: `That is ${config.votesPerDay} votes today. More tomorrow.` });
+    const out = await castVote(store.transact, newId, {
+      uid: viewer.uid,
+      path,
+      value: value as VoteValue,
+    });
+    if (!out.ok) {
+      const [code, error] = VOTE_ERRORS[out.error];
+      return reply.code(code).send({ error });
+    }
+    return out;
+  });
+
+  app.get('/votes/mine', async (req, reply) => {
+    const viewer = await viewerOf(req, reply);
+    if (!viewer) return reply;
+    const raw = String((req.query as { paths?: unknown }).paths ?? '');
+    const paths = raw.split(',').filter((p) => POST_PATH.test(p));
+    if (paths.length > 100) return reply.code(400).send({ error: 'At most 100 paths' });
+    return { votes: await store.myVotes(viewer.uid, paths), rep: await store.userRep(viewer.uid) };
+  });
+
+  app.post('/accept', async (req, reply) => {
+    const viewer = await viewerOf(req, reply);
+    if (!viewer) return reply;
+    const { questionId, answerId } = (req.body ?? {}) as {
+      questionId?: unknown;
+      answerId?: unknown;
+    };
+    const id = /^[A-Za-z0-9]{1,40}$/;
+    if (
+      typeof questionId !== 'string' ||
+      !id.test(questionId) ||
+      !(answerId === null || (typeof answerId === 'string' && id.test(answerId)))
+    )
+      return reply.code(400).send({ error: 'Expected { questionId, answerId | null }' });
+    const out = await acceptAnswer(store.transact, newId, {
+      uid: viewer.uid,
+      questionId,
+      answerId: answerId as string | null,
+    });
+    if (!out.ok) {
+      const [code, error] = {
+        not_found: [404, 'That question is not available.'],
+        not_owner: [403, 'Only the person who asked can accept an answer.'],
+        not_answer: [400, 'That is not a published answer to this question.'],
+      }[out.error] as [number, string];
+      return reply.code(code).send({ error });
+    }
+    return out;
   });
 
   app.get('/review/queue', async (req, reply) => {

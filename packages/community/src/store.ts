@@ -13,6 +13,8 @@
 
 import { randomInt } from 'node:crypto';
 import type { Role } from './auth.js';
+import { votePath, type Doc, type Transact, type Write } from './engagement.js';
+import type { VoteValue } from './reputation.js';
 import type { Decision, ReviewCall, Signals } from './review.js';
 
 export type PostStatus = 'published' | 'pending' | 'rejected';
@@ -99,6 +101,12 @@ export interface CommunityStore {
   setRole(uid: string, role: Role): Promise<void>;
   spentToday(day: string): Promise<number>;
   addSpend(day: string, usd: number): Promise<void>;
+  /** Runs reads and commits the returned writes atomically (see engagement.ts). */
+  transact: Transact;
+  /** A user's reputation; 1 for someone with no profile yet. */
+  userRep(uid: string): Promise<number>;
+  /** The user's current votes on these posts; posts they have not voted on are absent. */
+  myVotes(uid: string, paths: string[]): Promise<Record<string, VoteValue>>;
 }
 
 /** A document path the service writes: guards every path that arrives from a browser. */
@@ -150,7 +158,7 @@ interface MemDoc {
 
 export class MemoryStore implements CommunityStore {
   readonly docs = new Map<string, MemDoc>();
-  readonly users = new Map<string, UserRecord & { role?: Role }>();
+  readonly users = new Map<string, UserRecord & { role?: Role; rep?: number }>();
   readonly reviews: ReviewLog[] = [];
   readonly spend = new Map<string, number>();
   private seq = 0;
@@ -196,6 +204,46 @@ export class MemoryStore implements CommunityStore {
   }
   async addSpend(day: string, usd: number) {
     this.spend.set(day, (this.spend.get(day) ?? 0) + usd);
+  }
+
+  private read(path: string): Doc | null {
+    if (path.startsWith('users/')) {
+      const u = this.users.get(path.slice(6));
+      return u ? { rep: u.rep ?? 1, role: u.role ?? 'member', display: u.display } : null;
+    }
+    const d = this.docs.get(path);
+    return d ? { ...d.fields } : null;
+  }
+
+  transact: Transact = async (fn) => {
+    const { writes, result } = await fn(async (path) => this.read(path));
+    for (const w of writes) this.write(w);
+    return result;
+  };
+
+  private write(w: Write) {
+    if (w.path.startsWith('users/')) {
+      const uid = w.path.slice(6);
+      const u = this.users.get(uid) ?? { uid, display: uid, firstSeen: new Date() };
+      this.users.set(uid, { ...u, ...(w.fields as { rep?: number }) });
+      return;
+    }
+    const d = this.docs.get(w.path);
+    if (d && w.mask) Object.assign(d.fields, w.fields);
+    else this.docs.set(w.path, { fields: { ...w.fields }, createdAt: d?.createdAt ?? new Date() });
+  }
+
+  async userRep(uid: string) {
+    return this.users.get(uid)?.rep ?? 1;
+  }
+
+  async myVotes(uid: string, paths: string[]) {
+    const out: Record<string, VoteValue> = {};
+    for (const p of paths) {
+      const v = this.docs.get(votePath(uid, p))?.fields.value;
+      if (v === 1 || v === -1) out[p] = v;
+    }
+    return out;
   }
 }
 
@@ -485,5 +533,70 @@ export class FirestoreStore implements CommunityStore {
       ],
     });
     await this.ok(res, 'addSpend');
+  }
+
+  private docName(path: string) {
+    return `${this.root}/${path}`;
+  }
+
+  private toWrite(w: Write) {
+    return {
+      update: { name: this.docName(w.path), fields: toFields(w.fields) },
+      ...(w.mask ? { updateMask: { fieldPaths: w.mask } } : {}),
+    };
+  }
+
+  transact: Transact = async (fn) => {
+    // Firestore aborts a transaction whose reads changed before commit; the whole function reruns.
+    for (let attempt = 1; ; attempt++) {
+      const begun = await this.ok(
+        await this.call('POST', `${this.base}:beginTransaction`, { options: { readWrite: {} } }),
+        'beginTransaction',
+      );
+      const { transaction } = (await begun.json()) as { transaction: string };
+      const get = async (path: string): Promise<Doc | null> => {
+        const res = await this.call(
+          'GET',
+          `${this.base}/${path}?transaction=${encodeURIComponent(transaction)}`,
+        );
+        if (res.status === 404) return null;
+        await this.ok(res, `get ${path}`);
+        return fromFields(((await res.json()) as FsDocument).fields ?? {});
+      };
+      const { writes, result } = await fn(get);
+      const res = await this.call('POST', `${this.base}:commit`, {
+        transaction,
+        writes: writes.map((w) => this.toWrite(w)),
+      });
+      if (res.ok) return result;
+      if (res.status === 409 && attempt < 5) continue;
+      await this.ok(res, 'commit');
+    }
+  };
+
+  async userRep(uid: string) {
+    const res = await this.call('GET', `${this.base}/users/${encodeURIComponent(uid)}`);
+    if (res.status === 404) return 1;
+    await this.ok(res, 'userRep');
+    const f = fromFields(((await res.json()) as FsDocument).fields ?? {});
+    return typeof f.rep === 'number' ? f.rep : 1;
+  }
+
+  async myVotes(uid: string, paths: string[]) {
+    const out: Record<string, VoteValue> = {};
+    if (!paths.length) return out;
+    const res = await this.ok(
+      await this.call('POST', `${this.base}:batchGet`, {
+        documents: paths.map((p) => this.docName(votePath(uid, p))),
+      }),
+      'myVotes',
+    );
+    const rows = (await res.json()) as Array<{ found?: FsDocument }>;
+    for (const r of rows) {
+      if (!r.found) continue;
+      const f = fromFields(r.found.fields ?? {});
+      if ((f.value === 1 || f.value === -1) && typeof f.post === 'string') out[f.post] = f.value;
+    }
+    return out;
   }
 }

@@ -2,6 +2,7 @@ import {
   addDoc,
   collection,
   doc,
+  getDoc,
   getDocs,
   limit,
   orderBy,
@@ -26,6 +27,11 @@ export type Category = (typeof CATEGORIES)[number]['value'];
 
 export type Question = {
   id: string;
+  /** The author's account, for posts made signed in; null for older, anonymous ones. */
+  uid: string | null;
+  score: number;
+  /** The answer the asker accepted, or null. */
+  acceptedAnswerId: string | null;
   title: string;
   body: string;
   name: string;
@@ -36,12 +42,39 @@ export type Question = {
 
 export type Answer = {
   id: string;
+  uid: string | null;
+  score: number;
   body: string;
   name: string;
   /** Empty for an answer to the question; otherwise the id of the answer this replies to. */
   parentId: string;
   createdAt: Date | null;
 };
+
+function engagement(data: Record<string, unknown>): { uid: string | null; score: number } {
+  return {
+    uid: typeof data.uid === 'string' ? data.uid : null,
+    score: typeof data.score === 'number' ? data.score : 0,
+  };
+}
+
+/** Public profile basics for signed-in authors: reputation and role. Missing profiles are skipped. */
+export async function profiles(
+  uids: string[],
+): Promise<Record<string, { rep: number; role: string }>> {
+  const unique = [...new Set(uids)].slice(0, 50);
+  const snaps = await Promise.all(unique.map((uid) => getDoc(doc(db(), 'users', uid))));
+  const out: Record<string, { rep: number; role: string }> = {};
+  for (const s of snaps) {
+    if (!s.exists()) continue;
+    const d = s.data();
+    out[s.id] = {
+      rep: typeof d.rep === 'number' ? d.rep : 1,
+      role: typeof d.role === 'string' ? d.role : 'member',
+    };
+  }
+  return out;
+}
 
 function toDate(value: unknown): Date | null {
   const ts = value as Timestamp | undefined;
@@ -75,6 +108,12 @@ export async function listQuestions(): Promise<Question[]> {
       );
       return {
         id: doc.id,
+        uid: typeof data.uid === 'string' ? data.uid : null,
+        score: typeof data.score === 'number' ? data.score : 0,
+        acceptedAnswerId:
+          typeof data.acceptedAnswerId === 'string' && data.acceptedAnswerId
+            ? data.acceptedAnswerId
+            : null,
         title: String(data.title ?? ''),
         body: String(data.body ?? ''),
         name: String(data.name ?? ''),
@@ -82,6 +121,7 @@ export async function listQuestions(): Promise<Question[]> {
         createdAt: toDate(data.createdAt),
         answers: answers.docs.map((a) => ({
           id: a.id,
+          ...engagement(a.data()),
           body: String(a.data().body ?? ''),
           name: String(a.data().name ?? ''),
           parentId: String(a.data().parentId ?? ''),
@@ -165,6 +205,7 @@ export async function listThreadAnswers(slug: string): Promise<Answer[]> {
   );
   return snap.docs.map((d) => ({
     id: d.id,
+    ...engagement(d.data()),
     body: String(d.data().body ?? ''),
     name: String(d.data().name ?? ''),
     parentId: String(d.data().parentId ?? ''),
