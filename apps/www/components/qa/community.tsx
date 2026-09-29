@@ -1,0 +1,167 @@
+'use client';
+
+import { useEffect, useState, type ReactNode } from 'react';
+import Link from 'next/link';
+import type { User } from 'firebase/auth';
+import { signIn, signOutUser, watchUser, type PostResult, type Provider } from '@/lib/community';
+
+/** The signed-in Firebase user, or null; `undefined` while it is still being worked out. */
+export function useUser(): User | null | undefined {
+  const [user, setUser] = useState<User | null | undefined>(undefined);
+  useEffect(() => {
+    let stop: (() => void) | undefined;
+    let live = true;
+    void watchUser((u) => live && setUser(u)).then((unsub) => {
+      if (live) stop = unsub;
+      else unsub();
+    });
+    return () => {
+      live = false;
+      stop?.();
+    };
+  }, []);
+  return user;
+}
+
+/**
+ * Shows sign-in buttons until someone is signed in, then the form it wraps with a "posting as"
+ * line. Posting needs an account: reputation, the review audit trail and rate limits all hang off it.
+ */
+export function SignInGate({
+  user,
+  children,
+}: {
+  user: User | null | undefined;
+  children: ReactNode;
+}) {
+  const [busy, setBusy] = useState<Provider | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  if (user === undefined)
+    return <p className="muted text-sm">Checking whether you&rsquo;re signed in…</p>;
+
+  if (!user) {
+    const go = async (p: Provider) => {
+      setBusy(p);
+      setError(null);
+      try {
+        await signIn(p);
+      } catch (e) {
+        const code = (e as { code?: string }).code ?? '';
+        // Closing the popup is a choice, not an error worth a message.
+        if (!code.includes('popup-closed') && !code.includes('cancelled-popup'))
+          setError('Sign-in did not complete. Try again, or try the other option.');
+      } finally {
+        setBusy(null);
+      }
+    };
+    return (
+      <div className="grid gap-3">
+        <p className="text-sm">Sign in to post. Your name is shown; your email address never is.</p>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            className="btn btn-primary"
+            disabled={busy !== null}
+            onClick={() => go('github')}
+          >
+            {busy === 'github' ? 'Opening GitHub…' : 'Sign in with GitHub'}
+          </button>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            disabled={busy !== null}
+            onClick={() => go('google')}
+          >
+            {busy === 'google' ? 'Opening Google…' : 'Sign in with Google'}
+          </button>
+        </div>
+        {error && (
+          <p role="alert" className="text-sm">
+            {error}
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid gap-3">
+      <p className="muted text-xs">
+        Posting as <span className="font-medium">{user.displayName ?? 'you'}</span> ·{' '}
+        <button type="button" className="underline" onClick={() => void signOutUser()}>
+          Sign out
+        </button>
+      </p>
+      {children}
+    </div>
+  );
+}
+
+/** What the review decided, in the author's terms. */
+export function ReviewOutcome({
+  result,
+  kind,
+  publishedHref,
+}: {
+  result: PostResult;
+  kind: 'question' | 'answer' | 'reply';
+  publishedHref?: string;
+}) {
+  const heading =
+    result.status === 'published'
+      ? `Your ${kind} is live.`
+      : result.status === 'pending'
+        ? `Your ${kind} is waiting for an editor.`
+        : `Your ${kind} was not published.`;
+
+  return (
+    <div className="grid gap-3" role="status">
+      <h2 className="font-semibold">{heading}</h2>
+      {result.status === 'published' && publishedHref && (
+        <p className="text-sm">
+          <Link href={publishedHref} className="underline">
+            View it
+          </Link>
+        </p>
+      )}
+      {result.reason && <p className="text-sm">{result.reason}</p>}
+      {result.status === 'rejected' && (
+        <p className="muted text-sm">
+          This Q&amp;A only takes questions and answers about SDODS itself. If yours is, add the
+          command, config or error message that shows it and post again.
+        </p>
+      )}
+      {result.redacted && (
+        <p className="muted text-sm">
+          Something that looked like a key, token or password was replaced with{' '}
+          <code>[redacted]</code> before it was saved. If it was real, rotate it anyway.
+        </p>
+      )}
+      {result.notes.length > 0 && (
+        <div className="text-sm">
+          <p className="font-medium">Suggestions</p>
+          <ul className="muted mt-1 list-disc pl-5">
+            {result.notes.map((n) => (
+              <li key={n}>{n}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {result.similar.length > 0 && (
+        <div className="text-sm">
+          <p className="font-medium">These may already answer it</p>
+          <ul className="mt-1 list-disc pl-5">
+            {result.similar.map((s) => (
+              <li key={s.slug}>
+                <Link href={`/questions/${s.slug}/`} className="underline">
+                  {s.title}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
