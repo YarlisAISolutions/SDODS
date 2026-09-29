@@ -35,7 +35,7 @@
     "dogfood": "bash scripts/dogfood.sh",
     "www:dev": "bun run --cwd apps/www dev",
     "www:build": "bun run --cwd apps/www build",
-    "www:build:release": "WWW_SITE_URL=https://sdods.com NEXT_PUBLIC_DESKTOP_PLATFORMS=linux NEXT_PUBLIC_MAXI_URL=https://sdods-maxi-7rxessch3q-uc.a.run.app bun run www:build",
+    "www:build:release": "WWW_SITE_URL=https://sdods.com NEXT_PUBLIC_DESKTOP_PLATFORMS=windows,linux NEXT_PUBLIC_MAXI_URL=https://sdods-maxi-7rxessch3q-uc.a.run.app bun run www:build",
     "www:screenshots": "bun run --cwd apps/www screenshots",
     "api:build": "gcloud builds submit --project automax-docs --region us-central1 --tag us-central1-docker.pkg.dev/automax-docs/sdods/automax-api:latest .",
     "api:deploy": "bash deploy/deploy-cloud-run.sh",

@@ -128,6 +128,22 @@ jobs:
           "- **@smoke:** exit $code" >> $env:GITHUB_STEP_SUMMARY
           if ($code) { throw "sdods run exited $code" }
 
+      # When first run fails, desktop.log has only the summary line. Re-run the bootstrap's scaffold
+      # command (bootstrap.ts) the way the app does, so the real error is in the job log.
+      - name: Diagnose a failed first run
+        if: failure() && steps.launch.outputs.ws
+        working-directory: ${{ steps.launch.outputs.ws }}
+        continue-on-error: true
+        run: |
+          $node = Join-Path '${{ steps.install.outputs.dir }}' 'resources\node\node.exe'
+          $env:SDODS_ROOT = '${{ steps.launch.outputs.ws }}'
+          $env:PATH = "$(Split-Path $node);$env:SystemRoot\System32;$env:SystemRoot"
+          Get-ChildItem -Force | Format-Table Name, Length
+          if (Test-Path node_modules/@sdods/cli/bin/sdods.js) {
+            & $node node_modules/@sdods/cli/bin/sdods.js init . --force --no-install --no-browsers 2>&1
+            "exit $LASTEXITCODE"
+          } else { 'the CLI was never installed into the workspace' }
+
       - name: Quit and uninstall
         if: always() && steps.install.outputs.uninstaller
         run: |
@@ -137,6 +153,20 @@ jobs:
           "uninstaller exited $($p.ExitCode)"
           Start-Sleep 5
           if (Test-Path (Join-Path '${{ steps.install.outputs.dir }}' 'SDODS.exe')) { throw 'SDODS.exe still present after uninstall' }
+
+      # The app logs to %LOCALAPPDATA% on C:, the checkout is on D:, and upload-artifact refuses a
+      # path outside the workspace. Print the log (the fastest thing to read) and copy it in.
+      - name: Collect logs
+        if: always()
+        run: |
+          New-Item -ItemType Directory -Force smoke-logs | Out-Null
+          $logs = Join-Path $env:LOCALAPPDATA 'SDODS\logs'
+          if (Test-Path $logs) {
+            Copy-Item "$logs\*" smoke-logs -Recurse
+            Get-Content (Join-Path $logs 'desktop.log') -ErrorAction SilentlyContinue
+          } else { 'no desktop.log was written' }
+          $smoke = '${{ steps.launch.outputs.ws }}\smoke.txt'
+          if ('${{ steps.launch.outputs.ws }}' -and (Test-Path $smoke)) { Copy-Item $smoke smoke-logs }
 
       - name: Upload logs
         if: always()

@@ -191,6 +191,10 @@ export async function initWorkspace(target: string, flags: InitFlags): Promise<I
           '@playwright/test':
             flags.link && flags.pm === 'bun' ? 'link:@playwright/test' : '^1.63.0',
           'playwright-bdd': flags.link && flags.pm === 'bun' ? 'link:playwright-bdd' : '^9.2.1',
+          // Optional in @sdods/core (a11y/audit.ts imports it lazily), but the demo project this
+          // scaffolds has an @a11y scenario, which failed on every fresh workspace without it.
+          // Same pin as packages/core.
+          '@axe-core/playwright': '4.13.0',
         },
         devDependencies: {
           '@types/node': '^22.20.2',

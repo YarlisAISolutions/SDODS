@@ -109,3 +109,12 @@ export function toCurl(req: {
     parts.push(`--data '${typeof req.body === 'string' ? req.body : JSON.stringify(req.body)}'`);
   return parts.join(' \\\n  ');
 }
+
+/**
+ * sdods.com's install page, opened on the tab for this machine's OS. The page detects the OS
+ * itself too; passing it keeps the link right when it is copied to someone else.
+ */
+export function cliInstallUrl(ua: string = navigator.userAgent || ''): string {
+  const os = /Windows/i.test(ua) ? 'windows' : /Mac OS X|Macintosh/i.test(ua) ? 'macos' : 'linux';
+  return `https://sdods.com/install/?os=${os}`;
+}
