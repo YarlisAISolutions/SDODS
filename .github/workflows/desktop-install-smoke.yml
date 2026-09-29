@@ -1,0 +1,149 @@
+name: desktop-install-smoke
+
+# Installs a PUBLISHED Windows installer the way a user would and proves it works end to end:
+# download from the public releases repo, check the checksum, silent install, launch with nothing
+# on PATH, wait for the first-run install and the local server, run the demo-shop @smoke suite
+# from the installed app's own runtime, uninstall.
+#
+# desktop.yml checks the packaged files; this checks the thing people actually download. 0.1.0's
+# Windows installers passed every packaging check and still could not do their first-run install,
+# so a Windows download is not linked from sdods.com/download until this is green for that release.
+#
+# Only win-x64: it is the runner's architecture. The arm64 installer comes from the same build but
+# is not run here.
+#
+#   gh workflow run desktop-install-smoke.yml -f tag=desktop-v0.1.2
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Desktop release tag to install (empty = the latest published release)'
+        type: string
+        default: ''
+  # Editing this workflow runs it against the latest release, so a broken smoke fails in its own PR.
+  pull_request:
+    paths: [.github/workflows/desktop-install-smoke.yml]
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    name: windows · x64 · install + @smoke
+    runs-on: windows-latest
+    timeout-minutes: 45
+    env:
+      RELEASE_REPO: ${{ vars.DESKTOP_RELEASE_REPO || 'YarlisAISolutions/sdods-releases' }}
+      GH_TOKEN: ${{ github.token }}
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - name: Download the installer and checksums
+        id: dl
+        run: |
+          $tag = '${{ inputs.tag }}'
+          if (-not $tag) { $tag = gh release view -R $env:RELEASE_REPO --json tagName -q .tagName }
+          $ver = $tag -replace '^desktop-v', ''
+          $exe = "SDODS-Setup-$ver-win-x64.exe"
+          New-Item -ItemType Directory -Force dl | Out-Null
+          gh release download $tag -R $env:RELEASE_REPO -D dl -p $exe -p SHA256SUMS.txt
+          if ($LASTEXITCODE) { throw "could not download $exe from $env:RELEASE_REPO $tag" }
+          $want = (Select-String -Path dl/SHA256SUMS.txt -Pattern ([regex]::Escape($exe)) |
+                   Select-Object -First 1).Line.Split(' ')[0].ToLower()
+          $got = (Get-FileHash "dl/$exe" -Algorithm SHA256).Hash.ToLower()
+          if ($want -ne $got) { throw "checksum mismatch for ${exe}: expected $want, got $got" }
+          "Installing $exe ($tag), sha256 ok"
+          "exe=dl/$exe" >> $env:GITHUB_OUTPUT
+          "tag=$tag" >> $env:GITHUB_OUTPUT
+
+      # Informational: says whether this release is signed, and by whom. Never fails the job; the
+      # signing gate lives in desktop.yml, where the build happens.
+      - name: Signature
+        run: |
+          $sig = Get-AuthenticodeSignature '${{ steps.dl.outputs.exe }}'
+          "Status: $($sig.Status)"
+          if ($sig.SignerCertificate) { "Signer: $($sig.SignerCertificate.Subject)" }
+          "- **Signature:** $($sig.Status) $($sig.SignerCertificate.Subject)" >> $env:GITHUB_STEP_SUMMARY
+
+      - name: Silent install (per user)
+        id: install
+        run: |
+          $p = Start-Process '${{ steps.dl.outputs.exe }}' -ArgumentList '/S' -Wait -PassThru
+          if ($p.ExitCode) { throw "installer exited $($p.ExitCode)" }
+          $app = Get-ChildItem "$env:LOCALAPPDATA\Programs" -Recurse -Filter SDODS.exe -ErrorAction SilentlyContinue |
+                 Select-Object -First 1
+          if (-not $app) { throw 'SDODS.exe not found under %LOCALAPPDATA%\Programs after install' }
+          $dir = $app.DirectoryName
+          foreach ($f in @('resources\node\node.exe', 'resources\node\node_modules\npm\bin\npm-cli.js')) {
+            if (-not (Test-Path (Join-Path $dir $f))) { throw "installed app is missing $f" }
+          }
+          $un = Get-ChildItem $dir -Filter 'Uninstall*.exe' | Select-Object -First 1
+          "Installed to $dir"
+          "dir=$dir" >> $env:GITHUB_OUTPUT
+          "uninstaller=$($un.FullName)" >> $env:GITHUB_OUTPUT
+
+      # The zero-prerequisite promise: the runner has Node, git and friends on PATH, a user's PC may
+      # not. Launch with only the Windows system directories on PATH.
+      - name: Launch and wait for first run
+        id: launch
+        run: |
+          $ws = Join-Path $env:RUNNER_TEMP 'sdods-ws'
+          $env:SDODS_DESKTOP_WORKSPACE = $ws
+          $env:SDODS_DESKTOP_NO_UPDATE = '1'
+          $env:PATH = "$env:SystemRoot\System32;$env:SystemRoot;$env:SystemRoot\System32\WindowsPowerShell\v1.0"
+          $proc = Start-Process (Join-Path '${{ steps.install.outputs.dir }}' 'SDODS.exe') -PassThru
+          "pid=$($proc.Id)" >> $env:GITHUB_OUTPUT
+          "ws=$ws" >> $env:GITHUB_OUTPUT
+          $log = Join-Path $env:LOCALAPPDATA 'SDODS\logs\desktop.log'
+          $deadline = (Get-Date).AddMinutes(20)
+          $server = $null
+          while ((Get-Date) -lt $deadline) {
+            Start-Sleep 5
+            if ($proc.HasExited) { throw "SDODS.exe exited early with $($proc.ExitCode)" }
+            if (-not (Test-Path $log)) { continue }
+            $text = Get-Content $log -Raw
+            if ($text -match 'startup failed') { throw 'the app logged "startup failed"; see the desktop.log artifact' }
+            if ($text -match 'server: ready at (\S+)') { $server = $Matches[1] }
+            if ($server -and $text -match 'browsers: (chromium ready|present)') { break }
+            if ($text -match 'browsers: install failed') { throw 'chromium install failed; see the desktop.log artifact' }
+          }
+          if (-not $server) { throw 'the server never became ready within 20 minutes' }
+          $health = Invoke-RestMethod "$server/api/health"
+          "Server $server healthy: $($health | ConvertTo-Json -Compress)"
+          "- **Server:** $server healthy" >> $env:GITHUB_STEP_SUMMARY
+
+      # Same runtime and environment the app gives its own children (runtime.ts buildChildEnv),
+      # so this is the run a user would start from the Runs page.
+      - name: demo-shop @smoke from the installed runtime
+        working-directory: ${{ steps.launch.outputs.ws }}
+        run: |
+          $node = Join-Path '${{ steps.install.outputs.dir }}' 'resources\node\node.exe'
+          $env:SDODS_ROOT = '${{ steps.launch.outputs.ws }}'
+          $env:PLAYWRIGHT_BROWSERS_PATH = Join-Path $env:LOCALAPPDATA 'SDODS\browsers'
+          $env:PATH = "$(Split-Path $node);$env:SystemRoot\System32;$env:SystemRoot"
+          & $node node_modules/@sdods/cli/bin/sdods.js run -p demo-shop -l ui -b chromium -t '@smoke' 2>&1 | Tee-Object smoke.txt
+          $code = $LASTEXITCODE
+          "- **@smoke:** exit $code" >> $env:GITHUB_STEP_SUMMARY
+          if ($code) { throw "sdods run exited $code" }
+
+      - name: Quit and uninstall
+        if: always() && steps.install.outputs.uninstaller
+        run: |
+          if ('${{ steps.launch.outputs.pid }}') { Stop-Process -Id ${{ steps.launch.outputs.pid || 0 }} -Force -ErrorAction SilentlyContinue }
+          Get-Process SDODS, node -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+          $p = Start-Process '${{ steps.install.outputs.uninstaller }}' -ArgumentList '/S' -Wait -PassThru
+          "uninstaller exited $($p.ExitCode)"
+          Start-Sleep 5
+          if (Test-Path (Join-Path '${{ steps.install.outputs.dir }}' 'SDODS.exe')) { throw 'SDODS.exe still present after uninstall' }
+
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: desktop-install-smoke-${{ steps.dl.outputs.tag || 'unknown' }}
+          path: |
+            ~/AppData/Local/SDODS/logs
+            ${{ steps.launch.outputs.ws }}\smoke.txt
+          if-no-files-found: warn
