@@ -1,0 +1,27 @@
+{
+  "name": "@sdods/community",
+  "version": "0.1.0",
+  "private": true,
+  "description": "The SDODS community Q&A backend: signed-in posting, an AI review agent, and the editor queue.",
+  "license": "Apache-2.0",
+  "author": "SDODS <admin@sdods.com>",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "dev": "node --import tsx src/main.ts",
+    "bundle": "bun build src/main.ts --target=node --outfile=dist/community.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.125.0",
+    "@fastify/rate-limit": "^11.2.0",
+    "@sdods/qa-archive": "workspace:*",
+    "fastify": "^5.12.4",
+    "jose": "^6.2.10",
+    "zod": "^4.6.5"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

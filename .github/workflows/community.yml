@@ -1,0 +1,94 @@
+name: community
+
+# Builds the community Q&A backend with Cloud Build and deploys it to Cloud Run (sdods-community).
+# Uses the same GCP_SA_KEY_AUTOMAX secret as api.yml. Without it the workflow only checks that the
+# image builds. Until the one-time setup exists (.claude/skills/sdods-community/SKILL.md) it skips.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'packages/community/**'
+      - 'packages/qa-archive/src/tags.ts'
+      - 'deploy/deploy-community.sh'
+      - 'bun.lock'
+      - '.github/workflows/community.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: community-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  GCP_PROJECT: automax-docs
+  GCP_REGION: us-central1
+  IMAGE: us-central1-docker.pkg.dev/automax-docs/sdods/community
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - id: creds
+        shell: bash
+        env:
+          SA_KEY: ${{ secrets.GCP_SA_KEY_AUTOMAX }}
+        run: |
+          if [ -n "$SA_KEY" ]; then echo "present=true" >> "$GITHUB_OUTPUT"; else echo "present=false" >> "$GITHUB_OUTPUT"; fi
+      - name: Validate Dockerfile (no credentials)
+        if: steps.creds.outputs.present != 'true'
+        run: docker build -f packages/community/Dockerfile -t community:ci . >/dev/null && echo "Dockerfile builds; skipping deploy (no GCP_SA_KEY_AUTOMAX secret)"
+      - uses: google-github-actions/auth@v3
+        if: steps.creds.outputs.present == 'true'
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY_AUTOMAX }}
+      - uses: google-github-actions/setup-gcloud@v3
+        if: steps.creds.outputs.present == 'true'
+      - name: Check one-time setup
+        id: setup
+        if: steps.creds.outputs.present == 'true'
+        # The runtime secret and service account are created by hand once (the sdods-community skill).
+        # Until they exist, skip the deploy with a notice instead of failing every push.
+        run: |
+          if gcloud secrets describe community-anthropic-key --project "$GCP_PROJECT" >/dev/null 2>&1 \
+            && gcloud iam service-accounts describe "community-runtime@$GCP_PROJECT.iam.gserviceaccount.com" --project "$GCP_PROJECT" >/dev/null 2>&1; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::notice::The community service is not set up in $GCP_PROJECT yet (secret community-anthropic-key or community-runtime@ missing); skipping build and deploy. See .claude/skills/sdods-community/SKILL.md."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Build image (Cloud Build)
+        if: steps.creds.outputs.present == 'true' && steps.setup.outputs.ready == 'true'
+        # Submitted async and polled, as in api.yml: streaming the log makes a green build fail
+        # whenever gcloud cannot read the log bucket.
+        run: |
+          id=$(gcloud builds submit --project "$GCP_PROJECT" --region "$GCP_REGION" \
+            --config packages/community/cloudbuild.yaml --substitutions "_IMAGE=$IMAGE:${{ github.sha }}" \
+            --timeout=20m --async --format='value(id)' .)
+          echo "Cloud Build $id"
+          echo "https://console.cloud.google.com/cloud-build/builds;region=$GCP_REGION/$id?project=$GCP_PROJECT"
+          for _ in $(seq 1 80); do
+            status=$(gcloud builds describe "$id" --project "$GCP_PROJECT" --region "$GCP_REGION" --format='value(status)')
+            case "$status" in
+              SUCCESS) echo "build succeeded"; exit 0 ;;
+              FAILURE | TIMEOUT | CANCELLED | EXPIRED)
+                echo "::error::Cloud Build $status - open the link above for the log"
+                gcloud builds log "$id" --project "$GCP_PROJECT" --region "$GCP_REGION" | tail -60 || true
+                exit 1 ;;
+            esac
+            sleep 15
+          done
+          echo "::error::timed out waiting for Cloud Build $id"
+          exit 1
+      - name: Tag latest
+        if: steps.creds.outputs.present == 'true' && steps.setup.outputs.ready == 'true'
+        run: gcloud artifacts docker tags add $IMAGE:${{ github.sha }} $IMAGE:latest
+      - name: Deploy to Cloud Run
+        if: steps.creds.outputs.present == 'true' && steps.setup.outputs.ready == 'true'
+        env:
+          ANTHROPIC_WORKSPACE_ID: ${{ vars.ANTHROPIC_WORKSPACE_ID }}
+        run: bash deploy/deploy-community.sh ${{ github.sha }}

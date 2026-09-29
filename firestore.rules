@@ -17,10 +17,16 @@ service cloud.firestore {
     // Google sign-in reports the account's primary address. sdods.com is a user alias domain for
     // yarlis.com, so the same mailbox signs in as admin@yarlis.com; admin@sdods.com stays for an
     // account that reports the alias.
+    // Editors and admins also carry a `role` custom claim, set by the community service
+    // (packages/community, POST /admin/role). A claim is part of the signed ID token, so reading it
+    // costs no document lookup.
     function isModerator() {
       return request.auth != null
-        && request.auth.token.email_verified == true
-        && request.auth.token.email in ['admin@sdods.com', 'admin@yarlis.com'];
+        && (
+          (request.auth.token.email_verified == true
+            && request.auth.token.email in ['admin@sdods.com', 'admin@yarlis.com'])
+          || request.auth.token.role in ['editor', 'admin']
+        );
     }
 
     // Fields every public post shares. `createdAt` must be the server's clock, not a timestamp the
@@ -203,6 +209,24 @@ service cloud.firestore {
       allow write: if false;
     }
     match /maxiUsage/{day} {
+      allow read, write: if false;
+    }
+
+    // The community service (packages/community) writes everything below with its service account.
+    // Posts it creates land in the collections above, with the same fields plus `uid` and a `review`
+    // summary, so the read rules above already cover them.
+    //
+    // Public profiles: a display name, reputation, badges and role. Never an email address.
+    match /users/{uid} {
+      allow read: if true;
+      allow write: if false;
+    }
+    // Every reviewer verdict (model, signals, decision, token counts): the audit trail.
+    match /communityReviews/{reviewId} {
+      allow read: if isModerator();
+      allow write: if false;
+    }
+    match /communityUsage/{day} {
       allow read, write: if false;
     }
 
