@@ -1,4 +1,5 @@
 import { CHECKPOINTS } from './checkpoints';
+import { TODAY_YEAR } from './calendar';
 import { LADDER } from './ladder';
 import { isChapter, isMonth, type Checkpoint, type RoadmapPhase } from './types';
 
@@ -54,17 +55,13 @@ export const NEXT_UP: string[] = [
 export const CURRENT: Checkpoint = CHECKPOINTS.find((c) => c.state === 'now')!;
 
 /**
- * The calendar year the "today" marker sits on.
+ * The calendar year the "today" marker sits on: the year the site was built in.
  *
- * Read from the current checkpoint's own date, not from the arc's `displayYear`. The two are not
- * the same thing and were quietly disagreeing: the current stop is a month in 2026 while the rung
- * it climbs is drawn under 2027, so the rail flagged a year that had not started yet. A delivered
- * chapter carries no date at all, so the arc's display year remains the fallback for that case.
+ * It used to be read from the current checkpoint's date, so while the work ran ahead of the
+ * calendar the rail flagged a year that had not started yet. The work marker is `CURRENT`; the
+ * calendar is `TODAY_YEAR`, and the sites rebuild monthly so it moves on by itself.
  */
-export const CURRENT_YEAR: number =
-  'when' in CURRENT
-    ? Number(CURRENT.when.slice(0, 4))
-    : LADDER.find((a) => a.level === CURRENT.arc)!.displayYear;
+export const CURRENT_YEAR: number = TODAY_YEAR;
 
 /** The rung being climbed right now, which may sit a year ahead of the calendar. */
 export const CURRENT_LEVEL_YEAR: number = LADDER.find((a) => a.level === CURRENT.arc)!.displayYear;

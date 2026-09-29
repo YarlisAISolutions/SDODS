@@ -24,6 +24,9 @@ const config = {
   env: {
     NEXT_PUBLIC_BASE_PATH: basePath,
     NEXT_PUBLIC_SITE_URL: siteUrl,
+    // The month the roadmap measures itself against (packages/roadmap/src/calendar.ts), fixed at
+    // build time so a client component renders the same month the server did.
+    ROADMAP_TODAY: process.env.ROADMAP_TODAY || new Date().toISOString().slice(0, 7),
   },
 };
 

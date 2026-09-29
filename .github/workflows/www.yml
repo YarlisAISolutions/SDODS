@@ -9,6 +9,7 @@ on:
     branches: [main]
     paths:
       - 'apps/www/**'
+      - 'packages/roadmap/**'
       - 'packages/qa-archive/**'
       - 'scripts/build-qa-index.ts'
       - 'firebase.json'
@@ -17,12 +18,17 @@ on:
   pull_request:
     paths:
       - 'apps/www/**'
+      - 'packages/roadmap/**'
       - 'packages/qa-archive/**'
       - 'scripts/build-qa-index.ts'
       - 'firebase.json'
       - '.firebaserc'
       - '.github/workflows/www.yml'
       - 'scripts/preview-quota-gate.sh'
+  # The roadmap reads the calendar at build time (packages/roadmap/src/calendar.ts), so a monthly
+  # rebuild moves "today" and flags overdue stops without anyone editing the page.
+  schedule:
+    - cron: '0 6 1 * *'
   workflow_dispatch:
 
 permissions:

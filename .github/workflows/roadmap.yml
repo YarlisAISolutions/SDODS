@@ -1,0 +1,48 @@
+name: roadmap
+
+# On the first of every month, files a GitHub issue for each roadmap stop whose month or year has
+# ended without being marked delivered, and closes the issue once it is (scripts/roadmap-issues.ts).
+# www.yml and docs.yml rebuild on the same schedule, so sdods.com/roadmap moves "today" on and shows
+# the same stops as overdue.
+
+on:
+  schedule:
+    - cron: '0 6 1 * *'
+  workflow_dispatch:
+    inputs:
+      today:
+        description: 'Pretend it is this month (YYYY-MM). Empty uses the real date.'
+        required: false
+      dry_run:
+        description: 'List what would be filed without filing it'
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: roadmap-issues
+  cancel-in-progress: false
+
+jobs:
+  overdue:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - run: bun install --frozen-lockfile
+      - name: File issues for overdue stops
+        env:
+          # Filed with RELEASE_PR_TOKEN, a fine-grained token of the maintainer, when it is set, so the
+          # issues are opened by the maintainer rather than github-actions[bot] (it needs Issues: write).
+          # Unset, it falls back to GITHUB_TOKEN.
+          GH_TOKEN: ${{ secrets.RELEASE_PR_TOKEN || github.token }}
+          ROADMAP_TODAY: ${{ inputs.today }}
+        run: bun run roadmap:issues ${{ inputs.dry_run && '--dry-run' || '' }}
