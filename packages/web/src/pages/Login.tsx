@@ -4,6 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router';
 import { useAuth } from '../auth/AuthContext';
 import { api } from '../api/client';
 import { Button, Field, Input } from '../components/ui';
+import { cliInstallUrl } from '../lib/utils';
 
 function Frame({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -65,6 +66,12 @@ export function LoginPage() {
         </Button>
         <p className="muted text-center text-[11px]">
           No account yet? Ask an admin, or run <code>sdods users create</code>.
+        </p>
+        <p className="muted text-center text-[11px]">
+          No <code>sdods</code> command yet?{' '}
+          <a href={cliInstallUrl()} target="_blank" rel="noreferrer" className="underline">
+            Install the SDODS CLI
+          </a>
         </p>
       </form>
     </Frame>
