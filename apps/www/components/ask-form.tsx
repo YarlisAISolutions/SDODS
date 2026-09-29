@@ -3,16 +3,146 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { CATEGORIES, submitQuestion, type Category } from '@/lib/questions';
+import { COMMUNITY_ENABLED, postQuestion, type PostResult } from '@/lib/community';
+import { ReviewOutcome, SignInGate, useUser } from '@/components/qa/community';
 
 const MAX_TITLE = 200;
 const MAX_BODY = 5000;
+
+/**
+ * With the community service configured, questions are posted signed in and reviewed on arrival;
+ * without it, they go straight to Firestore as before. Chosen at build time.
+ */
+export const AskForm = COMMUNITY_ENABLED ? CommunityAskForm : LegacyAskForm;
+
+const MIN_TITLE = 10;
+const MIN_BODY = 20;
+const MAX_REVIEWED_BODY = 10_000;
+
+/** Signed-in posting: the review publishes, rejects with a reason, or passes it to an editor. */
+function CommunityAskForm() {
+  const user = useUser();
+  const [title, setTitle] = useState('');
+  const [category, setCategory] = useState<Category>('ui');
+  const [body, setBody] = useState('');
+  const [state, setState] = useState<'idle' | 'sending' | 'error'>('idle');
+  const [error, setError] = useState('');
+  const [result, setResult] = useState<PostResult | null>(null);
+
+  if (result) {
+    return (
+      <div className="card grid gap-4 p-6">
+        <ReviewOutcome
+          result={result}
+          kind="question"
+          publishedHref={`/questions/live/?id=${result.id}`}
+        />
+        <div className="flex flex-wrap gap-3">
+          <Link href="/questions/" className="btn btn-secondary">
+            Back to questions
+          </Link>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => {
+              // A rejected question keeps its text so the author can fix it and try again.
+              if (result.status !== 'rejected') {
+                setTitle('');
+                setBody('');
+              }
+              setResult(null);
+              setState('idle');
+            }}
+          >
+            {result.status === 'rejected' ? 'Edit and try again' : 'Ask another'}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="card p-6">
+      <SignInGate user={user}>
+        <form
+          className="grid gap-4"
+          aria-label="Ask a question"
+          aria-busy={state === 'sending'}
+          onSubmit={async (e) => {
+            e.preventDefault();
+            setState('sending');
+            try {
+              setResult(await postQuestion({ title, body, category }));
+              setState('idle');
+            } catch (err) {
+              setError((err as Error).message);
+              setState('error');
+            }
+          }}
+        >
+          <div className="grid gap-4 sm:grid-cols-[1fr_auto]">
+            <label className="text-sm">
+              <span className="mb-1 block font-medium">Question</span>
+              <input
+                required
+                minLength={MIN_TITLE}
+                maxLength={MAX_TITLE}
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="One line — what are you trying to do with SDODS?"
+              />
+            </label>
+            <label className="text-sm">
+              <span className="mb-1 block font-medium">About</span>
+              <select value={category} onChange={(e) => setCategory(e.target.value as Category)}>
+                {CATEGORIES.map((c) => (
+                  <option key={c.value} value={c.value}>
+                    {c.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <label className="text-sm">
+            <span className="mb-1 block font-medium">Details</span>
+            <textarea
+              required
+              rows={10}
+              minLength={MIN_BODY}
+              maxLength={MAX_REVIEWED_BODY}
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              placeholder="The sdods command you ran, what happened, and what you expected. Paste the error. Keys and passwords are masked automatically, but leave them out if you can."
+            />
+            <span className="muted mt-1 block text-xs tabular-nums">
+              {body.length} / {MAX_REVIEWED_BODY.toLocaleString('en')}
+            </span>
+          </label>
+          <div className="flex flex-wrap items-center gap-3">
+            <button type="submit" className="btn btn-primary" disabled={state === 'sending'}>
+              {state === 'sending' ? 'Reviewing…' : 'Post question'}
+            </button>
+            <span className="muted text-xs">
+              Checked on arrival: questions about SDODS are published straight away.
+            </span>
+          </div>
+          {state === 'error' && (
+            <p className="text-sm" role="alert">
+              {error}
+            </p>
+          )}
+        </form>
+      </SignInGate>
+    </div>
+  );
+}
 
 /**
  * Posts a question straight from the browser to Firestore. Nothing here can
  * publish: the rules only accept a `pending` document, so the worst a bad
  * actor achieves is a row the moderator deletes.
  */
-export function AskForm() {
+function LegacyAskForm() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [title, setTitle] = useState('');

@@ -1,5 +1,7 @@
 import type { Metadata } from 'next';
 import { Moderation } from '@/components/qa/moderation';
+import { EditorQueue } from '@/components/qa/editor-queue';
+import { COMMUNITY_ENABLED } from '@/lib/community';
 
 /**
  * Where pending questions, answers and replies are approved or rejected.
@@ -17,11 +19,23 @@ export default function ModeratePage() {
   return (
     <div className="mx-auto max-w-4xl px-4 py-12">
       <h1 className="text-2xl font-extrabold tracking-tight md:text-3xl">Moderate questions</h1>
-      <p className="muted mt-2 text-sm">
-        Everything posted on the site waits here until it is approved. Approved posts appear on
-        their page straight away; rejected ones are deleted.
-      </p>
-      <Moderation />
+      {COMMUNITY_ENABLED ? (
+        <>
+          <p className="muted mt-2 text-sm">
+            The AI review publishes clear SDODS posts and rejects clearly off-topic ones on arrival.
+            What it could not decide waits here for an editor.
+          </p>
+          <EditorQueue />
+        </>
+      ) : (
+        <>
+          <p className="muted mt-2 text-sm">
+            Everything posted on the site waits here until it is approved. Approved posts appear on
+            their page straight away; rejected ones are deleted.
+          </p>
+          <Moderation />
+        </>
+      )}
     </div>
   );
 }
