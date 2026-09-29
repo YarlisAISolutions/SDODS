@@ -15,6 +15,7 @@ import {
   type DesktopAsset,
   type Platform,
 } from '@/lib/desktop-release';
+import { DownloadGlyph, PlatformIcon } from './platform-icon';
 
 const ORDER: Platform[] = ['macos', 'windows', 'linux'];
 
@@ -159,8 +160,9 @@ export function DownloadPicker() {
           <p className="muted text-sm">Recommended for this computer</p>
           <a
             href={downloadUrl(release, detected)}
-            className="btn btn-primary mt-3 inline-block px-5 py-3 text-base"
+            className="btn btn-primary mt-3 px-5 py-3 text-base"
           >
+            <PlatformIcon platform={detected.platform} mono />
             Download for {PLATFORM_LABEL[detected.platform]} · {detected.label}
           </a>
           <p className="muted mt-3 text-sm">
@@ -183,17 +185,29 @@ export function DownloadPicker() {
       <h2 className="mt-10 text-xl font-semibold">
         {ready && detected ? 'Every download' : 'Downloads'}
       </h2>
-      <div className="mt-4 grid gap-4 sm:grid-cols-3">
+      <div
+        className={`mt-4 grid gap-4 ${grouped.length === 3 ? 'sm:grid-cols-3' : 'sm:grid-cols-2'}`}
+      >
         {grouped.map(({ platform, assets }) => (
           <div key={platform} className="card p-5">
-            <h3 className="font-semibold">{PLATFORM_LABEL[platform]}</h3>
-            <ul className="mt-3 space-y-2 text-sm">
+            <h3 className="flex items-center gap-2 font-semibold">
+              <PlatformIcon platform={platform} className="h-6 w-6" />
+              {PLATFORM_LABEL[platform]}
+            </h3>
+            <ul className="mt-4 space-y-2 text-sm">
               {assets.map((asset) => (
                 <li key={asset.file}>
-                  <a className="underline" href={downloadUrl(release, asset)}>
-                    {asset.label}
+                  <a
+                    className="btn btn-secondary w-full px-3 py-2 text-sm"
+                    href={downloadUrl(release, asset)}
+                    aria-label={`Download SDODS for ${PLATFORM_LABEL[platform]}, ${asset.label}, ${asset.size}`}
+                  >
+                    <span className="flex items-center gap-2">
+                      <DownloadGlyph />
+                      {asset.label}
+                    </span>
+                    <span className="muted text-xs font-normal">{asset.size}</span>
                   </a>
-                  <span className="muted"> · {asset.size}</span>
                 </li>
               ))}
             </ul>
