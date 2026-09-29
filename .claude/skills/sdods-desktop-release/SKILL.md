@@ -42,31 +42,32 @@ manifests to the tap, the bucket and Microsoft's queue is a separate step: see t
 draft — the download page links straight at the asset URLs, and draft assets are not downloadable.
 The sync script refuses to run against a draft for exactly this reason.
 
-## The download page is switched off, per platform
+## The download page is switched on per platform
 
-`sdods.com/download` offers nothing right now, and that is deliberate. The installers are
-unsigned, so macOS reports them as malware ("Apple could not verify...") and Windows blocks them
-behind SmartScreen. A download most visitors are actively warned away from costs more trust than
-no download at all, and the CLI install is a complete SDODS that nothing blocks.
+`sdods.com/download` currently offers **Windows and Linux** (`NEXT_PUBLIC_DESKTOP_PLATFORMS:
+windows,linux` in `.github/workflows/www.yml`). macOS stays hidden: an unsigned app there is
+reported as "damaged" with no way through, so a visitor is worse off than with no download at all,
+and the CLI install is a complete SDODS that nothing blocks.
 
 The switch is a **list of platforms**, not a boolean, because the reason for hiding is per-platform:
 
-| Platform | What it is waiting for |
+| Platform | State |
 |---|---|
-| macOS | a Developer ID certificate — $99/year |
-| Windows | its own certificate — Azure Artifact Signing ~$10/month, or an OV cert |
-| Linux | **nothing.** No Gatekeeper, no SmartScreen; the `.deb` and AppImage install unsigned today |
+| macOS | hidden until a Developer ID certificate exists ($99/year) |
+| Windows | **offered.** Unsigned for now: SmartScreen shows "More info → Run anyway", and the picker says so. Azure Artifact Signing (~$10/month) is the chosen route (`sdods-sign-windows`); once a release is signed, `desktop:sync-release <tag> --signed=windows` swaps the advice for the softer publisher note |
+| Linux | **offered.** No Gatekeeper, no SmartScreen; the `.deb` and AppImage install unsigned |
 
-So Linux can be switched on at any time for free, and macOS can go live the moment the Apple
-certificate lands without waiting on Windows.
+**Before linking a Windows release, run `desktop-install-smoke.yml` against it** (`gh workflow run
+desktop-install-smoke.yml -f tag=desktop-v<ver>`). It installs the published win-x64 installer,
+launches it with nothing on PATH and runs demo-shop `@smoke`. 0.1.0's Windows installers passed
+every packaging check and still could not do their first-run install.
 
 ```bash
-NEXT_PUBLIC_DESKTOP_PLATFORMS=linux          # only Linux
-NEXT_PUBLIC_DESKTOP_PLATFORMS=macos,linux    # after the Apple certificate
-NEXT_PUBLIC_DESKTOP_PLATFORMS=all            # everything
+NEXT_PUBLIC_DESKTOP_PLATFORMS=windows,linux   # today
+NEXT_PUBLIC_DESKTOP_PLATFORMS=all             # after the Apple certificate
 ```
 
-Unset means none, which is the current state. An unrecognised value **fails the build** rather than
+Unset means none. An unrecognised value **fails the build** rather than
 silently hiding a platform — `=mac` is a typo that would otherwise look like a deliberate choice.
 
 **Nothing is deleted.** Releases still build and publish and `desktop-release.ts` stays current, so

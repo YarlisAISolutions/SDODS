@@ -277,7 +277,7 @@ Follow `sdods-desktop-release` → *The loop*.
    (same as `--signed=all`) if macOS is signed too. Only the platforms you name lose their
    workaround text. A bare `--signed` is refused. Signed Windows keeps a softer SmartScreen note,
    because reputation takes several releases to build.
-2. Add `windows` to `NEXT_PUBLIC_DESKTOP_PLATFORMS`.
+2. `windows` is already in `NEXT_PUBLIC_DESKTOP_PLATFORMS` (offered unsigned since 2026-09-29); nothing to change there.
 3. `bun run channels:sync`, then submit to winget (`sdods-release-channels`). winget validation
    was the channel waiting for this signature.
 4. Tick the Windows items in #169.

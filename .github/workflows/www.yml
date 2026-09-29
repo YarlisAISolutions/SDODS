@@ -52,12 +52,16 @@ jobs:
         run: bun run www:build
         env:
           WWW_SITE_URL: https://sdods.com
-          # Which desktop downloads the site offers. Linux only, because Linux is the one platform
-          # that needs no code signing: there is no Gatekeeper and no SmartScreen, and the .deb and
-          # AppImage install unsigned exactly as they always have. macOS and Windows stay hidden
-          # until their certificates exist, since an unsigned build there is reported as malware.
-          # Add them here as they are signed: `macos,linux`, then `all`.
-          NEXT_PUBLIC_DESKTOP_PLATFORMS: linux
+          # Which desktop downloads the site offers.
+          #   linux:   needs no signing (no Gatekeeper, no SmartScreen).
+          #   windows: offered while unsigned, because SmartScreen lets the user through with
+          #            "More info → Run anyway" and the download picker says so (it reads
+          #            `signed` in lib/desktop-release.ts and drops the advice once the release is
+          #            Authenticode-signed through Azure Artifact Signing). Only a release that
+          #            passed desktop-install-smoke.yml should be linked here.
+          #   macos:   hidden until the Developer ID certificate exists. An unsigned app is
+          #            reported as "damaged", with no Run-anyway button.
+          NEXT_PUBLIC_DESKTOP_PLATFORMS: windows,linux
           # Maxi, the docs assistant (deploy/deploy-maxi.sh). A repository variable, so the chat stays
           # hidden until the service is live: an empty value renders no widget.
           NEXT_PUBLIC_MAXI_URL: ${{ vars.MAXI_URL }}
