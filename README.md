@@ -838,4 +838,4 @@ SDODS is free and stays free. If it saves you time, [buy the maintainers a coffe
 
 ## License
 
-Apache-2.0. Copyright © 2026 Sireesh Yarlagadda and SDODS contributors.
+Apache-2.0. Copyright © 2026 Yarlis AI Solutions and SDODS contributors.
