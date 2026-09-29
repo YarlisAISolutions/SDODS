@@ -456,6 +456,20 @@ jobs:
           ./installer/install.ps1 -Help
           ./installer/install.ps1 -DryRun -Dir "$env:RUNNER_TEMP\amx" -BinDir "$env:RUNNER_TEMP\amx-bin" -Browsers none -Yes
           if (Test-Path "$env:RUNNER_TEMP\amx") { throw 'dry run wrote files' }
+      # The published bin shim, in the layout npm installs (bin/ + dist/, no src/), from a drive-letter
+      # path. `import('D:\\...')` is rejected on Windows, and that once stopped every Windows install
+      # of @sdods/cli -- desktop first run included -- before it printed anything.
+      - name: Published bin shim starts from a Windows path
+        shell: pwsh
+        run: |
+          $pkg = Join-Path $env:RUNNER_TEMP 'cli-shim'
+          New-Item -ItemType Directory -Force "$pkg\bin", "$pkg\dist" | Out-Null
+          Copy-Item packages/cli/bin/sdods.js "$pkg\bin\"
+          Set-Content "$pkg\package.json" '{"type":"module"}'
+          Set-Content "$pkg\dist\bin.js" "console.log('shim-ok')"
+          $out = node "$pkg\bin\sdods.js"
+          if ($LASTEXITCODE -or $out -ne 'shim-ok') { throw "bin shim failed: $out" }
+          'bin shim ok'
 
   report:
     name: report · ingest · notify
