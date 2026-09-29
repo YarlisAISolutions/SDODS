@@ -84,11 +84,27 @@ record progress in the tracking issue.
 >   gcloud projects add-iam-policy-binding $P --member serviceAccount:$SA --role roles/firebaseauth.admin
 >   gcloud secrets add-iam-policy-binding community-anthropic-key --project $P \
 >     --member serviceAccount:$SA --role roles/secretmanager.secretAccessor
->   # the CI deployer (the account behind GCP_SA_KEY_AUTOMAX) must be able to run as it:
+>   # the CI deployer is github-deploy-api@ (the account behind GCP_SA_KEY_AUTOMAX; api.yml says so).
+>   D=github-deploy-api@$P.iam.gserviceaccount.com
 >   gcloud iam service-accounts add-iam-policy-binding $SA --project $P \
->     --member serviceAccount:<deployer-email> --role roles/iam.serviceAccountUser
+>     --member serviceAccount:$D --role roles/iam.serviceAccountUser
+>   # …and must be able to *see* the secret, or the workflow's setup check skips the deploy:
+>   gcloud secrets add-iam-policy-binding community-anthropic-key --project $P \
+>     --member serviceAccount:$D --role roles/secretmanager.viewer
 >   ```
->   `roles/firebaseauth.admin` is what lets `POST /admin/role` set custom claims.
+>   `roles/firebaseauth.admin` is what lets `POST /admin/role` set custom claims. The last grant
+>   mirrors Maxi's; without it the run is green but prints "not set up … skipping".
+>
+> **Leave `COMMUNITY_ANTHROPIC_WORKSPACE_ID` unset** for a key created inside a workspace. Sending
+> another workspace's id (e.g. Maxi's `ANTHROPIC_WORKSPACE_ID`) makes every Claude call 404, and
+> every post then waits for an editor. Check a key without printing it:
+> `K=$(gcloud secrets versions access latest --secret community-anthropic-key --project automax-docs); curl -s -o /dev/null -w "%{http_code}\n" -H "x-api-key: $K" -H "anthropic-version: 2023-06-01" https://api.anthropic.com/v1/models; unset K`
+
+**Public access.** The organisation only allows IAM members from its own domain, so Cloud Run's
+`allUsers` invoker binding is refused and a new service answers every request with 403.
+`deploy-community.sh` therefore deploys with `--no-invoker-iam-check`. On an existing service:
+`gcloud run services update sdods-community --region us-central1 --project automax-docs --no-invoker-iam-check`.
+Confirm with `curl https://sdods-community-7rxessch3q-uc.a.run.app/health` → `{"ok":true,…}`.
 > - **Agent confirms with:** `gcloud projects get-iam-policy automax-docs --flatten bindings --filter "bindings.members:community-runtime@" --format "value(bindings.role)"`
 >   lists `roles/datastore.user` and `roles/firebaseauth.admin`.
 

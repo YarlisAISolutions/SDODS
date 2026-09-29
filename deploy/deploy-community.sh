@@ -9,6 +9,10 @@
 # service account community-runtime@ needs roles/datastore.user, roles/firebaseauth.admin (to set
 # the editor/admin custom claims) and secretAccessor on the community-anthropic-key secret.
 #
+# --no-invoker-iam-check, not --allow-unauthenticated: the organisation restricts IAM members to its
+# own domain, so an allUsers invoker binding is refused and the service stays private (every request
+# 403s). Turning off the invoker check makes it public without that binding. The service authenticates
+# every write itself (Firebase ID tokens).
 # COMMUNITY_TRUST_PROXY=1: Cloud Run's front end appends exactly one X-Forwarded-For hop, so the
 # client address is the last one and a visitor cannot pick their own rate-limit bucket.
 # No comments inside the command below: a comment line ends the backslash continuation, and the
@@ -27,7 +31,7 @@ gcloud run deploy "$SERVICE" \
   --image "$IMAGE" \
   --platform managed \
   --service-account "$RUNTIME_SA" \
-  --allow-unauthenticated \
+  --no-invoker-iam-check \
   --port 8080 \
   --cpu 1 --memory 512Mi \
   --min-instances 0 --max-instances "${MAX_INSTANCES:-3}" \
