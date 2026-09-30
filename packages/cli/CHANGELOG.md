@@ -1,5 +1,18 @@
 # @sdods/cli
 
+## 0.12.1
+
+### Patch Changes
+
+- 70eb49d: `sdods run` and `sdods watch` run bddgen through Node from the workspace's installed `playwright-bdd` instead of `npx bddgen`. Where npx finds no `node_modules/.bin` shim it recognises (bun installs on Windows), it downloaded the unrelated registry package `bddgen@1.0.5` and every run failed with "bddgen failed to generate specs".
+- @sdods/agents@0.12.1
+  - @sdods/contracts@0.12.1
+  - @sdods/core@0.12.1
+  - @sdods/db@0.12.1
+  - @sdods/integrations@0.12.1
+  - @sdods/mcp@0.12.1
+  - @sdods/server@0.12.1
+
 ## 0.12.0
 
 ### Minor Changes
