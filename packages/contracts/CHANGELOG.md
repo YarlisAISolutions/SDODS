@@ -1,5 +1,9 @@
 # @sdods/contracts
 
+## 0.12.1
+
+No changes in this release.
+
 ## 0.12.0
 
 No changes in this release.
