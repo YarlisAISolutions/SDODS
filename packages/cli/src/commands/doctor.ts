@@ -323,12 +323,6 @@ function tokenMatrix(cliStatus: Check[], localLlm?: Check): TokenRow[] {
       detail: 'self-issued, free: MCP over HTTP and CI result ingest (`sdods tokens create`)',
     },
     {
-      name: 'FIREBASE_SERVICE_ACCOUNT_AUTOMAX_DOCS',
-      requirement: 'ci-only',
-      present: has('FIREBASE_SERVICE_ACCOUNT_AUTOMAX_DOCS'),
-      detail: 'GitHub secret for the docs deploy workflow',
-    },
-    {
       name: 'NPM_TOKEN',
       requirement: 'ci-only',
       present: has('NPM_TOKEN'),

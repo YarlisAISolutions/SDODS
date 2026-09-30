@@ -51,6 +51,35 @@ export default tseslint.config(
     },
   },
   {
+    // The platform stays vendor-neutral: Firebase is a deployment choice, wired in through ports
+    // (community/maxi stores and verifiers, the sites' Identity). Its adapters live only in the
+    // places below, which move to the private deployment package.
+    files: ['packages/**/*.{ts,tsx}', 'apps/**/*.{ts,tsx}'],
+    ignores: [
+      'packages/community/src/firebase/**',
+      'packages/community/src/main.ts',
+      'packages/community/test/firebase.test.ts',
+      'packages/maxi/src/firebase/**',
+      'packages/maxi/src/main.ts',
+      'packages/maxi/test/firebase.test.ts',
+      'apps/www/lib/firebase-identity.ts',
+    ],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              regex: '^(firebase|firebase-admin|@firebase)(/|$)|/firebase(/|\\.js$|/index\\.js$)',
+              message:
+                'Firebase belongs in a deployment adapter (src/firebase/, lib/firebase-identity.ts), behind a port.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     // The electron-builder hooks are plain .mjs running in Node: js.configs.recommended declares
     // no Node globals, and TypeScript files get theirs from typescript-eslint. Scoped narrowly --
     // the Next.js configs import `process` themselves and a blanket rule collides with that.
