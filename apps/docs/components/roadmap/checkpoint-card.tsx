@@ -1,6 +1,6 @@
 /** The stop a reader is standing at, written out: what it is for, what lands, how you know. */
 import type { Checkpoint, CheckpointState } from '@sdods/roadmap';
-import { isChapter, isMonth } from '@sdods/roadmap';
+import { isChapter, isMonth, isOverdue } from '@sdods/roadmap';
 
 const BADGE: Record<CheckpointState, { label: string; className: string }> = {
   delivered: {
@@ -19,6 +19,12 @@ const BADGE: Record<CheckpointState, { label: string; className: string }> = {
     label: 'Direction',
     className: 'bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300',
   },
+};
+
+/** Shown beside the state once a stop's month or year has ended without its proof. */
+export const OVERDUE_BADGE = {
+  label: 'Overdue',
+  className: 'bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-200',
 };
 
 /** What to print above the title: a chapter has no date, and that is deliberate. */
@@ -55,6 +61,11 @@ export function CheckpointCard({
         <span className={`rounded-full px-2 py-0.5 font-semibold ${badge.className}`}>
           {badge.label}
         </span>
+        {isOverdue(checkpoint) && (
+          <span className={`rounded-full px-2 py-0.5 font-semibold ${OVERDUE_BADGE.className}`}>
+            {OVERDUE_BADGE.label}
+          </span>
+        )}
         <span>{whenOf(checkpoint)}</span>
         <span className="ml-auto font-mono">
           {index + 1} / {total}

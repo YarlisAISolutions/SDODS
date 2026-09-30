@@ -5,8 +5,8 @@
  * survives having no JavaScript, being printed, and being read by anything that does not run
  * a browser.
  */
-import { CHECKPOINTS, type Checkpoint } from '@sdods/roadmap';
-import { whenOf } from './checkpoint-card';
+import { CHECKPOINTS, isOverdue, type Checkpoint } from '@sdods/roadmap';
+import { OVERDUE_BADGE, whenOf } from './checkpoint-card';
 
 const GROUPS: Array<{ title: string; blurb: string; of: (c: Checkpoint) => boolean }> = [
   {
@@ -42,7 +42,16 @@ export function RoadmapChecklist() {
                 id={checkpoint.id}
                 className="rounded-lg border border-fd-border p-4"
               >
-                <p className="text-xs text-fd-muted-foreground">{whenOf(checkpoint)}</p>
+                <p className="flex flex-wrap items-center gap-2 text-xs text-fd-muted-foreground">
+                  <span>{whenOf(checkpoint)}</span>
+                  {isOverdue(checkpoint) && (
+                    <span
+                      className={`rounded-full px-2 py-0.5 font-semibold ${OVERDUE_BADGE.className}`}
+                    >
+                      {OVERDUE_BADGE.label}
+                    </span>
+                  )}
+                </p>
                 <h4 className="mt-0.5 font-semibold">
                   {checkpoint.label} — {checkpoint.title}
                 </h4>

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { ERAS, HISTORY, HISTORY_FROM, yearsOfEra } from './history';
 import { HORIZON, CURRENT_YEAR } from './compat';
 import { LADDER } from './ladder';
-import { CHECKPOINTS } from './checkpoints';
+import { TODAY_MONTH } from './calendar';
 
 describe('the road behind the ladder', () => {
   it('runs contiguous years and stops where the ladder starts', () => {
@@ -61,8 +61,7 @@ describe('the road behind the ladder', () => {
     }
   });
 
-  it('flags today on the calendar year of the current stop, not the rung it climbs', () => {
-    const now = CHECKPOINTS.find((c) => c.state === 'now')!;
-    expect('when' in now && now.when.startsWith(String(CURRENT_YEAR))).toBe(true);
+  it('flags today on the calendar year the site was built in, not the rung it climbs', () => {
+    expect(CURRENT_YEAR).toBe(Number(TODAY_MONTH.slice(0, 4)));
   });
 });

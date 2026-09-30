@@ -4,3 +4,4 @@ export * from './history';
 export * from './checkpoints';
 export * from './verification';
 export * from './compat';
+export * from './calendar';

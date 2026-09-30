@@ -189,6 +189,11 @@ export default function RoadmapPage() {
                   >
                     {STATUS_WORD[h.state]}
                   </span>
+                  {h.state !== 'delivered' && h.year < CURRENT_YEAR && (
+                    <span className="rounded-full bg-rose-100 px-2.5 py-1 text-xs font-semibold text-rose-800 dark:bg-rose-900/40 dark:text-rose-200">
+                      Overdue
+                    </span>
+                  )}
                 </div>
 
                 <p className="mt-5 text-xl font-semibold leading-snug">{h.value}</p>
