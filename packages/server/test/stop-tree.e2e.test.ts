@@ -1,4 +1,4 @@
-import { execSync } from 'node:child_process';
+import { execFileSync, execSync } from 'node:child_process';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { createMemoryDb, migrateToLatest } from '@sdods/db';
@@ -25,7 +25,23 @@ function leftovers(pattern: string): string[] {
       .split(/\s+/)
       .filter(Boolean);
   }
-  return execSync(`pgrep -f '${pattern}' || true`).toString().split(/\s+/).filter(Boolean);
+  // No shell: a `sh -c "pgrep -f '<pattern>'"` wrapper carries the pattern in its own command line,
+  // and Linux pgrep excludes only itself, so the test would find its own shell.
+  try {
+    return execFileSync('pgrep', ['-f', pattern]).toString().split(/\s+/).filter(Boolean);
+  } catch {
+    return []; // exit 1: nothing matched
+  }
+}
+
+/** Command lines of the leftovers, so a real leak says what leaked. */
+function describe_(pids: string[]): string {
+  if (!pids.length || process.platform === 'win32') return pids.join(', ');
+  try {
+    return execFileSync('ps', ['-o', 'pid=,command=', '-p', pids.join(',')]).toString();
+  } catch {
+    return pids.join(', ');
+  }
 }
 
 const until = async (cond: () => boolean, ms: number) => {
@@ -60,6 +76,7 @@ describe.skipIf(!enabled)('stopping a real run', () => {
     await until(() => leftovers(pattern).length === 0, 15_000);
 
     expect(job.status).toBe('cancelled');
-    expect(leftovers(pattern)).toEqual([]);
+    const left = leftovers(pattern);
+    expect(left, describe_(left)).toEqual([]);
   }, 240_000);
 });
