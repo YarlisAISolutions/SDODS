@@ -27,7 +27,7 @@ import { startServer, ServerStartError, type ServerHandle } from './server.js';
 import { authenticate, loadCredentials } from './auth.js';
 import { buildMenu } from './menu.js';
 import { log } from './log.js';
-import { ensureChromium, chromiumPresent } from './browsers.js';
+import { ensureChromium, chromiumPresent, type BrowserState } from './browsers.js';
 import { createUpdater, SERVER_STOP_TIMEOUT_MS, type UpdateController } from './updater.js';
 
 // Keep the userData path free of spaces and out of the roaming profile's way. Must run before
@@ -113,6 +113,59 @@ function errorDetail(err: unknown): string {
 
 function send(channel: string, payload: unknown) {
   if (win && !win.isDestroyed()) win.webContents.send(channel, payload);
+}
+
+let browserInstall: Promise<BrowserState> | null = null;
+
+/**
+ * Download the Chromium test browser, one download at a time.
+ *
+ * The outcome is reported with a native dialog: the dashboard is the served web app with no
+ * preload, so it never hears `browsers:state`, and a download that failed silently left every run
+ * failing with Playwright's "Executable doesn't exist". Runs also install what they are missing on
+ * their own, so a failure here is not the end of it, only the earliest chance to say so.
+ */
+function installTestBrowsers(
+  workspace: string,
+  opts: { force?: boolean; interactive?: boolean } = {},
+): Promise<BrowserState> {
+  if (browserInstall) return browserInstall;
+  browserInstall = ensureChromium({
+    workspace,
+    force: opts.force,
+    onProgress: (line) => send('browsers:progress', line),
+  })
+    .then(async (state) => {
+      log.info('browsers:', state);
+      send('browsers:state', state);
+      if (state === 'failed') {
+        const { response } = await dialog.showMessageBox({
+          type: 'warning',
+          message: 'The Chromium test browser could not be downloaded',
+          detail:
+            'Test runs will try to download it again on their own. If it keeps failing, check the ' +
+            'network or proxy (HTTPS_PROXY) and whether antivirus quarantined the download. ' +
+            'Details are in SDODS → Open Logs Folder.',
+          buttons: ['Retry now', 'Close'],
+          defaultId: 0,
+          cancelId: 1,
+        });
+        if (response === 0) {
+          browserInstall = null;
+          return installTestBrowsers(workspace, { interactive: true });
+        }
+      } else if (opts.interactive) {
+        void dialog.showMessageBox({
+          type: 'info',
+          message: 'The Chromium test browser is ready.',
+        });
+      }
+      return state;
+    })
+    .finally(() => {
+      browserInstall = null;
+    });
+  return browserInstall;
 }
 
 function createWindow(): BrowserWindow {
@@ -218,6 +271,8 @@ async function startup(config: DesktopConfig) {
       serverUrl: server.url,
       credentials: () => loadCredentials(),
       updates: updates ?? undefined,
+      reinstallBrowsers: () =>
+        void installTestBrowsers(config.workspace, { force: true, interactive: true }),
     });
     await win?.loadURL(server.url);
     log.info('window: loaded the dashboard');
@@ -229,15 +284,7 @@ async function startup(config: DesktopConfig) {
     // Only now, with the dashboard on screen, fetch the browser engine. SDODS launches a browser
     // for every layer -- api runs included -- so nothing can run until this lands; doing it before
     // the window loaded would just make first launch feel broken for several minutes.
-    if (!chromiumPresent()) {
-      void ensureChromium({
-        workspace: config.workspace,
-        onProgress: (line) => send('browsers:progress', line),
-      }).then((state) => {
-        log.info('browsers:', state);
-        send('browsers:state', state);
-      });
-    }
+    if (!chromiumPresent(config.workspace)) void installTestBrowsers(config.workspace);
   } catch (err) {
     log.error('startup failed:', err);
     send('bootstrap:error', {

@@ -391,6 +391,107 @@ describe('SDODS server', () => {
     expect(job.log.since(0).map((l) => l.line)).toContain('[3/3] done');
   });
 
+  it('reruns a run with the same selection, and refuses to rerun failures that do not exist', async () => {
+    const auth = { cookie: adminCookie, 'x-csrf-token': adminCsrf };
+    const first = await app.inject({
+      method: 'POST',
+      url: '/api/runs',
+      headers: auth,
+      payload: { project: 'shop', env: 'local', tags: '@smoke', workers: 2, headed: true },
+    });
+    const firstId = first.json().runId as string;
+    await new Promise((r) => setTimeout(r, 150));
+
+    const rerun = await app.inject({
+      method: 'POST',
+      url: `/api/runs/${firstId}/rerun`,
+      headers: auth,
+    });
+    expect(rerun.statusCode).toBe(202);
+    expect(rerun.json().rerunOf).toBe(firstId);
+    const again = app.runManager.get(rerun.json().runId)!;
+    // Replays the whole selection, including what the runs table has no column for.
+    expect(again.input).toMatchObject({
+      project: 'shop',
+      env: 'local',
+      tags: '@smoke',
+      workers: 2,
+      headed: true,
+    });
+
+    // The fake runner ingests no scenarios, so there is nothing that failed to rerun.
+    const failed = await app.inject({
+      method: 'POST',
+      url: `/api/runs/${firstId}/rerun`,
+      headers: auth,
+      payload: { scope: 'failed' },
+    });
+    expect(failed.statusCode).toBe(409);
+
+    const missing = await app.inject({
+      method: 'POST',
+      url: '/api/runs/nope/rerun',
+      headers: auth,
+    });
+    expect(missing.statusCode).toBe(404);
+  });
+
+  it('passes failed scenarios to the runner as one escaped title filter', async () => {
+    const job = await app.runManager.start({
+      project: 'shop',
+      scenarios: ['Login (happy path)', 'Pay $5'],
+      scenario: 'ignored',
+    });
+    await new Promise((r) => setTimeout(r, 50));
+    const argv = job.log.since(0)[0]!.line;
+    expect(argv).toContain('--grep (?:Login \\(happy path\\)|Pay \\$5)');
+    expect(argv).not.toContain('--scenario');
+  });
+
+  it('stores UI preferences per user and validates keys and size', async () => {
+    const auth = { cookie: adminCookie, 'x-csrf-token': adminCsrf };
+    const key = 'runForm:web:shop';
+    const empty = await app.inject({
+      method: 'GET',
+      url: `/api/me/preferences/${key}`,
+      headers: auth,
+    });
+    expect(empty.json()).toMatchObject({ key, value: null });
+    const put = await app.inject({
+      method: 'PUT',
+      url: `/api/me/preferences/${key}`,
+      headers: auth,
+      payload: { value: { v: 1, env: 'local', browsers: ['chromium'] } },
+    });
+    expect(put.statusCode).toBe(200);
+    const got = await app.inject({
+      method: 'GET',
+      url: `/api/me/preferences/${key}`,
+      headers: auth,
+    });
+    expect(got.json().value).toEqual({ v: 1, env: 'local', browsers: ['chromium'] });
+    // Another user does not see it.
+    const other = await app.inject({
+      method: 'GET',
+      url: `/api/me/preferences/${key}`,
+      headers: { cookie: viewerCookie },
+    });
+    expect(other.json().value).toBeNull();
+    const badKey = await app.inject({
+      method: 'GET',
+      url: '/api/me/preferences/a%20b',
+      headers: auth,
+    });
+    expect(badKey.statusCode).toBe(400);
+    const tooBig = await app.inject({
+      method: 'PUT',
+      url: `/api/me/preferences/${key}`,
+      headers: auth,
+      payload: { value: 'x'.repeat(17 * 1024) },
+    });
+    expect(tooBig.statusCode).toBe(400);
+  });
+
   it('validates features on write (tag taxonomy) and lists them by module', async () => {
     const bad = await app.inject({
       method: 'PUT',

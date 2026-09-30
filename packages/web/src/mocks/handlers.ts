@@ -4,6 +4,7 @@ import type { AgentJob, Schedule, StartRunInput } from '../api/types';
 
 const state = {
   loggedIn: true,
+  preferences: {} as Record<string, { key: string; value: unknown; updatedAt: string | null }>,
   runs: [...d.runs],
   schedules: [...d.schedules],
   tokens: [...d.tokens],
@@ -94,6 +95,17 @@ export const handlers = [
   http.post('/api/auth/setup', () => json({ ok: true })),
 
   // Mirrors packages/server/src/routes/me.ts.
+  http.get('/api/me/preferences/:key', ({ params }) =>
+    json(
+      state.preferences[params.key as string] ?? { key: params.key, value: null, updatedAt: null },
+    ),
+  ),
+  http.put('/api/me/preferences/:key', async ({ params, request }) => {
+    const { value } = (await request.json()) as { value: unknown };
+    const pref = { key: params.key as string, value, updatedAt: new Date().toISOString() };
+    state.preferences[pref.key] = pref;
+    return json(pref);
+  }),
   http.patch('/api/me', async ({ request }) => {
     const b = (await request.json()) as { displayName?: string | null; email?: string | null };
     if (b.displayName !== undefined) d.me.user.displayName = b.displayName || undefined;
@@ -279,6 +291,21 @@ export const handlers = [
     const r = state.runs.find((x) => x.id === params.id);
     if (r) r.status = 'cancelled';
     return json({ ok: true });
+  }),
+  http.post('/api/runs/:id/rerun', async ({ params, request }) => {
+    const from = state.runs.find((x) => x.id === params.id);
+    if (!from) return notFound('run');
+    const b = (await request.json().catch(() => ({}))) as { scope?: string };
+    const id = `run-${Date.now()}`;
+    state.runs.unshift({
+      ...from,
+      id,
+      trigger: 'ui',
+      status: 'running',
+      totals: undefined,
+      startedAt: new Date().toISOString(),
+    });
+    return json({ runId: id, rerunOf: from.id, scope: b.scope ?? 'all' }, { status: 202 });
   }),
   http.post('/api/runs/:id/baselines/accept', async ({ params, request }) => {
     const body = (await request.json()) as { names?: string[]; all?: boolean };

@@ -8,6 +8,8 @@ import * as m0006 from './0006_schedules.js';
 import * as m0007 from './0007_hierarchy.js';
 import * as m0008 from './0008_runner_naming.js';
 import * as m0009 from './0009_user_profile.js';
+import * as m0010 from './0010_run_params.js';
+import * as m0011 from './0011_user_preferences.js';
 
 /**
  * Static registry (bundler-friendly, no runtime file discovery). Order matters: Kysely sorts by key.
@@ -22,4 +24,6 @@ export const MIGRATIONS: Record<string, SdodsMigration> = {
   '0007_hierarchy': m0007,
   '0008_runner_naming': m0008,
   '0009_user_profile': m0009,
+  '0010_run_params': m0010,
+  '0011_user_preferences': m0011,
 };

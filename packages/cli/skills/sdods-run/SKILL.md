@@ -32,13 +32,19 @@ an SDODS source checkout use `bun run sdods`.
    ```
 2. Run the requested slice. Typical combinations:
    ```bash
-   sdods run -p <project> -e <env> -l api                                  # API only, no browser
+   sdods run -p <project> -e <env> -l api                                  # API only (still launches chromium: shared fixtures)
    sdods run -p <project> -e <env> -l ui -b chromium -t @smoke             # quick UI smoke
    sdods run -p <project> -e <env> -t @regression --project-matrix         # every browser in the yaml
    sdods run -p <project> -e <env> -t "@user:admin"                        # scenarios that lease admin users
    sdods run -p <project> -e <env> -l hybrid -w 2                          # API→UI chaining
    sdods run -p <project> -e <env> --har-replay --strict -t @smoke         # offline, CI-style
+   sdods run -p <project> -e <env> -b firefox --install-browsers           # download missing browsers first
    ```
+   A run whose browser is missing or half-downloaded stops before generating specs with the
+   `sdods browsers install -b <engine>` command; `--install-browsers` (or
+   `SDODS_AUTO_INSTALL_BROWSERS=1`, which the desktop app sets) downloads it instead. Never answer
+   Playwright's "run npx playwright install" by running that from another folder: it installs a
+   different revision into a cache the runner does not read.
 3. Read results:
    ```bash
    sdods report --last                    # summary: totals, failed, flaky, report paths

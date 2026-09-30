@@ -45,6 +45,67 @@ jobs:
       # CLI e2e tests replay the committed HAR fixtures when CI is set (offline, deterministic).
       - run: bun run test
 
+  # The desktop app's first-run failure on Windows ("Executable doesn't exist … chromium-1243"),
+  # reproduced from source on every OS: a browser cache holding a half-downloaded Chromium must
+  # stop a run with the SDODS command, not Playwright's `npx playwright install`; with auto-install
+  # on (as the desktop app sets it) the run repairs the cache and passes; and stopping a real UI
+  # run must leave no CLI, Playwright or browser process behind, which on Windows needs taskkill /T.
+  browsers-and-stop:
+    name: browsers · stop · ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-14, windows-latest]
+    defaults:
+      run:
+        shell: bash
+    env:
+      PLAYWRIGHT_BROWSERS_PATH: ${{ github.workspace }}/.pw-browsers
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - run: bun install --frozen-lockfile
+      - name: A half-downloaded Chromium, as left on the Windows machine
+        # Node builds the path: on Windows the workspace is D:\a\…, which bash mkdir would mangle.
+        run: |
+          node -e "
+            const fs = require('fs'), path = require('path'), { createRequire } = require('module');
+            // The runner's playwright-core, reached through @playwright/test; browsers.json is not
+            // exported, so it is read next to the package.json that is.
+            const test = createRequire(require.resolve('@playwright/test/package.json'));
+            const core = createRequire(test.resolve('playwright/package.json')).resolve('playwright-core/package.json');
+            const rev = require(path.join(path.dirname(core), 'browsers.json')).browsers.find((b) => b.name === 'chromium').revision;
+            const dir = path.join(process.env.PLAYWRIGHT_BROWSERS_PATH, 'chromium-' + rev);
+            fs.mkdirSync(dir, { recursive: true });
+            console.log('created', dir, '->', fs.readdirSync(process.env.PLAYWRIGHT_BROWSERS_PATH));
+          "
+      - name: Without auto-install the run stops with the SDODS command
+        run: |
+          set +e
+          out=$(bun run sdods run -p demo-shop -e $DEMO_ENV -l api --har-replay --strict --no-ingest 2>&1)
+          code=$?
+          echo "$out" | tail -5
+          [ $code -ne 0 ] || { echo "expected the run to stop"; exit 1; }
+          echo "$out" | grep -q 'sdods browsers install -b chromium' || { echo "missing SDODS hint"; exit 1; }
+          if echo "$out" | grep -q 'npx playwright install'; then echo "leaked the npx advice"; exit 1; fi
+      - if: runner.os == 'Linux'
+        run: sudo npx playwright install-deps chromium
+      - name: With auto-install the run repairs the cache and passes
+        env:
+          SDODS_AUTO_INSTALL_BROWSERS: '1'
+        run: bun run sdods run -p demo-shop -e $DEMO_ENV -l api --har-replay --strict --no-ingest
+      - name: Stopping a real UI run leaves no process behind
+        env:
+          SDODS_E2E_STOP: '1'
+        run: bunx vitest run packages/server/test/stop-tree.e2e.test.ts
+
   web:
     name: web · build · unit
     runs-on: ubuntu-latest

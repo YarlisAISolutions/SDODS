@@ -150,11 +150,22 @@ export const StartRunBody = z.object({
   workers: z.number().int().positive().optional(),
   feature: z.string().optional(),
   scenario: z.string().optional(),
+  /** Exact scenario names to run (Rerun failed); matched as a title filter like `scenario`. */
+  scenarios: z.array(z.string().min(1)).max(500).optional(),
   harMode: z.enum(['off', 'update', 'replay']).optional(),
   strict: z.boolean().optional(),
   projectMatrix: z.boolean().optional(),
   retries: z.number().int().min(0).optional(),
 });
+
+export const RerunBody = z
+  .object({
+    /** `all` replays the whole selection; `failed` only the scenarios that failed in that run. */
+    scope: z.enum(['all', 'failed']).default('all'),
+    /** Rerun just these scenarios of the run's selection (e.g. the one open on the scenario page). */
+    scenarios: z.array(z.string().min(1)).min(1).max(500).optional(),
+  })
+  .default({ scope: 'all' });
 
 export const RunListQuery = z.object({
   project: z.string().optional(),

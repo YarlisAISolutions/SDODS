@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router';
 import { useProjects, useRuns, useStartRun, useProject, useProcesses } from '../api/queries';
 import type { RunListItem, StartRunInput } from '../api/types';
@@ -17,9 +17,11 @@ import {
   TotalsBar,
 } from '../components/ui';
 import { DataTable } from '../components/ui/DataTable';
+import { RunControls } from '../components/RunControls';
 import { Dialog } from '../components/ui/Dialog';
 import { useToast } from '../components/ui/Toast';
 import { fmtDuration, fmtRelative, shortSha } from '../lib/utils';
+import { sanitizeSelection, selectionOf, useRunFormPref } from '../lib/run-form-pref';
 
 export function RunsPage() {
   const [params, setParams] = useSearchParams();
@@ -170,6 +172,11 @@ export function RunsPage() {
                 <span title={c.getValue<string>()}>{fmtRelative(c.getValue<string>())}</span>
               ),
             },
+            {
+              header: '',
+              id: 'actions',
+              cell: (c) => <RunControls run={c.row.original} stopPropagation compact />,
+            },
           ]}
         />
       )}
@@ -182,33 +189,69 @@ export function RunsPage() {
   );
 }
 
+const BLANK_FORM = { env: '', tags: '', layers: [], browsers: [] } satisfies Partial<StartRunInput>;
+
 export function StartRunDialog({
   open,
   onClose,
   defaultProject,
   prefill,
+  onStarted,
 }: {
   open: boolean;
   onClose: () => void;
   defaultProject?: string;
   prefill?: Partial<StartRunInput>;
+  /** Called with the new run's id instead of navigating to it (the feature editor stays put). */
+  onStarted?: (runId: string) => void;
 }) {
   const { workspace } = useWorkspace();
   const projects = useProjects(workspace?.slug);
   const [form, setForm] = useState<StartRunInput>({
     project: defaultProject ?? '',
-    env: '',
-    tags: '',
-    layers: [],
-    browsers: [],
+    ...BLANK_FORM,
     ...prefill,
   });
-  const project = useProject(form.project || defaultProject || '');
-  const processes = useProcesses(form.project || defaultProject || '');
+  const slug = form.project || defaultProject || '';
+  const project = useProject(slug);
+  const processes = useProcesses(slug);
+  const pref = useRunFormPref(workspace?.slug, slug);
   const start = useStartRun();
   const nav = useNavigate();
   const { toast } = useToast();
   const p = project.data;
+
+  // What a fresh dialog shows for this project: its defaults, then the last selection used for it,
+  // then what the caller scoped it to (feature, scenario). A project with several browsers starts
+  // on chromium alone, since "none ticked" means every browser the project declares.
+  const defaultsFor = (withSaved: boolean): StartRunInput => {
+    const saved =
+      withSaved && p
+        ? sanitizeSelection(
+            pref.saved,
+            p,
+            processes.data?.map((pr) => pr.name),
+          )
+        : {};
+    const browsers =
+      saved.browsers ??
+      (p && p.browsers.length > 1 && p.browsers.includes('chromium') ? ['chromium' as const] : []);
+    return { ...BLANK_FORM, project: slug, ...saved, browsers, ...prefill };
+  };
+
+  // Restore once per opening and per project, after the saved selection and the project are known.
+  const restoredFor = useRef<string | null>(null);
+  useEffect(() => {
+    if (!open) {
+      restoredFor.current = null;
+      return;
+    }
+    if (!slug || !p || pref.loading || processes.isLoading || restoredFor.current === slug) return;
+    restoredFor.current = slug;
+    setForm(defaultsFor(true));
+    // Deliberately keyed on these alone: re-running on every edit would undo the user's changes.
+  }, [open, slug, p, pref.loading, processes.isLoading]);
+
   const submit = () => {
     const input: StartRunInput = {
       ...form,
@@ -219,10 +262,12 @@ export function StartRunDialog({
       browsers: form.browsers?.length ? form.browsers : undefined,
       process: form.process || undefined,
     };
+    pref.save(selectionOf(input));
     start.mutate(input, {
       onSuccess: (r) => {
         onClose();
-        nav(`/runs/${r.runId}`);
+        if (onStarted) onStarted(r.runId);
+        else nav(`/runs/${r.runId}`);
       },
       onError: (e) => toast((e as Error).message, 'error'),
     });
@@ -367,7 +412,18 @@ export function StartRunDialog({
           {form.scenario && <> › {form.scenario}</>}
         </div>
       )}
-      <div className="muted mt-3 text-[11px]">
+      <div className="muted mt-3 flex flex-wrap items-center justify-between gap-2 text-[11px]">
+        <span>Your last selection for this project is remembered.</span>
+        <button
+          type="button"
+          className="underline"
+          data-testid="reset-run-form"
+          onClick={() => setForm(defaultsFor(false))}
+        >
+          Reset to project defaults
+        </button>
+      </div>
+      <div className="muted mt-1 text-[11px]">
         Prefer the CLI?{' '}
         <Link to="/settings/mcp" className="underline">
           Use MCP or API tokens

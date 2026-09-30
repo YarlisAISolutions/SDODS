@@ -32,8 +32,15 @@ import {
   selectVisualFailures,
 } from '@sdods/core';
 
-import { AcceptBaselinesBody, CompareQuery, RunListQuery, StartRunBody } from '../schemas/index.js';
-import { badRequest, forbidden, notFound, parse } from '../errors.js';
+import {
+  AcceptBaselinesBody,
+  CompareQuery,
+  RerunBody,
+  RunListQuery,
+  StartRunBody,
+} from '../schemas/index.js';
+import { badRequest, conflict, forbidden, notFound, parse } from '../errors.js';
+import { NothingToRerunError } from '../services/run-manager.js';
 import { diffPngs, pngSize } from '../services/image-diff.js';
 import { ArchiveTooLargeError, extractArtifacts } from '../services/artifacts-archive.js';
 import { assertRunAccess, hardenFileReply, projectOfRun, runDir } from '../services/run-access.js';
@@ -221,16 +228,49 @@ export async function runRoutes(app: FastifyInstance) {
       const { id } = req.params as { id: string };
       const job = app.runManager.get(id);
       if (!job) throw notFound('Live run');
-      await canSeeProject(req, job.input.project);
+      // Stopping someone's run is as consequential as starting one, so it takes the same role.
+      const role = await canSeeProject(req, job.input.project);
+      if (role === 'viewer') throw forbidden('Editor role required to stop runs.');
       const ok = app.runManager.cancel(id);
       await audit(app.adb.db, {
         actorUserId: req.principal!.userId,
-        actorType: 'user',
+        actorType: req.principal!.via === 'token' ? 'token' : 'user',
         action: 'run.cancel',
         targetType: 'run',
         targetId: id,
       });
       return { ok, status: job.status };
+    },
+  );
+
+  app.post(
+    '/api/runs/:id/rerun',
+    { preHandler: [app.requireScope('runs:write')] },
+    async (req, reply) => {
+      const { id } = req.params as { id: string };
+      const { scope, scenarios } = parse(RerunBody, req.body ?? undefined);
+      let input;
+      try {
+        input = await app.runManager.rerunInput(id, scope, scenarios);
+      } catch (e) {
+        if (e instanceof NothingToRerunError) throw conflict(e.message);
+        throw e;
+      }
+      if (!input) throw notFound(`Run ${id}`);
+      const role = await canSeeProject(req, input.project);
+      if (role === 'viewer') throw forbidden('Editor role required to start runs.');
+      if (!app.registry.has(input.project)) throw notFound(`Project ${input.project}`);
+      const job = await app.runManager.start({ ...input, trigger: 'ui' }, req.principal!.userId);
+      await audit(app.adb.db, {
+        actorUserId: req.principal!.userId,
+        actorType: req.principal!.via === 'token' ? 'token' : 'user',
+        action: 'run.rerun',
+        targetType: 'run',
+        targetId: job.runId,
+        details: { from: id, scope, scenarios: input.scenarios?.length },
+      });
+      reply.code(202);
+      return { runId: job.runId, status: job.status, rerunOf: id, scope };
     },
   );
 

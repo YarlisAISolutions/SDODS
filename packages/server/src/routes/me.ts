@@ -4,12 +4,14 @@ import {
   deleteSessionById,
   deleteSessionsForUser,
   getUserById,
+  getUserPreference,
   hashToken,
   listSessionsForUser,
+  setUserPreference,
   updateUser,
 } from '@sdods/db';
 import { ChangePasswordBody, PatchMeBody } from '../schemas/index.js';
-import { HttpError, forbidden, notFound, parse } from '../errors.js';
+import { HttpError, badRequest, forbidden, notFound, parse } from '../errors.js';
 import { hashPassword, verifyPassword } from '../services/password.js';
 import type { Principal } from '../types.js';
 import { publicUser } from './auth.js';
@@ -26,6 +28,32 @@ export async function meRoutes(app: FastifyInstance) {
       throw forbidden('Account settings need a browser session, not an API token.');
     return p as Principal & { sessionToken: string };
   };
+
+  // UI preferences, e.g. `runForm:<workspace>:<project>` for the last run selection. Opaque to
+  // the server: the web app validates what it reads back against the current project.
+  const PREF_KEY = /^[A-Za-z0-9:._-]{1,200}$/;
+  const PREF_MAX_BYTES = 16 * 1024;
+  const prefKey = (req: FastifyRequest) => {
+    const { key } = req.params as { key: string };
+    if (!PREF_KEY.test(key)) throw badRequest('Preference keys are 1-200 of A-Z a-z 0-9 : . _ -');
+    return key;
+  };
+
+  app.get('/api/me/preferences/:key', async (req) => {
+    const p = sessionOnly(req);
+    const pref = await getUserPreference(app.adb.db, p.userId, prefKey(req));
+    return pref ?? { key: prefKey(req), value: null, updatedAt: null };
+  });
+
+  app.put('/api/me/preferences/:key', async (req) => {
+    const p = sessionOnly(req);
+    const key = prefKey(req);
+    const { value } = (req.body ?? {}) as { value?: unknown };
+    if (value === undefined) throw badRequest('Body must be { "value": … }.');
+    if (Buffer.byteLength(JSON.stringify(value)) > PREF_MAX_BYTES)
+      throw badRequest(`A preference is at most ${PREF_MAX_BYTES / 1024} KB.`);
+    return setUserPreference(app.adb.db, p.userId, key, value);
+  });
 
   app.patch('/api/me', async (req) => {
     const p = sessionOnly(req);

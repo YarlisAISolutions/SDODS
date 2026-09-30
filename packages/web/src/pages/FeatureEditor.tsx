@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router';
+import { Link, useNavigate, useParams } from 'react-router';
 import { EditorState } from '@codemirror/state';
 import { EditorView, keymap, lineNumbers, highlightActiveLine } from '@codemirror/view';
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
@@ -14,6 +14,7 @@ import {
   useFeature,
   useFeatures,
   useProject,
+  useRun,
   useSaveFeature,
   useSteps,
   useValidateFeature,
@@ -21,7 +22,18 @@ import {
 } from '../api/queries';
 import type { Diagnostic } from '../api/types';
 import { useAuth } from '../auth/AuthContext';
-import { Badge, Button, ErrorBox, Kbd, PageHeader, Spinner, TagChip } from '../components/ui';
+import {
+  Badge,
+  Button,
+  ErrorBox,
+  Kbd,
+  PageHeader,
+  Spinner,
+  StatusPill,
+  TagChip,
+  TotalsBar,
+} from '../components/ui';
+import { RunControls, isLiveRun } from '../components/RunControls';
 import { useToast } from '../components/ui/Toast';
 import { cn } from '../lib/utils';
 import { gherkinLanguage, parseFeatureText, scenarioAtLine } from './editor/gherkin-language';
@@ -46,6 +58,8 @@ export function FeatureEditorPage() {
   const [serverDiags, setServerDiags] = useState<Diagnostic[]>([]);
   const [cursorLine, setCursorLine] = useState(1);
   const [running, setRunning] = useState<{ feature: string; scenario?: string } | null>(null);
+  // The run started from this editor, followed in place so it can be stopped or rerun from here.
+  const [editorRunId, setEditorRunId] = useState<string | null>(null);
   const host = useRef<HTMLDivElement>(null);
   const view = useRef<EditorView | null>(null);
   const worker = useRef<WorkerApi | null>(null);
@@ -327,6 +341,13 @@ export function FeatureEditorPage() {
           </>
         }
       />
+      {editorRunId && (
+        <EditorRunBar
+          runId={editorRunId}
+          onStarted={setEditorRunId}
+          onDismiss={() => setEditorRunId(null)}
+        />
+      )}
       <div className="grid min-h-0 flex-1 grid-cols-[220px_minmax(0,1fr)_280px] gap-3">
         <aside
           className="panel min-h-0 overflow-auto p-2 text-sm scrollbar-thin"
@@ -452,14 +473,56 @@ export function FeatureEditorPage() {
           open
           onClose={() => setRunning(null)}
           defaultProject={slug}
+          // No env here: the dialog restores the last one used for this project, else the default.
           prefill={{
             project: slug,
-            env: project.data?.envs.default ?? '',
             feature: running.feature,
             scenario: running.scenario,
           }}
+          onStarted={setEditorRunId}
         />
       )}
+    </div>
+  );
+}
+
+/**
+ * The run started from this editor, followed in place: status, live totals, Stop and Rerun, so
+ * running a scenario, stopping it and trying again does not mean leaving the file.
+ */
+function EditorRunBar({
+  runId,
+  onStarted,
+  onDismiss,
+}: {
+  runId: string;
+  onStarted: (runId: string) => void;
+  onDismiss: () => void;
+}) {
+  const q = useRun(runId, true);
+  const run = q.data;
+  const live = isLiveRun(run?.status);
+  return (
+    <div
+      className="panel mx-4 mb-2 flex flex-wrap items-center gap-3 px-3 py-2 text-xs"
+      data-testid="editor-run-bar"
+      role="status"
+    >
+      {run ? <StatusPill status={run.status} /> : <Spinner />}
+      <span className="mono muted">{runId}</span>
+      {run?.totals && <TotalsBar totals={run.totals} />}
+      {live && <span className="muted">running…</span>}
+      <span className="ml-auto flex items-center gap-2">
+        {run && <RunControls run={run} onStarted={onStarted} />}
+        <Link to={`/runs/${runId}`} className="underline">
+          Open run
+        </Link>
+        {!live && (
+          <Button size="sm" variant="ghost" aria-label="Dismiss" onClick={onDismiss}>
+            ✕
+          </Button>
+        )}
+      </span>
     </div>
   );
 }

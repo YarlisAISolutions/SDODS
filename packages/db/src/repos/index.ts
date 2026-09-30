@@ -5,3 +5,4 @@ export * from './test-data.js';
 export * from './auth.js';
 export * from './platform.js';
 export * from './hierarchy.js';
+export * from './preferences.js';
