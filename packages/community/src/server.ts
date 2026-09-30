@@ -8,7 +8,16 @@ import { editPost, resolveEdit } from './edits.js';
 import { acceptAnswer, castVote } from './engagement.js';
 import { canVote, type VoteValue } from './reputation.js';
 import { redact } from './redact.js';
-import { parseAnswer, parseQuestion, parseResolve, parseRole } from './requests.js';
+import {
+  isDocId,
+  isSlug,
+  isUid,
+  parseAnswer,
+  parseFeedback,
+  parseQuestion,
+  parseResolve,
+  parseRole,
+} from './requests.js';
 import { review, type Decision, type ReviewResult } from './review.js';
 import {
   newId,
@@ -162,6 +171,70 @@ export async function buildCommunityServer(deps: CommunityServerDeps): Promise<F
     if (!v) return reply;
     return { uid: v.uid, name: v.name, role: v.role, provider: v.provider };
   });
+
+  // Public reads: what the static site shows. Published posts and public profile fields only, so
+  // no sign-in; a short shared cache keeps a busy page from reaching the service on every visit.
+  const cached = (reply: FastifyReply) =>
+    reply.header('cache-control', `public, max-age=${config.readCacheSeconds}`);
+  // One page view makes several reads, so they get a roomier per-IP limit than posting does.
+  const reads = {
+    config: { rateLimit: { max: config.readRateLimit, timeWindow: config.rateLimitWindowMs } },
+  };
+
+  app.get('/questions', reads, async (req, reply) => {
+    const { limit } = req.query as { limit?: string };
+    const n = Math.min(Math.max(Number(limit) || 50, 1), 100);
+    cached(reply);
+    return { items: await store.publishedQuestions(n) };
+  });
+
+  app.get('/questions/:id', reads, async (req, reply) => {
+    const { id } = req.params as { id: string };
+    if (!isDocId(id)) return reply.code(400).send({ error: 'Bad id' });
+    const q = await store.questionThread(id);
+    if (!q) return reply.code(404).send({ error: 'No such question.' });
+    cached(reply);
+    return q;
+  });
+
+  app.get('/threads/:slug/answers', reads, async (req, reply) => {
+    const { slug } = req.params as { slug: string };
+    if (!isSlug(slug)) return reply.code(400).send({ error: 'Bad slug' });
+    cached(reply);
+    return { items: await store.threadAnswers(slug) };
+  });
+
+  app.get('/profiles', reads, async (req, reply) => {
+    const { uids } = req.query as { uids?: string };
+    const list = [...new Set((uids ?? '').split(',').filter(Boolean))];
+    if (list.length > 50 || !list.every(isUid))
+      return reply.code(400).send({ error: 'Up to 50 valid uids, comma-separated.' });
+    cached(reply);
+    return { profiles: await store.profiles(list) };
+  });
+
+  app.get('/revisions', reads, async (req, reply) => {
+    const { path } = req.query as { path?: string };
+    if (!path || !POST_PATH.test(path)) return reply.code(400).send({ error: 'Bad path' });
+    cached(reply);
+    return { items: await store.revisions(path) };
+  });
+
+  // Anonymous, so it gets a tighter per-IP limit of its own on top of the global one.
+  app.post(
+    '/feedback',
+    {
+      config: {
+        rateLimit: { max: config.feedbackPerWindow, timeWindow: config.rateLimitWindowMs },
+      },
+    },
+    async (req, reply) => {
+      const parsed = parseFeedback(req.body);
+      if (!parsed.ok) return reply.code(400).send({ error: parsed.error });
+      await store.saveFeedback(parsed.value);
+      return { ok: true };
+    },
+  );
 
   /** The AI review with the daily budget in front of it: past the budget, a human decides. */
   async function reviewWithBudget(

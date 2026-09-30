@@ -17,7 +17,15 @@ import {
   fieldsFor,
   toQueueItem,
   toPendingEdit,
+  toPublicAnswer,
+  toPublicProfile,
+  toPublicQuestion,
+  toPublicRevision,
+  feedbackRecord,
   type CommunityStore,
+  type Feedback,
+  type PublicAnswer,
+  type PublicProfile,
   type NewPost,
   type PendingEdit,
   type QueueItem,
@@ -358,5 +366,133 @@ export class FirestoreStore implements CommunityStore {
       if ((f.value === 1 || f.value === -1) && typeof f.post === 'string') out[f.post] = f.value;
     }
     return out;
+  }
+
+  /**
+   * A structured query under `parent` (a document path, or '' for the root). Equality filters on
+   * `where`, then one order. These are the same queries the site used to run from the browser, so
+   * they need no new composite indexes.
+   */
+  private async query(
+    what: string,
+    q: {
+      parent?: string;
+      collection: string;
+      where: Record<string, string>;
+      orderBy: string;
+      direction: 'ASCENDING' | 'DESCENDING';
+      limit?: number;
+    },
+  ): Promise<Array<{ id: string; fields: Record<string, unknown>; createdAt: string | null }>> {
+    const filters = Object.entries(q.where).map(([fieldPath, stringValue]) => ({
+      fieldFilter: { field: { fieldPath }, op: 'EQUAL', value: { stringValue } },
+    }));
+    const url = `${q.parent ? `${this.base}/${q.parent}` : this.base}:runQuery`;
+    const res = await this.ok(
+      await this.call('POST', url, {
+        structuredQuery: {
+          from: [{ collectionId: q.collection }],
+          where: filters.length === 1 ? filters[0] : { compositeFilter: { op: 'AND', filters } },
+          orderBy: [{ field: { fieldPath: q.orderBy }, direction: q.direction }],
+          ...(q.limit ? { limit: q.limit } : {}),
+        },
+      }),
+      what,
+    );
+    const rows = (await res.json()) as Array<{ document?: FsDocument }>;
+    return rows.flatMap((r) => {
+      if (!r.document) return [];
+      const fields = fromFields(r.document.fields ?? {});
+      const createdAt =
+        typeof fields.createdAt === 'string' ? fields.createdAt : (r.document.createTime ?? null);
+      return [{ id: r.document.name.split('/').at(-1)!, fields, createdAt }];
+    });
+  }
+
+  private async answersOf(questionId: string): Promise<PublicAnswer[]> {
+    const rows = await this.query('answers', {
+      parent: `questions/${encodeURIComponent(questionId)}`,
+      collection: 'answers',
+      where: { status: 'published' },
+      orderBy: 'createdAt',
+      direction: 'ASCENDING',
+    });
+    return rows.map((a) => toPublicAnswer(a.id, a.fields, a.createdAt));
+  }
+
+  async publishedQuestions(limit: number) {
+    const rows = await this.query('publishedQuestions', {
+      collection: 'questions',
+      where: { status: 'published' },
+      orderBy: 'createdAt',
+      direction: 'DESCENDING',
+      limit,
+    });
+    return Promise.all(
+      rows.map(async (q) =>
+        toPublicQuestion(q.id, q.fields, q.createdAt, await this.answersOf(q.id)),
+      ),
+    );
+  }
+
+  async questionThread(id: string) {
+    const res = await this.call('GET', `${this.base}/questions/${encodeURIComponent(id)}`);
+    if (res.status === 404) return null;
+    await this.ok(res, 'questionThread');
+    const doc = (await res.json()) as FsDocument;
+    const f = fromFields(doc.fields ?? {});
+    if (f.status !== 'published') return null;
+    const createdAt = typeof f.createdAt === 'string' ? f.createdAt : (doc.createTime ?? null);
+    return toPublicQuestion(id, f, createdAt, await this.answersOf(id));
+  }
+
+  async threadAnswers(slug: string) {
+    const rows = await this.query('threadAnswers', {
+      collection: 'threadAnswers',
+      where: { slug, status: 'published' },
+      orderBy: 'createdAt',
+      direction: 'ASCENDING',
+    });
+    return rows.map((a) => toPublicAnswer(a.id, a.fields, a.createdAt));
+  }
+
+  async profiles(uids: string[]) {
+    const out: Record<string, PublicProfile> = {};
+    if (!uids.length) return out;
+    const res = await this.ok(
+      await this.call('POST', `${this.base}:batchGet`, {
+        documents: uids.map((uid) => this.docName(`users/${uid}`)),
+      }),
+      'profiles',
+    );
+    const rows = (await res.json()) as Array<{ found?: FsDocument }>;
+    for (const r of rows)
+      if (r.found)
+        out[r.found.name.split('/').at(-1)!] = toPublicProfile(fromFields(r.found.fields ?? {}));
+    return out;
+  }
+
+  async revisions(path: string) {
+    const rows = await this.query('revisions', {
+      collection: 'revisions',
+      where: { post: path, status: 'applied' },
+      orderBy: 'revision',
+      direction: 'ASCENDING',
+    });
+    return rows.map((r) => toPublicRevision(r.fields, r.createdAt));
+  }
+
+  async saveFeedback(f: Feedback) {
+    const { collection, fields } = feedbackRecord(f);
+    const res = await this.call('POST', `${this.base}:commit`, {
+      writes: [
+        {
+          update: { name: this.docName(`${collection}/${newId()}`), fields: toFields(fields) },
+          currentDocument: { exists: false },
+          updateTransforms: [{ fieldPath: 'createdAt', setToServerValue: 'REQUEST_TIME' }],
+        },
+      ],
+    });
+    await this.ok(res, 'saveFeedback');
   }
 }

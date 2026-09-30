@@ -1,5 +1,7 @@
 /** What the browser may send, validated before anything else happens. */
 
+import type { Feedback } from './store.js';
+
 export const LIMITS = {
   titleMin: 10,
   titleMax: 200,
@@ -112,4 +114,45 @@ export function parseRole(body: unknown): Parsed<RoleRequest> {
   if (b.role !== 'member' && b.role !== 'editor' && b.role !== 'admin')
     return { ok: false, error: 'role must be member, editor or admin' };
   return { ok: true, value: { uid: b.uid, role: b.role } };
+}
+
+export const isDocId = (v: unknown): v is string => typeof v === 'string' && DOC_ID.test(v);
+export const isSlug = (v: unknown): v is string => typeof v === 'string' && SLUG.test(v);
+/** A uid as the identity provider issues it (the verifier caps it at 128 characters). */
+export const isUid = (v: unknown): v is string =>
+  typeof v === 'string' && /^[A-Za-z0-9_-]{1,128}$/.test(v);
+
+const FEEDBACK_KINDS = ['feature', 'bug', 'feedback'] as const;
+const VERDICTS = ['helpful', 'not-helpful'] as const;
+
+/** Feedback, with the limits the Firestore rules enforced when browsers wrote it directly. */
+export function parseFeedback(body: unknown): Parsed<Feedback> {
+  const b = (body ?? {}) as Record<string, unknown>;
+  const within = (v: unknown, max: number, min = 0) => {
+    const t = text(v ?? '');
+    return t !== null && t.length >= min && t.length <= max ? t : null;
+  };
+  if (b.type === 'site') {
+    const kind = FEEDBACK_KINDS.find((k) => k === b.kind);
+    const title = within(b.title, 200, 1);
+    const content = within(b.body, 5000, 1);
+    const name = within(b.name, 100);
+    const email = within(b.email, 254);
+    if (!kind) return { ok: false, error: 'Bad kind' };
+    if (title === null) return { ok: false, error: 'The title must be 1–200 characters.' };
+    if (content === null) return { ok: false, error: 'The message must be 1–5000 characters.' };
+    if (name === null || email === null) return { ok: false, error: 'Name or email too long.' };
+    return { ok: true, value: { type: 'site', kind, title, body: content, name, email } };
+  }
+  if (b.type === 'page') {
+    const verdict = VERDICTS.find((v) => v === b.verdict);
+    const path = within(b.path, 300);
+    const title = within(b.title, 200);
+    const note = within(b.note, 2000);
+    if (!verdict) return { ok: false, error: 'Bad verdict' };
+    if (path === null || title === null || note === null)
+      return { ok: false, error: 'A field is too long.' };
+    return { ok: true, value: { type: 'page', path, title, verdict, note } };
+  }
+  return { ok: false, error: 'Bad type' };
 }

@@ -117,6 +117,144 @@ export interface UserRecord {
   firstSeen: Date;
 }
 
+// What the site reads. Only published posts, only public fields; dates are ISO strings.
+
+export interface PublicAnswer {
+  id: string;
+  uid: string | null;
+  score: number;
+  revision: number;
+  body: string;
+  name: string;
+  /** Empty for an answer to the question; otherwise the answer this replies to. */
+  parentId: string;
+  createdAt: string | null;
+}
+
+export interface PublicQuestion {
+  id: string;
+  uid: string | null;
+  score: number;
+  revision: number;
+  acceptedAnswerId: string | null;
+  title: string;
+  body: string;
+  name: string;
+  category: string;
+  createdAt: string | null;
+  /** Published answers and replies, oldest first. */
+  answers: PublicAnswer[];
+}
+
+export interface PublicProfile {
+  rep: number;
+  role: string;
+  display: string;
+  badges: Array<{ id: string; tier: 'gold' | 'silver' | 'bronze'; post?: string; at: string }>;
+}
+
+export interface PublicRevision {
+  revision: number;
+  title: string | null;
+  body: string;
+  byName: string;
+  comment: string;
+  createdAt: string | null;
+}
+
+/** A feature request or bug report from the site, or a "was this page helpful?" click. */
+export type Feedback =
+  | {
+      type: 'site';
+      kind: 'feature' | 'bug' | 'feedback';
+      title: string;
+      body: string;
+      name: string;
+      email: string;
+    }
+  | { type: 'page'; path: string; title: string; verdict: 'helpful' | 'not-helpful'; note: string };
+
+const str = (v: unknown) => (typeof v === 'string' ? v : '');
+const num = (v: unknown, fallback: number) => (typeof v === 'number' ? v : fallback);
+const orNull = (v: unknown) => (typeof v === 'string' && v ? v : null);
+
+export function toPublicAnswer(
+  id: string,
+  f: Record<string, unknown>,
+  createdAt: string | null,
+): PublicAnswer {
+  return {
+    id,
+    uid: orNull(f.uid),
+    score: num(f.score, 0),
+    revision: num(f.revision, 0),
+    body: str(f.body),
+    name: str(f.name),
+    parentId: str(f.parentId),
+    createdAt,
+  };
+}
+
+export function toPublicQuestion(
+  id: string,
+  f: Record<string, unknown>,
+  createdAt: string | null,
+  answers: PublicAnswer[],
+): PublicQuestion {
+  return {
+    id,
+    uid: orNull(f.uid),
+    score: num(f.score, 0),
+    revision: num(f.revision, 0),
+    acceptedAnswerId: orNull(f.acceptedAnswerId),
+    title: str(f.title),
+    body: str(f.body),
+    name: str(f.name),
+    category: str(f.category) || 'other',
+    createdAt,
+    answers,
+  };
+}
+
+export function toPublicProfile(f: Record<string, unknown>): PublicProfile {
+  const badges = (Array.isArray(f.badges) ? f.badges : []).filter(
+    (b): b is PublicProfile['badges'][number] =>
+      Boolean(b) && typeof (b as { id?: unknown }).id === 'string',
+  );
+  return {
+    rep: num(f.rep, 1),
+    role: str(f.role) || 'member',
+    display: str(f.display) || 'SDODS user',
+    badges,
+  };
+}
+
+export function toPublicRevision(
+  f: Record<string, unknown>,
+  createdAt: string | null,
+): PublicRevision {
+  return {
+    revision: num(f.revision, 0),
+    title: orNull(f.title),
+    body: str(f.body),
+    byName: str(f.byName),
+    comment: str(f.comment),
+    createdAt,
+  };
+}
+
+/** The document a feedback row is stored as, with the fields the old browser path wrote. */
+export function feedbackRecord(f: Feedback): {
+  collection: string;
+  fields: Record<string, unknown>;
+} {
+  const { type, ...fields } = f;
+  return {
+    collection: type === 'site' ? 'feedback' : 'pageFeedback',
+    fields: { ...fields, status: 'new' },
+  };
+}
+
 export interface CommunityStore {
   /** Creates the user's public profile on first sight; returns when they were first seen. */
   ensureUser(u: {
@@ -144,6 +282,19 @@ export interface CommunityStore {
   pendingEdits(): Promise<PendingEdit[]>;
   /** The user's current votes on these posts; posts they have not voted on are absent. */
   myVotes(uid: string, paths: string[]): Promise<Record<string, VoteValue>>;
+
+  /** Published questions, newest first, each with its published answers. */
+  publishedQuestions(limit: number): Promise<PublicQuestion[]>;
+  /** One published question with its published answers; null when missing or not published. */
+  questionThread(id: string): Promise<PublicQuestion | null>;
+  /** Published answers on a static archive thread, oldest first. */
+  threadAnswers(slug: string): Promise<PublicAnswer[]>;
+  /** Public profiles for these users; users with no profile are absent. */
+  profiles(uids: string[]): Promise<Record<string, PublicProfile>>;
+  /** A post's applied revisions, oldest first. */
+  revisions(path: string): Promise<PublicRevision[]>;
+  /** Stores feedback for the moderator; it is never shown on the site. */
+  saveFeedback(f: Feedback): Promise<void>;
 }
 
 /** A document path the service writes: guards every path that arrives from a browser. */
@@ -294,6 +445,64 @@ export class MemoryStore implements CommunityStore {
       if (v === 1 || v === -1) out[p] = v;
     }
     return out;
+  }
+
+  /** Published documents directly under `prefix` (no deeper paths), with their ids. */
+  private published(prefix: string, where: (f: Record<string, unknown>) => boolean = () => true) {
+    return [...this.docs.entries()]
+      .filter(([p, d]) => {
+        const rest = p.startsWith(prefix) ? p.slice(prefix.length) : '';
+        return rest && !rest.includes('/') && d.fields.status === 'published' && where(d.fields);
+      })
+      .map(([p, d]) => ({ id: p.slice(prefix.length), fields: d.fields, at: d.createdAt }))
+      .sort((a, b) => a.at.getTime() - b.at.getTime());
+  }
+
+  private thread(id: string, fields: Record<string, unknown>, at: Date): PublicQuestion {
+    const answers = this.published(`questions/${id}/answers/`).map((a) =>
+      toPublicAnswer(a.id, a.fields, a.at.toISOString()),
+    );
+    return toPublicQuestion(id, fields, at.toISOString(), answers);
+  }
+
+  async publishedQuestions(limit: number) {
+    return this.published('questions/')
+      .reverse()
+      .slice(0, limit)
+      .map((q) => this.thread(q.id, q.fields, q.at));
+  }
+
+  async questionThread(id: string) {
+    const d = this.docs.get(`questions/${id}`);
+    return d && d.fields.status === 'published' ? this.thread(id, d.fields, d.createdAt) : null;
+  }
+
+  async threadAnswers(slug: string) {
+    return this.published('threadAnswers/', (f) => f.slug === slug).map((a) =>
+      toPublicAnswer(a.id, a.fields, a.at.toISOString()),
+    );
+  }
+
+  async profiles(uids: string[]) {
+    const out: Record<string, PublicProfile> = {};
+    for (const uid of uids) {
+      const u = this.read(`users/${uid}`);
+      if (u) out[uid] = toPublicProfile(u);
+    }
+    return out;
+  }
+
+  async revisions(path: string) {
+    return [...this.docs.entries()]
+      .filter(([p, d]) => p.startsWith('revisions/') && d.fields.post === path)
+      .filter(([, d]) => d.fields.status === 'applied')
+      .map(([, d]) => toPublicRevision(d.fields, d.createdAt.toISOString()))
+      .sort((a, b) => a.revision - b.revision);
+  }
+
+  async saveFeedback(f: Feedback) {
+    const { collection, fields } = feedbackRecord(f);
+    this.docs.set(`${collection}/m${++this.seq}`, { fields, createdAt: new Date() });
   }
 }
 

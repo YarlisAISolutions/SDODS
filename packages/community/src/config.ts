@@ -25,6 +25,12 @@ export interface CommunityConfig {
   postsPerWindow: number;
   /** Requests per IP per window, across every route. */
   ipRateLimit: number;
+  /** Public reads (question lists, profiles, revisions) per IP per window. */
+  readRateLimit: number;
+  /** Anonymous feedback submissions per IP per window. */
+  feedbackPerWindow: number;
+  /** Shared-cache lifetime of the public read routes, in seconds. */
+  readCacheSeconds: number;
   rateLimitWindowMs: number;
   /**
    * Accounts first seen less than this many hours ago always go to the editor queue. 0 disables it:
@@ -88,12 +94,20 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): CommunityConfi
       : [
           'https://sdods.com',
           'https://www.sdods.com',
+          // The docs site sends "was this page helpful?" clicks to /feedback.
+          'https://docs.sdods.com',
           ...(production ? [] : ['http://localhost:3100', 'http://localhost:3002']),
         ],
-    allowedOriginPatterns: list(env.COMMUNITY_ALLOWED_ORIGIN_PATTERNS),
+    // Commas or spaces: spaces survive `gcloud --set-env-vars`, which splits on commas.
+    allowedOriginPatterns: (env.COMMUNITY_ALLOWED_ORIGIN_PATTERNS ?? '')
+      .split(/[\s,]+/)
+      .filter(Boolean),
     dailyBudgetUsd: num(env.COMMUNITY_DAILY_BUDGET_USD, 5),
     postsPerWindow: num(env.COMMUNITY_POSTS_PER_WINDOW, 10),
     ipRateLimit: num(env.COMMUNITY_IP_RATE_LIMIT, 60),
+    readRateLimit: num(env.COMMUNITY_READ_RATE_LIMIT, 1200),
+    feedbackPerWindow: num(env.COMMUNITY_FEEDBACK_PER_WINDOW, 10),
+    readCacheSeconds: num(env.COMMUNITY_READ_CACHE_SECONDS, 60),
     rateLimitWindowMs: num(env.COMMUNITY_RATE_LIMIT_WINDOW_MS, 60 * 60 * 1000),
     newAccountQueueHours: num(env.COMMUNITY_NEW_ACCOUNT_QUEUE_HOURS, 0),
     upvoteRep: num(env.COMMUNITY_UPVOTE_REP, 15),
