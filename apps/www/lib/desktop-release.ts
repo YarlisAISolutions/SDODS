@@ -156,7 +156,8 @@ export interface DesktopRelease {
  */
 export const DESKTOP_RELEASE: DesktopRelease = {
   tag: 'desktop-v0.1.3',
-  assetBaseUrl: 'https://github.com/YarlisAISolutions/sdods-releases/releases/download/desktop-v0.1.3',
+  assetBaseUrl:
+    'https://github.com/YarlisAISolutions/sdods-releases/releases/download/desktop-v0.1.3',
   version: '0.1.3',
   published: '2026-09-29',
   signed: ['windows'],
