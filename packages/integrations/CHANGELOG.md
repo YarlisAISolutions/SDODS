@@ -1,5 +1,11 @@
 # @sdods/integrations
 
+## 0.12.0
+
+### Patch Changes
+
+- @sdods/contracts@0.12.0
+
 ## 0.11.3
 
 ### Patch Changes
