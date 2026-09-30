@@ -1,14 +1,23 @@
 import type Anthropic from '@anthropic-ai/sdk';
 import rateLimit from '@fastify/rate-limit';
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from 'fastify';
-import { canModerate, type Verifier, type Viewer } from './auth.js';
+import { canModerate, type RoleClaims, type Verifier, type Viewer } from './auth.js';
 import type { CommunityConfig } from './config.js';
 import type { ThreadIndex } from './duplicates.js';
 import { editPost, resolveEdit } from './edits.js';
 import { acceptAnswer, castVote } from './engagement.js';
 import { canVote, type VoteValue } from './reputation.js';
 import { redact } from './redact.js';
-import { parseAnswer, parseQuestion, parseResolve, parseRole } from './requests.js';
+import {
+  isDocId,
+  isSlug,
+  isUid,
+  parseAnswer,
+  parseFeedback,
+  parseQuestion,
+  parseResolve,
+  parseRole,
+} from './requests.js';
 import { review, type Decision, type ReviewResult } from './review.js';
 import {
   newId,
@@ -24,6 +33,8 @@ export interface CommunityServerDeps {
   config: CommunityConfig;
   client: Pick<Anthropic, 'messages'>;
   verify: Verifier;
+  /** Grants roles in the identity provider; without it, roles live only on the profile. */
+  roleClaims?: RoleClaims;
   store: CommunityStore;
   index: ThreadIndex;
   logger?: boolean | object;
@@ -32,9 +43,16 @@ export interface CommunityServerDeps {
 
 export function isAllowedOrigin(origin: string, config: CommunityConfig): boolean {
   if (config.allowedOrigins.includes(origin)) return true;
-  // Firebase Hosting preview channels: https://<site>--<channel>-<hash>.web.app
-  const m = /^https:\/\/([a-z0-9-]+?)--[a-z0-9-]+\.web\.app$/.exec(origin);
-  return Boolean(m && config.previewSites.includes(m[1]!));
+  return config.allowedOriginPatterns.some((p) => originPattern(p).test(origin));
+}
+
+/**
+ * `https://site--*.example.app` → a RegExp in which `*` stands for letters, digits and hyphens but
+ * never a dot, so a pattern for preview hosts cannot match someone else's domain.
+ */
+export function originPattern(glob: string): RegExp {
+  const escaped = glob.split('*').map((s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  return new RegExp(`^${escaped.join('[a-z0-9-]+')}$`);
 }
 
 /** USD per million tokens; unknown models are priced like Opus so the budget errs on the safe side. */
@@ -82,7 +100,7 @@ const FALLBACK_REASON: Record<Decision, string> = {
 };
 
 export async function buildCommunityServer(deps: CommunityServerDeps): Promise<FastifyInstance> {
-  const { config, client, verify, store, index } = deps;
+  const { config, client, verify, roleClaims, store, index } = deps;
   const now = deps.now ?? (() => new Date());
   const app = Fastify({
     logger: deps.logger ?? { level: process.env.COMMUNITY_LOG_LEVEL ?? 'info' },
@@ -90,8 +108,8 @@ export async function buildCommunityServer(deps: CommunityServerDeps): Promise<F
     bodyLimit: 64 * 1024,
   });
 
-  // CORS: sdods.com and its preview channels only. The Authorization header carries the Firebase
-  // ID token, so it has to be allowed on the preflight.
+  // CORS: the configured sites and preview hosts only. The Authorization header carries the
+  // sign-in ID token, so it has to be allowed on the preflight.
   app.addHook('onRequest', async (req, reply) => {
     const origin = req.headers.origin;
     if (!origin) return;
@@ -153,6 +171,70 @@ export async function buildCommunityServer(deps: CommunityServerDeps): Promise<F
     if (!v) return reply;
     return { uid: v.uid, name: v.name, role: v.role, provider: v.provider };
   });
+
+  // Public reads: what the static site shows. Published posts and public profile fields only, so
+  // no sign-in; a short shared cache keeps a busy page from reaching the service on every visit.
+  const cached = (reply: FastifyReply) =>
+    reply.header('cache-control', `public, max-age=${config.readCacheSeconds}`);
+  // One page view makes several reads, so they get a roomier per-IP limit than posting does.
+  const reads = {
+    config: { rateLimit: { max: config.readRateLimit, timeWindow: config.rateLimitWindowMs } },
+  };
+
+  app.get('/questions', reads, async (req, reply) => {
+    const { limit } = req.query as { limit?: string };
+    const n = Math.min(Math.max(Number(limit) || 50, 1), 100);
+    cached(reply);
+    return { items: await store.publishedQuestions(n) };
+  });
+
+  app.get('/questions/:id', reads, async (req, reply) => {
+    const { id } = req.params as { id: string };
+    if (!isDocId(id)) return reply.code(400).send({ error: 'Bad id' });
+    const q = await store.questionThread(id);
+    if (!q) return reply.code(404).send({ error: 'No such question.' });
+    cached(reply);
+    return q;
+  });
+
+  app.get('/threads/:slug/answers', reads, async (req, reply) => {
+    const { slug } = req.params as { slug: string };
+    if (!isSlug(slug)) return reply.code(400).send({ error: 'Bad slug' });
+    cached(reply);
+    return { items: await store.threadAnswers(slug) };
+  });
+
+  app.get('/profiles', reads, async (req, reply) => {
+    const { uids } = req.query as { uids?: string };
+    const list = [...new Set((uids ?? '').split(',').filter(Boolean))];
+    if (list.length > 50 || !list.every(isUid))
+      return reply.code(400).send({ error: 'Up to 50 valid uids, comma-separated.' });
+    cached(reply);
+    return { profiles: await store.profiles(list) };
+  });
+
+  app.get('/revisions', reads, async (req, reply) => {
+    const { path } = req.query as { path?: string };
+    if (!path || !POST_PATH.test(path)) return reply.code(400).send({ error: 'Bad path' });
+    cached(reply);
+    return { items: await store.revisions(path) };
+  });
+
+  // Anonymous, so it gets a tighter per-IP limit of its own on top of the global one.
+  app.post(
+    '/feedback',
+    {
+      config: {
+        rateLimit: { max: config.feedbackPerWindow, timeWindow: config.rateLimitWindowMs },
+      },
+    },
+    async (req, reply) => {
+      const parsed = parseFeedback(req.body);
+      if (!parsed.ok) return reply.code(400).send({ error: parsed.error });
+      await store.saveFeedback(parsed.value);
+      return { ok: true };
+    },
+  );
 
   /** The AI review with the daily budget in front of it: past the budget, a human decides. */
   async function reviewWithBudget(
@@ -576,6 +658,7 @@ export async function buildCommunityServer(deps: CommunityServerDeps): Promise<F
     if (viewer.role !== 'admin') return reply.code(403).send({ error: 'Admins only.' });
     const parsed = parseRole(req.body);
     if (!parsed.ok) return reply.code(400).send({ error: parsed.error });
+    await roleClaims?.(parsed.value.uid, parsed.value.role);
     await store.setRole(parsed.value.uid, parsed.value.role);
     req.log.info({ ...parsed.value, by: viewer.uid }, 'role set');
     return {

@@ -13,7 +13,7 @@ import {
 
 /**
  * One question and its answers, rendered statically, with answers and replies posted on the site
- * layered on top from Firestore (see `ThreadCommunityProvider`).
+ * layered on top from the community service (see `ThreadCommunityProvider`).
  *
  * `dynamicParams = false` is what makes a mistyped slug a build error rather than a page that only
  * fails in production: under `output: 'export'` there is no server to fall back to.

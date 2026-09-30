@@ -15,7 +15,7 @@ import { BadgeCountsInline, EditPost, RevisionHistory } from '@/components/qa/ph
  * Community answers and replies layered over a question page.
  *
  * On an archive thread the question and its archive answers are static HTML; what people post on the
- * site lives in Firestore and is fetched here after paint. One provider fetches once for the whole
+ * site lives in the community service and is fetched here after paint. One provider fetches once for the whole
  * page, and every reply list reads from it, so a thread with ten answers is still one query.
  *
  * Replies are one level deep. Replying to a reply files it under the same answer and starts the body
@@ -139,7 +139,7 @@ export function PostMeta({ post }: { post: Pick<Answer, 'uid' | 'name' | 'create
 
 /**
  * The replies under one answer, and the Reply button that opens a form for it. `parentId` is the
- * answer's id — an archive answer id such as `a1`, or a Firestore document id.
+ * answer's id — an archive answer id such as `a1`, or a live post id.
  */
 export function ReplyThread({ parentId, parentName }: { parentId: string; parentName: string }) {
   const { target, posts } = usePosts();

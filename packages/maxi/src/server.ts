@@ -23,9 +23,16 @@ const ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
 export function isAllowedOrigin(origin: string, config: MaxiConfig): boolean {
   if (config.allowedOrigins.includes(origin)) return true;
-  // Firebase Hosting preview channels: https://<site>--<channel>-<hash>.web.app
-  const m = /^https:\/\/([a-z0-9-]+?)--[a-z0-9-]+\.web\.app$/.exec(origin);
-  return Boolean(m && config.previewSites.includes(m[1]!));
+  return config.allowedOriginPatterns.some((p) => originPattern(p).test(origin));
+}
+
+/**
+ * `https://site--*.example.app` → a RegExp in which `*` stands for letters, digits and hyphens but
+ * never a dot, so a pattern for preview hosts cannot match someone else's domain.
+ */
+export function originPattern(glob: string): RegExp {
+  const escaped = glob.split('*').map((s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  return new RegExp(`^${escaped.join('[a-z0-9-]+')}$`);
 }
 
 export async function buildMaxiServer(deps: MaxiServerDeps): Promise<FastifyInstance> {

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import type { FastifyInstance } from 'fastify';
-import type { Verifier, Viewer } from '../src/auth.js';
+import type { RoleClaims, Verifier, Viewer } from '../src/auth.js';
 import { loadConfig } from '../src/config.js';
 import { ThreadIndex } from '../src/duplicates.js';
 import { buildCommunityServer } from '../src/server.js';
@@ -31,7 +31,11 @@ const verify: Verifier = async (h) => people[(h ?? '').replace('Bearer ', '')] ?
 let app: FastifyInstance | undefined;
 afterEach(async () => app?.close());
 
-async function setup(script: Parameters<typeof fakeClient>[0], env: Record<string, string> = {}) {
+async function setup(
+  script: Parameters<typeof fakeClient>[0],
+  env: Record<string, string> = {},
+  roleClaims?: RoleClaims,
+) {
   const store = new MemoryStore();
   const index = new ThreadIndex({ url: 'unused', refreshMs: 1e9 });
   index.set([
@@ -42,6 +46,7 @@ async function setup(script: Parameters<typeof fakeClient>[0], env: Record<strin
     config: { ...loadConfig({ NODE_ENV: 'test', ...env }) },
     client,
     verify,
+    roleClaims,
     store,
     index,
     logger: false,
@@ -215,15 +220,32 @@ describe('roles', () => {
     expect((await set('admin')).statusCode).toBe(200);
     expect(store.users.get('uMember')?.role).toBe('editor');
   });
+
+  it('grants the role in the identity provider as well as on the profile', async () => {
+    const granted: Array<[string, string]> = [];
+    const { app } = await setup([], {}, async (uid, role) => void granted.push([uid, role]));
+    await app.inject({
+      method: 'POST',
+      url: '/admin/role',
+      headers: { authorization: 'Bearer admin' },
+      payload: { uid: 'uMember', role: 'editor' },
+    });
+    expect(granted).toEqual([['uMember', 'editor']]);
+  });
 });
 
 describe('CORS', () => {
-  it('allows sdods.com and its preview channels, and nothing else', async () => {
-    const { app } = await setup([]);
+  it('allows the configured sites and preview-host patterns, and nothing else', async () => {
+    const { app } = await setup([], {
+      COMMUNITY_ALLOWED_ORIGIN_PATTERNS: 'https://site--*.preview.example',
+    });
     const pre = (origin: string) =>
       app.inject({ method: 'OPTIONS', url: '/questions', headers: { origin } });
     expect((await pre('https://sdods.com')).statusCode).toBe(204);
-    expect((await pre('https://sdods-automax--pr-210-b2bw8lf9.web.app')).statusCode).toBe(204);
+    expect((await pre('https://site--pr-210-b2bw8lf9.preview.example')).statusCode).toBe(204);
+    expect((await pre('https://other--pr-1.preview.example')).statusCode).toBe(403);
+    // `*` never crosses a dot, so a pattern cannot be satisfied by someone else's domain.
+    expect((await pre('https://site--x.evil.com.preview.example')).statusCode).toBe(403);
     expect((await pre('https://evil.example')).statusCode).toBe(403);
     expect((await pre('https://sdods.com')).headers['access-control-allow-headers']).toContain(
       'authorization',

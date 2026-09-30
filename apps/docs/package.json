@@ -2,7 +2,7 @@
   "name": "@sdods/docs",
   "version": "0.1.0",
   "private": true,
-  "description": "SDODS documentation site (Fumadocs on Next.js, static export on Firebase Hosting).",
+  "description": "SDODS documentation site (Fumadocs on Next.js, static export).",
   "license": "Apache-2.0",
   "author": "SDODS <admin@sdods.com>",
   "scripts": {
@@ -17,7 +17,6 @@
     "@sdods/contracts": "workspace:*",
     "@sdods/roadmap": "workspace:*",
     "@sdods/site-kit": "workspace:*",
-    "firebase": "^12.19.0",
     "fumadocs-core": "^16.15.11",
     "fumadocs-mdx": "^15.4.1",
     "fumadocs-ui": "^16.15.11",

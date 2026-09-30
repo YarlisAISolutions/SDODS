@@ -2,7 +2,7 @@
   "name": "@sdods/www",
   "version": "0.1.0",
   "private": true,
-  "description": "SDODS landing site (sdods.com / www.sdods.com): Next.js static export on Firebase Hosting.",
+  "description": "SDODS landing site (sdods.com / www.sdods.com): a Next.js static export.",
   "license": "Apache-2.0",
   "author": "SDODS <admin@sdods.com>",
   "scripts": {

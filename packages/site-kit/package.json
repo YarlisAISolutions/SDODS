@@ -10,6 +10,8 @@
   ],
   "exports": {
     ".": "./src/index.ts",
+    "./identity": "./src/identity/types.ts",
+    "./identity-impl": "./src/identity/none.ts",
     "./styles.css": "./src/styles.css"
   },
   "peerDependencies": {

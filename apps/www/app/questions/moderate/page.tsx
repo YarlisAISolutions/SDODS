@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import { Moderation } from '@/components/qa/moderation';
 import { EditorQueue } from '@/components/qa/editor-queue';
 import { COMMUNITY_ENABLED } from '@/lib/community';
 
@@ -7,8 +6,8 @@ import { COMMUNITY_ENABLED } from '@/lib/community';
  * Where pending questions, answers and replies are approved or rejected.
  *
  * Not linked from anywhere, not in the sitemap, and not indexed — but none of that is the protection.
- * The page is a static shell anyone can load; what it can read and change is decided by
- * `firestore.rules`, which only let the moderator account see pending posts or publish them.
+ * The page is a static shell anyone can load; the community service decides what it can read and
+ * change, and only answers editors and admins.
  */
 export const metadata: Metadata = {
   title: 'Moderate questions',
@@ -28,13 +27,9 @@ export default function ModeratePage() {
           <EditorQueue />
         </>
       ) : (
-        <>
-          <p className="muted mt-2 text-sm">
-            Everything posted on the site waits here until it is approved. Approved posts appear on
-            their page straight away; rejected ones are deleted.
-          </p>
-          <Moderation />
-        </>
+        <p className="muted mt-2 text-sm">
+          Moderation needs the community service, which is not configured for this build.
+        </p>
       )}
     </div>
   );

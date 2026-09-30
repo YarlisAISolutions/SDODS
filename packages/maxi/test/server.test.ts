@@ -22,7 +22,14 @@ async function setup(
   turns: Turn[],
   opts: { corpus?: boolean; budget?: number; spent?: number } = {},
 ) {
-  const config = { ...loadConfig({ NODE_ENV: 'test' }), dailyBudgetUsd: opts.budget ?? 5 };
+  const config = {
+    ...loadConfig({
+      NODE_ENV: 'test',
+      MAXI_ALLOWED_ORIGIN_PATTERNS:
+        'https://site--*.preview.example https://docs--*.preview.example',
+    }),
+    dailyBudgetUsd: opts.budget ?? 5,
+  };
   const { client, requests } = fakeClient(turns);
   const corpus = new Corpus({
     url: 'https://docs.example/llms-full.txt',
@@ -188,19 +195,19 @@ describe('POST /chat', () => {
 });
 
 describe('CORS', () => {
-  it('allows the SDODS sites and their preview channels, and nothing else', async () => {
+  it('allows the configured sites and preview-host patterns, and nothing else', async () => {
     const { app } = await setup([{ text: 'ok' }]);
     const preflight = await app.inject({
       method: 'OPTIONS',
       url: '/chat',
       headers: {
-        origin: 'https://sdods-automax--pr-42-abc123.web.app',
+        origin: 'https://site--pr-42-abc123.preview.example',
         'access-control-request-method': 'POST',
       },
     });
     expect(preflight.statusCode).toBe(204);
     expect(preflight.headers['access-control-allow-origin']).toBe(
-      'https://sdods-automax--pr-42-abc123.web.app',
+      'https://site--pr-42-abc123.preview.example',
     );
 
     const foreign = await ask(
@@ -212,7 +219,7 @@ describe('CORS', () => {
     const lookalike = await ask(
       app,
       { messages: [{ role: 'user', content: 'hi' }] },
-      'https://someone-else--pr-1-x.web.app',
+      'https://someone-else--pr-1-x.preview.example',
     );
     expect(lookalike.statusCode).toBe(403);
   });

@@ -6,7 +6,7 @@ import { CopyButton } from '@/components/copy-button';
  *
  * A server component with no `dangerouslySetInnerHTML` anywhere: every string arrives as a React
  * text node, so a body typed by a stranger into the answer box cannot become markup. That is the
- * whole reason the archive and the moderated Firestore answers share one parser and one renderer —
+ * whole reason the archive and the moderated live answers share one parser and one renderer —
  * there is no second path with weaker rules.
  */
 

@@ -2,12 +2,13 @@
 
 import { useEffect, useState, type ReactNode } from 'react';
 import Link from 'next/link';
-import type { User } from 'firebase/auth';
+import { SignInCancelled, type SiteUser } from '@sdods/site-kit/identity';
 import { signIn, signOutUser, watchUser, type PostResult, type Provider } from '@/lib/community';
+import { identity } from '@/lib/identity';
 
-/** The signed-in Firebase user, or null; `undefined` while it is still being worked out. */
-export function useUser(): User | null | undefined {
-  const [user, setUser] = useState<User | null | undefined>(undefined);
+/** The signed-in user, or null; `undefined` while it is still being worked out. */
+export function useUser(): SiteUser | null | undefined {
+  const [user, setUser] = useState<SiteUser | null | undefined>(undefined);
   useEffect(() => {
     let stop: (() => void) | undefined;
     let live = true;
@@ -23,6 +24,8 @@ export function useUser(): User | null | undefined {
   return user;
 }
 
+const PROVIDER_NAMES: Record<Provider, string> = { github: 'GitHub', google: 'Google' };
+
 /**
  * Shows sign-in buttons until someone is signed in, then the form it wraps with a "posting as"
  * line. Posting needs an account: reputation, the review audit trail and rate limits all hang off it.
@@ -31,11 +34,14 @@ export function SignInGate({
   user,
   children,
 }: {
-  user: User | null | undefined;
+  user: SiteUser | null | undefined;
   children: ReactNode;
 }) {
   const [busy, setBusy] = useState<Provider | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  if (!identity.providers.length)
+    return <p className="muted text-sm">Signing in is not available on this build of the site.</p>;
 
   if (user === undefined)
     return <p className="muted text-sm">Checking whether you&rsquo;re signed in…</p>;
@@ -47,9 +53,8 @@ export function SignInGate({
       try {
         await signIn(p);
       } catch (e) {
-        const code = (e as { code?: string }).code ?? '';
         // Closing the popup is a choice, not an error worth a message.
-        if (!code.includes('popup-closed') && !code.includes('cancelled-popup'))
+        if (!(e instanceof SignInCancelled))
           setError('Sign-in did not complete. Try again, or try the other option.');
       } finally {
         setBusy(null);
@@ -59,22 +64,17 @@ export function SignInGate({
       <div className="grid gap-3">
         <p className="text-sm">Sign in to post. Your name is shown; your email address never is.</p>
         <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            className="btn btn-primary"
-            disabled={busy !== null}
-            onClick={() => go('github')}
-          >
-            {busy === 'github' ? 'Opening GitHub…' : 'Sign in with GitHub'}
-          </button>
-          <button
-            type="button"
-            className="btn btn-secondary"
-            disabled={busy !== null}
-            onClick={() => go('google')}
-          >
-            {busy === 'google' ? 'Opening Google…' : 'Sign in with Google'}
-          </button>
+          {identity.providers.map((p, i) => (
+            <button
+              key={p}
+              type="button"
+              className={i === 0 ? 'btn btn-primary' : 'btn btn-secondary'}
+              disabled={busy !== null}
+              onClick={() => go(p)}
+            >
+              {busy === p ? `Opening ${PROVIDER_NAMES[p]}…` : `Sign in with ${PROVIDER_NAMES[p]}`}
+            </button>
+          ))}
         </div>
         {error && (
           <p role="alert" className="text-sm">
@@ -88,7 +88,7 @@ export function SignInGate({
   return (
     <div className="grid gap-3">
       <p className="muted text-xs">
-        Posting as <span className="font-medium">{user.displayName ?? 'you'}</span> ·{' '}
+        Posting as <span className="font-medium">{user.name ?? 'you'}</span> ·{' '}
         <button type="button" className="underline" onClick={() => void signOutUser()}>
           Sign out
         </button>

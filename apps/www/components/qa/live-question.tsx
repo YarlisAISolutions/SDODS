@@ -16,9 +16,8 @@ import { formatDate } from '@/lib/qa-list';
 import type { Question } from '@/lib/questions';
 
 /**
- * Reads one published question and its published answers straight from Firestore. Pending documents
- * are not filtered out here — the rules refuse to return them at all — so nothing unmoderated can
- * reach this component.
+ * Reads one published question and its published answers from the community service, which only
+ * returns published posts, so nothing unmoderated can reach this component.
  */
 export function LiveQuestion() {
   const id = useSearchParams().get('id');
@@ -33,11 +32,8 @@ export function LiveQuestion() {
     }
     let cancelled = false;
     import('@/lib/questions')
-      .then(({ listQuestions }) => listQuestions())
-      .then((questions) => {
-        if (cancelled) return;
-        setState({ kind: 'ready', question: questions.find((q) => q.id === id) ?? null });
-      })
+      .then(({ getQuestion }) => getQuestion(id))
+      .then((question) => !cancelled && setState({ kind: 'ready', question }))
       .catch(() => !cancelled && setState({ kind: 'error' }));
     return () => {
       cancelled = true;
