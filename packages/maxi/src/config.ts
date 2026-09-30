@@ -15,14 +15,20 @@ export interface MaxiConfig {
   stepsFile: string;
   /** Browser origins allowed to call the API. */
   allowedOrigins: string[];
-  /** Firebase Hosting preview channels (`<site>--pr-12-abc.web.app`) of these sites are allowed too. */
-  previewSites: string[];
+  /**
+   * Origin patterns allowed too, for preview hosts: `*` matches one run of [a-z0-9-], never a dot.
+   * Separated by commas or spaces (spaces survive `gcloud --set-env-vars`, commas do not).
+   */
+  allowedOriginPatterns: string[];
   /** Estimated spend per UTC day after which Maxi stops answering until tomorrow. */
   dailyBudgetUsd: number;
   /** Requests per IP per window on /chat. */
   chatRateLimit: number;
   rateLimitWindowMs: number;
-  /** Firestore project for conversation logs and the spend counter; unset keeps both in memory. */
+  /**
+   * Firestore project for conversation logs and the spend counter; unset keeps both in memory.
+   * Moves to the private deployment package with the rest of ./firebase/.
+   */
   firestoreProject?: string;
   trustProxy: boolean | number;
   docsSiteUrl: string;
@@ -61,12 +67,12 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): MaxiConfig {
           'https://docs.sdods.com',
           ...(production ? [] : ['http://localhost:3100', 'http://localhost:3002']),
         ],
-    previewSites: list(env.MAXI_PREVIEW_SITES ?? 'sdods-automax,automax-docs'),
+    allowedOriginPatterns: (env.MAXI_ALLOWED_ORIGIN_PATTERNS ?? '').split(/[\s,]+/).filter(Boolean),
     dailyBudgetUsd: num(env.MAXI_DAILY_BUDGET_USD, 20),
     chatRateLimit: num(env.MAXI_CHAT_RATE_LIMIT, 30),
     rateLimitWindowMs: num(env.MAXI_RATE_LIMIT_WINDOW_MS, 10 * 60 * 1000),
     firestoreProject: env.MAXI_FIRESTORE_PROJECT || undefined,
-    // Cloud Run sits behind Google's front end, which sets X-Forwarded-For.
+    // Behind a load balancer or platform front end that sets X-Forwarded-For.
     trustProxy:
       trust === undefined ? production : /^\d+$/.test(trust) ? Number(trust) : trust === 'true',
     docsSiteUrl: env.MAXI_DOCS_SITE_URL || 'https://docs.sdods.com',

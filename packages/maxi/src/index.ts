@@ -11,8 +11,8 @@ export { loadConfig, type MaxiConfig } from './config.js';
 export { Corpus, type CorpusSnapshot } from './corpus.js';
 export { estimateCostUsd, parseChatRequest, utcDay } from './limits.js';
 export { corpusBlock, persona, systemBlocks } from './prompt.js';
-export { buildMaxiServer, isAllowedOrigin, type MaxiServerDeps } from './server.js';
-export { FirestoreStore, MemoryStore, type ChatLog, type MaxiStore, type Vote } from './store.js';
+export { buildMaxiServer, isAllowedOrigin, originPattern, type MaxiServerDeps } from './server.js';
+export { MemoryStore, type ChatLog, type MaxiStore, type Vote } from './store.js';
 export {
   expressionToRegExp,
   loadSteps,

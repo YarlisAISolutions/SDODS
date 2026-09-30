@@ -1,8 +1,11 @@
 import { createClient } from './client.js';
 import { loadConfig } from './config.js';
 import { Corpus } from './corpus.js';
+// sdods.com's own store. This composition root, and ./firebase/, move to the private deployment
+// package; a self-host passes its own MaxiStore instead.
+import { FirestoreStore } from './firebase/store.js';
 import { buildMaxiServer } from './server.js';
-import { FirestoreStore, MemoryStore } from './store.js';
+import { MemoryStore } from './store.js';
 import { loadSteps, StepCatalog } from './tools.js';
 
 const config = loadConfig();
@@ -18,7 +21,7 @@ const corpus = new Corpus({
   log: (msg, extra) => console.log(JSON.stringify({ msg, ...extra })),
 });
 
-// ANTHROPIC_API_KEY comes from Secret Manager on Cloud Run, or the shell locally.
+// ANTHROPIC_API_KEY comes from the platform's secret store, or the shell locally.
 const app = await buildMaxiServer({ config, client: createClient(), corpus, catalog, store });
 await corpus.load();
 corpus.start();

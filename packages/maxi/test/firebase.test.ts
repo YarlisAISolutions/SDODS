@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { FirestoreStore } from '../src/store.js';
+import { FirestoreStore } from '../src/firebase/store.js';
+
+// The Firebase adapter: these tests move to the private deployment package with ./src/firebase.
 
 function recorder(responses: Response[]) {
   const calls: Array<{ url: string; method: string; body?: unknown }> = [];

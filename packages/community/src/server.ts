@@ -1,7 +1,7 @@
 import type Anthropic from '@anthropic-ai/sdk';
 import rateLimit from '@fastify/rate-limit';
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from 'fastify';
-import { canModerate, type Verifier, type Viewer } from './auth.js';
+import { canModerate, type RoleClaims, type Verifier, type Viewer } from './auth.js';
 import type { CommunityConfig } from './config.js';
 import type { ThreadIndex } from './duplicates.js';
 import { editPost, resolveEdit } from './edits.js';
@@ -24,6 +24,8 @@ export interface CommunityServerDeps {
   config: CommunityConfig;
   client: Pick<Anthropic, 'messages'>;
   verify: Verifier;
+  /** Grants roles in the identity provider; without it, roles live only on the profile. */
+  roleClaims?: RoleClaims;
   store: CommunityStore;
   index: ThreadIndex;
   logger?: boolean | object;
@@ -32,9 +34,16 @@ export interface CommunityServerDeps {
 
 export function isAllowedOrigin(origin: string, config: CommunityConfig): boolean {
   if (config.allowedOrigins.includes(origin)) return true;
-  // Firebase Hosting preview channels: https://<site>--<channel>-<hash>.web.app
-  const m = /^https:\/\/([a-z0-9-]+?)--[a-z0-9-]+\.web\.app$/.exec(origin);
-  return Boolean(m && config.previewSites.includes(m[1]!));
+  return config.allowedOriginPatterns.some((p) => originPattern(p).test(origin));
+}
+
+/**
+ * `https://site--*.example.app` → a RegExp in which `*` stands for letters, digits and hyphens but
+ * never a dot, so a pattern for preview hosts cannot match someone else's domain.
+ */
+export function originPattern(glob: string): RegExp {
+  const escaped = glob.split('*').map((s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  return new RegExp(`^${escaped.join('[a-z0-9-]+')}$`);
 }
 
 /** USD per million tokens; unknown models are priced like Opus so the budget errs on the safe side. */
@@ -82,7 +91,7 @@ const FALLBACK_REASON: Record<Decision, string> = {
 };
 
 export async function buildCommunityServer(deps: CommunityServerDeps): Promise<FastifyInstance> {
-  const { config, client, verify, store, index } = deps;
+  const { config, client, verify, roleClaims, store, index } = deps;
   const now = deps.now ?? (() => new Date());
   const app = Fastify({
     logger: deps.logger ?? { level: process.env.COMMUNITY_LOG_LEVEL ?? 'info' },
@@ -90,8 +99,8 @@ export async function buildCommunityServer(deps: CommunityServerDeps): Promise<F
     bodyLimit: 64 * 1024,
   });
 
-  // CORS: sdods.com and its preview channels only. The Authorization header carries the Firebase
-  // ID token, so it has to be allowed on the preflight.
+  // CORS: the configured sites and preview hosts only. The Authorization header carries the
+  // sign-in ID token, so it has to be allowed on the preflight.
   app.addHook('onRequest', async (req, reply) => {
     const origin = req.headers.origin;
     if (!origin) return;
@@ -576,6 +585,7 @@ export async function buildCommunityServer(deps: CommunityServerDeps): Promise<F
     if (viewer.role !== 'admin') return reply.code(403).send({ error: 'Admins only.' });
     const parsed = parseRole(req.body);
     if (!parsed.ok) return reply.code(400).send({ error: parsed.error });
+    await roleClaims?.(parsed.value.uid, parsed.value.role);
     await store.setRole(parsed.value.uid, parsed.value.role);
     req.log.info({ ...parsed.value, by: viewer.uid }, 'role set');
     return {
