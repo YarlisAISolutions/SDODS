@@ -5,6 +5,7 @@ import pc from 'picocolors';
 import { newRunId } from '@sdods/contracts';
 import { SdodsError, listGeneratedProjects, normalizeTagExpr } from '@sdods/core';
 import { createContext } from '../context.js';
+import { workspaceBin } from '../workspace-bin.js';
 import { collect, out } from '../ui.js';
 
 interface WatchFlags {
@@ -85,7 +86,8 @@ export function register(program: Command) {
       process.on('SIGTERM', stop);
 
       // initial generation so UI mode has specs to show
-      const gen = await execa('npx', ['bddgen', '-c', configPath], {
+      const [bddgen, ...bddgenArgs] = workspaceBin(ctx.rootDir, 'playwright-bdd', 'bddgen');
+      const gen = await execa(bddgen, [...bddgenArgs, '-c', configPath], {
         cwd: ctx.rootDir,
         env: childEnv,
         stdio: 'inherit',
@@ -97,7 +99,7 @@ export function register(program: Command) {
         });
       }
 
-      const watcher = execa('npx', ['bddgen', '-c', configPath, '--watch'], {
+      const watcher = execa(bddgen, [...bddgenArgs, '-c', configPath, '--watch'], {
         cwd: ctx.rootDir,
         env: childEnv,
         stdio: 'inherit',

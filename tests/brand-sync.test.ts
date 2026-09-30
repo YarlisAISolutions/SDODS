@@ -68,6 +68,35 @@ describe('brand sync', () => {
     }
   });
 
+  it('every brand SVG is well-formed XML', () => {
+    // An <img> (the README on github.com, every <img src=".../sdods-logo.svg">) parses SVG as
+    // strict XML; the inline components use the forgiving HTML parser. A "--" inside a comment in
+    // brand/sdods.svg was therefore invisible on the sites and broke every <img> of the lockup,
+    // including the README header and the web UI's tab icon.
+    const files = [
+      ...outputs(),
+      ...['brand/sdods.svg', 'brand/mark.svg'].map((path) => ({
+        path,
+        content: readFileSync(join(repoRoot, path), 'utf8'),
+      })),
+    ];
+    const bad = files.filter(({ content }) =>
+      [...content.matchAll(/<!--([\s\S]*?)-->/g)].some((m) => m[1]!.includes('--')),
+    );
+    expect(bad.map((b) => b.path)).toEqual([]);
+  });
+
+  it('the tab icon fills its square', () => {
+    // The bare mark is 2:1, so as a favicon it was a sliver in an empty square, and the web UI used
+    // the full lockup. The favicon is the mark on a full-bleed tile.
+    const icons = outputs().filter((o) => /favicon\.svg$/.test(o.path));
+    expect(icons.map((i) => i.path)).toContain('packages/web/public/favicon.svg');
+    for (const i of icons) expect(i.content).toMatch(/<rect width="128" height="128"/);
+    expect(readFileSync(join(repoRoot, 'packages/web/index.html'), 'utf8')).toContain(
+      'href="/favicon.svg"',
+    );
+  });
+
   it('the lockup carries the tagline from brand.json', () => {
     const { tagline } = loadBrand();
     const lockups = outputs().filter((o) => o.path.endsWith('sdods-logo.svg'));

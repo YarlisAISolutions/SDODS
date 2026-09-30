@@ -16,9 +16,11 @@
     </g>
     <text class="ink" x="78" y="94" font-family="'Space Grotesk','Avenir Next','Futura','Helvetica Neue',Helvetica,Arial,sans-serif"
           font-size="76" font-weight="700" letter-spacing="10">SD</text>
+    <!-- No double hyphen in any comment: XML forbids it, and an <img> of this file (the README on
+         github.com, every <img src=".../sdods-logo.svg">) then fails to load at all. -->
     <!-- The centre O is a drawn circle, not a glyph, so it sits outside the font's metrics and
          its position is a plain number. Measured with brand/measure.ts: at x=62 the word split
-         into "SD ODS" -- 30.2 units before the O against 14.0 after it. SD starts at 78 so both
+         into "SD ODS", 30.2 units before the O against 14.0 after it. SD starts at 78 so both
          gaps are 14.0 and the word is centred between the arcs (50.2 either side). -->
     <!-- the centre O: one ring, one core. A single unambiguous letterform. -->
     <g transform="translate(237,68)" fill="none">

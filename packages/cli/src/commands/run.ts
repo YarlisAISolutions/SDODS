@@ -40,6 +40,7 @@ import {
 } from '@sdods/core';
 import { analyzeChangeImpact } from '@sdods/mcp';
 import { createContext } from '../context.js';
+import { workspaceBin } from '../workspace-bin.js';
 import { browserStatuses, ensureBrowsers } from './browsers.js';
 import { gateFailedError, printGates } from '../gates.js';
 import { maybeNotify, notifyRun, type AutoNotifyOutcome } from '../notify.js';
@@ -483,7 +484,8 @@ export async function runCommand(flags: RunFlags, cmd: Command): Promise<number>
   // Recorded specs are plain runner tests: no Gherkin to generate.
   const recordedOnly = runnerProjects.every((p) => p.layer === 'recorded');
   if (!recordedOnly) {
-    const gen = await execa('npx', ['bddgen', '-c', configPath], {
+    const [bddgen, ...bddgenArgs] = workspaceBin(ctx.rootDir, 'playwright-bdd', 'bddgen');
+    const gen = await execa(bddgen, [...bddgenArgs, '-c', configPath], {
       cwd: ctx.rootDir,
       env: childEnv,
       stdio: ctx.opts.quiet ? 'pipe' : 'inherit',
