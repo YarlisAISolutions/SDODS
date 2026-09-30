@@ -94,7 +94,11 @@ export async function buildServer(opts: BuildServerOptions = {}): Promise<Fastif
     }
     if (opts.scheduler !== false) await scheduler.start();
   });
-  app.addHook('onClose', async () => scheduler.stop());
+  app.addHook('onClose', async () => {
+    scheduler.stop();
+    // Runs live in their own process groups, so they would outlive the server otherwise.
+    runManager.shutdown();
+  });
   return app;
 }
 

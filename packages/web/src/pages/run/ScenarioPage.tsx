@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useParams } from 'react-router';
 import { useRun, useScenario } from '../../api/queries';
+import { RunControls } from '../../components/RunControls';
 import { useAuth } from '../../auth/AuthContext';
 import {
   Badge,
@@ -60,23 +61,26 @@ export function ScenarioPage() {
           </span>
         }
         actions={
-          s.attempts.length > 1 && (
-            <div className="flex items-center gap-1 text-xs" role="tablist" aria-label="attempts">
-              attempt
-              {s.attempts.map((a, i) => (
-                <Button
-                  key={a.id}
-                  size="sm"
-                  role="tab"
-                  aria-selected={i === idx}
-                  variant={i === idx ? 'primary' : 'default'}
-                  onClick={() => setAttemptIdx(i)}
-                >
-                  {i + 1} <StatusPill status={a.status} />
-                </Button>
-              ))}
-            </div>
-          )
+          <span className="flex flex-wrap items-center gap-2">
+            {run.data && <RunControls run={run.data} scenarios={[s.scenarioName]} />}
+            {s.attempts.length > 1 && (
+              <div className="flex items-center gap-1 text-xs" role="tablist" aria-label="attempts">
+                attempt
+                {s.attempts.map((a, i) => (
+                  <Button
+                    key={a.id}
+                    size="sm"
+                    role="tab"
+                    aria-selected={i === idx}
+                    variant={i === idx ? 'primary' : 'default'}
+                    onClick={() => setAttemptIdx(i)}
+                  >
+                    {i + 1} <StatusPill status={a.status} />
+                  </Button>
+                ))}
+              </div>
+            )}
+          </span>
         }
       />
       {s.flaky && (

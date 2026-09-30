@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router';
-import { useCancelRun, useRun } from '../api/queries';
-import { useAuth } from '../auth/AuthContext';
+import { useRun } from '../api/queries';
+import { RunControls } from '../components/RunControls';
 import {
   Badge,
   Button,
@@ -21,8 +21,6 @@ import { LiveLog } from './run/LiveLog';
 export function RunDetailPage() {
   const { runId = '' } = useParams();
   const q = useRun(runId, true);
-  const cancel = useCancelRun();
-  const { canEdit } = useAuth();
   const [tab, setTab] = useState('scenarios');
   const run = q.data;
   const live = run?.status === 'running' || run?.status === 'queued';
@@ -86,16 +84,7 @@ export function RunDetailPage() {
                 <Button size="sm">NDJSON</Button>
               </a>
             )}
-            {live && canEdit() && (
-              <Button
-                size="sm"
-                variant="danger"
-                onClick={() => cancel.mutate(run.id)}
-                disabled={cancel.isPending}
-              >
-                Cancel
-              </Button>
-            )}
+            <RunControls run={run} />
           </>
         }
       />

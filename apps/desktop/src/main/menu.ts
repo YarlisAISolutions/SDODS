@@ -17,6 +17,8 @@ export interface MenuContext {
   serverUrl: string;
   credentials: () => Credentials | null;
   updates?: UpdateController;
+  /** Delete and download the Chromium test browser again. */
+  reinstallBrowsers?: () => void;
 }
 
 export function buildMenu(ctx: MenuContext): void {
@@ -79,6 +81,16 @@ export function buildMenu(ctx: MenuContext): void {
         label: 'Open Logs Folder',
         click: () => void shell.openPath(logsDir()),
       },
+      ...(ctx.reinstallBrowsers
+        ? ([
+            {
+              // The way out when runs fail with "Executable doesn't exist": a clean download of
+              // the exact revision the workspace's Playwright launches, into the app's own cache.
+              label: 'Reinstall Test Browsers',
+              click: () => ctx.reinstallBrowsers?.(),
+            },
+          ] satisfies MenuItemConstructorOptions[])
+        : []),
       ...updateItems,
       ...(SPONSOR_ENABLED
         ? ([

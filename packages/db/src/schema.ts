@@ -143,6 +143,8 @@ export interface RunsTable {
   html_report_rel: string | null;
   exit_code: number | null;
   error_text: string | null;
+  /** The StartRunInput a server-started run was launched with; null for CLI runs and older rows. */
+  params_json: Json<Record<string, unknown>> | null;
   created_at: Ts;
   updated_at: Ts;
 }
@@ -508,6 +510,15 @@ export interface AuditLogTable {
   created_at: Ts;
 }
 
+export interface UserPreferencesTable {
+  id: string;
+  user_id: string;
+  key: string;
+  value_json: Json<unknown>;
+  created_at: Ts;
+  updated_at: Ts;
+}
+
 export interface Database {
   organizations: OrganizationsTable;
   workspaces: WorkspacesTable;
@@ -540,6 +551,7 @@ export interface Database {
   schedules: SchedulesTable;
   schedule_runs: ScheduleRunsTable;
   audit_log: AuditLogTable;
+  user_preferences: UserPreferencesTable;
 }
 
 /** Platform tables in foreign-key order (parents first). Used by export/import/switch/prune. */
@@ -548,6 +560,7 @@ export const TABLES_IN_FK_ORDER: Array<keyof Database> = [
   'users',
   'sessions',
   'api_tokens',
+  'user_preferences',
   'organizations',
   'workspaces',
   'org_members',

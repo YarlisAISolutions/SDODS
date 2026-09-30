@@ -25,6 +25,7 @@ import type {
   ScenarioDetail,
   Schedule,
   ScheduleRun,
+  RerunInput,
   StartRunInput,
   StepDef,
   Trends,
@@ -361,6 +362,17 @@ export const useCancelRun = () => {
   return useMutation({
     mutationFn: (id: string) => api(`/api/runs/${id}/cancel`, { method: 'POST' }),
     onSuccess: () => inv(['runs'], ['run']),
+  });
+};
+/** Start a new run from an earlier one's selection: all of it, its failures, or named scenarios. */
+export const useRerunRun = () => {
+  const inv = useInvalidate();
+  return useMutation({
+    mutationFn: ({ runId, scope = 'all', scenarios }: RerunInput) =>
+      api<{ runId: string; rerunOf: string }>(`/api/runs/${runId}/rerun`, {
+        json: { scope, ...(scenarios?.length ? { scenarios } : {}) },
+      }),
+    onSuccess: () => inv(['runs']),
   });
 };
 

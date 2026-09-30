@@ -26,12 +26,17 @@ export function spawnCli(
   config: ServerConfig,
   args: string[],
   env: NodeJS.ProcessEnv = {},
+  opts: { processGroup?: boolean } = {},
 ): ChildProcess {
   const { cmd, args: argv } = cliCommand(config, args);
   return spawn(cmd, argv, {
     cwd: config.rootDir,
     env: { ...process.env, FORCE_COLOR: '0', NO_COLOR: '1', ...env },
     stdio: ['ignore', 'pipe', 'pipe'],
+    // Its own process group, so a stop can signal the whole tree (see kill-tree.ts). Windows has
+    // no process groups; taskkill /T walks the tree there instead.
+    detached: Boolean(opts.processGroup) && process.platform !== 'win32',
+    windowsHide: true,
   });
 }
 

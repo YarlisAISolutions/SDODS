@@ -75,7 +75,7 @@ export function registerDoctorCommand(program: Command) {
         });
       }
 
-      const browsers = await browserCheck();
+      const browsers = await browserCheck(ctx.rootDir);
       checks.push(...browsers);
       if (opts.fix && browsers.some((b) => !b.ok)) {
         out(pc.cyan('Installing browsers…'));
@@ -433,11 +433,11 @@ async function versionCheck(name: string, args: string[], fix: string, bin = nam
   }
 }
 
-async function browserCheck(): Promise<Check[]> {
+async function browserCheck(cwd: string): Promise<Check[]> {
   // Reuses `browsers list`'s detection so the two commands can never disagree about what is
   // installed — and so channel browsers are probed by path rather than by the bundled engine's
   // executable, which exists whether or not the branded browser does.
-  const statuses = await browserStatuses(['chromium', 'edge', 'firefox', 'webkit']);
+  const statuses = await browserStatuses(['chromium', 'edge', 'firefox', 'webkit'], { cwd });
   return statuses.map((s) => ({
     name: `browser:${s.name}`,
     ok: s.installed,

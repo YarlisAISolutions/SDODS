@@ -40,7 +40,7 @@ import {
 } from '@sdods/core';
 import { analyzeChangeImpact } from '@sdods/mcp';
 import { createContext } from '../context.js';
-import { browserStatuses } from './browsers.js';
+import { browserStatuses, ensureBrowsers } from './browsers.js';
 import { gateFailedError, printGates } from '../gates.js';
 import { maybeNotify, notifyRun, type AutoNotifyOutcome } from '../notify.js';
 import { installedPlaywrightVersion, stepResultsWarning } from '../runner-compat.js';
@@ -88,6 +88,7 @@ export interface RunFlags {
   allowEmpty?: boolean;
   notify?: boolean;
   allowPoolContention?: boolean;
+  installBrowsers?: boolean;
 }
 
 const RECORDING_MODES = RecordingModeSchema.options.join(' | ');
@@ -128,6 +129,10 @@ function addRunOptions(cmd: Command): Command {
     .option('--process <name>', 'run a named process (recipe) from the project or workspace')
     .option('--project-matrix', 'run every browser declared in the project yaml')
     .option('--device <name>', 'device name for mobile emulation, e.g. "iPhone 15"')
+    .option(
+      '--install-browsers',
+      'download any test browser the run needs that is missing (also SDODS_AUTO_INSTALL_BROWSERS=1)',
+    )
     .option('--headed', 'run headed')
     .option('-w, --workers <n>', 'parallel workers', parseIntFlag('workers'))
     .option(
@@ -259,7 +264,9 @@ export async function runCommand(flags: RunFlags, cmd: Command): Promise<number>
   // selected browser here would fail runs that would have worked.
   const usesBrowser = !layers.length || layers.some((l) => l !== 'api');
   const missing = usesBrowser
-    ? (await browserStatuses(browsers)).filter((s) => s.channel && !s.installed)
+    ? (await browserStatuses(browsers, { cwd: ctx.rootDir })).filter(
+        (s) => s.channel && !s.installed,
+      )
     : [];
   if (missing.length) {
     const names = missing.map((s) => s.name);
@@ -456,6 +463,21 @@ export async function runCommand(flags: RunFlags, cmd: Command): Promise<number>
       hint: 'Check --layer / --browser against the project yaml.',
       exitCode: 2,
     });
+  }
+
+  // Every run target launches a browser, including @api ones: the BDD fixtures are shared across
+  // layers, so an api target opens the runner's default engine (chromium). Checking here, against
+  // the targets actually generated, catches a missing or half-downloaded engine before bddgen, and
+  // either installs it (desktop app, --install-browsers) or stops with the SDODS command rather
+  // than Playwright's "npx playwright install", which installs to the wrong place.
+  if (!flags.list) {
+    await ensureBrowsers(
+      runnerProjects.map((p) => p.browser ?? 'chromium'),
+      {
+        cwd: ctx.rootDir,
+        install: Boolean(flags.installBrowsers) || process.env.SDODS_AUTO_INSTALL_BROWSERS === '1',
+      },
+    );
   }
 
   // Recorded specs are plain runner tests: no Gherkin to generate.

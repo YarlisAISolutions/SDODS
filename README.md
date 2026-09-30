@@ -658,7 +658,7 @@ In order. Each step assumes the one above it.
 sdods init ~/my-tests                 # workspace yaml, runner config, demo project, skills
 cd ~/my-tests
 sdods doctor                          # Node, bun, browsers, projects, env vars, database
-sdods browsers install -b chromium    # engines are a separate download; API suites need none
+sdods browsers install -b chromium    # engines are a separate download; every layer, API included, launches one
 sdods project create checkout         # a project is one app under test
 sdods env add staging -p checkout --ui-url https://staging.example.com --api-url https://api.staging.example.com
 sdods config show -p checkout -e staging --explain    # what resolved, and which file won

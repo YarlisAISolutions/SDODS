@@ -35,6 +35,8 @@ export interface RunUpsert {
   htmlReportRel?: string | null;
   exitCode?: number | null;
   errorText?: string | null;
+  /** The selection a server-started run was launched with, for Rerun. */
+  params?: Record<string, unknown>;
 }
 
 export async function upsertRun(
@@ -78,6 +80,7 @@ export async function upsertRun(
     html_report_rel: r.htmlReportRel,
     exit_code: r.exitCode,
     error_text: r.errorText,
+    params_json: r.params ? enc.json(r.params) : undefined,
   });
   if (existing) {
     await db
@@ -176,6 +179,59 @@ export function mapRun(
     exitCode: row.exit_code ?? undefined,
     errorText: row.error_text ?? undefined,
   } as RunRecord & { projectId: string; totalsRaw: Record<string, unknown> };
+}
+
+/**
+ * What a run was started with, for Rerun: the stored selection when the server started it, else
+ * the parts the row always records. `null` when the run does not exist.
+ */
+export async function getRunParams(
+  db: Kysely<Database>,
+  id: string,
+): Promise<{ project: string; params: Record<string, unknown> } | null> {
+  const row = await db
+    .selectFrom('runs')
+    .innerJoin('projects', 'projects.id', 'runs.project_id')
+    .select([
+      'projects.slug as project_slug',
+      'runs.params_json',
+      'runs.env_name',
+      'runs.process',
+      'runs.tags_expr',
+      'runs.layers_json',
+      'runs.browsers_json',
+    ])
+    .where('runs.id', '=', id)
+    .executeTakeFirst();
+  if (!row) return null;
+  const stored = readJson<Record<string, unknown>>(row.params_json);
+  if (stored) return { project: row.project_slug, params: stored };
+  const layers = readJson<string[]>(row.layers_json) ?? [];
+  const browsers = readJson<string[]>(row.browsers_json) ?? [];
+  return {
+    project: row.project_slug,
+    params: stripUndefined({
+      env: row.env_name || undefined,
+      process: row.process ?? undefined,
+      tags: row.tags_expr ?? undefined,
+      layers: layers.length ? layers : undefined,
+      browsers: browsers.length ? browsers : undefined,
+    }),
+  };
+}
+
+/** Names of the scenarios that failed in a run, deduplicated (a scenario can run per browser). */
+export async function getFailedScenarioNames(
+  db: Kysely<Database>,
+  runId: string,
+): Promise<string[]> {
+  const rows = await db
+    .selectFrom('scenarios')
+    .select('scenario_name')
+    .where('run_id', '=', runId)
+    .where('status', 'in', ['failed', 'timedOut', 'interrupted'])
+    .execute();
+  return [...new Set(rows.map((r) => r.scenario_name))];
 }
 
 export async function deleteRunChildren(db: Kysely<Database>, runId: string): Promise<void> {

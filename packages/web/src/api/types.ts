@@ -501,7 +501,20 @@ export interface StartRunInput {
   workers?: number;
   feature?: string;
   scenario?: string;
+  /** Exact scenario names; takes precedence over `scenario` (Rerun failed). */
+  scenarios?: string[];
   harMode?: 'off' | 'update' | 'replay';
+  strict?: boolean;
+  retries?: number;
+}
+
+export type RerunScope = 'all' | 'failed';
+
+export interface RerunInput {
+  runId: string;
+  scope?: RerunScope;
+  /** Rerun only these scenarios of the run's selection. */
+  scenarios?: string[];
 }
 
 export interface MySession {

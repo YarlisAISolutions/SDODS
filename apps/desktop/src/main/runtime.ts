@@ -132,6 +132,10 @@ export function buildChildEnv(opts: ChildEnvOptions): NodeJS.ProcessEnv {
     SDODS_ROOT: opts.workspace,
     // App-owned browser cache, so runs do not depend on (or pollute) the user's global one.
     PLAYWRIGHT_BROWSERS_PATH: browsersDir(),
+    // Runs download any engine they need that is missing, with progress in the run log, rather
+    // than failing with Playwright's "run npx playwright install" (which, run by hand, installs a
+    // different revision into a different folder). See ensureBrowsers in the CLI's browsers.ts.
+    SDODS_AUTO_INSTALL_BROWSERS: '1',
   };
   if (opts.sessionSecret) env.SESSION_SECRET = opts.sessionSecret;
   if (opts.port) env.PORT = String(opts.port);

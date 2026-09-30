@@ -2,10 +2,18 @@ import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { ChildProcess } from 'node:child_process';
 import type { SdodsDb } from '@sdods/db';
-import { getProjectBySlug, readGateVerdict, recordGateVerdict, upsertRun } from '@sdods/db';
+import {
+  getFailedScenarioNames,
+  getProjectBySlug,
+  getRunParams,
+  readGateVerdict,
+  recordGateVerdict,
+  upsertRun,
+} from '@sdods/db';
 import { newRunId, runFiles, type RunRecord, type RunTrigger } from '@sdods/contracts';
 import type { ServerConfig } from '../config.js';
 import { spawnCli } from './cli.js';
+import { killTree } from './kill-tree.js';
 import { LogBuffer } from './log-buffer.js';
 
 export interface StartRunInput {
@@ -20,6 +28,8 @@ export interface StartRunInput {
   workers?: number;
   feature?: string;
   scenario?: string;
+  /** Exact scenario names (Rerun failed). Takes precedence over `scenario`. */
+  scenarios?: string[];
   harMode?: 'off' | 'update' | 'replay';
   strict?: boolean;
   projectMatrix?: boolean;
@@ -40,7 +50,20 @@ export interface RunJob {
   startedBy?: string | null;
   /** Why the run ended badly, when the CLI never got far enough to record totals itself. */
   errorText?: string;
+  /** Set by cancel(): on Windows a stopped run exits with a plain code, not a signal. */
+  cancelRequested?: boolean;
 }
+
+/** Thrown by `rerunInput` when there is nothing to rerun; the route turns it into a 409. */
+export class NothingToRerunError extends Error {}
+
+/** The parts of a StartRunInput that describe the selection, i.e. what Rerun should replay. */
+function selectionOf(input: StartRunInput): Record<string, unknown> {
+  const { trigger: _trigger, scheduleId: _scheduleId, ...selection } = input;
+  return Object.fromEntries(Object.entries(selection).filter(([, v]) => v !== undefined));
+}
+
+const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 export interface RunnerHooks {
   /** override for tests: return a fake child-like process */
@@ -102,6 +125,7 @@ export class RunManager {
         startedBy,
         artifactsDir: runDir,
         command: this.args(job).join(' '),
+        params: selectionOf(input),
       });
     }
     this.queue.push(job);
@@ -119,11 +143,47 @@ export class RunManager {
       return true;
     }
     if (job.status !== 'running' || !job.child) return false;
-    job.log.push('sys', 'cancel requested');
-    job.child.kill('SIGTERM');
-    const t = setTimeout(() => job.child?.kill('SIGKILL'), 10_000);
+    job.log.push('sys', 'stop requested');
+    job.cancelRequested = true;
+    const child = job.child;
+    killTree(child, 'SIGTERM');
+    // Playwright gets a moment to close its browsers; anything still alive after that is forced.
+    const t = setTimeout(() => killTree(child, 'SIGKILL'), 10_000);
     t.unref();
     return true;
+  }
+
+  /** Stop everything: queued runs never start and running trees are ended (server shutdown). */
+  shutdown(): void {
+    for (const job of [...this.queue]) this.cancel(job.runId);
+    for (const job of this.jobs.values()) if (job.status === 'running') this.cancel(job.runId);
+  }
+
+  /**
+   * The input that reruns `runId`: its whole selection, or only the scenarios that failed.
+   * `null` when the run is unknown. Throws NothingToRerunError when `failed` finds no failures.
+   */
+  async rerunInput(
+    runId: string,
+    scope: 'all' | 'failed',
+    scenarios?: string[],
+  ): Promise<StartRunInput | null> {
+    const live = this.jobs.get(runId);
+    const stored = live
+      ? { project: live.input.project, params: selectionOf(live.input) }
+      : await getRunParams(this.adb.db, runId);
+    if (!stored) return null;
+    const input = { ...stored.params, project: stored.project } as StartRunInput;
+    if (scenarios?.length) {
+      input.scenarios = [...new Set(scenarios)];
+      delete input.scenario;
+    } else if (scope === 'failed') {
+      const failed = await getFailedScenarioNames(this.adb.db, runId);
+      if (!failed.length) throw new NothingToRerunError('That run has no failed scenarios.');
+      input.scenarios = failed;
+      delete input.scenario;
+    }
+    return input;
   }
 
   private args(job: RunJob): string[] {
@@ -150,7 +210,9 @@ export class RunManager {
     if (i.headed) args.push('--headed');
     if (i.workers) args.push('-w', String(i.workers));
     if (i.feature) args.push('--feature', i.feature);
-    if (i.scenario) args.push('--scenario', i.scenario);
+    // One --grep alternation: Playwright keeps only the last --grep it is given.
+    if (i.scenarios?.length) args.push('--grep', `(?:${i.scenarios.map(escapeRe).join('|')})`);
+    else if (i.scenario) args.push('--scenario', i.scenario);
     if (i.harMode === 'replay') args.push('--har-replay');
     if (i.harMode === 'update') args.push('--har-update');
     if (i.strict) args.push('--strict');
@@ -173,7 +235,10 @@ export class RunManager {
     job.startedAt = Date.now();
     const args = this.args(job);
     job.log.push('sys', `sdods ${args.join(' ')}`);
-    const spawner = this.hooks.spawn ?? spawnCli;
+    const spawner =
+      this.hooks.spawn ??
+      ((config: ServerConfig, argv: string[], env: NodeJS.ProcessEnv) =>
+        spawnCli(config, argv, env, { processGroup: true }));
     const child = spawner(this.config, args, { SDODS_TRIGGER: job.input.trigger ?? 'ui' });
     job.child = child;
     void this.setStatus(job, 'running');
@@ -207,7 +272,7 @@ export class RunManager {
     child.on('exit', (code, signal) => {
       const exit = code ?? (signal ? 130 : 1);
       const status: RunJob['status'] =
-        signal === 'SIGTERM' || signal === 'SIGKILL' || exit === 130
+        job.cancelRequested || signal === 'SIGTERM' || signal === 'SIGKILL' || exit === 130
           ? 'cancelled'
           : exit === 0
             ? 'passed'
