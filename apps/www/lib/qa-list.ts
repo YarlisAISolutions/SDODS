@@ -2,7 +2,7 @@
  * The shapes the questions list works in.
  *
  * Deliberately plain data with no dependency on `@sdods/qa-archive` at runtime: the browser island
- * that renders the list must not pull the archive (or the Firestore SDK) into its bundle, so
+ * that renders the list must not pull the archive into its bundle, so
  * everything it needs — display names, avatar colours, excerpts — is computed on the server and
  * handed over as props or fetched from the generated index.
  */

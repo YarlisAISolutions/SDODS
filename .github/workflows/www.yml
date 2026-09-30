@@ -68,10 +68,12 @@ jobs:
           # Maxi, the docs assistant (deploy/deploy-maxi.sh). A repository variable, so the chat stays
           # hidden until the service is live: an empty value renders no widget.
           NEXT_PUBLIC_MAXI_URL: ${{ vars.MAXI_URL }}
-          # The community service (packages/community). Unset keeps the question and answer forms on
-          # the old path (straight to Firestore as pending); set COMMUNITY_URL once the service is
-          # deployed and the sign-in providers are enabled (the sdods-community skill).
+          # The community service (packages/community): the live questions, posting, votes and
+          # feedback all go through it. Unset, the Q&A shows only the static archive.
           NEXT_PUBLIC_COMMUNITY_URL: ${{ vars.COMMUNITY_URL }}
+          # sdods.com's sign-in (Firebase Auth), swapped in for @sdods/site-kit/identity-impl.
+          # Unset, the site builds with no sign-in, as a fork does.
+          SDODS_IDENTITY_MODULE: ./lib/firebase-identity.ts
           # Whether the source repository is public: shows the GitHub buttons, Discussions and
           # prefilled issue forms (apps/*/lib/links.ts). A repository variable, so making the repo
           # private again is `gh variable set REPO_PUBLIC --body false` and a rebuild, not a code change.

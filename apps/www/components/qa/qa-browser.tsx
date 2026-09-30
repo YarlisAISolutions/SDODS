@@ -23,9 +23,9 @@ import {
  *
  * Two things this component deliberately does not do. It never imports `@sdods/qa-archive`, because
  * the archive belongs in the statically rendered pages, not in a bundle. And it never imports
- * `@/lib/questions` at the top level, because that pulls the Firestore SDK — several hundred
- * kilobytes — onto the critical path of the most-visited page in the section. Both arrive later,
- * over the network, and only when they are needed.
+ * `@/lib/questions` at the top level, so fetching live posts stays off the critical path of the
+ * most-visited page in the section. Both arrive later, over the network, and only when they are
+ * needed.
  */
 
 const SORTS: { value: Sort; label: string }[] = [
@@ -156,7 +156,7 @@ export function QaBrowser({
     };
   }, []);
 
-  // Firestore is imported here and nowhere else, so its bundle is fetched after paint.
+  // The live questions are fetched here, after paint.
   useEffect(() => {
     let cancelled = false;
     import('@/lib/questions')

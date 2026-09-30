@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { FEEDBACK_URL } from '@/lib/links';
-import { recordPageFeedback, type Verdict } from '@/lib/firebase';
+import { PAGE_FEEDBACK_ENABLED, recordPageFeedback, type Verdict } from '@/lib/page-feedback';
 
 const BTN = 'rounded-md border border-fd-border px-3 py-1 text-sm hover:bg-fd-accent';
 
@@ -45,7 +45,7 @@ export function PageFeedback({ path, title }: { path: string; title: string }) {
       className="mt-12 rounded-lg border border-fd-border bg-fd-card p-4 text-sm"
     >
       <div className="flex flex-wrap items-center gap-3">
-        {done ? (
+        {!PAGE_FEEDBACK_ENABLED ? null : done ? (
           <span role="status" className="font-medium">
             Thanks — noted.
           </span>

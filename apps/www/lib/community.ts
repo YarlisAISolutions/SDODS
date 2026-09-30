@@ -1,22 +1,21 @@
 /**
- * The community service (packages/community): signed-in posting with an AI review, and the editor
- * queue.
+ * The community service (packages/community): signed-in posting with an AI review, the editor
+ * queue, and the public reads in questions.ts.
  *
  * Off until `NEXT_PUBLIC_COMMUNITY_URL` is set at build time (the COMMUNITY_URL repository
- * variable). Until then the forms keep writing straight to Firestore as `pending`, exactly as
- * before, so the site works whether or not the service has been deployed.
+ * variable). Without it the Q&A shows only the static archive and posting is unavailable.
  *
- * `firebase/auth` is imported lazily, inside these functions, so a page that only shows the
- * questions list never downloads it.
+ * Sign-in goes through the site's Identity (lib/identity.ts), whichever provider the deployment
+ * wired in; this module only needs its ID token.
  */
-import type { User } from 'firebase/auth';
-import { app } from '@/lib/firebase';
+import type { SignInProvider, SiteUser } from '@sdods/site-kit/identity';
+import { identity } from '@/lib/identity';
 import type { AnswerTarget } from '@/lib/questions';
 
 export const COMMUNITY_URL = (process.env.NEXT_PUBLIC_COMMUNITY_URL ?? '').replace(/\/+$/, '');
 export const COMMUNITY_ENABLED = COMMUNITY_URL !== '';
 
-export type Provider = 'github' | 'google';
+export type Provider = SignInProvider;
 
 export interface Me {
   uid: string;
@@ -24,29 +23,10 @@ export interface Me {
   role: 'member' | 'editor' | 'admin';
 }
 
-async function authModule() {
-  const mod = await import('firebase/auth');
-  return { mod, auth: mod.getAuth(app()) };
-}
-
 /** Calls back with the signed-in user (or null) now and on every change. Returns an unsubscribe. */
-export async function watchUser(cb: (u: User | null) => void): Promise<() => void> {
-  const { mod, auth } = await authModule();
-  return mod.onAuthStateChanged(auth, cb);
-}
-
-export async function signIn(provider: Provider): Promise<void> {
-  const { mod, auth } = await authModule();
-  // A popup rather than a redirect: redirects break when the browser blocks third-party cookies
-  // on a custom domain, which is now the common case.
-  const p = provider === 'github' ? new mod.GithubAuthProvider() : new mod.GoogleAuthProvider();
-  await mod.signInWithPopup(auth, p);
-}
-
-export async function signOutUser(): Promise<void> {
-  const { mod, auth } = await authModule();
-  await mod.signOut(auth);
-}
+export const watchUser = (cb: (u: SiteUser | null) => void) => identity.watch(cb);
+export const signIn = (provider: Provider) => identity.signIn(provider);
+export const signOutUser = () => identity.signOut();
 
 export class CommunityError extends Error {
   constructor(
@@ -58,11 +38,9 @@ export class CommunityError extends Error {
 }
 
 async function call<T>(method: 'GET' | 'POST', route: string, body?: unknown): Promise<T> {
-  const { auth } = await authModule();
-  const user = auth.currentUser;
-  if (!user) throw new CommunityError('Sign in to post.', 401);
-  // getIdToken refreshes an expiring token, so a long-open page still posts.
-  const token = await user.getIdToken();
+  // A fresh token each call: an expiring one is refreshed, so a long-open page still posts.
+  const token = await identity.idToken();
+  if (!token) throw new CommunityError('Sign in to post.', 401);
   const res = await fetch(`${COMMUNITY_URL}${route}`, {
     method,
     headers: {
@@ -136,7 +114,7 @@ export const myVotes = (paths: string[]) =>
 export const acceptAnswer = (questionId: string, answerId: string | null) =>
   call<{ ok: true; acceptedAnswerId: string | null }>('POST', '/accept', { questionId, answerId });
 
-/** The Firestore path of a post, as the service names it. */
+/** A post's reference (its document path), as the service names it. */
 export const postPath = (target: AnswerTarget, id: string) =>
   target.kind === 'live' ? `questions/${target.questionId}/answers/${id}` : `threadAnswers/${id}`;
 

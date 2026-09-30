@@ -45,8 +45,8 @@ const base = `http://127.0.0.1:${port}`;
 
 const browser = await chromium.launch();
 try {
-  // `networkidle` is the wrong wait for the questions pages: they talk to Firestore, which on a
-  // blocked or slow network never goes idle and hangs the capture. Those wait for their own content
+  // `networkidle` is the wrong wait for the questions pages: they call the community service, which
+  // on a blocked or slow network never goes idle and hangs the capture. Those wait for their own content
   // to be on the page instead, which is the thing being photographed.
   for (const [name, path, width, height, settle] of [
     ['home-desktop', '/', 1280, 800, 'idle'],
