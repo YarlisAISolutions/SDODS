@@ -89,7 +89,7 @@ export const INSTALL_CHANNELS: Channel[] = [
     os: ['macos', 'linux', 'windows'],
     kind: 'cli',
     command: 'npm install -g @sdods/cli',
-    note: 'Needs Node 22+. Currently @sdods/cli@0.12.0 — the same package the installer script fetches.',
+    note: 'Needs Node 22+. Currently @sdods/cli@0.12.1 — the same package the installer script fetches.',
     live: true,
   },
   {
