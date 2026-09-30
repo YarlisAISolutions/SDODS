@@ -7,7 +7,8 @@
   "author": "SDODS <admin@sdods.com>",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./adapters": "./src/adapters.ts"
   },
   "scripts": {
     "dev": "node --import tsx src/main.ts",
