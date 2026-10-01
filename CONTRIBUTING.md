@@ -17,7 +17,7 @@ bun run sdods doctor
 - `packages/*` — the product, one package per responsibility (see `docs/ARCHITECTURE.md` for the graph).
 - `projects/demo-shop` — the reference project; it doubles as the release acceptance suite and carries every tag in the taxonomy.
 - `apps/docs` — the documentation site (Docusaurus).
-- `docs/` — architecture notes and assets.
+- `docs/` — architecture notes and assets; `docs/TODO.md` lists the open issues as stories, with the person each is waiting on.
 
 ## Working agreements
 
