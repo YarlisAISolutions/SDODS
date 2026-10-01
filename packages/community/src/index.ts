@@ -9,6 +9,7 @@ export {
   type Verifier,
   type Viewer,
 } from './auth.js';
+export { createClient } from './client.js';
 export { loadConfig, type CommunityConfig } from './config.js';
 export { ThreadIndex } from './duplicates.js';
 export { redact } from './redact.js';
