@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "SDODS \u2014 an automation platform: BDD UI + API + hybrid testing, multi-project, data-driven, self-healing, MCP, agents.",
+  "description": "SDODS — an automation platform: BDD UI + API + hybrid testing, multi-project, data-driven, self-healing, MCP, agents.",
   "license": "Apache-2.0",
   "engines": {
     "node": ">=22"
